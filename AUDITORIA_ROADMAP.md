@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.43
+# Auditoría del roadmap · Alfa 0.54
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -14,7 +14,8 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
-| 27–28 | Pendiente | Clima, inundaciones, desastres y riesgos profundos |
+| 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
+| 28 | Parcial: atención primaria/urgente, cualificaciones, acceso vial, agua diferida y esperas por barrio | Edades, hospitalización, ambulancias, educación, seguridad y protección social |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -117,3 +118,10 @@ Las inundaciones que afectan calles y activos municipales generan expedientes di
 La región ahora tiene dos episodios anuales programados. El calor aumenta el consumo de electricidad/agua y proyecta enfermedad por exposición; refugios cívicos con personal, electricidad y acceso vial reducen los casos. La sequía reduce 45% la fuente por 30 días; protocolos comerciales y cisternas modifican el balance hídrico con costos y consecuencias. En las pruebas del mapa inicial, la preparación de refugios redujo los casos de 45 a 13; consumo térmico subió de 535 a 653 kW y de 100 a 117 m³/día. Restricciones redujeron el consumo medido de agua; cisternas restituyeron 30 m³/día. Online/Offline, esquema 38. La fase 27 sigue parcial: falta variabilidad geográfica de amenazas, inundaciones prolongadas, incendios y reconstrucción integral.
 
 La pantalla Ciudad > Clima se verificó en Chromium a 390×844 y 1440×900. Conserva scroll vertical dentro del panel, botones dentro de sus límites y no produce overflow horizontal ni errores JavaScript. No se validó conexión LAN física ni despliegue en Vercel.
+
+
+## Alfa 0.54 · capacidad sanitaria territorial (fase 28, parcial)
+
+Las vacantes cívicas requieren habilidad Salud y la formación de seis residentes durante dos ciclos cuesta $840. El centro tiene 12 puestos; nuevos centros ya construibles tienen 16. Cada trabajador aporta capacidad primaria y urgente diferente, reducida por electricidad/agua/cloacas. Los hogares se asignan por ruta de calle y límite de 45 minutos; lo que excede capacidad forma lista de espera con resultados por barrio. El agua entregada y la depuración de aguas residuales actúan como proxy de seguridad sanitaria: un promedio móvil de 30 días demora el cambio en demanda; la ola de calor aumenta urgencias. Insumos sanitarios y nómina pública impactan el balance. Online/Offline, esquema 39. Sin personal cualificado, la capacidad comprobada es cero. La fase sigue parcial: no existen camas, ambulancias, diagnóstico, grupos etarios, escuelas ni policía funcional.
+
+Chromium verificó Ciudad > Salud en móvil (390×844) y escritorio (1440×900): controles dentro del modal, scroll vertical y sin errores JavaScript ni overflow horizontal. No se probó LAN física ni Vercel.

@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.53",
+  "currentVersion": "0.54",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.54",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 28 (parcial): los centros de salud solo atienden con puestos cubiertos por trabajadores cualificados en Salud y servicios eléctricos, agua y cloacas. Las rutas limitan el acceso a 45 minutos; consultas primarias y urgencias tienen capacidades distintas. La demanda sin cobertura deja listas de espera visibles por barrio, mientras los déficits persistentes reducen servicios y apoyo.",
+        "Se incorporó formación sanitaria municipal: hasta 6 residentes, dos cierres mensuales, $840 en el curso inicial. El acceso incompleto al agua/cloacas aumenta gradualmente la necesidad sanitaria mediante un promedio móvil de 30 días; las olas de calor elevan urgencias. Los turnos y proveedores generan gasto mensual. Online/Offline, panel Ciudad > Salud y migración de guardados al esquema 39."
+      ]
+    },
     {
       "version": "0.53",
       "date": "2026-10-31",

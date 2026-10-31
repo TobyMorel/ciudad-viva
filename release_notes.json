@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.65",
+  "currentVersion": "0.66",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.66",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): las calles con condición estructural inferior a 25% se cierran al tránsito; rutas laborales, camiones y corredores de colectivo calculan desvíos sobre tramos abiertos.",
+        "La rehabilitación por contrato vuelve a abrir la calle tras inspección final y la restablece a 82%. El mapa 3D coloca barreras y el inventario señala cierres preventivos. Online/Offline, guardados al esquema 50.",
+        "El mapa actual no contiene cursos de agua interiores ni puentes. La red vial no inventa cruces sobre agua; incorporar puentes requiere primero tramos de mapa que conecten ambas márgenes."
+      ]
+    },
     {
       "version": "0.65",
       "date": "2026-10-31",

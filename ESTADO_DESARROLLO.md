@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.65 · 31 de octubre de 2026
+**Entrega:** Alfa 0.66 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.66 · Fase 31 (parcial): los tramos viales bajo 25% de condición estructural se cierran y bloquean para el enrutamiento de residentes, empleo, colectivos y camiones. Si no hay desvío, los destinos quedan aislados. El mapa 3D muestra barreras; Mantenimiento prioriza el inventario cerrado. Inspección y contrato existentes rehabilitan a 82% y reabren la calle. Online/Offline, esquema 50. Verificación Online: el segmento central crítico hace imposible la ruta oeste-este y al restaurar calidad 82% vuelve a abrirse. Offline en Chromium: la calle cerrada no admite ruta, inspección de un día, adjudicación a Sur Obras, cinco días de trabajo, condición final 82% y ruta restablecida. Sin errores JS. UI de Mantenimiento revisada en 390×844 y 1440×900: sin desborde horizontal ni solapamientos; scroll vertical esperado. El puente queda pendiente porque el mapa aún no representa agua interior ni márgenes conectables.
 
 - Alfa 0.65 · Fase 31 (parcial): los seis tendidos municipales registran condición persistente por tramo. La carga de edificios cercanos acelera desgaste mensual y el pago efectivo de Redes lo mitiga. Al bajar de 25%, un tramo crítico genera avería que desconecta esa sección; la reparación cuesta según severidad y tarda tres días. Ciudad > Servicios informa condición media y tramos críticos por red. Online/Offline, esquema 49. Verificado Online: tramo crítico sale del grafo de conexión y, tras tres avances diarios de cuadrilla, vuelve a servicio y condición 82%. Verificado Offline en Chromium: cierre mensual al 0% de financiación generó avería bajo el umbral, el botón contrató reparación y a los tres días restauró la línea a 82%. Sin errores JS; móvil 390×844 y escritorio 1440×900, contenido del panel sin overflow horizontal ni solapamientos; scroll vertical esperado. LAN física/Vercel no probados.
 

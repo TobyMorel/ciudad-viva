@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.65
+# Auditoría del roadmap · Alfa 0.66
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -196,3 +196,8 @@ Prueba de ciclo completo en Online y Offline: Municipalidad a 60,1% con polític
 ## Alfa 0.65 · desgaste y averías de redes (fase 31, parcial)
 
 Electricidad, agua, cloacas, drenaje, gas y fibra incorporan condición persistente por tramo. El uso del entorno acelera deterioro y la financiación efectiva del programa Redes lo mitiga. Al cruzar el umbral crítico se registra una avería, el tramo se excluye del grafo de conexión y se ofrece reparación por cuadrilla con costo asociado a severidad y tres días de trabajo. Servicios expone condición media y activos críticos. Online/Offline, esquema 49. Sigue pendiente el mantenimiento de puentes, cierre preventivo por inspección, sustitución y activos privados.
+
+
+## Alfa 0.66 · cierres y desvíos por seguridad (fase 31, parcial)
+
+La condición vial bajo 25% cierra el tramo a enrutamiento. Viajes laborales, vehículos de residuos y colectivos usan la red alternativa; si no la hay, el destino queda sin acceso. El panel prioriza cierres y el mapa 3D los marca con barreras. Tras diagnóstico y rehabilitación contractual, inspección final restablece el activo a 82% y lo abre. Online/Offline, esquema 50. Los puentes quedan pendientes de incorporar geografía de cruces de agua, inexistente hoy en el mapa.

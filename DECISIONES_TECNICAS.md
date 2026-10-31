@@ -159,3 +159,10 @@ El impuesto inmobiliario anual usa una base de diseño de $2.400 por residente y
 - Cada tramo mantiene condición en `utilities.lineConditions` con clave de red y coordenadas. Las seis redes (electricidad, agua, cloacas, pluvial, gas y fibra) comparten estados compatibles Online/Offline y la migración al esquema 49 inicializa los tramos existentes en 82%.
 - El desgaste mensual sube con edificios cercanos. El factor efectivamente pagado por Redes reduce el desgaste; no existe colapso aleatorio. Bajo 25% se registra una avería persistente, se interrumpe el tendido en ese segmento y la reparación municipal tiene costo según condición y plazo de tres días.
 - La interfaz muestra promedio y cantidad de tramos críticos por red. El reporte no duplica los inventarios; deriva la condición desde el registro persistente.
+
+
+## Alfa 0.66 · cierres de seguridad vial
+
+- La condición menor a 25% cierra la calle sin borrarla del catastro. `route_between` y `offlineRoadRoute` excluyen ese segmento, de modo que todo destino busca ruta alternativa y devuelve sin acceso si no existe. El corredor de colectivos se vuelve a trazar contra la red abierta.
+- La inspección y el contrato de rehabilitación ya existentes operan el activo cerrado; la recepción final retorna condición 82% y reabre el tramo. Barreras renderizadas se derivan de los mismos valores persistentes para evitar un estado visual desincronizado.
+- No se crea una entidad puente ficticia: el mapa procedural actual no tiene agua interior ni margen opuesta conectable. El sistema de puentes requiere ampliar geografía y conectividad del mapa primero.

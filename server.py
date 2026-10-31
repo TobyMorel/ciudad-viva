@@ -491,7 +491,7 @@ def commute_model():
          tuple((b.get("x"),b.get("y"),b.get("kind"),b.get("occupants",0),b.get("status"),b.get("business",{}).get("status"),b.get("business",{}).get("jobSlots"),b.get("business",{}).get("wage"),tuple((r.get("id"),r.get("workerEligible"),r.get("status"),tuple(sorted(r.get("skills",{}).items())),r.get("expectedMonthlyWage")) for r in b.get("residents",[]))) for b in homes+sites),
          tuple((o.get("id"),o.get("status"),round(o.get("travelledDistance",0),1)) for o in state.get("supply",{}).get("orders",[]) if o.get("status")=="en tránsito"),
          tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])))
-    if key==_commute_cache_key:
+    if key==_commute_cache_key and not state["busRoutes"]:
         for line in state.get("busRoutes",[]):
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
@@ -513,11 +513,13 @@ def commute_model():
     target=min(round(len(residents)*max(0,min(100,state["employment"]))/100),round(sum(caps)))
     remaining={si:int(math.floor(cap)) for si,cap in enumerate(caps)}
     # Priorizar residentes sin empleo; rutas cortas primero. Cada residente recibe un solo empleador.
+    reserved_drivers={pid for line in state["busRoutes"] if line.get("status")=="active" and line.get("route") for pid in line.get("driverIds",[])}
     candidates=[];seeking_without_route=[];seeking_without_skill=[];seeking_below_wage=[]
     for hi,home,person in residents:
         prior_status=person.get("status");prior_employer=person.get("employerName");prior_employer_id=person.get("employerId")
         person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
         ensure_person_work_profile(person)
+        if person.get("id") in reserved_drivers:continue
         reachable=sorted((distances[hi,si],si) for si in range(len(sites)) if (hi,si) in routes)
         qualified=[(distance,si) for distance,si in reachable if person["skills"].get(workplace_profile(sites[si])[0],0)>=workplace_profile(sites[si])[2]]
         choices=[(distance,si) for distance,si in qualified if workplace_profile(sites[si])[3]>=person["expectedMonthlyWage"]]
@@ -573,6 +575,28 @@ def commute_model():
         person["unemploymentReason"]="sin vacante alcanzable"
         if prior_status=="empleado":
             person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
+    driver_count=0
+    for line in state["busRoutes"]:
+        previous=set(line.get("driverIds",[]))
+        line["driverIds"]=[];line["driverShifts"]=[]
+        if line.get("status")=="active" and len(line.get("route",[]))>1:
+            candidates_for_line=[]
+            for _,home,person in residents:
+                if person.get("status")!="buscando" or person["skills"].get("logistica",0)<42 or person.get("expectedMonthlyWage",0)>10:continue
+                path=route_between((home["x"],home["y"]),tuple(line["from"]))
+                if path:candidates_for_line.append((0 if person["id"] in previous else 1,len(path),str(person["id"]),person))
+            for _,_,_,person in sorted(candidates_for_line)[:line.get("buses",1)]:
+                person.update({"status":"empleado","employerId":f"bus-{line['id']}","employerName":f"Colectivo · {line.get('originName','Línea')}","monthlyWage":10,"attendance":1,"commuteMode":"walk","busLineId":None,"unemployedSinceDay":None,"unemploymentReason":None})
+                line["driverIds"].append(person["id"])
+                line["driverShifts"].append({"personId":person["id"],"window":"07:00–09:00 / 17:00–19:00"})
+        line["effectiveBuses"]=len(line["driverIds"])
+        line["operational"]=line.get("status")=="active" and len(line.get("route",[]))>1 and line["effectiveBuses"]>0
+        line["pauseReason"]=("Sin conductor con acceso vial y perfil de logística" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexión vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
+        line["capacity"]=line["effectiveBuses"]*BUS_SEATS
+        line["headwayMinutes"]=max(6,math.ceil((max(1,len(line.get("route",[]))-1)*3.6)/max(1,line["effectiveBuses"])))
+        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST if line["operational"] else 0
+        if not line["operational"]:line["monthlyFareRevenue"]=0
+        driver_count+=line["effectiveBuses"]
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
@@ -617,11 +641,11 @@ def commute_model():
                 edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+trip_vehicles/75
     for line in state.get("busRoutes",[]):
         if not line.get("operational"):continue
-        vehicles+=line.get("buses",1);emissions+=round(line.get("buses",1)*max(0,len(line["route"])-1)*.55,2)
+        vehicles+=line.get("effectiveBuses",0);emissions+=round(line.get("effectiveBuses",0)*max(0,len(line["route"])-1)*.55,2)
         for aa,bb in zip(line["route"],line["route"][1:]):
             edge=tuple(sorted((tuple(aa),tuple(bb))))
-            if edge[0] in roads and edge[1] in roads:segment_flow[edge]=segment_flow.get(edge,0)+line.get("buses",1)/80
-        line["dailyRiders"]=line.get("ridersThisPass",0);line["monthlyFareRevenue"]=round(line["dailyRiders"]*line.get("fare",BUS_FARE)*44);line["monthlyOperatingCost"]=line.get("buses",1)*BUS_MONTHLY_OPERATING_COST
+            if edge[0] in roads and edge[1] in roads:segment_flow[edge]=segment_flow.get(edge,0)+line.get("effectiveBuses",0)/80
+        line["dailyRiders"]=line.get("ridersThisPass",0);line["monthlyFareRevenue"]=round(line["dailyRiders"]*line.get("fare",BUS_FARE)*44);line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
@@ -663,6 +687,10 @@ def commute_model():
         staffed+=effective
         if workplace["kind"]=="shop":private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
+    for line in state["busRoutes"]:
+        if line.get("status")=="cancelled":continue
+        workplaces.append({"name":f"Colectivo · {line.get('originName','Línea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0),"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"Logística","minimumSkill":42,"offeredWage":10})
+    model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":round((staffed+driver_count)/max(1,state["population"]*.42)*100)})
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
     jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
     search_days=[max(0,state.get("day",1)-int(person.get("unemployedSinceDay",state.get("day",1)))) for person in jobseekers]
@@ -719,7 +747,7 @@ def traffic_factor(route, exclude_order=None):
     for i in range(len(route)-1):
         a=tuple(route[i]);b=tuple(route[i+1]);edge=tuple(sorted((a,b)))
         arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
-        background=commute_model()["segmentFlow"].get(edge,0)
+        background=(_commute_cache or commute_model())["segmentFlow"].get(edge,0)
         capacity=2.4 if arterial else 1.2
         trucks=0
         for order in active:
@@ -747,6 +775,15 @@ def pay_public_wages(workforce):
         home["householdCash"]=round(home.get("householdCash",0)+wage)
         home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         payroll+=wage
+    # El salario del conductor ya está dentro del costo operativo de la línea.
+    active_ids={pid for line in state.get("busRoutes",[]) if line.get("operational") for pid in line.get("driverIds",[])}
+    for home in state["buildings"]:
+        if home.get("kind")!="home":continue
+        for person in home.get("residents",[]):
+            if person.get("id") in active_ids and person.get("status")=="empleado":
+                wage=person.get("monthlyWage",0)
+                home["householdCash"]=round(home.get("householdCash",0)+wage)
+                home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
     return payroll
 
 def draw_business_credit(firm, amount):
@@ -1194,6 +1231,7 @@ def public_state(player_id=None):
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])
+    view["jobs"]=state["jobs"]+sum(line.get("buses",0) for line in state["busRoutes"] if line.get("status")=="active")
     view["busStopSites"]={line["id"]:bus_stop_sites(line) for line in state.get("busRoutes",[]) if line.get("status") in ("active","paused")}
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
@@ -1235,7 +1273,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.28"
+    server_version="CiudadViva/0.29"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

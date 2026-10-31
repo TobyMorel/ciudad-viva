@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.28",
+  "currentVersion": "0.29",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.29",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los colectivos requieren conductores identificables del padrón laboral con habilidad de logística, salario aceptable y acceso vial al origen. Cada residente puede ocupar un solo empleo.",
+        "La cantidad de vehículos en servicio, frecuencia, aforo, emisiones, boletos y costo operativo dependen de la dotación real. Si no hay conductor, la línea queda sin servicio y muestra la causa.",
+        "El panel de movilidad muestra la dotación y los turnos de hora pico en un desplegable compacto; el modo offline y la sala LAN usan la misma regla de operación."
+      ]
+    },
     {
       "version": "0.28",
       "date": "31 de octubre de 2026",
@@ -226,16 +235,8 @@
   ],
   "upcoming": [
     {
-      "title": "Conductores, turnos y demanda",
-      "detail": "Asignar residentes a flotas y simular frecuencia por personal disponible. Comprobar conexión LAN entre dos equipos físicos."
-    },
-    {
-      "title": "Conductores y turnos municipales",
-      "detail": "Asignar personal y horarios a las flotas, reflejar disponibilidad por turno y dar el siguiente paso de la fase 22."
-    },
-    {
-      "title": "Fase 22 · Operación y personal de transporte",
-      "detail": "Modelar conductores residentes, turnos, depósitos, mantenimiento, horarios de fin de semana, paradas intermedias y conexiones de líneas con capacidad compartida."
+      "title": "Fase 22 · Depósito y transbordos",
+      "detail": "Crear cocheras y relevos para la flota, y permitir viajes de pasajeros entre dos líneas con espera y tarifa trazables."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",

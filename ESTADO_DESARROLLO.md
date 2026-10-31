@@ -163,8 +163,17 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - La conexión LAN entre dos equipos físicos y la publicación en Vercel no son verificables desde esta prueba local.
 
 
+- Alfa 0.29: cada línea activa contrata hasta un conductor por vehículo entre residentes sin otro empleo, con acceso vial, habilidad logística y salario aceptable. Se prioriza conservar la dotación anterior. La flota efectiva gobierna frecuencia, capacidad, costo, emisiones y colectivos 3D. Sin conductor no circula ni cobra boletos. El panel agrupa los turnos de hora pico en un desplegable. Pendiente: horarios de jornada completa, depósitos, relevos y validación LAN física.
+
 ## Verificación Alfa 0.28
 
 - API local: antes de crear sala, `/api/state` responde 409; crear sala en el anfitrión responde 200, código incorrecto responde 403 y un invitado con código válido recibe el estado sin privilegios de anfitrión. `/api/rooms` lista la sala y recibe un anuncio UDP de prueba. Una zonificación hecha por un invitado aparece en el estado leído por otro.
 - Chromium: creación de sala en escritorio (1440×960), búsqueda/unión de invitado y menú LAN en móvil (390×844), modo Offline y cuatro subcategorías de Ciudad; sin desborde horizontal ni errores JS en estas pantallas.
 - Las mecánicas históricas no se consideran todas cerradas: la auditoría por fase está en `AUDITORIA_ROADMAP.md`. Falta una prueba LAN entre dos equipos físicos y una revisión integral de décadas de simulación.
+
+## Verificación Alfa 0.29
+
+- Motor LAN: un corredor con dos vehículos asignó dos residentes distintos, ofreció 60 plazas y costó $280/mes. Tres recálculos conservaron los mismos valores; pausar dejó flota y costo en cero. Se detectó y corrigió una recursión de congestión durante esta prueba.
+- Motor Offline: el corredor asignó dos conductores y reprodujo 60 plazas y $280/mes. Pausa, reanudación y recarga mantuvieron la dotación y actualizaron el costo. El salario de $10 por conductor se acredita al hogar dentro del costo operativo, sin sumar otra nómina municipal.
+- Chromium a 1440×960 y 390×844 comprobó el panel Movilidad, creación de línea, turnos desplegados, ausencia de errores JS y ancho de documento igual al viewport. La prueba visual aisló el render 3D para revisar la interfaz; la animación 3D se verificó por código, no por captura en esta sesión.
+- Prueba LAN en dos computadoras físicas sigue pendiente.

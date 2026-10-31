@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.54
+# Auditoría del roadmap · Alfa 0.55
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -15,7 +15,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
-| 28 | Parcial: atención primaria/urgente, cualificaciones, acceso vial, agua diferida y esperas por barrio | Edades, hospitalización, ambulancias, educación, seguridad y protección social |
+| 28 | Parcial: atención primaria/urgente, cualificaciones, agua diferida y listas por barrio; escuela con docentes, aulas, viajes, espera y desarrollo laboral | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -125,3 +125,10 @@ La pantalla Ciudad > Clima se verificó en Chromium a 390×844 y 1440×900. Cons
 Las vacantes cívicas requieren habilidad Salud y la formación de seis residentes durante dos ciclos cuesta $840. El centro tiene 12 puestos; nuevos centros ya construibles tienen 16. Cada trabajador aporta capacidad primaria y urgente diferente, reducida por electricidad/agua/cloacas. Los hogares se asignan por ruta de calle y límite de 45 minutos; lo que excede capacidad forma lista de espera con resultados por barrio. El agua entregada y la depuración de aguas residuales actúan como proxy de seguridad sanitaria: un promedio móvil de 30 días demora el cambio en demanda; la ola de calor aumenta urgencias. Insumos sanitarios y nómina pública impactan el balance. Online/Offline, esquema 39. Sin personal cualificado, la capacidad comprobada es cero. La fase sigue parcial: no existen camas, ambulancias, diagnóstico, grupos etarios, escuelas ni policía funcional.
 
 Chromium verificó Ciudad > Salud en móvil (390×844) y escritorio (1440×900): controles dentro del modal, scroll vertical y sin errores JavaScript ni overflow horizontal. No se probó LAN física ni Vercel.
+
+
+## Alfa 0.55 · educación pública operativa (fase 28, parcial)
+
+Una escuela es una obra pública cotizada a $9.600 y 68 días base, con trabajadores, etapas y contratista; Online consume materiales. Offline conserva contrato y plazo, pero no compra/entrega insumos. Al habilitarse abre cuatro aulas (96 plazas), 12 puestos docentes y mantenimiento mensual de $820. Niños y adolescentes simulados (5–17) viajan por rutas reales, hasta 40 minutos; la cantidad atendida queda limitada por aulas, docentes con habilidad Educación ≥48 y servicios de energía, agua y cloacas. Esperas, falta de acceso y costo por estudiante aparecen en Ciudad > Educación. Cada alumno atendido cuesta $0,35/mes en insumos; 12 ciclos de asistencia suman habilidad laboral. Un curso de Educación municipal forma candidatos docentes. Online/Offline, esquema 40. No incluye educación inicial, niveles separados, transporte escolar ni ampliación de aulas.
+
+Chromium comprobó Ciudad > Educación a 390×844 y 1440×900. El contenido puede desplazarse verticalmente; botones y tarjetas quedan dentro del panel, sin desbordes horizontales ni errores de JavaScript. No se verificó LAN física ni Vercel.

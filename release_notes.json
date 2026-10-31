@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.54",
+  "currentVersion": "0.55",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.55",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 28 (parcial): escuelas municipales con cuatro aulas, 12 vacantes docentes y obra de 68 días/$9.600 con contratista, anticipos e inspección. La población escolar simulada (5–17 años) se asigna a escuelas por viaje vial de hasta 40 minutos; aulas, docentes cualificados y electricidad/agua/cloacas definen la capacidad operativa. Los alumnos sin plaza quedan como espera visible. Online reserva y consume áridos, acero, madera y componentes. En Offline la licitación, anticipo, cuadrilla y calendario funcionan, pero la compra/entrega de materiales sigue pendiente en el modo local.",
+        "El municipio cubre $820/mes de operación y $0,35 por alumno atendido en insumos. La asistencia mensual sostenida desarrolla habilidades laborales después de 12 meses; la formación de Educación permite calificar docentes. Online y Offline; panel Ciudad > Educación; guardados migrados a esquema 40. La fase continúa parcial: no hay jardines, secundaria diferenciada, educación técnica/superior ni expansión de escuelas existentes."
+      ]
+    },
     {
       "version": "0.54",
       "date": "2026-10-31",
@@ -464,12 +472,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 26 · residuos y seguridad de suministro",
-      "detail": "Añadir contenedores, estaciones de transferencia y logística de reciclables. Completar respaldo y redundancia de redes para sostener hospitales y bombeo durante averías."
+      "title": "Fase 28 · Bomberos y despacho de emergencias",
+      "detail": "Construir estación con personal por turno, vehículos y cobertura por rutas. Un incendio consume disponibilidad y el tiempo de llegada determina daños y respuesta; presupuesto y personal limitan cuántos incidentes se atienden."
     },
     {
-      "title": "Fase 27 · clima y resiliencia urbana",
-      "detail": "Ampliar lluvia, inundaciones y otros riesgos con preparación, daños a infraestructura, respuesta de servicios y recuperación municipal."
+      "title": "Fase 28 · Seguridad y protección social",
+      "detail": "Incorporar patrullaje e iluminación con cobertura y tiempos de respuesta, más programas municipales de asistencia con cupo, gasto y resultados para hogares desplazados o vulnerables."
     }
   ]
 }

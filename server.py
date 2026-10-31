@@ -31,6 +31,7 @@ MATERIAL_NEEDS = {
     "home":{"aggregate":27,"steel":9,"timber":15,"components":10},
     "shop":{"aggregate":24,"steel":14,"timber":8,"components":12},
     "civic":{"aggregate":52,"steel":22,"timber":12,"components":24},
+    "school":{"aggregate":58,"steel":25,"timber":30,"components":28},
     "depot":{"aggregate":38,"steel":18,"timber":14,"components":12},
     "busGarage":{"aggregate":30,"steel":16,"timber":8,"components":10},
     "busStop":{"aggregate":10,"steel":0,"timber":5,"components":2},
@@ -62,6 +63,7 @@ def new_business(building, job_slots, starting_cash=5000):
 JOB_PROFILES = {
     "shop": ("comercio", "Comercio", 35),
     "civic": ("salud", "Atención sanitaria", 48),
+    "school": ("educacion", "Docencia", 48),
     "depot": ("logistica", "Logística", 42),
     "port": ("logistica", "Logística", 42),
     "airport": ("logistica", "Logística", 42),
@@ -72,7 +74,7 @@ JOB_PROFILES = {
     "landfill": ("logistica", "Gestión de residuos", 42),
     "recyclingPlant": ("logistica", "Recuperación de materiales", 42),
 }
-TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42),"salud":("Salud",48)}
+TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42),"salud":("Salud",48),"educacion":("Educación",48)}
 TRAINING_SEATS=6
 TRAINING_MONTHS=2
 TRAINING_BASE_MONTHLY_COST=180
@@ -98,7 +100,7 @@ def stable_skill(person_id, category):
 
 def ensure_person_work_profile(person):
     person.setdefault("skills",{})
-    for category in ("comercio","administracion","logistica","salud"):
+    for category in ("comercio","administracion","logistica","salud","educacion"):
         person["skills"].setdefault(category,25+stable_skill(person.get("id",""),category)%76)
     person.setdefault("expectedMonthlyWage",7+stable_skill(person.get("id",""),"salario")%3)
     person.setdefault("carAccess",stable_skill(person.get("id",""),"auto")%100<65)
@@ -106,7 +108,7 @@ def ensure_person_work_profile(person):
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
     firm=site.get("business",{}) if site.get("kind") in ("shop","hotel") else {}
-    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel") else 14 if site.get("kind") in ("powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic") else 8))
+    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel") else 14 if site.get("kind") in ("powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school") else 8))
     return category,label,minimum,wage
 
 def training_candidates(category,center,excluded=None):
@@ -203,7 +205,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":39,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":40,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -227,11 +229,12 @@ CONTRACTORS = {
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
 PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y licitación","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
 PROJECTS["powerPlant"]={"label":"Central eléctrica","cost":18800,"days":96,"stageNames":["Estudio y permisos","Cimientos y turbina","Conexión eléctrica","Pruebas de generación","Inspección y puesta en marcha"]}
+PROJECTS["school"]={"label":"Escuela primaria","cost":9600,"days":68,"stageNames":["Proyecto y permisos","Cimientos y aulas","Instalaciones y patio","Equipamiento y contratación inicial","Inspección y habilitación"]}
 PROJECTS["waterPlant"]={"label":"Planta potabilizadora","cost":14200,"days":84,"stageNames":["Estudio de fuente y permisos","Captación y filtros","Conexión y bombeo","Pruebas sanitarias","Inspección y puesta en marcha"]}
 PROJECTS["wastewaterPlant"]={"label":"Planta depuradora","cost":16600,"days":90,"stageNames":["Estudio ambiental y permisos","Colectores y tanques","Digestores y filtros","Pruebas de calidad","Inspección y puesta en marcha"]}
 PROJECTS["landfill"]={"label":"Relleno sanitario municipal","cost":9800,"days":72,"stageNames":["Evaluación ambiental y licitación","Impermeabilización del terreno","Celdas de disposición","Báscula y control de acceso","Inspección y habilitación"]}
 PROJECTS["recyclingPlant"]={"label":"Planta de reciclaje","cost":14800,"days":88,"stageNames":["Estudio ambiental y licitación","Separación y clasificación","Línea de lavado","Pruebas de recuperación","Inspección y habilitación"]}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
+LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"school":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -245,7 +248,7 @@ def material_plan(kind, initial_progress=0):
 def ensure_business_state():
     shops=[b for b in state["buildings"] if b.get("kind")=="shop"]
     public=[b for b in state["buildings"] if b.get("kind") in ("civic","depot","landfill","recyclingPlant")]
-    weights={"shop":1.0,"civic":.8,"depot":.65,"landfill":.65,"recyclingPlant":.8,"port":.85,"airport":.9}
+    weights={"shop":1.0,"civic":.8,"school":.8,"depot":.65,"landfill":.65,"recyclingPlant":.8,"port":.85,"airport":.9}
     total_weight=max(.01,sum(weights[b["kind"]] for b in shops+public))
     estimated_slots=max(1,round(state.get("jobs",0)/total_weight))
     for building in shops:
@@ -290,15 +293,17 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(39,state.get("version",1))
+    state["version"]=max(40,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
+    state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
     state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
     for building in state["buildings"]:
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
+        if building.get("kind")=="school":building.setdefault("jobSlots",12);building.setdefault("classrooms",4)
         if building["kind"]=="home":
             building.setdefault("capacity",max(building.get("occupants",0),round(building.get("occupants",0)*1.15)))
     supply=state.setdefault("supply",new_supply())
@@ -564,7 +569,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     population=max(0,state.get("population",0))
     household=population*.00115
     businesses=sum(max(1,b.get("business",{}).get("lastWorkers",round(b.get("business",{}).get("jobSlots",0)*.55)))*.00115 for b in buildings if b.get("kind")=="shop" and b.get("business",{}).get("status")!="cerrado")
-    public_staff=sum(max(0,w.get("workersAssigned",0)) for w in state.get("workplaces",[]) if w.get("kind") in ("civic","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
+    public_staff=sum(max(0,w.get("workersAssigned",0)) for w in state.get("workplaces",[]) if w.get("kind") in ("civic","school","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
     public=public_staff*.00075
     visitors=sum(max(0,b.get("monthlyGuests",0)) for b in buildings if b.get("kind")=="hotel")/30*.0015
     generated=household+businesses+public+visitors
@@ -723,7 +728,7 @@ def apply_climate_impacts():
 
 def calculate_utility_balance(apply_effects=False):
     utilities=ensure_utility_state();climate=ensure_climate_state()
-    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
+    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","school","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     month=((state.get("day",1)-1)//30)%12
     summer=month in (11,0,1)
     day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
@@ -737,7 +742,7 @@ def calculate_utility_balance(apply_effects=False):
         if kind=="home":return occupants*.72*seasonal_power,occupants*.12*seasonal_water
         if kind=="shop":return workers*1.35*seasonal_power,workers*.055*seasonal_water
         if kind=="hotel":return building.get("beds",48)*1.25*seasonal_power,building.get("beds",48)*.09*seasonal_water
-        if kind=="civic":return 32*seasonal_power,14*seasonal_water
+        if kind in ("civic","school"):return 32*seasonal_power,14*seasonal_water
         if kind=="depot":return 12*seasonal_power,4*seasonal_water
         if kind=="busGarage":return 18*seasonal_power,2*seasonal_water
         if kind=="port":return 85*seasonal_power,32*seasonal_water
@@ -754,7 +759,7 @@ def calculate_utility_balance(apply_effects=False):
         occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
         workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
         gas=occupants*.025 if kind=="home" else workers*.08 if kind=="shop" else 4 if kind in ("hotel","airport","port") else 1
-        telecom=occupants*.018 if kind=="home" else workers*.035 if kind in ("shop","civic","hotel","airport","port") else .2
+        telecom=occupants*.018 if kind=="home" else workers*.035 if kind in ("shop","civic","school","hotel","airport","port") else .2
         building["utilityDemand"]={"powerKw":round(kw,1),"waterM3Day":round(m3,1),"gasM3Day":round(gas,2),"telecomMbps":round(telecom,2)}
         building["utilityAccess"]={"powerConnected":utility_building_connected(building,"power"),"waterConnected":utility_building_connected(building,"water"),"sewerConnected":utility_building_connected(building,"sewer"),"gasConnected":utility_building_connected(building,"gas"),"telecomConnected":utility_building_connected(building,"telecom"),"gasServedPct":0,"telecomServedPct":0,"powerServedPct":0,"waterServedPct":0,"wastewaterTreatedPct":0}
     power_tiles=energized_utility_tiles("power");water_tiles=energized_utility_tiles("water");sewer_tiles=energized_utility_tiles("sewer")
@@ -772,7 +777,7 @@ def calculate_utility_balance(apply_effects=False):
         total=sum(b["utilityDemand"][key] for b in buildings)
         connected_demand=sum(b["utilityDemand"][key] for b in connected)
         remaining=usable;delivered=0
-        priorities=("civic","home","powerPlant","waterPlant","wastewaterPlant","recyclingPlant","shop","hotel","airport","port","depot","busGarage")
+        priorities=("civic","school","home","powerPlant","waterPlant","wastewaterPlant","recyclingPlant","shop","hotel","airport","port","depot","busGarage")
         for kind in priorities:
             group=[b for b in connected if b.get("kind")==kind];need=sum(b["utilityDemand"][key] for b in group)
             fraction=min(1,max(0,remaining/need)) if need else 1
@@ -932,7 +937,7 @@ def register_recovery_needs(report,day):
             asset={"x":x,"y":y,"quality":72,"monthlyCost":15};state["roadAssets"].append(asset)
         cost=850+max(0,82-int(asset.get("quality",72)))*22
         needs.append({"id":f"recovery-road-{x}-{y}-{day}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":day,"condition":int(asset.get("quality",72)),"estimate":cost,"inspectionStatus":"pendiente","status":"abierta"})
-    public_kinds={"civic","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
+    public_kinds={"civic","school","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
     for row in report.get("floodedBuildings",[]):
         if row.get("kind") not in public_kinds:continue
         x,y=row["x"],row["y"]
@@ -1260,7 +1265,7 @@ def commute_model():
     roads={tuple(r) for r in state["roads"]}
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
     sites=[b for b in state["buildings"] if b.get("status","operativo") in ("operativo","habilitado") and
-           (b.get("kind") in ("civic","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant") or (b.get("kind") in ("shop","hotel") and b.get("business",{}).get("status")=="abierto"))]
+           (b.get("kind") in ("civic","school","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant") or (b.get("kind") in ("shop","hotel") and b.get("business",{}).get("status")=="abierto"))]
     state.setdefault("busRoutes",[])
     for line in state["busRoutes"]:
         path=bus_line_route(line)
@@ -1282,9 +1287,9 @@ def commute_model():
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
         return _commute_cache
-    weights={"shop":1.0,"civic":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
+    weights={"shop":1.0,"civic":.8,"school":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
     company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel"))
-    public_sites=[b for b in sites if b["kind"] in ("civic","depot","landfill","port","airport","powerPlant","waterPlant","wastewaterPlant","recyclingPlant")]
+    public_sites=[b for b in sites if b["kind"] in ("civic","school","depot","landfill","port","airport","powerPlant","waterPlant","wastewaterPlant","recyclingPlant")]
     public_jobs=max(0,state["jobs"]-company_jobs)
     public_weight=sum(weights[b["kind"]] for b in public_sites)
     caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","hotel") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
@@ -1600,7 +1605,7 @@ def order_route_eta(order):
 def pay_public_wages(workforce):
     payroll=0
     for emp in workforce.get("employees",[]):
-        if emp["site"].get("kind") not in ("civic","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"):continue
+        if emp["site"].get("kind") not in ("civic","school","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"):continue
         wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
         home["householdCash"]=round(home.get("householdCash",0)+wage)
         home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
@@ -2041,7 +2046,7 @@ def tick_one_day():
     state["day"] += 1
     day=state["day"]
     advance_utility_repairs()
-    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True)
+    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
         for home in state["buildings"]:
@@ -2072,8 +2077,8 @@ def tick_one_day():
         recycling_income=waste_report.get("recyclingRevenueMonth",0)
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
-        health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0)
-        due=state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost
+        health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
+        due=state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost
         available=state["money"]+monthly_income
         net=monthly_income-due
         if available>=due:
@@ -2190,12 +2195,17 @@ def tick_one_day():
                 coverage=round(5+5*c["quality"])
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"civic","name":"Centro de salud","level":1,"occupants":0,"jobSlots":16,"status":"habilitado","monthlyCost":operating_cost,"quality":quality}); state["monthlyExpenses"]+=operating_cost; state["services"]=min(100,state["services"]+coverage); state["approval"]=min(100,state["approval"]+3)
                 ev("Centro de salud habilitado",f"Inspección aprobada con calidad {quality}%. Cobertura +{coverage} puntos; operación y mantenimiento $ {operating_cost}/mes.")
-            if p["kind"] not in ("civic","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
+            elif p["kind"]=="school":
+                operating_cost=820
+                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"school","name":"Escuela primaria municipal","level":1,"occupants":0,"jobSlots":12,"classrooms":4,"status":"habilitado","monthlyCost":operating_cost,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=operating_cost
+                ev("Escuela habilitada","Cuatro aulas para 96 estudiantes potenciales. El municipio financia $820/mes; la capacidad operativa depende de docentes, servicios y rutas.")
+            if p["kind"] not in ("civic","school","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
             state["projects"].remove(p)
     if day%30==0 and state["projects"]: ev("Revisión de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
 
 def health_service_report(workplaces=None,advance=False):
-    health=state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
+    health=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
+    state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0]
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
     staff={(w.get("x"),w.get("y")):w for w in workplaces if w.get("kind")=="civic"}
@@ -2262,6 +2272,49 @@ def health_service_report(workplaces=None,advance=False):
         "clinics":[{"name":c["name"],"x":c["building"]["x"],"y":c["building"]["y"],"staff":c["staff"],"primaryCapacity":round(c["primaryCapacity"],1),"urgentCapacity":round(c["urgentCapacity"],1),"utilityPct":round(c["utility"]*100),"averageTravelMinutes":round(sum(c["travelMinutes"])/max(1,len(c["travelMinutes"]))) if c["travelMinutes"] else None,"patients":c["patients"]} for c in clinics],
         "neighborhoods":area_rows[:6],"unreachableResidents":sum(a["population"] for a in areas if a["travelMinutes"] is None),"delayedWaterRiskPct":round(delayed_risk/population*100),"monthlySupplyCost":monthly_supplies,"primaryBacklog":round(health.get("primaryBacklog",0),1)}
 
+def education_service_report(workplaces=None,advance=False):
+    workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
+    pupils=[]
+    for home in (b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0):
+        for person in home.get("residents",[]):
+            ensure_person_work_profile(person)
+            if person.get("age") is None:
+                seed=stable_skill(person.get("id",""),"edad")
+                person["age"]=18+seed%48 if person.get("workerEligible") else (5+seed%13 if seed%100<62 else 66+seed%20)
+            if 5<=person["age"]<=17:pupils.append((home,person))
+    schools=[]
+    for building in (b for b in state["buildings"] if b.get("kind")=="school" and b.get("status") in ("habilitado","operativo")):
+        work=next((w for w in workplaces if w.get("kind")=="school" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
+        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100
+        schools.append({"building":building,"teachers":max(0,work.get("staffedJobs",0)),"utility":utility,"seats":max(0,int(building.get("classrooms",4))*24),"assigned":[]})
+    for home,person in pupils:
+        options=[]
+        for school in schools:
+            path=route_between((home["x"],home["y"]),(school["building"]["x"],school["building"]["y"]))
+            if path:
+                minutes=max(0,len(path)-1)*2.5+4
+                if minutes<=40:options.append((minutes,school))
+        if options:
+            minutes,school=min(options,key=lambda x:(x[0],x[1]["building"]["x"],x[1]["building"]["y"]))
+            school["assigned"].append((person,minutes))
+    rows=[];within=served=0
+    for school in schools:
+        teacher_capacity=school["teachers"]*18;capacity=round(min(school["seats"],teacher_capacity)*school["utility"])
+        enrolled=min(capacity,len(school["assigned"]));within+=len(school["assigned"]);served+=enrolled
+        rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),"seatCapacity":school["seats"],"teacherCapacity":teacher_capacity,"operationalCapacity":capacity,"studentsNearby":len(school["assigned"]),"enrolled":enrolled,"unserved":max(0,len(school["assigned"])-enrolled),"utilityPct":round(school["utility"]*100),"averageTravelMinutes":round(sum(x[1] for x in school["assigned"])/max(1,len(school["assigned"])),1) if school["assigned"] else None})
+    month=(state.get("day",1)-1)//30;education=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
+    if advance and month>education.get("lastProcessedMonth",-1):
+        education["lastProcessedMonth"]=month
+        for school,row in zip(schools,rows):
+            for person,_ in school["assigned"][:row["enrolled"]]:
+                progress=person.setdefault("educationProgress",{"months":0,"level":"inicial"});progress["months"]+=1
+                if progress["months"]%12==0:
+                    progress["level"]="primaria" if progress["months"]<72 else "secundaria"
+                    for skill in ("comercio","administracion","logistica","salud"):person["skills"][skill]=min(100,person["skills"].get(skill,25)+2)
+        ev("Ciclo escolar",f"{served} estudiantes asisten; {within-served} quedan sin plaza operativa. Docentes y aulas limitan la cobertura.")
+    total=len(pupils)
+    return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,"coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(served*.35)}
+
 def public_state(player_id=None):
     ensure_supply_state()
     cutoff=time.time()-25
@@ -2297,14 +2350,14 @@ def public_state(player_id=None):
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
     view["trainingCatalog"]=training_catalog()
-    view["healthReport"]=health_service_report(commute["workplaces"])
+    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"])
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
-    view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
+    view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
     transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+view["healthReport"].get("monthlySupplyCost",0))
+    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+view["healthReport"].get("monthlySupplyCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
@@ -2337,7 +2390,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.54"
+    server_version="CiudadViva/0.55"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2460,7 +2513,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
-                    if kind in ("airport","hotel","powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
+                    if kind in ("airport","hotel","school","powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
                     bus_line=None
                     if kind=="busStop":
                         bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)

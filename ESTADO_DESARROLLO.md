@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.54 · 31 de octubre de 2026
+**Entrega:** Alfa 0.55 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.55 · Fase 28 (parcial): sumé escuelas municipales como obras con licitación, cuadrilla, anticipo e inspección (68 días base, $9.600; Online usa materiales, Offline aún no maneja su compra/entrega). La escuela entrega 4 aulas y 12 vacantes docentes; un máximo de 96 plazas físicas depende de docentes cualificados, acceso a calles ≤40 minutos y servicios operativos. La demanda usa residentes simulados de 5–17 años; registra alumnos atendidos, en espera y sin ruta. Costos: $820 de operación y $0,35 mensual por estudiante. Con asistencia sostenida durante 12 meses, suben habilidades laborales; un curso municipal de Educación forma candidatos a docentes. Online/Offline, esquema 40. Verificación: Online: construcción/entrega con materiales y capacidad/espera; Offline: contrato y asistencia; compras/entregas siguen pendientes en modo local; Chromium a 390×844 y 1440×900 sin solapamiento, desbordes horizontales ni errores JavaScript. Continúa parcial: sin educación inicial, niveles diferenciados, expansión de aulas o análisis por grupo etario/distrito.
 
 - Alfa 0.54 · Fase 28 (parcial): cada centro cívico funciona como atención primaria y urgencias básicas si tiene personal con perfil Salud, electricidad, agua, cloacas y rutas de hasta 45 minutos. Doce puestos en el centro inicial y 16 en una nueva obra; cada profesional aporta 2,2 consultas primarias y 0,35 urgencias/día antes de ajustar por servicios. La demanda depende de población, agua/cloacas con rezago de 30 días y urgencias de calor. Los casos sin atender generan lista de espera acumulable; el panel informa cobertura, costos de insumos y barrios afectados. El curso Salud forma seis residentes en dos cierres mensuales por $840. Online/Offline, pantalla Ciudad > Salud, migración de guardados al esquema 39. Pruebas confirmaron 95% de consultas primarias y 100% de urgencias en el mapa inicial; sin personal la capacidad es cero. Chromium a 390×844 y 1440×900: scroll vertical, sin desbordes horizontales ni errores JavaScript. Pendientes: pediatría/edades, camas, ambulancias, diagnósticos, ampliar un centro existente y otros servicios de la fase 28.
 

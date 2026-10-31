@@ -6,4 +6,4 @@
 4. Ampliar mapas mediante sectores cargables y optimizar instancias/LOD antes de ciudades grandes.
 5. Implementar responsabilidades municipales, apoyo y elecciones conforme a las fases del roadmap.
 
-La Alfa 0.16 asigna residentes a empleadores, ajusta salarios a la asistencia por congestión y acredita nóminas a los hogares. La entrega entre equipos físicos por Wi-Fi continúa pendiente de una prueba fuera de este entorno.
+La Alfa 0.17 incorpora elección de modo al inicio. Offline juega y guarda en el navegador en Vercel; Online conecta a la sala LAN servida por el anfitrión. La simulación offline permite calendario, zonificación y obras básicas por etapas; pedidos de materiales y rescate aún requieren servidor. La entrega entre equipos físicos por Wi-Fi continúa pendiente de una prueba fuera de este entorno.

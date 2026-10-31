@@ -731,7 +731,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.16"
+    server_version="CiudadViva/0.17"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -750,12 +750,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT}); return
         rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","game.js","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
+        if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
             self._send(404,{"error":"No encontrado"}); return
         file=(ROOT/rel).resolve()
         if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta inválida"}); return
         if not file.is_file(): self._send(404,{"error":"No encontrado"}); return
-        typ="text/html; charset=utf-8" if file.suffix==".html" else "text/css; charset=utf-8" if file.suffix==".css" else "application/javascript; charset=utf-8" if file.suffix==".js" else "image/svg+xml" if file.suffix==".svg" else "application/octet-stream"
+        typ="text/html; charset=utf-8" if file.suffix==".html" else "text/css; charset=utf-8" if file.suffix==".css" else "application/javascript; charset=utf-8" if file.suffix==".js" else "application/json; charset=utf-8" if file.suffix==".json" else "image/svg+xml" if file.suffix==".svg" else "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
         global state

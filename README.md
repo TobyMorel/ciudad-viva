@@ -1,6 +1,10 @@
-# Ciudad Viva · Alfa 0.16
+# Ciudad Viva · Alfa 0.17
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
+
+## Modos de juego
+
+Al abrir la página se puede elegir **Offline** u **Online · red local**. Offline funciona en Vercel y guarda la ciudad en el almacenamiento local del navegador. Incluye calendario, parcelas, zonificación y obras con progreso por etapas; pedidos logísticos y rescate de obras siguen requiriendo el servidor. Para compartir una ciudad, elegí Online y abrí la dirección LAN del equipo anfitrión.
 
 ## Iniciar
 
@@ -27,4 +31,4 @@ Pendientes: contratos, habilidades y horarios laborales, competencia y proveedor
 
 ## Publicación en Vercel
 
-Esta versión no se puede jugar desplegando solo los archivos estáticos: el navegador necesita la API autoritativa de `server.py` para el reloj, acciones, guardado y sincronización. Vercel no mantiene ese proceso Python activo entre solicitudes, y no ofrece la sala LAN local del iniciador. El sitio puede servir los recursos, pero no iniciar una partida funcional. Para jugar hoy, ejecutá el iniciador incluido en una computadora anfitriona; para una versión web en Vercel hace falta separar la simulación y persistir su estado en un backend durable. Eso también cambiaría el requisito de multijugador exclusivamente LAN si ese backend fuera público.
+Esta versión no se puede jugar desplegando solo los archivos estáticos: el navegador necesita la API autoritativa de `server.py` para el reloj, acciones, guardado y sincronización. Vercel no mantiene ese proceso Python activo entre solicitudes, y no ofrece la sala LAN local del iniciador. La opción Offline usa simulación local del navegador; la opción Online requiere abrir una instancia servida por el anfitrión LAN. Para jugar hoy, ejecutá el iniciador incluido en una computadora anfitriona; para una versión web en Vercel hace falta separar la simulación y persistir su estado en un backend durable. Eso también cambiaría el requisito de multijugador exclusivamente LAN si ese backend fuera público.

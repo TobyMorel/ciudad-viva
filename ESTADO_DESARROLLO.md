@@ -1,7 +1,9 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.16 · 31 de octubre de 2026  
+**Entrega:** Alfa 0.17 · 31 de octubre de 2026  
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
+
+- Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
 
 ## Implementado
 
@@ -20,6 +22,8 @@
 - Inventarios, saldos de contratistas, ofertas y estado de cada pedido visibles en la interfaz y persistentes en el guardado. La cola de descarga ordena pedidos por prioridad manual, material que desbloquea una etapa detenida, días de espera y exposición contractual calculada. La exposición se informa en la interfaz y no se cobra. El guardado usa esquema 14 y migra automáticamente las ciudades Alfa anteriores; los flujos laborales y sus tiempos se derivan al cargar el estado, no se guardan duplicados.
 
 - La asistencia individual derivada del tiempo de viaje determina el salario cobrado. La nómina efectiva de cada empleador coincide con el dinero acreditado en los hogares; el inspector muestra asistencia y trabajadores con jornada reducida por tráfico.
+
+- Alfa 0.17: en servidor estático sin API, Online muestra la explicación de que se requiere sala LAN y no deja el juego en bucle de reconexión. Offline inicia, avanza el calendario, conserva la ciudad al recargar y acepta contratos locales. Chromium no reportó errores JS.
 
 ## Verificaciones ejecutadas
 
@@ -53,4 +57,4 @@
 - Los residentes trabajadores ya tienen identidad y empleador, con salario mensual a la caja común de su hogar. Todavía comparten una sola caja por vivienda y no tienen horario, formación, contrato o búsqueda con preferencias. Los viajes laborales están agrupados en el mapa; los autos y peatones ambientales siguen decorativos.
 - Los empleados tienen identidad y empleador, pero no contrato, habilidades, horarios ni preferencias de búsqueda. Las empresas comerciales ya tienen caja, inventario, producción, ventas, costos y quiebra; faltan proveedores productivos identificables, competencia de precios y encadenamiento entre empresas. Los depósitos ya mantienen inventario separado y abastecen obras conectadas; la descarga visible usa trabajadores y autoelevadores finitos. Los viajes y la asistencia siguen agregados, sin horarios ni decisiones de ruta individuales; los autos no laborales y peatones son decorativos. También faltan salarios reales de cuadrillas.
 - No están implementados electricidad, agua, cloacas, residuos, transporte público funcional, elecciones, puertos, aeropuertos, turismo, clima, patrimonio o simulación por décadas.
-- Requiere Python 3.9+ y WebGL. Descubrimiento de salas por código, transferencia de anfitrión, autenticación y validación física de Wi-Fi siguen pendientes.
+- Offline requiere navegador con WebGL; Online requiere Python 3.9+ en el anfitrión. Descubrimiento de salas por código, transferencia de anfitrión, autenticación y validación física de Wi-Fi siguen pendientes. Offline todavía no incluye pedidos logísticos, rescate de obra ni reasignación laboral dinámica de edificios nuevos.

@@ -14,3 +14,5 @@
 - **Presupuesto inicial:** $48.000 municipales, $26.000 privados, 620 residentes, 286 empleos, $6.200/mes de ingresos y $4.700/mes de gastos. Son valores iniciales de balance, no una economía final.
 
 - **Empleo y salarios (Alfa 0.16):** cada residente en edad laboral se representa como registro estable dentro de su hogar. Una persona ocupa como máximo una vacante alcanzable por calle. La asistencia derivada del tiempo de viaje multiplica el salario base: la nómina acreditada en el hogar coincide con el débito privado o el gasto municipal. Los hogares compran una cantidad pequeña de bienes solo si tienen efectivo. Se usa una caja común por vivienda hasta implementar personas adultas e ingresos separados.
+
+- **Modos de ejecución (Alfa 0.17):** Offline usa un estado inicial estático y persistencia localStorage, por lo que funciona en hosting estático como Vercel. Conserva avance de calendario, obras básicas y partidas en el mismo navegador. Online requiere la API Python del anfitrión LAN y se valida antes de entrar. La simulación offline aún no implementa pedidos logísticos ni todas las acciones del servidor.

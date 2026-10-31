@@ -1,3 +1,5 @@
+Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md`.
+
 # Siguiente entrega · continuidad
 
 1. Completar fase 21 con programas de formación que ocupen presupuesto y plazas, tarden varios ciclos y eleven habilidades de cohortes concretas.

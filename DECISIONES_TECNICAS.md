@@ -264,3 +264,8 @@ La fábrica usa plantilla y acceso simultáneo a energía, agua y tratamiento cl
 - Se usa una cooperativa regional finita para abastecer a la procesadora con grano. La empresa paga el pedido desde caja privada, el stock del proveedor se descuenta al despachar y el insumo solo ingresa al recibir la carga por ruta. El límite de reposición mensual y el stock máximo evitan importaciones infinitas.
 - Cada unidad de grano permite procesar como máximo una unidad de alimento terminado. La producción también requiere plantilla, servicios y lugar en el inventario local; los comercios compran los alimentos y acreditan ventas a la fábrica. Se mantiene separado del proveedor de insumos minoristas para evitar que una tienda compre grano crudo.
 - El mismo objeto de pedido se usa para entrega temporal y representación en el mapa 3D. Online actualiza distancia recorrida con congestión; Offline estima llegada por ruta y días. No se afirma una simulación de tráfico idéntica entre motores.
+
+
+## Alfa 0.83 · revisión reproducible del plazo
+
+El riesgo de demora se evalúa al menos una vez por cada 30 días transcurridos desde la adjudicación. Su probabilidad es 2,5% base + 22% de la falta de confiabilidad histórica + 4 puntos porcentuales si la empresa mantiene ocupada toda su capacidad. El resultado se deriva de coordenadas de obra, ciclo y empresa; no requiere estado de RNG nuevo y persiste mediante `lastRiskReviewCycle`. Si se materializa, suma entre 2 y 5 días, consume la jornada sin avance y redistribuye los certificados sobre el plazo ampliado. La regla es idéntica en Python y JavaScript para conservar guardados y paridad Offline. No se cobra sobrecosto ni penalidad: el precio adjudicado permanece fijo hasta implementar órdenes de cambio y reclamos.

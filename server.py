@@ -774,6 +774,25 @@ def ev(title, detail):
     state["events"].insert(0,{"day":state["day"],"title":title,"detail":detail})
     del state["events"][30:]
 
+def assess_contract_delay(project, contractor):
+    """Monthly, reproducible schedule risk from past reliability and current workload."""
+    day=int(state.get("day",1));start=int(project.get("contractedDay",day-max(0,int(project.get("elapsed",0)))))
+    cycle=max(1,(day-start)//30)
+    if day-start<30 or int(project.get("lastRiskReviewCycle",0))>=cycle:return False
+    project["lastRiskReviewCycle"]=cycle
+    active=sum(1 for p in state.get("projects",[]) if p.get("contractor")==project.get("contractor") and p.get("status") not in ("pausada","cancelada","finalizada"))
+    capacity=max(1,int(contractor.get("capacity",1)));congested=active>=capacity
+    reliability=max(0,min(1,float(contractor.get("reliability",.75))))
+    chance=.025+(1-reliability)*.22+(.04 if congested else 0)
+    salt=CONTRACTOR_NAMES.index(project.get("contractor")) if project.get("contractor") in CONTRACTOR_NAMES else 0
+    seed=(int(project.get("x",0)+1)*73856093 ^ int(project.get("y",0)+1)*19349663 ^ cycle*83492791 ^ salt*2654435761)&0xffffffff
+    if (seed%10000)/10000>=chance:return False
+    delay=2+(seed//10000)%4
+    project["duration"]+=delay;project["delayDays"]=int(project.get("delayDays",0))+delay
+    project["lastDelayReason"]=(f"Confiabilidad histórica {round(reliability*100)}%"+(f" · capacidad completa {active}/{capacity}" if congested else ""))
+    ev("Demora contractual detectada",f"{project.get('label','La obra')} de {project.get('contractor','la constructora')} requiere {delay} días adicionales. Causa: {project['lastDelayReason']}; avance físico y certificados se ajustaron al nuevo plazo.")
+    return True
+
 CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
@@ -3006,6 +3025,7 @@ def tick_one_day():
             p["status"]="contratada";p["cause"]="Insumos recibidos; la cuadrilla vuelve a trabajar"
             ev("Obra reanudada por abastecimiento",f"{p['label']} recibió materiales y retoma el avance.")
         c=CONTRACTORS[p["contractor"]]
+        if assess_contract_delay(p,c): continue
         next_elapsed=p["elapsed"]+1
         missing=missing_materials(p,next_elapsed)
         if missing:

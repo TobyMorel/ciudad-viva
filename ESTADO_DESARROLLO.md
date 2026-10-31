@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.82 · 31 de octubre de 2026
+**Entrega:** Alfa 0.83 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -565,3 +565,17 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 - Offline en navegador: llegaron pedidos de 54 y 27 unidades por calles conectadas; el siguiente cierre produjo 27 alimentos con 19 trabajadores. También se verificó que los pedidos de grano no se ofrecen a comercios como insumos minoristas.
 - Chromium 390×844 y 1440×900: el panel de abastecimiento ajusta sus columnas al ancho del modal; sin desborde horizontal de página ni errores JS. La ruta de grano se ve como camión 3D.
 - Fase 18 pasa de 55% a 60% usando el criterio documentado de saltos de cinco puntos. El progreso global sigue sin estimación por falta de ponderación de las 34 fases. LAN física y Vercel no se probaron.
+
+
+## Alfa 0.83 · demoras contractuales por desempeño (fase 19)
+
+- Cada proyecto activo revisa una vez por ciclo de 30 días el riesgo de plazo. La probabilidad usa la confiabilidad histórica de la empresa y si está ocupada toda su capacidad contratada; un resultado estable derivado de obra, ubicación y ciclo permite reproducir la misma partida tras guardar/cargar.
+- Si se detecta demora, no avanza el trabajo ese día, el plazo se amplía 2–5 días y el pago certificado sigue el avance sobre el nuevo plazo. Se guarda el total de días, ciclo revisado y causa. Las tarjetas de contratos muestran la demora cuando existe; los eventos registran la causa y el ajuste.
+- Online y Offline aplican la misma fórmula. No cambia el precio adjudicado ni se crean multas ficticias: costos por cambios, reclamos y garantías quedan pendientes para etapas posteriores de fase 19.
+
+### Verificación Alfa 0.83
+
+- `python -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, JSON de notas y `git diff --check`: correctos.
+- Online: `tick_one_day()` con una obra de riesgo registró +4 días, no avanzó esa jornada y guardó su ciclo; un escenario sin incidencia avanzó con normalidad y tampoco duplicó la revisión. Se probaron las tres constructoras y el rango de 2–5 días. Offline en Chromium: la misma coordenada/ciclo registró +4 días, el plazo pasó de 60 a 64 y el avance se reanudó al día siguiente; un caso sin incidencia mantuvo su calendario. La tarjeta exhibe la causa.
+- Chromium 390×844 y 1440×900: texto de demora legible en la tarjeta, sin overflow horizontal de página/tarjeta ni errores JS. LAN física y Vercel no probados.
+- Fase 19 sube de 30% a 35%: confiabilidad y capacidad ahora afectan el calendario del proyecto en ambos motores. El total global sigue sin estimarse por falta de ponderaciones verificables para las 34 fases.

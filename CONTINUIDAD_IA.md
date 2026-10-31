@@ -103,3 +103,8 @@ Continuar la fase 33 con simulación reproducible de varias décadas. Hacer prue
 La procesadora compra grano finito a una cooperativa regional, paga con caja empresarial, espera preparación y ruta vial, produce solo con insumo real y vende stock de alimentos a comercios por el mercado existente. La ficha informa pedidos, inventario, faltantes y ventas; los camiones 3D pueden seleccionarse. Verificado Online y Offline con llegadas y producción.
 
 **Próximo punto:** implementar las cadenas áridos→hormigón→obra y madera→aserradero→materiales, y hacer que el abastecimiento de fábricas compita por cuotas bajo escasez. Después avanzar fase 19 (licitaciones y dirección de obras); continuar gobierno electoral del hito E más adelante. Conservar las acciones abiertas a invitados y documentar las diferencias Offline conocidas. El global continúa no estimable sin pesos de fase.
+
+
+### Alfa 0.83 · cumplimiento contractual con efecto real (actual)
+
+Fase 19: el riesgo de demora ya afecta calendario y avance en Online/Offline. `assess_contract_delay()` en `server.py` y `assessOfflineContractDelay()` en `offline.js` revisan ciclos de 30 días. La probabilidad depende de confiabilidad y saturación de capacidad; el resultado es reproducible por coordenadas/ciclo/empresa. La obra guarda `lastRiskReviewCycle`, `delayDays` y `lastDelayReason`; la tarjeta de obra los muestra. Mantener ambas fórmulas iguales al modificarlas y probar un caso de demora y otro sin demora. No hay multas, orden de cambio ni reclamos todavía. Siguiente: agregar pagos por hitos físicos y retenciones o la garantía técnica; evitar ampliar detalle visual aislado.

@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.82
+# Auditoría del roadmap · Alfa 0.83
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -303,3 +303,8 @@ La fase 17 subraya las empresas y empleos de la nueva fábrica; fase 18 la caden
 La procesadora importa grano de cuota regional limitada por camión, descuenta la compra de su caja, espera ETA, consume inventario en producción condicionada a empleo/servicios y ofrece alimentos como proveedor local. Los comercios compran esos productos y abonan a la fábrica. La ficha del edificio y los camiones 3D muestran el ciclo. Una primera cadena está verificada; permanecen pendientes los otros tres circuitos del roadmap, depósitos y mermas.
 
 La fase 18 sube a 60%. Offline comparte insumo/producción pero conserva sus diferencias: pedidos con ETA simplificada y obras sin consumo de materiales. El global permanece sin cálculo verificable porque no hay ponderaciones entre fases.
+
+
+## Alfa 0.83 · segunda evidencia para fase 19
+
+El historial de confiabilidad de las constructoras deja de ser solo informativo: cada ciclo de 30 días evalúa un riesgo de demora por empresa y ocupación de capacidad. Cuando se concreta, agrega días al calendario contractual, omite avance esa jornada y conserva motivo y conteo en Online y Offline. Fase 19: 35% (ofertas/capacidad + riesgo de calendario). Pendiente: hitos, alcance, multas, disputas, garantías, inspección de defectos y rescate. No se estima el avance global sin pesos comunes.

@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.82",
+  "currentVersion": "0.83",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.83",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 19: la confiabilidad histórica de la constructora y la ocupación de su capacidad determinan un riesgo mensual reproducible de demora. Cuando ocurre, se detiene el avance de esa jornada, aumenta el plazo contractual 2–5 días y los certificados quedan ligados al nuevo avance; se conserva la causa en el proyecto y en acontecimientos.",
+        "Online y Offline aplican la misma regla a proyectos de obra. Las tarjetas de contratos muestran el tiempo añadido y su causa cuando sucede. La oferta mantiene visibles precio, calidad, confiabilidad y capacidad para comparar empresas."
+      ],
+      "roadmapPhase": 19,
+      "phaseProgress": 35,
+      "overallProgress": null
+    },
     {
       "version": "0.82",
       "date": "2026-10-31",
@@ -921,10 +932,12 @@
     {
       "phase": 19,
       "title": "Licitaciones avanzadas y dirección de obras complejas",
-      "progress": 30,
-      "summary": "Licitaciones comparables, adjudicación y avance contractual por etapas",
+      "progress": 35,
+      "summary": "Comparación de ofertas, capacidad y riesgos de plazo con demoras mensuales persistentes ligadas al historial de cumplimiento.",
       "pending": [
-        "Dirección de proyectos complejos, hitos, penalidades, disputa y auditoría."
+        "Etapas conceptuales y ejecutivas con tiempos propios; tareas con dependencias; certificación por hitos y retenciones.",
+        "Órdenes de cambio, multas/reclamos, disputas, garantías y recepción provisional.",
+        "Riesgos específicos de clima, geotecnia, permisos, equipamiento y quiebra; recuperación de obras sin reiniciar."
       ]
     },
     {
@@ -1055,5 +1068,6 @@
         "Probar ciudades pequeñas, metropolitanas, portuarias y turísticas"
       ]
     }
-  ]
+  ],
+  "overallProgress": null
 }

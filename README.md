@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.82
+# Ciudad Viva · Alfa 0.83
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -232,3 +232,8 @@ Pintá suelo residencial, comercial o industrial para permitir inversión. Las c
 ## Alfa 0.82 · primera cadena de alimentos
 
 La procesadora industrial compra grano a una cooperativa regional con cupo mensual finito, paga la mercancía y espera el transporte por carretera. El grano recibido limita su producción junto con el empleo y los servicios; el alimento terminado queda en inventario local y los comercios lo compran por la red de proveedores. Los pedidos y camiones son visibles, y la ficha del edificio informa cantidades, costos y faltantes. Online y Offline.
+
+
+## Alfa 0.83 · riesgo de plazo contractual
+
+La confiabilidad histórica ya afecta la ejecución de las obras. Cada 30 días, una revisión reproducible combina el historial de cumplimiento de la constructora y su carga de contratos; ciertos resultados detienen el avance de la jornada y amplían el plazo entre 2 y 5 días. El estado conserva las demoras y su causa. El avance físico y los certificados se recalculan usando el plazo revisado. Funciona en Online y Offline.

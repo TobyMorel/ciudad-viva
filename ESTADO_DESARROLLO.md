@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.34 · 31 de octubre de 2026
+**Entrega:** Alfa 0.35 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -217,3 +217,18 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Chromium Offline con la semilla local comprobó 203 viajes de ida y 203 de regreso, con 10 pasajeros en cada sentido de la línea fixture y $110 de ingreso previsto.
 - El panel Movilidad en Chromium a 1440×960 y 390×844 queda dentro del viewport; no tiene desborde horizontal. El contenido largo conserva scroll vertical. Ida y vuelta y la ocupación por sentido son visibles; no se detectaron errores JS ni texto recortado.
 - El test Chromium aisló WebGL con un stub de render para medir la interfaz. La escena 3D de colectivos se validó por el recorrido de animación; no se hizo una prueba visual de píxeles del render. La LAN entre dos equipos físicos sigue pendiente.
+
+
+## Alfa 0.35 · horario y capacidad por franja
+
+- Las salidas del bus se calculan en nueve franjas de dos horas entre 05:00 y 23:00. Cada una deriva su frecuencia del largo del recorrido y la cantidad de colectivos; las ventanas de menor demanda amplían el intervalo. Los asientos por salida fijan capacidad por franja y por sentido.
+- Las personas se distribuyen de forma estable según su ID en tres turnos: temprano, matutino y mediodía. El regreso usa otro tramo horario y una reserva de aforo separada. Se actualiza el tiempo de espera, la alternativa de transporte y el costo del colectivo al cambiar de turno o franja. Dos conductores asignados por vehículo cubren 05:00–14:00 y 14:00–23:00.
+- Se conserva un costo mensual base por unidad y se agregan $0,08 por salida programada fuera de las dos franjas pico, por día laborable (22 días). Movilidad muestra horario, frecuencia, salidas, asientos y pasajeros. Los viajes no laborales todavía no existen, aunque el servicio puede salir sin pasajeros en ventanas sin demanda asignada.
+
+### Verificación Alfa 0.35
+
+- `python3 -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, validación JSON y `git diff --check` pasan.
+- En un corredor LAN fixture hubo 12 viajes matutinos y 12 regresos; siete franjas con salidas variables, 72 salidas programadas por sentido, aforo por ventana dentro del límite y cálculo consistente de tarifa mensual. Offline en el mismo corredor asignó siete viajes por sentido y el mismo catálogo de frecuencias.
+- Se verificó que el tiempo de espera refleje la frecuencia de la franja y que los pasajeros no superen su aforo específico. Los conductores cubren dos turnos y las horas de baja frecuencia elevan el gasto operativo por salidas adicionales.
+- Chromium, con WebGL aislado para medir la interfaz, abrió Horario diario en escritorio 1440×960 y móvil 390×844. Las nueve franjas se leen dentro del popup, el contenido largo mantiene scroll vertical y no hay desborde horizontal, texto cortado ni errores JavaScript.
+- LAN en dos dispositivos físicos y una simulación urbana de larga duración siguen pendientes. La selección modal y horarios cubren desplazamientos laborales; la demanda no laboral, trenes, metro y carga aún faltan.

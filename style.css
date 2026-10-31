@@ -81,4 +81,6 @@ canvas#city{touch-action:none}
 
 .bus-transfers{max-width:100%;min-width:0;border:1px solid #bfd8dc;border-radius:13px;background:#edf5f5;padding:.55rem .7rem;margin:.45rem 0 .8rem}.bus-transfers summary{cursor:pointer;color:#245e65;font-size:.84rem;font-weight:800;overflow-wrap:anywhere}.bus-transfers>div{display:grid;gap:.3rem;padding:.45rem 0 .1rem}.bus-transfers small{display:block;color:#456b6c;line-height:1.45;overflow-wrap:anywhere}
 
+.bus-schedule{max-width:100%;min-width:0;border:1px solid #d1dfd4;border-radius:10px;background:#f3f8f1;padding:.45rem .6rem}.bus-schedule summary{cursor:pointer;color:#315f50;font-size:.75rem;font-weight:750;line-height:1.4;overflow-wrap:anywhere}.bus-schedule>div{display:grid;gap:.25rem;padding:.4rem 0}.bus-schedule small{display:block;color:#567065;font-size:.7rem;line-height:1.45;overflow-wrap:anywhere}
+
 .bus-mode-hint{display:block;margin:-.25rem 0 .65rem;color:#52736e;line-height:1.45;overflow-wrap:anywhere}

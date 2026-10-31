@@ -67,6 +67,11 @@ BUS_MONTHLY_OPERATING_COST=140
 BUS_FARE=0.25
 BUS_TRANSFER_DISCOUNT=0.4
 BUS_SEATS=30
+BUS_WINDOW_DEPARTURES=(
+    ("early","05:00–07:00",1.5),("morningPeak","07:00–09:00",1.0),("dayMorning","09:00–11:00",1.75),("dayNoon","11:00–13:00",1.75),
+    ("midday","13:00–15:00",1.5),("afternoon","15:00–17:00",1.5),
+    ("eveningPeak","17:00–19:00",1.0),("evening","19:00–21:00",1.75),("late","21:00–23:00",2.0))
+BUS_WORK_SHIFTS=(("early","afternoon"),("morningPeak","eveningPeak"),("midday","late"))
 
 def stable_skill(person_id, category):
     """Valor reproducible compartido con Offline, independiente del orden de carga."""
@@ -473,6 +478,27 @@ def bus_stop_sites(line):
 
 _commute_cache_key=None
 _commute_cache=None
+def work_shift_for(person_id):
+    person_id=str(person_id);slot=sum((index+1)*ord(char) for index,char in enumerate(person_id))%len(BUS_WORK_SHIFTS)
+    return BUS_WORK_SHIFTS[slot]
+
+def bus_service_schedule(line):
+    route_minutes=max(1,(len(line.get("route",[]))-1)*3.6+6)
+    base=max(6,math.ceil(route_minutes/max(1,line.get("effectiveBuses",0))))
+    active=bool(line.get("operational") and line.get("effectiveBuses",0)>0)
+    windows=[];headways={};capacities={};departures={}
+    for key,label,multiplier in BUS_WINDOW_DEPARTURES:
+        headway=math.ceil(base*multiplier);count=math.floor(120/headway) if active else 0;capacity=count*BUS_SEATS
+        headways[key]=headway;capacities[key]=capacity;departures[key]=count
+        windows.append({"key":key,"label":label,"headwayMinutes":headway,"departuresPerDirection":count,"capacityPerDirection":capacity})
+    outbound=sum(capacities.values())
+    inbound=outbound
+    extra=sum(departures[k] for k in departures if k not in ("morningPeak","eveningPeak"))*2
+    return {"scheduleWindows":windows,"headwayByWindow":headways,"capacityByWindow":capacities,"departuresByWindow":departures,
+            "ridersByWindow":{},"returnRidersByWindow":{},"capacity":outbound,"returnCapacity":inbound,
+            "headwayMinutes":headways["morningPeak"],"scheduledDeparturesPerDirection":sum(departures.values()),
+            "monthlyServiceCost":round(extra*22*.08)}
+
 def nearest_bus_node(point,path):
     return min((abs(point[0]-node[0])+abs(point[1]-node[1]),index) for index,node in enumerate(path))
 
@@ -480,15 +506,17 @@ def choose_bus_itinerary(emp):
     """Devuelve el trayecto más rápido con hasta un transbordo en parada construida."""
     home=(emp["home"]["x"],emp["home"]["y"]);site=(emp["site"]["x"],emp["site"]["y"])
     alternative=2+emp["distance"]*4 if emp["mode"]=="walk" else 7+emp["distance"]*2.5*1.25
-    lines=[line for line in state.get("busRoutes",[]) if line.get("operational") and len(line.get("route",[]))>1 and line.get("ridersThisPass",0)<line.get("capacity",0)]
+    window=emp.get("departureWindowKey","morningPeak")
+    lines=[line for line in state.get("busRoutes",[]) if line.get("operational") and len(line.get("route",[]))>1 and line.get("ridersByWindow",{}).get(window,0)<line.get("capacityByWindow",{}).get(window,0)]
     offers=[]
     for line in lines:
         access_from,start=nearest_bus_node(home,line["route"]);access_to,end=nearest_bus_node(site,line["route"])
         if access_from+access_to>2 or start>=end:continue
         ride=max(1,end-start)
-        minutes=(access_from+access_to)*4+line["headwayMinutes"]/2+ride*1.8+line.get("fare",BUS_FARE)*6
+        headway=line.get("headwayByWindow",{}).get(window,line["headwayMinutes"])
+        minutes=(access_from+access_to)*4+headway/2+ride*1.8+line.get("fare",BUS_FARE)*6
         if minutes<alternative:
-            offers.append({"lines":[line],"legFares":[line.get("fare",BUS_FARE)],"access":access_from+access_to,"ride":ride,"transferMinutes":0,"transferStop":None,"fare":line.get("fare",BUS_FARE),"travelRoute":line["route"][start:end+1],"minutes":minutes})
+            offers.append({"lines":[line],"headways":[headway],"legFares":[line.get("fare",BUS_FARE)],"access":access_from+access_to,"ride":ride,"transferMinutes":0,"transferStop":None,"fare":line.get("fare",BUS_FARE),"travelRoute":line["route"][start:end+1],"minutes":minutes})
     stops=[b for b in state["buildings"] if b.get("kind")=="busStop" and b.get("status") in ("habilitado","operativo")]
     if stops and len(lines)>1:
         for first in lines:
@@ -503,12 +531,13 @@ def choose_bus_itinerary(emp):
                     access_two,board=nearest_bus_node((stop["x"],stop["y"]),second["route"])
                     if access_one>1 or access_two>1 or start>=leave or board>=end:continue
                     ride=max(1,leave-start)+max(1,end-board)
-                    transfer=2+(access_one+access_two)*4+second["headwayMinutes"]/2
+                    first_headway=first.get("headwayByWindow",{}).get(window,first["headwayMinutes"]);second_headway=second.get("headwayByWindow",{}).get(window,second["headwayMinutes"])
+                    transfer=2+(access_one+access_two)*4+second_headway/2
                     leg_fares=[first.get("fare",BUS_FARE),round(second.get("fare",BUS_FARE)*BUS_TRANSFER_DISCOUNT,2)]
                     fare=round(sum(leg_fares),2)
-                    minutes=(access_from+access_to)*4+first["headwayMinutes"]/2+ride*1.8+transfer+fare*6
+                    minutes=(access_from+access_to)*4+first_headway/2+ride*1.8+transfer+fare*6
                     if minutes<alternative*(1.5 if emp["mode"]=="walk" else 1.25):
-                        offers.append({"lines":[first,second],"legFares":leg_fares,"access":access_from+access_to,"ride":ride,"transferMinutes":round(transfer),"transferStop":stop.get("name","Parada de intercambio"),"fare":fare,"travelRoute":first["route"][start:leave+1]+second["route"][board:end+1],"minutes":minutes})
+                        offers.append({"lines":[first,second],"headways":[first_headway,second_headway],"legFares":leg_fares,"access":access_from+access_to,"ride":ride,"transferMinutes":round(transfer),"transferStop":stop.get("name","Parada de intercambio"),"fare":fare,"travelRoute":first["route"][start:leave+1]+second["route"][board:end+1],"minutes":minutes})
     return min(offers,key=lambda item:(item["minutes"],len(item["lines"]),tuple(str(line["id"]) for line in item["lines"]))) if offers else None
 
 def add_return_commutes(employees,commutes):
@@ -518,16 +547,19 @@ def add_return_commutes(employees,commutes):
     for emp in employees:
         person=emp["person"]
         ids=list(reversed(emp.get("busLineIds",[])))
-        bus_ready=bool(ids) and all(lines[line_id].get("operational") and lines[line_id].get("returnRidersThisPass",0)<lines[line_id].get("capacity",0) for line_id in ids)
+        window=emp.get("returnWindowKey","eveningPeak")
+        bus_ready=bool(ids) and all(lines[line_id].get("operational") and lines[line_id].get("returnRidersByWindow",{}).get(window,0)<lines[line_id].get("capacityByWindow",{}).get(window,0) for line_id in ids)
         if bus_ready:
-            for line_id in ids:lines[line_id]["returnRidersThisPass"]+=1
+            for line_id in ids:
+                lines[line_id]["returnRidersThisPass"]+=1
+                counters=lines[line_id].setdefault("returnRidersByWindow",{});counters[window]=counters.get(window,0)+1
             fares=[lines[ids[0]].get("fare",BUS_FARE)]
             if len(ids)>1:fares.append(round(lines[ids[1]].get("fare",BUS_FARE)*BUS_TRANSFER_DISCOUNT,2))
             mode="bus";distance=emp["busDistance"];route=list(reversed(emp["busTravelRoute"]))
             transfer=emp.get("transferMinutes",0)
             if len(ids)>1:
                 old_second=lines[emp["busLineIds"][1]]
-                transfer=max(0,transfer-round(old_second["headwayMinutes"]/2)+round(lines[ids[1]]["headwayMinutes"]/2))
+                transfer=max(0,transfer-round(old_second.get("headwayByWindow",{}).get(emp.get("departureWindowKey","morningPeak"),old_second["headwayMinutes"])/2)+round(lines[ids[1]].get("headwayByWindow",{}).get(window,lines[ids[1]]["headwayMinutes"])/2))
             access=emp.get("busAccessSegments",0)*4
         else:
             ids=[];fares=[];mode="walk" if emp["distance"]<=3 or not person.get("carAccess") else "auto"
@@ -543,13 +575,14 @@ def add_return_commutes(employees,commutes):
         for line_id,_ in sorted(cents.items(),key=lambda item:(-(item[1]%100),str(item[0])))[:remainder]:due[line_id]+=1
         emp["monthlyBusFareByLine"]=due;person["monthlyBusFareByLine"]=due
         for line_id,amount in due.items():fare_due[line_id]=fare_due.get(line_id,0)+amount
-        group=(emp["site"]["x"],emp["site"]["y"],emp["home"]["x"],emp["home"]["y"],mode,tuple(ids))
+        group=(emp["site"]["x"],emp["site"]["y"],emp["home"]["x"],emp["home"]["y"],mode,tuple(ids),window)
         grouped.setdefault(group,[]).append((emp,route,distance,access,transfer,fares))
     return_trips=[]
-    for (sx,sy,hx,hy,mode,ids),rows in grouped.items():
+    for (sx,sy,hx,hy,mode,ids,window),rows in grouped.items():
         emp,route,distance,access,transfer,fares=rows[0]
         line=lines[ids[0]] if ids else None
-        wait=round(line["headwayMinutes"]/2) if line else 0 if mode=="walk" else 3
+        headway=line.get("headwayByWindow",{}).get(window,line["headwayMinutes"]) if line else None
+        wait=round(headway/2) if line else 0 if mode=="walk" else 3
         factor=1 if mode=="walk" else traffic_factor(route)
         ride=round(distance*(1.8 if line else 4 if mode=="walk" else 2.5)*factor)
         parking=2 if mode=="auto" else 0
@@ -557,7 +590,7 @@ def add_return_commutes(employees,commutes):
         vehicles=math.ceil(len(rows)/1.4) if mode=="auto" else 0
         emissions=round(vehicles*distance*.18,2)
         counts[mode]+=len(rows);minutes_total+=len(rows)*minutes;auto_vehicles+=vehicles;auto_emissions+=emissions
-        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":line.get("headwayMinutes") if line else None,"reason":"regreso","departureWindow":"17:00–19:00","walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor,2),"attendance":1})
+        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":headway,"reason":"regreso","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"17:00–19:00"),"departureWindowKey":window,"walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor,2),"attendance":1})
     commutes.extend(return_trips)
     for line_id,line in lines.items():
         line["dailyRiders"]=line.get("ridersThisPass",0)+line.get("returnRidersThisPass",0)
@@ -582,6 +615,7 @@ def commute_model():
         line["pauseReason"]="Sin conexión vial entre las paradas" if line.get("status")=="active" and not path else line.get("pauseReason")
         line["ridersThisPass"]=0
         line["returnRidersThisPass"]=0
+        line["ridersByWindow"]={};line["returnRidersByWindow"]={}
         line["forecastMonthlyFareRevenue"]=0
         if not line["operational"]:line.update({"monthlyOperatingCost":0,"monthlyFareRevenue":0})
     key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
@@ -649,7 +683,9 @@ def commute_model():
         remaining[si]-=1
         distance=distances[hi,si];mode="walk" if distance<=3 or not person["carAccess"] else "auto"
         person["commuteMode"]=mode
-        item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distance,"mode":mode}
+        depart_window,return_window=work_shift_for(person["id"])
+        person.update({"workShiftWindow":depart_window,"returnShiftWindow":return_window})
+        item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distance,"mode":mode,"departureWindowKey":depart_window,"returnWindowKey":return_window}
         employees.append(item);site_people[si].append(item)
     employed_ids={emp["person"].get("id") for emp in employees}
     for home,person,prior_status,prior_employer,prior_employer_id in seeking_without_route:
@@ -687,13 +723,12 @@ def commute_model():
             for index,(_,_,_,person) in enumerate(selected[:len(selected)//2*2]):
                 person.update({"status":"empleado","employerId":f"bus-{line['id']}","employerName":f"Colectivo · {line.get('originName','Línea')}","monthlyWage":10,"attendance":1,"commuteMode":"walk","busLineId":None,"unemployedSinceDay":None,"unemploymentReason":None})
                 line["driverIds"].append(person["id"])
-                line["driverShifts"].append({"personId":person["id"],"busIndex":index//2+1,"shift":"mañana" if index%2==0 else "tarde","window":"07:00–09:00" if index%2==0 else "17:00–19:00"})
+                line["driverShifts"].append({"personId":person["id"],"busIndex":index//2+1,"shift":"mañana" if index%2==0 else "tarde","window":"05:00–14:00" if index%2==0 else "14:00–23:00"})
         line["effectiveBuses"]=len(line["driverIds"])//2
         line["operational"]=line.get("status")=="active" and len(line.get("route",[]))>1 and line["effectiveBuses"]>0
         line["pauseReason"]=("Faltan dos conductores compatibles por colectivo para cubrir mañana y tarde" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexión vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
-        line["capacity"]=line["effectiveBuses"]*BUS_SEATS
-        line["headwayMinutes"]=max(6,math.ceil((max(1,len(line.get("route",[]))-1)*3.6)/max(1,line["effectiveBuses"])))
-        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST if line["operational"] else 0
+        line.update(bus_service_schedule(line))
+        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST+line["monthlyServiceCost"] if line["operational"] else 0
         if not line["operational"]:line["monthlyFareRevenue"]=0
         driver_count+=len(line["driverIds"])
     garages=sorted((b for b in state["buildings"] if b.get("kind")=="busGarage" and b.get("status") in ("habilitado","operativo")),key=lambda b:(b["x"],b["y"]))
@@ -711,34 +746,37 @@ def commute_model():
                 if assigned>0:line["garageAssignments"].append({"garageId":garage_id,"buses":assigned});free_bays[garage_id]-=assigned
         line["garageBuses"]=sum(a["buses"] for a in line["garageAssignments"])
         line["leasedBuses"]=line["effectiveBuses"]-line["garageBuses"]
-        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST-line["garageBuses"]*30 if line["operational"] else 0
+        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST-line["garageBuses"]*30+line.get("monthlyServiceCost",0) if line["operational"] else 0
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
+        window=emp.get("departureWindowKey","morningPeak")
         itinerary=choose_bus_itinerary(emp)
         if itinerary:
             for line,leg_fare in zip(itinerary["lines"],itinerary["legFares"]):
                 line["ridersThisPass"]+=1
-                line["forecastMonthlyFareRevenue"]+=round(leg_fare*44)
+                counts=line.setdefault("ridersByWindow",{});counts[window]=counts.get(window,0)+1
             ids=[line["id"] for line in itinerary["lines"]]
-            emp.update({"mode":"bus","busLineId":ids[0],"busLineIds":ids,"busLegFares":itinerary["legFares"],"busLine":itinerary["lines"][0],"busAccessSegments":itinerary["access"],"busDistance":itinerary["ride"],"transferMinutes":itinerary["transferMinutes"],"transferStop":itinerary["transferStop"],"busFare":itinerary["fare"],"busTravelRoute":itinerary["travelRoute"]})
+            emp.update({"mode":"bus","busLineId":ids[0],"busLineIds":ids,"busLegFares":itinerary["legFares"],"busHeadways":itinerary.get("headways",[]),"busLine":itinerary["lines"][0],"busAccessSegments":itinerary["access"],"busDistance":itinerary["ride"],"transferMinutes":itinerary["transferMinutes"],"transferStop":itinerary["transferStop"],"busFare":itinerary["fare"],"busTravelRoute":itinerary["travelRoute"]})
+            emp["person"].update({"busHeadways":itinerary.get("headways",[])})
             emp["person"].update({"commuteMode":"bus","busLineId":ids[0],"busLineIds":ids,"busLegFares":itinerary["legFares"]})
         else:
             emp["busLineId"]=None;emp["busLineIds"]=[];emp["busLegFares"]=[];emp["person"].update({"commuteMode":emp["mode"],"busLineId":None,"busLineIds":[],"busLegFares":[]})
-        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"],tuple(emp.get("busLineIds",[])))
+        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"],tuple(emp.get("busLineIds",[])),window)
         grouped.setdefault(group,[]).append(emp)
         distance_total+=emp["distance"]
     walking=auto_commuters=bus_commuters=vehicles=0;emissions=0.0
-    for (hx,hy,sx,sy,mode,line_ids),items in grouped.items():
+    for (hx,hy,sx,sy,mode,line_ids,window),items in grouped.items():
         route=items[0]["route"];distance=items[0].get("busDistance",items[0]["distance"]);factor=1.0
         line=items[0].get("busLine") if mode=="bus" else None
-        walk_access=items[0].get("busAccessSegments",0)*4 if line else 2;wait=0 if mode=="walk" else round(line.get("headwayMinutes",60)/2) if line else 3;ride=round(distance*(4 if mode=="walk" else 1.8 if line else 2.5)*factor);parking=0 if mode in ("walk","bus") else 2
+        headway=line.get("headwayByWindow",{}).get(window,line.get("headwayMinutes",60)) if line else None
+        walk_access=items[0].get("busAccessSegments",0)*4 if line else 2;wait=0 if mode=="walk" else round(headway/2) if line else 3;ride=round(distance*(4 if mode=="walk" else 1.8 if line else 2.5)*factor);parking=0 if mode in ("walk","bus") else 2
         transfer_minutes=items[0].get("transferMinutes",0)
         minutes=walk_access+wait+ride+parking+transfer_minutes;attendance=max(.25,1-max(0,minutes-15)/240)
         trip_vehicles=math.ceil(len(items)/1.4) if mode=="auto" else 0
         trip_emissions=round(trip_vehicles*distance*.18,2)
         walking+=len(items) if mode=="walk" else 0;auto_commuters+=len(items) if mode=="auto" else 0;bus_commuters+=len(items) if mode=="bus" else 0;vehicles+=trip_vehicles;emissions+=trip_emissions
-        commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"busTravelRoute":items[0].get("busTravelRoute"),"mode":mode,"busLineId":line.get("id") if line else None,"busLineIds":list(line_ids),"busLegFares":items[0].get("busLegFares",[]),"transferStop":items[0].get("transferStop"),"fare":items[0].get("busFare",0),"headwayMinutes":line.get("headwayMinutes") if line else None,"reason":"trabajo","departureWindow":"07:00–09:00","walkAccessMinutes":walk_access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer_minutes,"estimatedMinutes":minutes,"vehicles":trip_vehicles,"dailyEmissionsKg":trip_emissions,"trafficFactor":round(factor,2),"attendance":round(attendance,2)})
+        commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"busTravelRoute":items[0].get("busTravelRoute"),"mode":mode,"busLineId":line.get("id") if line else None,"busLineIds":list(line_ids),"busLegFares":items[0].get("busLegFares",[]),"transferStop":items[0].get("transferStop"),"fare":items[0].get("busFare",0),"headwayMinutes":headway,"reason":"trabajo","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"07:00–09:00"),"departureWindowKey":window,"walkAccessMinutes":walk_access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer_minutes,"estimatedMinutes":minutes,"vehicles":trip_vehicles,"dailyEmissionsKg":trip_emissions,"trafficFactor":round(factor,2),"attendance":round(attendance,2)})
         weighted_minutes+=len(items)*minutes
         si=items[0]["siteIndex"];site_effective[si]+=len(items)*attendance;site_minutes[si]+=len(items)*minutes
         for aa,bb in zip(route,route[1:]):
@@ -753,7 +791,7 @@ def commute_model():
             if edge[0] in roads and edge[1] in roads:segment_flow[edge]=segment_flow.get(edge,0)+line.get("effectiveBuses",0)/80
         line["dailyRiders"]=line.get("ridersThisPass",0)
         if line.get("fareCollectedDay")!=state["day"]:line["monthlyFareRevenue"]=line.get("forecastMonthlyFareRevenue",0)
-        line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST-line.get("garageBuses",0)*30
+        line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST-line.get("garageBuses",0)*30+line.get("monthlyServiceCost",0)
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
@@ -775,7 +813,8 @@ def commute_model():
         trip["estimatedMinutes"]=minutes
         attendance=max(.25,1-max(0,minutes-15)/240)
         trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
-        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"],tuple(trip.get("busLineIds",[])))
+        if trip.get("reason")=="regreso":continue
+        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"],tuple(trip.get("busLineIds",[])),trip.get("departureWindowKey","morningPeak"))
         for emp in grouped.get(group,[]):
             emp["attendance"]=attendance
             emp["earnedWage"]=round(emp["wage"]*attendance)

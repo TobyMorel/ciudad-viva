@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.34",
+  "currentVersion": "0.35",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.35",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los colectivos publican salidas y asientos por nueve franjas de dos horas, de 05:00 a 23:00. La frecuencia depende del recorrido y la flota; las franjas fuera de hora pico reducen frecuencia, espera y capacidad disponible.",
+        "Los trabajadores reciben turnos estables por residente y eligen bus según la espera de su franja. El regreso usa su propio turno, aforo y tarifa integrada; dos turnos de conductores cubren la jornada completa.",
+        "Cada salida de baja demanda agrega costo operativo. Movilidad despliega el horario, las salidas previstas, los asientos y viajeros por franja. Chromium verificó la interfaz en 1440×960 y 390×844, sin texto recortado, solapamientos ni desborde horizontal."
+      ]
+    },
     {
       "version": "0.34",
       "date": "31 de octubre de 2026",

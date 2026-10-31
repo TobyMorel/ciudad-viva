@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.72",
+  "currentVersion": "0.73",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.73",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 33 (parcial): el calendario anual envejece residentes; al cumplir 18 pasan a buscar empleo y a los 67 se jubilan y liberan puestos. Cada cuatro años pueden ocurrir nacimientos en hogares con adulto fértil, plaza vacante y $180 de caja doméstica; crece la población y aumentan futuras necesidades de salud y educación.",
+        "El desgaste anual baja condición y calidad de inmuebles privados de más de 20 años, con ritmo creciente por edad. Al caer bajo 70% se genera una necesidad de renovación en su barrio. La rehabilitación consume capital privado, inventario de la constructora, cuatro trabajadores y permiso; tarda 24–36 días. La inspección restituye condición, calidad y dos plazas habitacionales, con arquitectura rehabilitada.",
+        "Ciudad > Evolución muestra edades, barrios, deterioro, inversiones y balances de décadas. El 3D marca edificios muy deteriorados y obras de rehabilitación. Disponible Online y Offline; guardados migran al esquema 57.",
+        "Fase 33 permanece parcial: aún falta probar 30 años, ciclos económicos, trayectorias de demanda/inversión y los escenarios portuario, turístico y metropolitano del roadmap."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.72",
       "date": "2026-10-31",
@@ -623,6 +634,10 @@
   ],
   "upcoming": [
     {
+      "title": "Fase 33 · equilibrio de largo plazo",
+      "detail": "Probar recorridos continuos de décadas y completar vínculos entre ciclo económico, demanda regional, deuda, nuevas empresas, cierre de negocios, proyectos de varios mandatos y capacidad operativa."
+    },
+    {
       "title": "Fase 33 · evolución urbana por décadas",
       "detail": "Agregar cambios demográficos y arquitectónicos persistentes a través de décadas, conectados con edad, conservación, vivienda, migraciones y economía; primero un ciclo jugable breve en Online y Offline."
     },
@@ -936,10 +951,13 @@
     {
       "phase": 33,
       "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
-      "progress": 10,
-      "summary": "Calendario acelerado y registros persistentes que permiten partidas largas",
+      "progress": 20,
+      "summary": "Edades y jubilación anual, nacimientos con capacidad/caja familiar, deterioro privado, renovación contratada y resumen barrial por década.",
       "pending": [
-        "Simulación equilibrada de décadas y transformaciones demográficas/arquitectónicas."
+        "Verificar escenario continuo de 30 años sin crecimiento imposible ni duplicación de recursos.",
+        "Conectar transformaciones con ciclos económicos, demanda regional finita y evolución inmobiliaria.",
+        "Probar trayectorias pequeña, metropolitana, portuaria y turística bajo reglas comunes.",
+        "Evaluar cómo inversiones de largo plazo continúan entre mandatos y afectan caja, empleo, materiales y mantenimiento."
       ]
     }
   ]

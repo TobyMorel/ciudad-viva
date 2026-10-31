@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.72
+# Ciudad Viva · Alfa 0.73
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -185,3 +185,11 @@ Cada mandato recibe metas medibles de empleo, reserva de vivienda y servicios. L
 ## Alfa 0.72 · reclamos con evidencia, acuerdos y mapa de progreso
 
 Ciudad > Gobierno ahora vincula los reclamos a entidades locales ya simuladas y permite que el equipo deje un acuerdo con vencimiento. Los cierres mensuales actualizan su resultado y repercuten en el apoyo y las elecciones. La pestaña Cambios añade un listado expandible de las 34 fases con un indicador orientativo y sus pendientes actuales. Las estimaciones por fase no son un porcentaje de finalización del juego; consultá `release_notes.json` y `AUDITORIA_ROADMAP.md` para el método y alcance.
+
+## Alfa 0.73 · evolución y rehabilitación de barrios
+
+La ciudad registra envejecimiento de residentes y edificios. Cumplir 18 permite buscar empleo; cumplir 67 jubila al residente y libera el puesto. Nacimientos requieren una vivienda con capacidad y dinero disponible. El desgaste privado crea encargos barriales que una constructora puede rehabilitar con su stock, cuatro trabajadores y una obra inspeccionada. El panel Ciudad > Evolución y el mapa 3D muestran su estado. Online y Offline, guardado esquema 57.
+
+Fase 33 sigue en desarrollo: falta probar 30 años y los escenarios urbanos indicados en el roadmap.
+
+Verificación de la entrega: compilación, prueba del ciclo de edad y renovación Online/Offline, endpoint de anfitrión y revisión del panel en 390×844 y 1440×900. La simulación continua aceptada de 30 años sigue pendiente; tampoco se probó LAN con dos equipos físicos en esta sesión.

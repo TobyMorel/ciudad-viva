@@ -183,7 +183,7 @@ def ensure_heritage_state():
         default_year=HERITAGE_FOUNDING_YEARS.get(name,current_year)
         building.setdefault("yearBuilt",default_year)
         building.setdefault("architecturalEra","Fundación urbana" if building["yearBuilt"]<1950 else "Expansión cívica" if building["yearBuilt"]<1970 else "Modernización")
-        building.setdefault("architecturalStyle","Tradicional" if building["yearBuilt"]<1970 else "Contemporáneo")
+        building.setdefault("architecturalStyle",architectural_style_for(building["yearBuilt"]))
         building.setdefault("originalUse",{"home":"Vivienda","shop":"Comercio","civic":"Servicio público"}.get(building.get("kind"),building.get("kind","Inmueble")))
         building.setdefault("renovations",[]);building.setdefault("conservation",92 if building["yearBuilt"]<1970 else 100)
         if name in HERITAGE_FOUNDING_YEARS:
@@ -194,6 +194,121 @@ def ensure_heritage_state():
         building["conservation"]=max(0,min(100,int(building["conservation"])))
     state.setdefault("adaptiveReuseWorks",[]);state.setdefault("adaptiveReuseHistory",[])
     state["version"]=max(53,int(state.get("version",1)))
+
+def architectural_style_for(year):
+    if year<1950:return "Tradicional"
+    if year<1970:return "Expansión cívica"
+    if year<1990:return "Moderno"
+    if year<2010:return "Contemporáneo"
+    return "Actual"
+
+def ensure_urban_evolution_state():
+    year=2026+(max(0,int(state.get("day",1))-1)//360)
+    evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year,"history":[],"lastBirthYear":2026})
+    evolution.setdefault("lastProcessedYear",year);evolution.setdefault("history",[]);evolution.setdefault("lastBirthYear",2026)
+    state.setdefault("urbanRenewalNeeds",[]);state.setdefault("urbanRenewalWorks",[]);state.setdefault("urbanRenewalHistory",[])
+    for building in state.get("buildings",[]):
+        if building.get("kind") in ("home","shop","hotel"):
+            building.setdefault("urbanCondition",float(building.get("quality",80 if building.get("kind")=="home" else 100)))
+            building["urbanCondition"]=max(0,min(100,float(building["urbanCondition"])))
+    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
+        for index,person in enumerate(home.setdefault("residents",[])):
+            if person.get("age") is None:
+                fallback_id=f"{home.get('x',0)}-{home.get('y',0)}-{index}"
+                seed=str(person.get('id') or fallback_id)
+                cohort=stable_skill(seed,"edad")%100
+                person["age"]=(18+stable_skill(seed,"edad-laboral")%43) if person.get("workerEligible") else (5+cohort%13 if cohort<76 else 67+cohort%20)
+            person["age"]=max(0,int(person["age"]))
+            person.setdefault("lifeStage","infancia" if person["age"]<18 else "jubilación" if person["age"]>=67 else "vida laboral")
+
+def urban_evolution_report():
+    year=2026+(max(0,int(state.get("day",1))-1)//360);districts=[]
+    for district_id,name,xmin,xmax in (("oeste","Oeste",0,10),("centro","Centro",10,18),("puerto","Puerto",18,100)):
+        homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and xmin<=b.get("x",0)<xmax]
+        people=[p for h in homes for p in h.get("residents",[])]
+        buildings=[b for b in state.get("buildings",[]) if xmin<=b.get("x",0)<xmax]
+        ages=[p.get("age",0) for p in people]
+        districts.append({"id":district_id,"name":name,"population":sum(int(h.get("occupants",0)) for h in homes),"children":sum(a<18 for a in ages),"workingAge":sum(18<=a<67 for a in ages),"retired":sum(a>=67 for a in ages),"averageAge":round(sum(ages)/max(1,len(ages)),1),"buildings":len(buildings),"olderBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"renewalNeeds":sum(n.get("districtId")==district_id and n.get("status")=="disponible" for n in state.get("urbanRenewalNeeds",[]))})
+    buildings=state.get("buildings",[]);conditions=[b.get("urbanCondition",100) for b in buildings if b.get("kind") in ("home","shop","hotel")]
+    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:]}
+
+def advance_urban_evolution():
+    year=2026+(max(0,int(state.get("day",1))-1)//360);evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year-1,"history":[],"lastBirthYear":2026})
+    previous=int(evolution.get("lastProcessedYear",year-1))
+    if year<=previous:return
+    years=min(50,year-previous);adults=retired=births=0
+    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
+        for person in home.setdefault("residents",[]):
+            old=int(person.get("age",0));new=min(120,old+years);person["age"]=new
+            if old<18<=new:
+                person.update({"workerEligible":True,"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1),"unemploymentReason":"alcanzó edad laboral"});person["lifeStage"]="vida laboral";adults+=1
+                ev("Residente se incorpora al mercado laboral",f"Un residente de {home.get('name','un hogar')} alcanzó los 18 años y busca un puesto compatible con sus habilidades.")
+            elif old<67<=new:
+                if person.get("status")=="empleado":person.update({"previousEmployer":person.get("employerName"),"previousEmployerId":person.get("employerId"),"employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
+                person.update({"workerEligible":False,"status":"jubilado","unemployedSinceDay":None,"unemploymentReason":None,"lifeStage":"jubilación"});retired+=1
+                ev("Residente inicia su jubilación",f"Una persona de {home.get('name','un hogar')} dejó la vida laboral; la vacante queda disponible para el mercado de empleo.")
+            else:person["lifeStage"]="infancia" if new<18 else "jubilación" if new>=67 else "vida laboral"
+    for building in (b for b in (state.get("buildings",[])) if b.get("kind") in ("home","shop","hotel")):
+        age=max(0,year-int(building.get("yearBuilt",year)))
+        if age<=20:continue
+        renewal=next((w for w in state.get("urbanRenewalWorks",[]) if w.get("x")==building.get("x") and w.get("y")==building.get("y")),None)
+        if renewal:continue
+        wear=.3 if age<=40 else .55 if age<=60 else .8
+        building["urbanCondition"]=round(max(25,float(building.get("urbanCondition",80))-wear),1)
+        if building.get("kind")=="home":building["quality"]=round(min(float(building.get("quality",80)),building["urbanCondition"]),1)
+        if building["urbanCondition"]<70 and not any(n.get("x")==building.get("x") and n.get("y")==building.get("y") and n.get("status")=="disponible" for n in state.setdefault("urbanRenewalNeeds",[])):
+            district="oeste" if building.get("x",0)<10 else "centro" if building.get("x",0)<18 else "puerto";name=building.get("name",building.get("kind","Inmueble"));estimate=2400+round((70-building["urbanCondition"])*95)+(500 if building.get("kind")=="shop" else 0)
+            need={"id":f"renewal-{building['x']}-{building['y']}-{year}","x":building["x"],"y":building["y"],"districtId":district,"name":name,"kind":building["kind"],"yearBuilt":building.get("yearBuilt",year),"age":age,"condition":building["urbanCondition"],"estimate":estimate,"status":"disponible","openedYear":year}
+            state["urbanRenewalNeeds"].append(need);ev("Inmueble envejecido necesita renovación",f"{name} tiene {age} años y condición {building['urbanCondition']}%. El propietario puede financiar una rehabilitación con materiales, cuadrilla y permiso; si no se invierte, el desgaste continuará.")
+    if year>2026 and (year-2026)%4==0 and int(evolution.get("lastBirthYear",2026))<year:
+        for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)<b.get("capacity",0) and b.get("householdCash",0)>=180 and b.get("birthsSince2026",0)<3):
+            fertile=any(24<=int(p.get("age",0))<=40 for p in home.get("residents",[]))
+            if not fertile:continue
+            home["householdCash"]-=180;home["occupants"]+=1;home["birthsSince2026"]=home.get("birthsSince2026",0)+1;births+=1
+            person={"id":f"birth-{year}-{home['x']}-{home['y']}","age":0,"lifeStage":"infancia","workerEligible":False,"status":"inactivo","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"birthYear":year}
+            ensure_person_work_profile(person);home.setdefault("residents",[]).append(person)
+        if births:
+            state["population"]=state.get("population",0)+births
+            ev("Nacimientos en hogares de la ciudad",f"Nacieron {births} residentes en hogares con adultos de 24–40 años, vacantes y fondos familiares para cuidados iniciales ($180 por hogar). La demanda de salud y educación crecerá con ellos.")
+        evolution["lastBirthYear"]=year
+    evolution["lastProcessedYear"]=year
+    if year%10==0:
+        report=urban_evolution_report();record={k:report[k] for k in ("year","population","children","workingAge","retired","averageAge","agingBuildings","averageCondition")};evolution.setdefault("history",[]).append(record);evolution["history"]=evolution["history"][-20:]
+        ev("Balance de década urbana",f"Año {year}: población {record['population']} · edad media {record['averageAge']} · {record['children']} menores, {record['workingAge']} en edad laboral y {record['retired']} jubilados · {record['agingBuildings']} inmuebles con 30 años o más. Las obras y mudanzas siguen activas al cambiar de década.")
+
+def advance_urban_renewals():
+    for work in list(state.setdefault("urbanRenewalWorks",[])):
+        work["elapsedDays"]=work.get("elapsedDays",0)+1;work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]));work["stage"]="Refuerzo estructural" if work["progress"]<.35 else "Instalaciones y renovación de fachada" if work["progress"]<.85 else "Inspección y habilitación"
+        if work["progress"]<1:continue
+        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
+        if building:
+            building["urbanCondition"]=85;building["quality"]=max(building.get("quality",0),85) if building.get("kind")=="home" else building.get("quality",85);building["lastUrbanRenewalYear"]=2026+(state.get("day",1)-1)//360;building["architecturalStyle"]="Contemporáneo rehabilitado";building.setdefault("renovations",[]).append({"year":2026+(state.get("day",1)-1)//360,"day":state.get("day",1),"contractor":work["contractor"],"cost":work["cost"],"scope":"Rehabilitación privada de ciclo largo"})
+            if building.get("kind")=="home":building["capacity"]=building.get("capacity",0)+2
+        need=next((n for n in state.get("urbanRenewalNeeds",[]) if n.get("id")==work.get("needId")),None)
+        if need:need.update({"status":"rehabilitada","completedDay":state.get("day",1)})
+        state.setdefault("urbanRenewalHistory",[]).append({**work,"status":"completada","completedDay":state.get("day",1)});state["urbanRenewalHistory"]=state["urbanRenewalHistory"][-40:];state["urbanRenewalWorks"].remove(work)
+        ev("Renovación urbana completada",f"{work['name']} fue rehabilitado por {work['contractor']} en {work['durationDays']} días. Recuperó condición 85%, cambió a arquitectura contemporánea y amplió dos plazas habitacionales cuando correspondía.")
+
+def start_urban_renewal(need_id,contractor):
+    ensure_supply_state()
+    need=next((n for n in state.get("urbanRenewalNeeds",[]) if n.get("id")==need_id and n.get("status")=="disponible"),None)
+    if not need:raise ValueError("La necesidad de rehabilitación ya no está disponible.")
+    if contractor not in CONTRACTORS:raise ValueError("Seleccioná una constructora habilitada.")
+    if any(w.get("x")==need["x"] and w.get("y")==need["y"] for w in state.get("urbanRenewalWorks",[])):raise ValueError("El inmueble ya tiene una obra en marcha.")
+    spec=CONTRACTORS[contractor];active=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")]
+    other=[w for key in ("heritageWorks","adaptiveReuseWorks","urbanRenewalWorks") for w in state.get(key,[]) if w.get("contractor")==contractor]
+    used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in active)+sum(w.get("workers",4) for w in other)
+    if len(active)+len(other)>=spec["capacity"] or used+4>spec["workers"]:raise ValueError(f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores.")
+    materials={"aggregate":4,"steel":2,"timber":2,"components":1};stock=state["supply"]["contractors"][contractor]
+    if any(stock.get(k,0)<v for k,v in materials.items()):raise ValueError(f"{contractor} no tiene el lote de rehabilitación (4 áridos, 2 acero, 2 madera y 1 componente).")
+    material_cost=sum(v*MATERIAL_PRICE[k] for k,v in materials.items());labor_cost=round((1700+max(0,70-need["condition"])*70)*spec["price"]);cost=material_cost+labor_cost
+    if state.get("privateCapital",0)<cost:raise ValueError(f"El capital privado disponible no cubre la rehabilitación de $ {cost:,}.".replace(",","."))
+    for k,v in materials.items():stock[k]-=v
+    state["privateCapital"]-=cost;state["money"]+=100;state["supply"]["contractorCash"][contractor]=state["supply"]["contractorCash"].get(contractor,0)+labor_cost
+    duration=max(24,round(30*spec["days"]/30));work={"id":f"urban-{need['x']}-{need['y']}-{state['day']}","needId":need["id"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"materials":materials,"materialCost":material_cost,"laborCost":labor_cost,"cost":cost,"permitFee":100,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"Diagnóstico y refuerzo estructural","startDay":state["day"],"status":"en obra"}
+    state["urbanRenewalWorks"].append(work);need.update({"status":"en obra","contractor":contractor,"workId":work["id"]})
+    ev("Rehabilitación urbana contratada",f"{need['name']}: inversión privada $ {cost:,}, permiso municipal $100, cuatro trabajadores, materiales de {contractor} y {duration} días de obra.".replace(",","."))
+    return work
 
 def ensure_government_state():
     day=max(1,int(state.get("day",1)))
@@ -604,7 +719,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":56,"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":57,"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -712,8 +827,9 @@ def ensure_supply_state():
     state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
     state.setdefault("busRoutes",[])
     ensure_heritage_state()
+    ensure_urban_evolution_state()
     ensure_government_state()
-    state["version"]=max(56,int(state.get("version",1)))
+    state["version"]=max(57,int(state.get("version",1)))
     for building in state["buildings"]:
         ensure_critical_inspection_schedule(building)
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
@@ -2533,6 +2649,8 @@ def tick_one_day():
     state["day"] += 1
     day=state["day"]
     advance_heritage_works()
+    advance_urban_evolution()
+    advance_urban_renewals()
     advance_adaptive_reuse()
     advance_utility_repairs()
     calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
@@ -2906,6 +3024,7 @@ def public_state(player_id=None):
     view["governmentReport"]=government_report()
     view["municipalFinance"]=municipal_finance_report()
     view["heritageReport"]=heritage_report()
+    view["urbanEvolutionReport"]=urban_evolution_report()
     view["roadMaintenanceReport"]=road_maintenance_report()
     order_views=[]
     for order in state["supply"]["orders"]:
@@ -2978,7 +3097,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.72"
+    server_version="CiudadViva/0.73"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -3059,6 +3178,10 @@ class Handler(BaseHTTPRequestHandler):
                     if not building or level not in ("protección parcial","protección integral"):self._send(409,{"error":"Elegí un inmueble histórico y un nivel de protección válido."});return
                     if building.get("heritageLevel")=="protección integral":self._send(409,{"error":"El inmueble ya tiene protección integral."});return
                     building["heritageLevel"]=level;building["protectedDay"]=state.get("day",1);ev("Inmueble histórico protegido",f"{building.get('name')}: {level}. Se conserva su uso y se habilita una rehabilitación patrimonial financiada.")
+                    self._send(200,public_state(pid));return
+                if action=="startUrbanRenewal":
+                    try:start_urban_renewal(data.get("needId"),str(data.get("contractor","")))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action=="heritageRestore":
                     ensure_supply_state()

@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.72
+# Auditoría del roadmap · Alfa 0.73
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -241,4 +241,12 @@ Cada barra es una estimación orientativa de cobertura de los sistemas centrales
 
 ### Próximo objetivo
 
-Fase 33: implementar evolución urbana persistente a través de décadas y conectar edad/conservación de edificios con transformaciones arquitectónicas, demografía, demanda de vivienda e inversión. Probar un ciclo en Online y Offline antes de ampliar contenido.
+Continuar la fase 33: ejecutar escenarios reproducibles de 30 años y conectar los ciclos económicos, la oferta regional finita y las inversiones de largo plazo con envejecimiento/demografía ya implementados.
+
+### Fase 33 · Alfa 0.73: edades, desgaste y renovación privada (parcial)
+
+**Implementado:** envejecimiento anual de perfiles residentes; incorporación al mercado laboral a los 18 y jubilación a los 67; nacimientos cada cuatro años si el hogar dispone de adulto de 24–40 años, capacidad y $180. Las viviendas, comercios y hoteles privados de más de 20 años pierden condición. Bajo 70% aparece necesidad por distrito; una constructora con cuadrilla y lote disponible puede ejecutar la rehabilitación financiada con capital privado, permiso municipal, cuatro trabajadores, inventario y 24–36 días de obra. La inspección recupera condición/calidad, suma plazas residenciales y cambia el estilo del inmueble. Se refleja en Ciudad > Evolución y en andamios/condición del mapa 3D. Online/Offline, esquema 57.
+
+**Pendiente / no verificado:** escenario continuo de 30 años; ciclos económicos, oferta regional finita e inversión competidora; trayectorias pequeña, metropolitana, portuaria y turística; contratos y deuda que cruzan mandatos sin explosión/duplicación de recursos. Por eso la fase sigue parcial (20% orientativo), no completada.
+
+**Verificación de Alfa 0.73:** pasó compilación Python/JavaScript; prueba de transiciones, desgaste, transacción de materiales/capital/permiso, plazo, inspección, plazas y nacimiento en motor Online; acción HTTP del anfitrión y arranque de renovación Offline en Chromium. Revisada UI de Evolución en 390×844 y 1440×900: sin overflow horizontal ni errores JS, contenido vertical navegable hasta las acciones. La corrida de treinta años sigue pendiente; por eso no se acepta aún el criterio central de la fase.

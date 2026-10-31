@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.72 · 31 de octubre de 2026
+**Entrega:** Alfa 0.73 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -430,3 +430,19 @@ Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulaci
 
 - Contenedor instalado en calle: inversión compartida $350, capacidad de recolección +0,15 t/día, persistencia en el guardado y objeto visible en el mapa. Se rechaza sin débito si la parcela no es calle o ya tiene contenedor.
 - Depósito municipal conectado: estación con 12 t y despacho diario de 1,5 t hacia reciclaje/disposición; los cuellos de botella conservan toneladas en transferencia o calle. Panel de Servicios actualizado. Pruebas HTTP Online: contenedor instalado por $350; el duplicado devuelve 409 y conserva dinero/estado. Offline: mismas reglas, capacidad y persistencia local comprobadas. Simulación con relleno lleno confirmó buffer de transferencia limitado a 12 t y acumulación urbana en ambos motores. Chromium cargó WebGL sin errores JS en escritorio (1440×900) y móvil (390×844); el panel de Servicios y la lista de construcción no tienen desborde horizontal. La LAN física permanece sin verificar.
+
+## Alfa 0.73 · Fase 33 (parcial)
+
+- La población registrada envejece una vez por año: 18 años habilita búsqueda de empleo, 67 años jubila al residente y libera su puesto. Cada cuatro años hay nacimientos condicionados por edad adulta, capacidad de vivienda y $180 de caja del hogar; afectan población, demanda futura .
+- Viviendas, comercios y hoteles privados mayores de 20 años pierden condición anualmente. Al caer debajo de 70% aparece una necesidad concreta en el distrito. La constructora elegida debe disponer de cuatro trabajadores y materiales; el capital privado paga materiales y mano de obra, la ciudad cobra permiso. La obra progresa durante 24–36 días y la inspección devuelve condición/calidad a 85%, registra rehabilitación y amplía dos plazas residenciales.
+- Ciudad > Evolución presenta grupos de edad, condición, inmuebles antiguos, obras activas, historial decenal y decisiones de rehabilitación. El 3D señala inmuebles deteriorados y usa andamios durante obras.
+- Disponible en Online y Offline; sincronizado por estado del anfitrión o guardado local. Esquema 57.
+- Avance de fase 33: 20% orientativo según el método estable ya documentado. No es el progreso global. Falta probar la partida de 30 años y completar ciclos económicos, inversión regional finita y escenarios pequeños, metropolitanos, portuarios y turísticos.
+
+### Verificación Alfa 0.73
+
+- Python: compilación y pruebas de transición 17→18 y 66→67, liberación de empleo, desgaste por edad, alta de renovación, descuento de lote/capital, permiso compartido, avance de cuadrilla 36 días, inspección/restauración/calidad/capacidad, nacimiento condicionado y registro de década. Resultado: pasó.
+- Online HTTP: con una sala anfitriona local abierta, acción de rehabilitación produjo una sola obra compartida, necesidad en estado «en obra» y permiso de $100. Resultado: pasó.
+- Offline en Chromium: el control Ciudad > Evolución ejecutó inicio de contrato, consumió materiales y capital y registró la obra; sin errores JS.
+- Interfaz: móvil 390×844 y escritorio 1440×900; panel sin desborde horizontal. En móvil se puede desplazar hasta el botón de rehabilitación; las categorías y tarjetas permanecen legibles. Resultado: pasó.
+- Pendiente de esta fase: corrida de aceptación continua de 30 años y las variantes pequeña/metropolitana/portuaria/turística. Multijugador entre dos computadoras físicas y despliegue Vercel no se validaron en este entorno.

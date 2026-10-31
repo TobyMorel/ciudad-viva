@@ -169,6 +169,37 @@ def process_training_programs():
 def new_finance():
     return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[]}
 
+def new_tax_state():
+    return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
+
+def ensure_tax_state():
+    taxes=state.setdefault("taxes",new_tax_state())
+    for key,value in new_tax_state().items():taxes.setdefault(key,value)
+    return taxes
+
+def collect_municipal_taxes():
+    """Cobra gravámenes sobre caja existente; la mora queda como cuenta por cobrar."""
+    taxes=ensure_tax_state();month=(state.get("day",1)-1)//30
+    if taxes.get("lastProcessedMonth")==month:return taxes.get("lastReport",{})
+    rates={"property":max(0,int(taxes.get("propertyRateBp",60))),"business":max(0,int(taxes.get("businessRateBp",200)))}
+    accounts=taxes.setdefault("arrearsByAsset",{});property_due=property_paid=business_due=business_paid=late_homes=late_firms=0
+    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0):
+        key=f"home-{home['x']}-{home['y']}";due=round(home.get("occupants",0)*2400*rates["property"]/120000)+accounts.get(key,0);cash=max(0,round(home.get("householdCash",0)));paid=min(cash,due)
+        home["householdCash"]=cash-paid;accounts[key]=due-paid;home["propertyTaxDue"]=due;home["propertyTaxPaid"]=paid;home["propertyTaxArrears"]=due-paid
+        property_due+=due;property_paid+=paid;late_homes+=int(due>paid)
+    for shop in (b for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"):
+        firm=shop["business"];key=firm.get("id",f"shop-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates["business"]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
+        firm["cash"]=cash-paid;accounts[key]=due-paid;firm["municipalTaxDue"]=due;firm["municipalTaxPaid"]=paid;firm["municipalTaxArrears"]=due-paid
+        firm["taxDelinquencyMonths"]=firm.get("taxDelinquencyMonths",0)+1 if due>paid else 0
+        business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
+    taxes["lastProcessedMonth"]=month
+    report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":property_paid+business_paid,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
+    taxes["lastReport"]=report;taxes.setdefault("history",[]).append(report.copy());del taxes["history"][:-12]
+    if report["collected"]:ev("Recaudación municipal",f"Se cobraron $ {report['collected']:,} de impuestos sobre viviendas y ventas; $ {report['arrears']:,} quedan en mora.".replace(",","."))
+    if late_homes and late_homes>=max(3,round(sum(1 for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0)*.35)):
+        state["approval"]=max(0,state.get("approval",0)-1);ev("Mora tributaria extendida",f"{late_homes} hogares no pudieron pagar el impuesto completo; la confianza municipal cae un punto.")
+    return report
+
 def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
@@ -228,7 +259,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":42,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":43,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -318,7 +349,8 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(42,state.get("version",1))
+    state["version"]=max(43,state.get("version",1))
+    ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
@@ -2032,7 +2064,9 @@ def simulate_hotel_month(workforce):
     open_count=max(1,sum(1 for h in hotels if h.get("business",{}).get("status")=="abierto" and route_between((4,10),(h["x"],h["y"]))))
     for hotel in hotels:
         firm=hotel["business"]
-        if firm.get("status")!="abierto":continue
+        if firm.get("status")!="abierto":
+            firm["lastTourismTax"]=0
+            continue
         connected=bool(route_between((4,10),(hotel["x"],hotel["y"])))
         has_airport=any(a.get("kind")=="airport" and a.get("operational") and route_between((a["x"],a["y"]),(hotel["x"],hotel["y"])) for a in state["buildings"])
         utility_factor=min(hotel.get("utilityAccess",{}).get("powerServedPct",100),hotel.get("utilityAccess",{}).get("waterServedPct",100),hotel.get("utilityAccess",{}).get("wastewaterTreatedPct",100))/100
@@ -2091,13 +2125,14 @@ def tick_one_day():
         simulate_airport_month(economic)
         tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
+        tax_report=collect_municipal_taxes()
         economic=commute_model()
         collect_bus_fares(economic)
         business_income=round(economic["privateStaffedJobs"]*2)
         transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
         airport_income=state.get("airportMonthlyIncome",0)
-        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax
+        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
         waste_report=calculate_waste_balance()
         recycling_income=waste_report.get("recyclingRevenueMonth",0)
@@ -2460,8 +2495,9 @@ def public_state(player_id=None):
     view["transitMonthlyCost"]=transit_cost
     business_income=round(commute["privateStaffedJobs"]*2)
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
-    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"])
+    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+state.get("taxes",{}).get("lastReport",{}).get("collected",0))
     view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
+    view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 def discovery_loop():
@@ -2543,6 +2579,16 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                if action=="adjustTax":
+                    taxes=ensure_tax_state();kind=str(data.get("kind",""));delta=int(data.get("delta",0))
+                    if kind=="property":key="propertyRateBp";low,high,step=20,140,10
+                    elif kind=="business":key="businessRateBp";low,high,step=0,500,25
+                    else:self._send(409,{"error":"Tipo de impuesto no reconocido."});return
+                    if delta not in (-step,step):self._send(409,{"error":"Cambio de alícuota inválido."});return
+                    old=taxes.get(key,60 if kind=="property" else 200);new=max(low,min(high,old+delta))
+                    if new==old:self._send(409,{"error":"La alícuota ya está en su límite."});return
+                    taxes[key]=new;ev("Política tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
+                    self._send(200,public_state(pid));return
                 if action=="municipalLoan":
                     ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
                     if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return

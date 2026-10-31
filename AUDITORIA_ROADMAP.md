@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.58
+# Auditoría del roadmap · Alfa 0.59
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -16,7 +16,8 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
-| 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
+| 29 | Parcial: créditos municipales, amortización, proyección base, impuestos inmobiliarios/comerciales y mora sobre caja real | Reservas, programas, compromisos de obra, escenarios y refinanciación |
+| 30–33 | Pendiente como sistemas completos | Patrimonio, mantenimiento plurianual, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
 
@@ -146,3 +147,10 @@ Las regresiones confirmaron despacho en ambas modalidades: 35 minutos y siete pu
 Online y Offline permiten contratar créditos de $5.000, $10.000 o $20.000 cuando el límite de solvencia y la cuota lo permiten. La tasa fija es 12% anual, con amortización mensual y plazos de 24 o 48 meses. El efectivo ingresa a tesorería al firmar; la cuota reduce caja al cierre de mes. Los impagos quedan registrados. Hacienda separa saldo de deuda y servicio mensual, y muestra proyecciones de caja a 12 y 48 meses manteniendo constantes las bases actuales, con ese supuesto declarado. Guardados migran al esquema 42.
 
 Verificado en servidor Online y adaptador Offline: $5.000 acreditados, cuota mensual de $132 a 48 meses; el primer pago separó $50 de interés y $82 de capital, saldo $4.918. La interfaz añade Hacienda dentro de Economía y suministros para no ampliar las categorías de Ciudad. Pendiente: escenarios, reservas, presupuestos por programa, refinanciación y compromiso de contratos futuros. No se validó LAN física ni Vercel.
+
+
+## Alfa 0.59 · impuestos sobre caja y actividad (fase 29, parcial)
+
+Se pueden ajustar impuestos inmobiliarios (0,20–1,40% anual) y comerciales sobre ventas (0–5%). La base inmobiliaria simulada es $2.400 por residente; el tributo comercial usa ventas registradas por cada negocio abierto. Al cierre mensual, los hogares y las empresas pagan desde su caja actual; el monto impago permanece como deuda tributaria del activo. La recaudación efectiva, no la facturada, aumenta la caja municipal. Menor efectivo doméstico limita compras; menor caja comercial limita insumos y operación. La confianza baja un punto cuando la mora alcanza al menos 35% de hogares ocupados. Hacienda informa tasas, base, cargos, pagos y mora. Online/Offline y guardados esquema 43.
+
+Regresiones: diez residentes facturan $12; pagaron $12 desde el efectivo del hogar. Una tienda con $1.000 de ventas facturó $20; con $5 de caja pagó $5 y dejó $15 de mora. Repetir la liquidación del mes no vuelve a cobrar. El adaptador Offline cerró el ciclo y debitó $17 combinando vivienda y comercio. Chromium revisó Hacienda en 390×844 y 1440×900, sin errores JavaScript ni desbordes horizontales; el contenido largo mantiene scroll vertical. Fase 29 pendiente: fondo de reserva, presupuestos por programa, escenarios de 12/48 meses, contratos futuros y refinanciación. LAN física/Vercel sin validar.

@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.58 · 31 de octubre de 2026
+**Entrega:** Alfa 0.59 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.59 · Fase 29 (parcial): impuestos inmobiliarios (0,20–1,40% anual sobre $2.400/residente) y comerciales (0–5% de ventas) ajustables. Cobro al cierre mensual desde caja disponible de hogares y negocios; impago se acumula por activo y no se acredita como ingreso municipal. El menor efectivo afecta compras familiares y liquidez empresarial. Panel informa tasas, facturación, pago y mora; Online/Offline, esquema 43. Verificado: factura de vivienda $12 y cobro $12; tienda factura $20, paga $5 y acumula $15; no hay doble cobro al repetir cierre. Offline recaudó $17 en ciclo simulado. Chromium móvil/escritorio: scroll vertical, sin overflow horizontal ni errores JS. LAN física/Vercel pendientes.
 
 - Alfa 0.58 · Fase 29 (parcial): créditos de inversión municipal sujetos a solvencia; montos $5.000/$10.000/$20.000, tasa fija 12% anual y amortización de 24/48 meses. Caja recibe capital al contratar y paga cuota mensual; saldo, interés, principal e impagos quedan persistidos. Hacienda informa ingresos/gastos, deuda/servicio y proyección constante a 12/48 meses. Online/Offline, esquema 42. Validación funcional: cuota $132/mes sobre $5.000, primer mes $50 interés + $82 capital, saldo $4.918. Pendiente: LAN física/Vercel, reservas, programas, refinanciación, escenarios y ciclo de vida.
 

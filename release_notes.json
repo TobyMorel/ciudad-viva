@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.58",
+  "currentVersion": "0.59",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.59",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 29 (parcial): impuesto inmobiliario municipal ajustable (0,20–1,40% anual) calculado sobre una valuación simulada de $2.400 por residente; gravamen comercial ajustable (0–5%) sobre ventas mensuales observadas. Cada cierre cobra solo desde caja real de hogares y empresas; faltantes quedan como mora persistente.",
+        "Los pagos de vivienda reducen el efectivo disponible para compras, y los pagos comerciales reducen caja para operar y adquirir insumos. La recaudación cobrada entra una sola vez a tesorería; el panel Hacienda muestra alícuotas, facturación, cobros, hogares/comercios en mora y saldo adeudado. Online/Offline, guardados migran al esquema 43.",
+        "Se corrigió el informe de caja Offline para contabilizar el impuesto turístico al cierre mensual, una sola vez, junto con la nueva recaudación municipal. Verificado en ambos motores con cobro, mora, deducción de efectivo e idempotencia. Chromium revisó Hacienda a 390×844 y 1440×900; scroll vertical, sin desbordes horizontales ni errores JS. LAN física y Vercel pendientes."
+      ]
+    },
     {
       "version": "0.58",
       "date": "2026-10-31",

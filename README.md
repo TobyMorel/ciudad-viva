@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.58
+# Ciudad Viva · Alfa 0.59
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -118,3 +118,8 @@ Las tormentas pueden anegar calles donde pasan tendidos conectados y averiar un 
 ## Alfa 0.58 · Hacienda municipal
 
 En **Economía y suministros** se pueden solicitar créditos municipales de inversión con tasa y cuotas visibles. El capital se acredita a caja; la amortización reduce la tesorería en cada cierre mensual. La vista muestra deuda, servicio y proyecciones de 12/48 meses con bases constantes. Online y Offline comparten los montos, límites de solvencia y plazos.
+
+
+## Alfa 0.59 · impuestos municipales
+
+En **Economía y suministros → Hacienda** podés ajustar los gravámenes sobre viviendas y ventas. La ciudad factura según población y actividad registrada; hogares y negocios pagan desde el efectivo disponible, y los faltantes quedan en mora. La tesorería suma lo efectivamente cobrado. Las tasas afectan compras de hogares y liquidez de comercios.

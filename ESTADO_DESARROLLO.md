@@ -177,3 +177,9 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Motor Offline: el corredor asignó dos conductores y reprodujo 60 plazas y $280/mes. Pausa, reanudación y recarga mantuvieron la dotación y actualizaron el costo. El salario de $10 por conductor se acredita al hogar dentro del costo operativo, sin sumar otra nómina municipal.
 - Chromium a 1440×960 y 390×844 comprobó el panel Movilidad, creación de línea, turnos desplegados, ausencia de errores JS y ancho de documento igual al viewport. La prueba visual aisló el render 3D para revisar la interfaz; la animación 3D se verificó por código, no por captura en esta sesión.
 - Prueba LAN en dos computadoras físicas sigue pendiente.
+
+## Alfa 0.30 · cocheras y plazas de flota
+
+- Una cochera municipal se adjudica y construye por etapas. En LAN exige seis trabajadores de obra y 30 áridos, 16 acero, 8 madera y 10 componentes. Offline usa el contrato y plazo simplificados. Al habilitarse aporta cuatro plazas y suma $50/mes al gasto base.
+- Las líneas ocupan plazas en cocheras con ruta vial al origen, sin duplicarlas entre líneas. Cada colectivo alojado baja su operación de $140 a $110/mes. Los vehículos sin plaza siguen alquilados y mantienen el costo anterior. La asignación, aforo y gasto son derivados y se recalculan al cargar.
+- Verificación: LAN simulada con dos colectivos pasó de dos alquileres y $280/mes a dos plazas propias y $220/mes; el informe indicó 2/4 plazas. Una obra con materiales y pagos disponibles terminó en el motor LAN y sumó $50/mes. Offline construyó la cochera, y la recarga asignó dos colectivos a plazas propias con el mismo ahorro. Chromium revisó Movilidad y Construir a 1440×960 y 390×844, con cocheras desplegadas, sin errores JS ni desborde horizontal. La revisión aisló WebGL para medir la interfaz; el nuevo modelo 3D se comprobó por código. Pendiente: conexión LAN física y simulación prolongada.

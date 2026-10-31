@@ -32,6 +32,7 @@ MATERIAL_NEEDS = {
     "shop":{"aggregate":24,"steel":14,"timber":8,"components":12},
     "civic":{"aggregate":52,"steel":22,"timber":12,"components":24},
     "depot":{"aggregate":38,"steel":18,"timber":14,"components":12},
+    "busGarage":{"aggregate":30,"steel":16,"timber":8,"components":10},
     "busStop":{"aggregate":10,"steel":0,"timber":5,"components":2}}
 CONTRACTOR_NAMES = ("Sur Obras","Constructora Delta","Estudio y Obra Norte")
 MARKET_SUPPLIERS = {
@@ -201,8 +202,8 @@ CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
-PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]}}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busStop":4}
+PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]}}
+LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busGarage":6,"busStop":4}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -597,6 +598,22 @@ def commute_model():
         line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST if line["operational"] else 0
         if not line["operational"]:line["monthlyFareRevenue"]=0
         driver_count+=line["effectiveBuses"]
+    garages=sorted((b for b in state["buildings"] if b.get("kind")=="busGarage" and b.get("status") in ("habilitado","operativo")),key=lambda b:(b["x"],b["y"]))
+    free_bays={f"garage-{g['x']}-{g['y']}":g.get("busBayCapacity",4) for g in garages}
+    for line in sorted(state["busRoutes"],key=lambda b:str(b.get("id"))):
+        line["garageAssignments"]=[]
+        if line["operational"]:
+            reachable=[]
+            for garage in garages:
+                path=route_between((garage["x"],garage["y"]),tuple(line["from"]))
+                if path:reachable.append((len(path),garage["x"],garage["y"],garage))
+            for _,_,_,garage in sorted(reachable):
+                garage_id=f"garage-{garage['x']}-{garage['y']}"
+                assigned=min(free_bays[garage_id],line["effectiveBuses"]-sum(a["buses"] for a in line["garageAssignments"]))
+                if assigned>0:line["garageAssignments"].append({"garageId":garage_id,"buses":assigned});free_bays[garage_id]-=assigned
+        line["garageBuses"]=sum(a["buses"] for a in line["garageAssignments"])
+        line["leasedBuses"]=line["effectiveBuses"]-line["garageBuses"]
+        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST-line["garageBuses"]*30 if line["operational"] else 0
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
@@ -645,7 +662,7 @@ def commute_model():
         for aa,bb in zip(line["route"],line["route"][1:]):
             edge=tuple(sorted((tuple(aa),tuple(bb))))
             if edge[0] in roads and edge[1] in roads:segment_flow[edge]=segment_flow.get(edge,0)+line.get("effectiveBuses",0)/80
-        line["dailyRiders"]=line.get("ridersThisPass",0);line["monthlyFareRevenue"]=round(line["dailyRiders"]*line.get("fare",BUS_FARE)*44);line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST
+        line["dailyRiders"]=line.get("ridersThisPass",0);line["monthlyFareRevenue"]=round(line["dailyRiders"]*line.get("fare",BUS_FARE)*44);line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST-line.get("garageBuses",0)*30
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
@@ -1197,6 +1214,10 @@ def tick_one_day():
                 state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":500,"label":"Depósito municipal","stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
                 state["supply"]["storageCapacity"]+=500;state["monthlyExpenses"]+=180
                 ev("Depósito logístico habilitado",f"El depósito abre con 500 unidades de capacidad adicional. Operación y seguridad $ 180/mes.")
+            elif p["kind"]=="busGarage":
+                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
+                state["monthlyExpenses"]+=50
+                ev("Cochera habilitada",f"La cochera ofrece cuatro plazas para colectivos con acceso vial. Mantenimiento $ 50/mes; cada vehículo alojado ahorra $ 30/mes frente al alquiler externo.")
             elif p["kind"]=="busStop":
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busStop","name":"Parada de colectivo","level":1,"status":"habilitado","quality":quality,"monthlyCost":25})
                 state["monthlyExpenses"]+=25
@@ -1231,6 +1252,7 @@ def public_state(player_id=None):
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])
+    view["busGarages"]=[{"id":f"garage-{g['x']}-{g['y']}","x":g["x"],"y":g["y"],"name":g.get("name","Cochera municipal"),"capacity":g.get("busBayCapacity",4),"occupied":sum(a["buses"] for line in state["busRoutes"] for a in line.get("garageAssignments",[]) if a["garageId"]==f"garage-{g['x']}-{g['y']}")} for g in state["buildings"] if g.get("kind")=="busGarage" and g.get("status") in ("habilitado","operativo")]
     view["jobs"]=state["jobs"]+sum(line.get("buses",0) for line in state["busRoutes"] if line.get("status")=="active")
     view["busStopSites"]={line["id"]:bus_stop_sites(line) for line in state.get("busRoutes",[]) if line.get("status") in ("active","paused")}
     view["workplaces"]=commute["workplaces"]
@@ -1273,7 +1295,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.29"
+    server_version="CiudadViva/0.30"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

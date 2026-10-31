@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.29",
+  "currentVersion": "0.30",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.30",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Nueva cochera municipal construible por licitación y etapas: seis trabajadores de obra, materiales en sala LAN y cuatro plazas al habilitarse. El edificio 3D incluye cubierta, portones y un colectivo estacionado.",
+        "Los colectivos con conductor usan plazas de cocheras alcanzables por calle. Cada plaza propia reduce el costo operativo mensual de $140 a $110; la cochera cuesta $50 al mes. Las plazas no utilizadas o inaccesibles no generan ahorro.",
+        "Movilidad incorpora un desplegable de cocheras con capacidad y ocupación, y cada línea distingue vehículos alojados de alquilados. La simulación offline y la sala LAN conservan esos datos al guardar y cargar."
+      ]
+    },
     {
       "version": "0.29",
       "date": "31 de octubre de 2026",
@@ -235,8 +244,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Depósito y transbordos",
-      "detail": "Crear cocheras y relevos para la flota, y permitir viajes de pasajeros entre dos líneas con espera y tarifa trazables."
+      "title": "Fase 22 · Relevos y transbordos",
+      "detail": "Crear jornadas diferenciadas de conducción y permitir viajes entre dos líneas con espera, capacidad y tarifa trazables."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",

@@ -152,3 +152,10 @@ El impuesto inmobiliario anual usa una base de diseño de $2.400 por residente y
 - El ciclo de fase 31 abarca calles y activos municipales operativos (salud, educación, bomberos, logística, redes y terminales). Los edificios pierden entre 0,28 y 0,48 puntos de condición al mes según dotación y ocupación; el plan general y el pago efectivo del programa Redes compensan el desgaste. Su mantenimiento de rutina se suma a la factura mensual del programa.
 - Bajo 60% se crea un expediente de deterioro con causa, condición y presupuesto. La inspección municipal cuesta $150 y ocupa un día; el informe habilita tres ofertas. La adjudicación respeta caja comprometida, liquidez del contratista y cuatro trabajadores, cobra al inicio, dura según contratista y restablece la condición del activo a 82% al inspeccionarse. El mismo contrato sirve para daños por tormenta y deterioro.
 - Si 25% de los edificios públicos queda bajo 60%, igual que la regla vial, el nivel de servicios pierde un punto por cierre mensual hasta corregir la cartera. El panel de mantenimiento tiene subpestañas para no mezclar inventarios; guardados migran al esquema 48.
+
+
+## Alfa 0.65 · degradación física de redes
+
+- Cada tramo mantiene condición en `utilities.lineConditions` con clave de red y coordenadas. Las seis redes (electricidad, agua, cloacas, pluvial, gas y fibra) comparten estados compatibles Online/Offline y la migración al esquema 49 inicializa los tramos existentes en 82%.
+- El desgaste mensual sube con edificios cercanos. El factor efectivamente pagado por Redes reduce el desgaste; no existe colapso aleatorio. Bajo 25% se registra una avería persistente, se interrumpe el tendido en ese segmento y la reparación municipal tiene costo según condición y plazo de tres días.
+- La interfaz muestra promedio y cantidad de tramos críticos por red. El reporte no duplica los inventarios; deriva la condición desde el registro persistente.

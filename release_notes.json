@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.64",
+  "currentVersion": "0.65",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.65",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): los tendidos de electricidad, agua, cloacas, drenaje, gas y fibra guardan condición por tramo. El desgaste aumenta con la carga de edificios cercanos y el plan pagado de Redes lo mitiga; guardados migran al esquema 49.",
+        "Un tendido crítico por debajo de 25% genera avería, interrumpe la conexión de ese tramo y abre reparación municipal con costo según severidad. Al asignar cuadrilla, la red vuelve a operar después de tres días.",
+        "Ciudad > Servicios muestra condición media y tramos críticos de cada red. La regla funciona Online y Offline y la condición persiste al guardar/cargar."
+      ]
+    },
     {
       "version": "0.64",
       "date": "2026-10-31",

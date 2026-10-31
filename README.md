@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.64
+# Ciudad Viva · Alfa 0.65
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -145,3 +145,8 @@ Las calles ahora tienen condición y desgaste ligados al uso. En Ciudad > Manten
 ## Alfa 0.64 · mantenimiento correctivo municipal
 
 El plan de mantenimiento también cubre edificios y servicios públicos, con costos según personal y ocupación. Calles bajo 45% de condición y edificios públicos bajo 60% crean un expediente de desgaste. La inspección cuesta $150 y demora un día; luego se elige una constructora, se ocupan cuatro trabajadores y el contrato devuelve el activo a 82%. Ciudad > Mantenimiento separa calles de edificios; Recuperación reúne los diagnósticos. Disponible Online y Offline, esquema 48.
+
+
+## Alfa 0.65 · condición y averías de redes
+
+Los tendidos de electricidad, agua, cloacas, drenaje, gas y fibra acumulan condición por tramo. La carga de edificios cercanos acelera el desgaste y la financiación efectiva de Redes lo reduce. Al caer por debajo de 25%, el tramo crítico puede fallar, cortar la conexión y generar un costo de reparación proporcional al deterioro. Una cuadrilla restablece el servicio tras tres días. Ciudad > Servicios informa la condición de cada red. Disponible Online y Offline; guardados migran al esquema 49.

@@ -2,13 +2,17 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.64
+## Estado al cerrar Alfa 0.65
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. La fase aún no representa transformaciones arquitectónicas por décadas, cambios de uso industriales/residenciales ni impactos de alquileres y desplazamiento. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
+## Sistema agregado en Alfa 0.65
+
+Los seis tendidos de servicios guardan condición por tramo. La carga local acelera el deterioro y la financiación de Redes lo mitiga; una falla crítica desconecta la línea hasta reparar. El tablero de Servicios informa la condición de cada red. Es un primer circuito de fase 31; se verificó el corte y restablecimiento de una línea en ambos motores, además del panel de condición en móvil y escritorio.
+
 ## Próximo sistema
 
-Extender fase 31 a condición y fallos individuales de redes, puentes y plantas, con cortes temporales y trabajos programados; después abrir fase 30 con reconversión de uso productivo, vivienda y efectos de alquiler/desplazamiento.
+Extender fase 31 a puentes y plantas, inspecciones de seguridad, cierres programados y activos privados; después abrir fase 30 con reconversión de uso productivo, vivienda y efectos de alquiler/desplazamiento.
 
 ## Verificación
 

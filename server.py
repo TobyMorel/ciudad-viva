@@ -192,7 +192,7 @@ def ensure_heritage_state():
         else:
             building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
         building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state["version"]=max(48,int(state.get("version",1)))
+    state["version"]=max(49,int(state.get("version",1)))
 
 def road_maintenance_report(funding_factor=None,advance=False):
     roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
@@ -383,7 +383,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":48,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":49,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -479,7 +479,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(48,state.get("version",1))
+    state["version"]=max(49,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("roadMaintenancePct",100)
@@ -740,6 +740,51 @@ def energized_utility_tiles(network):
 def utility_building_connected(building,network):
     tiles=energized_utility_tiles(network)
     return any((building.get("x",-99)+dx,building.get("y",-99)+dy) in tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1)))
+
+def utility_condition_report():
+    utilities=ensure_utility_state();conditions=utilities.setdefault("lineConditions",{})
+    line_keys={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}
+    report={}
+    for network,key in line_keys.items():
+        values=[max(0,min(100,float(conditions.get(f"{network}:{x}:{y}",82)))) for x,y in utilities.get(key,[])]
+        report[network]={"segments":len(values),"averageCondition":round(sum(values)/max(1,len(values)),1),"criticalSegments":sum(q<40 for q in values),"minimumCondition":round(min(values),1) if values else 100}
+    return report
+
+def advance_utility_line_conditions(funding_factor):
+    utilities=ensure_utility_state();conditions=utilities.setdefault("lineConditions",{})
+    line_keys={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}
+    names={"power":"electricidad","water":"agua potable","sewer":"cloacas","drainage":"drenaje pluvial","gas":"gas","telecom":"fibra óptica"}
+    bases={"power":720,"water":640,"sewer":690,"drainage":690,"gas":580,"telecom":460}
+    funded=max(0,min(1,float(funding_factor)));created=[]
+    for network,key in line_keys.items():
+        lines=utilities.get(key,[]);risks=[];connected=energized_utility_tiles(network)
+        current_buildings=[b for b in state.get("buildings",[]) if utility_building_connected(b,network)]
+        for x,y in lines:
+            nearby=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
+            load=1+min(4,nearby*.5)
+            asset_key=f"{network}:{x}:{y}"
+            quality=max(0,min(100,float(conditions.get(asset_key,82))))
+            quality=max(0,min(100,quality-(.08+load*.03)+.18*funded))
+            conditions[asset_key]=round(quality,1)
+            if quality<25:
+                alternate=set(connected);alternate.discard((x,y));source=(4,10)
+                reached={source} if source in alternate else set();queue=list(reached)
+                for a,b in queue:
+                    for neighbor in ((a+1,b),(a-1,b),(a,b+1),(a,b-1)):
+                        if neighbor in alternate and neighbor not in reached:reached.add(neighbor);queue.append(neighbor)
+                lost=sum(1 for building in current_buildings if not any((building.get("x",-99)+dx,building.get("y",-99)+dy) in reached for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))))
+                risks.append((lost,quality,x,y))
+        active={(f.get("network"),f.get("x"),f.get("y")) for f in utilities.get("failures",[]) if f.get("status")!="reparada"}
+        risks=[r for r in risks if (network,r[2],r[3]) not in active]
+        if risks:
+            lost,quality,x,y=sorted(risks,key=lambda r:(-r[0],r[1],r[3],r[2]))[0]
+            cost=round(bases[network]*(1+(25-quality)/50))
+            failure={"id":uuid.uuid4().hex,"network":network,"x":x,"y":y,"day":state.get("day",1),"reason":"Desgaste por mantenimiento insuficiente","repairCost":cost,"affectedBuildings":lost,"status":"avería","remainingDays":0}
+            utilities.setdefault("failures",[]).append(failure);created.append(failure)
+            impact=f"Se interrumpió el suministro a {lost} edificios." if lost else "Las rutas alternativas mantienen el suministro, pero el tramo quedó fuera de servicio."
+            ev("Avería por desgaste de red",f"El tramo de {names[network]} en calle {x+1},{y+1} falló tras acumular desgaste. {impact} Repararlo cuesta $ {cost} y requiere una cuadrilla.")
+    utilities["lineConditionReport"]=utility_condition_report()
+    return utilities["lineConditionReport"],created
 
 def ensure_waste_state():
     waste=state.setdefault("waste",{})
@@ -1105,6 +1150,7 @@ def calculate_utility_balance(apply_effects=False):
         "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
         "climate":{"heatwave":{"active":heat_active,"targetDay":heat_day,"durationDays":5,"powerDemandMultiplier":1.22 if heat_active else 1.0,"waterDemandMultiplier":1.18 if heat_active else 1.0,"coolingPrepared":climate.get("coolingPreparedForDay")==heat_day,"healthCases":(climate.get("heatForecast") or {}).get("actualHealthCases",0)},"drought":{"active":drought_active,"targetDay":drought_day,"durationDays":30,"sourceReductionPct":45 if drought_active else 0,"waterRestrictions":restrictions_active,"waterCapacityM3Day":round(water_capacity),"emergencyTankerM3Day":tanker_capacity,"demandM3Day":round(water_total),"shortageM3Day":round(max(0,water_total-water_delivered))}},
         "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
+        "lineCondition":utility_condition_report(),
         "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
     utilities["report"]=report
     if apply_effects:
@@ -1237,6 +1283,7 @@ def advance_utility_repairs():
         failure["remainingDays"]=max(0,int(failure.get("remainingDays",1))-1)
         if failure["remainingDays"]==0:
             failure["status"]="reparada";failure["completedDay"]=state.get("day",0)
+            ensure_utility_state().setdefault("lineConditions",{})[f"{failure.get('network')}:{failure.get('x')}:{failure.get('y')}"]=82
             ev("Red de servicios reparada",f"La cuadrilla restableció {failure['network']} en la calle {failure['x']+1},{failure['y']+1}. La conexión y el servicio se recalculan.")
 
 def bus_line_route(line):
@@ -2286,6 +2333,7 @@ def tick_one_day():
         available=state["money"]+monthly_income
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
         road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
+        advance_utility_line_conditions(budget_report["programs"]["networks"]["fundingPct"]/100)
         road_report=state.get("roadMaintenanceReport",{});poor=road_report.get("poorSegments",0);total=road_report.get("segments",0)
         facilities=road_report.get("facilityCount",0);worn=road_report.get("wornFacilities",0)
         if (total and poor/max(1,total)>=.35) or (facilities and worn/max(1,facilities)>=.25):

@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.64
+# Auditoría del roadmap · Alfa 0.65
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -191,3 +191,8 @@ Fase 31 sigue parcial: no hay inspección de puentes/edificios, cierre por segur
 El plan de mantenimiento de Alfa 0.63 ahora cubre centros cívicos, escuelas, bomberos, depósitos, plantas de servicios, puertos y aeropuertos, con condición mensual según puestos y ocupación. El gasto preventivo se incorpora a Redes y residuos y el factor realmente liquidado determina cuánto se evita el desgaste. Una calle bajo 45% o un edificio público bajo 60% crea un expediente con causa, condición y costo estimado. La inspección cuesta $150 y espera un día; después se adjudica una constructora, se pagan los fondos, se ocupa cuadrilla de cuatro trabajadores y la reparación restaura a 82%. Ambos tipos de necesidad usan el mismo flujo que los daños de tormenta, sin duplicar bienes ni fondos. Online y Offline, esquema 48.
 
 Prueba de ciclo completo en Online y Offline: Municipalidad a 60,1% con política sin financiación, caída a 59,8%, expediente de desgaste, inspección completada, oferta de Sur Obras de $900, cinco días, cuatro trabajadores y condición final 82%. Chromium 390×844 y 1440×900: subpestañas de calle/edificios dentro del modal, scroll vertical, sin overflow horizontal, textos solapados ni errores JavaScript. Fase 31 permanece parcial: no hay deterioro individual de redes técnicas/puentes ni cierres temporales.
+
+
+## Alfa 0.65 · desgaste y averías de redes (fase 31, parcial)
+
+Electricidad, agua, cloacas, drenaje, gas y fibra incorporan condición persistente por tramo. El uso del entorno acelera deterioro y la financiación efectiva del programa Redes lo mitiga. Al cruzar el umbral crítico se registra una avería, el tramo se excluye del grafo de conexión y se ofrece reparación por cuadrilla con costo asociado a severidad y tres días de trabajo. Servicios expone condición media y activos críticos. Online/Offline, esquema 49. Sigue pendiente el mantenimiento de puentes, cierre preventivo por inspección, sustitución y activos privados.

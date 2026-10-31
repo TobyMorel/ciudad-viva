@@ -1,14 +1,23 @@
 {
-  "currentVersion": "0.19",
+  "currentVersion": "0.20",
+  "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.20",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "La vista 3D ocupa el espacio principal; construcción, ciudad, economía, obras, registro y cambios se abren en ventanas emergentes.",
+        "Controles de tiempo integrados en una barra compacta sobre el mapa, con diseño adaptable a móvil.",
+        "Historial paginado de Alfa 0.1 a 0.20: cinco versiones por página. Las notas que no están en la historia disponible se identifican como no conservadas."
+      ]
+    },
     {
       "version": "0.19",
       "date": "31 de octubre de 2026",
       "changes": [
         "Banco Cooperativo con liquidez finita y líneas de crédito empresariales según puestos de trabajo.",
         "Las empresas pueden financiar salarios, gastos e insumos; pagan intereses y amortizan deuda desde sus excedentes.",
-        "Dos vencimientos de intereses impagos provocan insolvencia, cierre, pérdida de vacantes y trabajadores que vuelven a buscar empleo.",
-        "Nueva pestaña Cambios con historial de versiones y próximas entregas, también disponible en modo Offline."
+        "La mora puede cerrar una empresa, retirar vacantes y dejar a sus trabajadores buscando empleo."
       ]
     },
     {
@@ -32,23 +41,129 @@
       "version": "0.16",
       "date": "30 de octubre de 2026",
       "changes": [
-        "Logística de materiales de obra con prioridades de descarga, urgencia contractual y esperas visibles.",
-        "Avisos de plazos expuestos y causas de demora en el registro de acontecimientos."
+        "La asistencia según tiempos de viaje determina salarios y nóminas efectivamente pagadas.",
+        "La congestión vial afecta el tiempo de viaje, el empleo cubierto y los ingresos de actividad.",
+        "Los residentes tienen identidades laborales y empleador registrado."
       ]
+    },
+    {
+      "version": "0.15",
+      "changes": [
+        "Entrega alfa con ciudad isométrica, obras contratadas por etapas, economía municipal y guardado.",
+        "Servidor local y base de juego cooperativo por red LAN."
+      ]
+    },
+    {
+      "version": "0.14",
+      "changes": [
+        "Se incorporan registros de residentes con identidad estable para migrar hogares y empleos entre versiones.",
+        "La asignación laboral se deriva de hogares, vacantes y acceso vial."
+      ]
+    },
+    {
+      "version": "0.13",
+      "changes": [
+        "El flujo de tráfico de camiones comparte capacidad vial y modifica los viajes laborales.",
+        "El empleo efectivo y la recaudación vinculada a la actividad responden a la congestión."
+      ]
+    },
+    {
+      "version": "0.12",
+      "changes": [
+        "Se trazan viajes entre hogares y puestos de trabajo por la red de calles.",
+        "El acceso laboral depende de que exista una ruta conectada."
+      ]
+    },
+    {
+      "version": "0.11",
+      "changes": [
+        "Camiones de materiales recorren rutas compartidas y la congestión extiende sus tiempos estimados de llegada.",
+        "El panel expone progreso, ruta y demoras logísticas."
+      ]
+    },
+    {
+      "version": "0.10",
+      "changes": [
+        "La cola logística prioriza cargas que destraban una etapa detenida y respeta prioridad manual alta.",
+        "Las esperas muestran exposición contractual estimada sin descontarla del presupuesto."
+      ]
+    },
+    {
+      "version": "0.9",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.8",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.7",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.6",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.5",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.4",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.3",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.2",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
+    },
+    {
+      "version": "0.1",
+      "changes": [
+        "No hay notas verificables de esta versión en el historial de código disponible."
+      ],
+      "archiveGap": true
     }
   ],
   "upcoming": [
     {
-      "title": "Hogares y mercado laboral",
-      "detail": "Búsqueda de empleo tras cierres, contratación por vacantes y movilidad laboral más trazable."
+      "title": "Mercado laboral trazable",
+      "detail": "Persistencia del desempleo, búsqueda por distancia y selección de vacantes con salarios y condiciones visibles."
     },
     {
-      "title": "Servicios urbanos conectados",
-      "detail": "Redes físicas de agua, electricidad, cloacas y residuos con capacidad, mantenimiento y fallas."
+      "title": "Redes urbanas",
+      "detail": "Agua, energía, cloacas y residuos como infraestructuras físicas con capacidad, costos y fallas."
     },
     {
-      "title": "Expansión y gobierno",
-      "detail": "Sectores de mapa extensibles, responsabilidades municipales y apoyo ciudadano con elecciones."
+      "title": "Ciudad ampliable y gobierno",
+      "detail": "Extensión del mapa por sectores y fases de apoyo ciudadano, responsabilidades y elecciones."
     }
   ]
 }

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.19
+# Ciudad Viva · Alfa 0.20
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -13,11 +13,11 @@ Requiere Python 3.9 o posterior y un navegador moderno con WebGL.
 - Windows: doble clic en **Iniciar Ciudad Viva.bat**.
 - Linux/macOS: abrir **Iniciar Ciudad Viva.sh** desde el explorador; si no arranca, usar su opción “Ejecutar”.
 
-El iniciador abre el servidor local y el navegador. `index.html` requiere el servidor para simular, guardar y aceptar conexiones LAN. Para invitar, el anfitrión deja el iniciador abierto y comparte la dirección LAN indicada en el panel izquierdo. El firewall y la red Wi-Fi deben permitir conexiones entre dispositivos.
+El iniciador abre el servidor local y el navegador. `index.html` requiere el servidor para simular, guardar y aceptar conexiones LAN. Para invitar, el anfitrión deja el iniciador abierto y comparte la dirección LAN indicada en la ventana Ciudad. El firewall y la red Wi-Fi deben permitir conexiones entre dispositivos.
 
 ## Cambios y próximas entregas
 
-La pestaña **Cambios** del panel derecho muestra el historial de versiones y las próximas entregas. Su contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.20 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 

@@ -100,3 +100,8 @@ Centros de salud municipales, potabilizadoras y depuradoras pueden instalar un g
 ## Alfa 0.50 · rutas físicas de recolección (fase 26, parcial)
 
 Los camiones municipales y de depósitos calculan circuitos sobre calles conectadas, visitan contenedores alcanzables y terminan en transferencia o disposición. Se asignan paradas por rutas viables; la capacidad por camión y parada limita retiro. Los contenedores guardan hasta 2 t; los aislados se llenan y desbordan a basura urbana. Los vehículos 3D recorren el camino calculado y Servicios reporta circuitos, carga y acceso. Implementación Online/Offline; esquema 35. Pendientes: elección manual de turnos, rutas separadas por reciclaje y flota diferenciada.
+
+
+## Alfa 0.51 · pronóstico y preparación ante tormentas (fase 27, parcial)
+
+En la costa templada del mapa, una tormenta de 18 mm se pronostica cinco días antes. El cálculo identifica escorrentía y sectores expuestos según suelo, urbanización y drenaje actual. El registro compara áreas previstas y anegamiento real. Con riesgo moderado/alto se pueden gastar $850 en limpieza de sumideros y bombas móviles, que aportan 25% de capacidad durante el episodio y pueden reducir inundaciones y daños de servicios. Online/Offline. Verificación en el escenario inicial: 1.202 → 228 m³ de agua acumulada y 13 → 3 parcelas afectadas con preparación. Pendiente: mapas editables de exposición, riesgos regionales adicionales y reconstrucción completa.

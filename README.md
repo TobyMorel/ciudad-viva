@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.50
+# Ciudad Viva · Alfa 0.51
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 

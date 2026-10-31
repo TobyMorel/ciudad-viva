@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.50 · 31 de octubre de 2026
+**Entrega:** Alfa 0.51 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,9 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.51 · Fase 27 (parcial): cinco días antes de la tormenta regional de 18 mm se pronostican escorrentía, capacidad de drenaje y exposición geográfica con base en terreno, calles y edificios. El evento anticipado incluye parcelas/activos vulnerables; la alerta se actualiza al resolverse el episodio con el daño previsto y observado. Con riesgo moderado/alto se pueden desplegar bombas móviles y limpiar sumideros por $850; durante ese episodio la capacidad pluvial aumenta 25%, reduciendo agua acumulada y zonas afectadas. Online/Offline comparten las reglas; guardados migran al esquema 36. En el mapa inicial preparado, la prueba bajó agua acumulada de 1.202 a 228 m³ y de 13 a 3 parcelas anegadas. El pronóstico sigue siendo determinista y solo describe la región costera de Puerto Claro.
+
 
 - Alfa 0.50 · Fase 26 (parcial): los camiones calculan recorridos sobre la red vial, distribuyen contenedores entre camiones municipales y de depósitos, y enlazan paradas con transferencia o disposición final. Se representan rutas y vehículos circulando por ellas. Los contenedores guardan hasta 2 t; los alcanzados se vacían a un ritmo de 0,15 t/día y los aislados acumulan hasta rebalsar hacia la basura sin recolectar. El acceso vial define qué contenedores aportan capacidad diaria. Online y Offline comparten reglas; guardados migran al esquema 35.
 

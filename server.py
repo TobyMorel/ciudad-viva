@@ -203,7 +203,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":35,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":36,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -290,7 +290,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(35,state.get("version",1))
+    state["version"]=max(36,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
@@ -646,8 +646,15 @@ def calculate_waste_balance(advance=False,apply_effects=False):
         waste["lastWasteImpactDay"]=state.get("day",0)
     return report
 
+def ensure_climate_state():
+    climate=state.setdefault("climate",{})
+    climate.setdefault("region","Costa templada de Puerto Claro")
+    climate.setdefault("forecast",None)
+    climate.setdefault("preparedForDay",None)
+    return climate
+
 def calculate_utility_balance(apply_effects=False):
-    utilities=ensure_utility_state()
+    utilities=ensure_utility_state();climate=ensure_climate_state()
     buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     month=((state.get("day",1)-1)//30)%12
     summer=month in (11,0,1)
@@ -754,7 +761,9 @@ def calculate_utility_balance(apply_effects=False):
     total_runoff=sum(row["runoffM3"] for row in runoff_sources)
     connected_runoff=sum(row["runoffM3"] for row in runoff_sources if row["connected"])
     unconnected_runoff=max(0,total_runoff-connected_runoff)
-    drainage_capacity=utilities["baseDrainageCapacityM3Day"]+len(drain_tiles)*18
+    permanent_drainage_capacity=utilities["baseDrainageCapacityM3Day"]+len(drain_tiles)*18
+    emergency_capacity=round(permanent_drainage_capacity*.25) if climate.get("preparedForDay")==state.get("day") else 0
+    drainage_capacity=permanent_drainage_capacity+emergency_capacity
     captured=min(connected_runoff,drainage_capacity)
     overflow=max(0,connected_runoff-captured)
     standing_water=unconnected_runoff+overflow
@@ -766,6 +775,29 @@ def calculate_utility_balance(apply_effects=False):
     flooded_tiles=sorted({(row["x"],row["y"]) for row in flood_rows},key=lambda xy:(xy[1],xy[0]))
     flooded_buildings=[{"x":row["x"],"y":row["y"],"kind":row.get("buildingKind"),"name":row.get("name"),"terrain":row["height"],"runoffM3":round(row["runoffM3"]),"repairCost":round(55+row["runoffM3"]*.035)} for row in flood_rows if row["kind"]=="building"]
     drainage_coverage=round(captured/max(1,total_runoff)*100) if total_runoff else 100
+    forecast=climate.get("forecast")
+    if day_cycle==12 and (not forecast or forecast.get("targetDay")!=state.get("day",1)+5):
+        rain_forecast=18
+        projected=[{**row,"runoffM3":round(rain_forecast*5*row["area"]*row["coefficient"],1)} for row in runoff_sources]
+        projected_total=sum(row["runoffM3"] for row in projected)
+        projected_connected=sum(row["runoffM3"] for row in projected if row["connected"])
+        projected_unconnected=max(0,projected_total-projected_connected)
+        projected_overflow=max(0,projected_connected-permanent_drainage_capacity)
+        projected_floods=[row for row in projected if row["runoffM3"]>0 and not row["connected"]]
+        left=projected_overflow
+        for row in sorted((r for r in projected if r["runoffM3"]>0 and r["connected"]),key=lambda r:(0 if r["height"]=="bajo" else 1 if r["height"]=="firme" else 2,r["y"],r["x"])):
+            if left<=0:break
+            projected_floods.append(row);left=max(0,left-row["runoffM3"])
+        expected_tiles=sorted({(r["x"],r["y"]) for r in projected_floods},key=lambda p:(p[1],p[0]))
+        expected_buildings=[{"name":r.get("name"),"x":r["x"],"y":r["y"],"terrain":r["height"]} for r in projected_floods if r["kind"]=="building"]
+        expected_standing=projected_unconnected+projected_overflow
+        level="alto" if len(expected_buildings)>=3 or expected_standing>permanent_drainage_capacity*.45 else "moderado" if expected_standing>0 else "bajo"
+        forecast={"issuedDay":state.get("day",1),"targetDay":state.get("day",1)+5,"rainfallMm":rain_forecast,"expectedRunoffM3":round(projected_total),"expectedStandingWaterM3":round(expected_standing),"expectedFloodedTiles":len(expected_tiles),"expectedFloodedBuildingCount":len(expected_buildings),"expectedFloodedBuildings":expected_buildings[:8],"warningLevel":level,"status":"pronosticada"}
+        climate["forecast"]=forecast
+        sample_names=", ".join(r.get("name") or f"parcela {r['x']+1},{r['y']+1}" for r in expected_buildings[:3]) or "sin edificios en riesgo calculado"
+        ev("Alerta meteorológica · tormenta prevista",f"La región {climate['region']} prevé 18 mm de lluvia para el día {forecast['targetDay']} (riesgo {level}). Se estiman {len(expected_tiles)} parcelas anegables y {len(expected_buildings)} edificios expuestos; drenaje actual {round(permanent_drainage_capacity)} m³/día. Zonas expuestas: {sample_names}.")
+    if forecast and climate.get("preparedForDay")==forecast.get("targetDay"):forecast["prepared"]=True
+    elif forecast:forecast["prepared"]=False
     for building in buildings:
         access=building["utilityAccess"]
         factor=min(access["powerServedPct"],access["waterServedPct"],access["wastewaterTreatedPct"],access["gasServedPct"],access["telecomServedPct"])/100
@@ -778,7 +810,7 @@ def calculate_utility_balance(apply_effects=False):
         "wastewater":{"treatmentCapacityM3Day":round(wastewater_capacity),"generatedM3Day":round(generated),"connectedM3Day":round(sewer_flow),"treatedM3Day":round(treated),"untreatedM3Day":round(untreated),"coveragePct":sewer_coverage,"connectedSegments":len(sewer_tiles),"connectedBuildings":sum(b["utilityAccess"]["sewerConnected"] for b in buildings),"plants":sum(b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")) for b in buildings)},
         "gas":{"capacityM3Day":round(gas_capacity),"demandM3Day":round(gas_total,2),"servedM3Day":round(gas_delivered,2),"shortageM3Day":round(max(0,gas_total-gas_delivered),2),"connectedSegments":len(gas_tiles),"connectedBuildings":sum(b["utilityAccess"]["gasConnected"] for b in buildings)},
         "telecommunications":{"capacityMbps":round(telecom_capacity),"demandMbps":round(telecom_total,2),"servedMbps":round(telecom_delivered,2),"shortageMbps":round(max(0,telecom_total-telecom_delivered),2),"connectedSegments":len(telecom_tiles),"connectedBuildings":sum(b["utilityAccess"]["telecomConnected"] for b in buildings)},
-        "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings))},
+        "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"permanentCapacityM3Day":round(permanent_drainage_capacity),"emergencyCapacityM3Day":emergency_capacity,"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings)),"forecast":forecast},
         "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
         "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
         "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
@@ -800,7 +832,14 @@ def calculate_utility_balance(apply_effects=False):
 
 def apply_drainage_impacts():
     utilities=ensure_utility_state();report=utilities.get("report",{}).get("drainage",{});day=state.get("day",0)
-    if report.get("rainfallMm",0)<12 or report.get("standingWaterM3Day",0)<=0 or utilities.get("lastDrainageImpactDay")==day:return
+    if report.get("rainfallMm",0)<12 or utilities.get("lastDrainageImpactDay")==day:return
+    climate=ensure_climate_state();forecast=climate.get("forecast")
+    if forecast and forecast.get("targetDay")==day:
+        forecast["status"]="ocurrida";forecast["actualFloodedTiles"]=len(report.get("floodedTiles",[]));forecast["actualFloodedBuildings"]=len(report.get("floodedBuildings",[]));forecast["actualStandingWaterM3"]=round(report.get("standingWaterM3Day",0));forecast["forecastHit"]=bool(report.get("standingWaterM3Day",0)>0)
+    if report.get("standingWaterM3Day",0)<=0:
+        utilities["lastDrainageImpactDay"]=day
+        ev("Tormenta contenida",f"Lluvia de {report['rainfallMm']} mm; la red absorbió la escorrentía sin anegamientos. Pronóstico: {forecast.get('warningLevel','sin alerta')} · preparación de emergencia: {'activa' if report.get('emergencyCapacityM3Day') else 'no desplegada'}.")
+        return
     homes_affected=0;critical_flood=False;public_cost=0;private_cost=0
     for row in report.get("floodedBuildings",[]):
         building=next((b for b in state.get("buildings",[]) if b.get("x")==row["x"] and b.get("y")==row["y"]),None)
@@ -822,7 +861,8 @@ def apply_drainage_impacts():
     if critical_flood or homes_affected>=max(25,round(state.get("population",0)*.08)):state["approval"]=max(0,state.get("approval",0)-1)
     register_utility_flood_damage(report.get("floodedTiles",[]),day)
     utilities["lastDrainageImpactDay"]=day
-    ev("Anegamiento por tormenta",f"La lluvia de {report['rainfallMm']} mm dejó {len(road_tiles)} parcelas anegadas. {affected_count} edificios recibieron daños; reparaciones estimadas $ {report.get('repairCostEstimate',0)+public_cost:,} y servicios -{min(3,max(1,math.ceil(affected_count/4)) if affected_count else 0)} puntos. Cloacas y pluviales son redes independientes.".replace(",","."))
+    forecast_note=f"Pronóstico {forecast.get('warningLevel','sin alerta')}: {forecast.get('expectedFloodedTiles',0)} parcelas / {forecast.get("expectedFloodedBuildingCount",len(forecast.get("expectedFloodedBuildings",[])))} edificios previstos; preparación {'activa (+{report.get("emergencyCapacityM3Day",0)} m³/día)' if report.get('emergencyCapacityM3Day') else 'no desplegada'}. " if forecast and forecast.get("targetDay")==day else "Sin pronóstico previo guardado. "
+    ev("Anegamiento por tormenta",f"{forecast_note}La lluvia de {report['rainfallMm']} mm dejó {len(road_tiles)} parcelas anegadas. {affected_count} edificios recibieron daños; reparaciones estimadas $ {report.get('repairCostEstimate',0)+public_cost:,} y servicios -{min(3,max(1,math.ceil(affected_count/4)) if affected_count else 0)} puntos. Cloacas y pluviales son redes independientes.".replace(",","."))
 
 def register_utility_flood_damage(flooded_tiles,day):
     utilities=ensure_utility_state();lines={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","gas":"gasLines","telecom":"telecomLines"}
@@ -2090,7 +2130,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.50"
+    server_version="CiudadViva/0.51"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2312,6 +2352,14 @@ class Handler(BaseHTTPRequestHandler):
                         if available<cost:self._send(409,{"error":f"Quedan $ {available}; el combustible cuesta $ {cost}."});return
                         building["backupFuelKwh"]=building["backupCapacityKwh"];state["money"]-=cost
                         ev("Combustible de emergencia repuesto",f"{building.get('name','Servicio crítico')}: reserva restaurada a tres días · costo $ {cost}.")
+                elif action=="prepareStorm":
+                    climate=ensure_climate_state();forecast=climate.get("forecast");target=int(data.get("targetDay",-1))
+                    if not forecast or forecast.get("targetDay")!=target or forecast.get("warningLevel")=="bajo" or target<=state["day"]:self._send(409,{"error":"No hay una alerta futura de riesgo que necesite despliegue."});return
+                    if climate.get("preparedForDay")==target:self._send(409,{"error":"Ya hay bombas móviles y cuadrillas asignadas para esa tormenta."});return
+                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved);cost=850
+                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el despliegue de bombas y limpieza cuesta $ {cost}."});return
+                    state["money"]-=cost;climate["preparedForDay"]=target;forecast["prepared"]=True
+                    ev("Respuesta preventiva desplegada",f"Se limpiaron sumideros y se preposicionaron bombas para el día {target}. $850; la capacidad pluvial aumentará 25% durante la tormenta.")
                 elif action=="repairUtility":
                     failure=next((f for f in ensure_utility_state()["failures"] if f.get("id")==str(data.get("id")) and f.get("status")=="avería"),None)
                     if not failure:self._send(409,{"error":"La avería ya fue reparada o tiene una cuadrilla asignada."});return

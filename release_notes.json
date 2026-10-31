@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.50",
+  "currentVersion": "0.51",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.51",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 27 (parcial): cinco días antes de una tormenta de 18 mm, el sistema pronostica escorrentía, capacidad pluvial y parcelas/edificios expuestos para la región costera templada del mapa. La alerta queda en acontecimientos y Servicios; al finalizar se registra el impacto previsto frente al real.",
+        "Con riesgo moderado/alto, el gobierno puede pagar $850 para limpiar sumideros y preposicionar bombas, lo que aumenta 25% la capacidad de drenaje durante ese episodio. Afecta inundaciones, daños e interrupciones de red ya simulados. Online y Offline; guardados anteriores migran al esquema 36."
+      ]
+    },
     {
       "version": "0.50",
       "date": "2026-10-31",

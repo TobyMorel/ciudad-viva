@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.46 · 31 de octubre de 2026
+**Entrega:** Alfa 0.47 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -365,3 +365,11 @@ Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulaci
 - La falta de cualquiera de estas redes reduce el factor de actividad comercial/hotelera. Online y Offline comparten el balance y la acción de construcción. Guardados migran a esquema 31.
 - Ciudad > Servicios incluye demanda, capacidad, entrega, conexiones, faltantes y costo. Dos nuevas capas 3D y herramientas permiten construir cada tendido.
 - Verificado: compilación/sintaxis de Python y JavaScript, balance de inicio, migración y edición de tramos. Pruebas de interfaz en móvil y escritorio documentadas al cerrar entrega. LAN física pendiente.
+
+
+## Alfa 0.47 · averías y reparación de redes (fase 26, parcial)
+
+- Un tramo de una red conectada puede fallar si la inundación alcanza su calzada. La avería conserva red, coordenada, día y causa; la resolución BFS excluye el segmento, interrumpiendo las conexiones aguas abajo.
+- Ciudad > Servicios permite asignar una cuadrilla desde el presupuesto común. Según la red, reparar cuesta $460–720 y tarda tres días; el avance se guarda por día y el servicio se restablece al finalizar. Acciones simultáneas no duplican cuadrillas ni pagos.
+- El informe muestra averías activas y el mapa marca el segmento rojo en la capa correspondiente. Online y Offline comparten comportamiento. Migración al esquema 32.
+- Verificado: compilación/sintaxis, corte y restauración en ambos modos, acción HTTP Online, y render móvil/escritorio con estado de reparación. Pendiente: prueba LAN física; fase 26 aún necesita respaldo y redundancia.

@@ -80,3 +80,8 @@ Se puede licitar una planta de reciclaje de $14.800 y 88 días base, con 16 pues
 ## Alfa 0.46 · redes de gas y telecomunicaciones (fase 26, parcial)
 
 Implementado: trazados de gas y fibra con conectividad física por calle, demanda diferenciada por tipo de edificio, capacidad incremental por tramo, mantenimiento, actividad productiva condicionada por suministros, panel de balance y capas 3D. Compatible con guardados anteriores y ambos modos de partida. Pendiente dentro de fase 26: cortes y reparación, redundancia, fuentes de red construibles, contenedores y transferencia de residuos, mercados privados de reciclaje y modelado más detallado de operadores.
+
+
+## Alfa 0.47 · averías y reparación de redes (fase 26, parcial)
+
+Implementado: una inundación puede inutilizar un tramo conectado físicamente; el corte recalcula continuidad y suministro. Una cuadrilla municipal repara el segmento con costo por tipo de red y plazo de tres días. El estado persiste en guardados, el informe identifica causa y ubicación, y la vista 3D resalta la avería. Online/Offline comparten la mecánica. Pendiente: fallas por desgaste, prevención, redundancia y respaldo crítico (bombas/hospitales), contenedores, transferencia y logística de reciclables.

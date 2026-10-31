@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.46
+# Ciudad Viva · Alfa 0.47
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -37,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.46 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.47 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -104,3 +104,8 @@ Alfa 0.45 añade una planta municipal de reciclaje como obra pública de $14.800
 ## Redes de gas y telecomunicaciones · Alfa 0.46
 
 La fase 26 incorpora tuberías de gas y fibra óptica tendidas en calles terminadas. La conexión de cada edificio se calcula por continuidad física desde la red base; cada segmento suma capacidad y mantenimiento municipal. Gas y conectividad aportan demanda propia de hogares, comercios, turismo y servicios. Los negocios con acceso deficiente producen menos, y el panel Ciudad > Servicios muestra demanda, entrega, conexiones, faltantes y costo mensual. Las herramientas tienen capas 3D para inspeccionar el trazado. Las ciudades anteriores reciben redes iniciales al migrar al esquema 31.
+
+
+## Averías y reparación de redes · Alfa 0.47
+
+Las tormentas pueden anegar calles donde pasan tendidos conectados y averiar un tramo. El tramo averiado queda fuera de servicio; la conectividad y el suministro se recalculan por continuidad, así que los edificios aguas abajo pueden perder servicios. Ciudad > Servicios muestra red, causa, ubicación y presupuesto requerido. Al asignar una cuadrilla se paga el costo indicado y la reparación demora tres días; al concluir, la línea vuelve a transportar suministro. El tramo dañado se marca en rojo al inspeccionar la capa de esa red. Disponible en ambos modos y compatible con ciudades anteriores (esquema 32).

@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.46",
+  "currentVersion": "0.47",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.47",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): inundaciones en calzadas conectadas pueden averiar un tramo real de una red de servicios; el corte desconecta los edificios aguas abajo y baja la cobertura.",
+        "Ciudad > Servicios registra la causa, ubicación y costo de cada avería. Asignar una cuadrilla cuesta según la red y tarda tres días; al terminar, se restablece el flujo y se actualiza el mapa.",
+        "Disponible en Online y Offline. La capa 3D de la red afectada marca el tramo averiado en rojo; guardados anteriores migran al esquema 32."
+      ]
+    },
     {
       "version": "0.46",
       "date": "2026-10-31",
@@ -398,8 +407,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 26 · residuos y resiliencia de redes",
-      "detail": "Añadir contenedores, estaciones de transferencia y logística de reciclables. Incorporar fallas operativas, reparación y redundancia para energía, agua, saneamiento, gas y telecomunicaciones."
+      "title": "Fase 26 · residuos y seguridad de suministro",
+      "detail": "Añadir contenedores, estaciones de transferencia y logística de reciclables. Completar respaldo y redundancia de redes para sostener hospitales y bombeo durante averías."
     },
     {
       "title": "Fase 27 · clima y resiliencia urbana",

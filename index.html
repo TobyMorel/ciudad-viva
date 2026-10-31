@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#173d3b">
+<title>Ciudad Viva</title><link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar"><div class="brand"><span class="mark">CV</span><div><b>CIUDAD VIVA</b><small>SIMULADOR MUNICIPAL · ALFA 0.15</small></div></div><div class="city-title"><strong id="cityName">Puerto Claro</strong><span id="dateLabel">Año 1 · Enero</span></div><div class="network"><i></i><span id="netLabel">Partida local</span><button id="copyInvite" title="Copiar dirección de invitación">INVITAR</button></div></header>
+  <section class="metrics">
+    <div class="metric"><span>TESORERÍA</span><b id="money">$ 0</b><small id="budgetFlow">Balance mensual</small></div>
+    <div class="metric"><span>POBLACIÓN</span><b id="population">0</b><small id="jobs">Puestos cubiertos 0 / 0</small></div>
+    <div class="metric"><span>EMPLEO EFECTIVO</span><b id="employment">0%</b><small id="employmentNote">Acceso y asistencia laboral</small></div>
+    <div class="metric"><span>SERVICIOS</span><b id="services">0%</b><small id="serviceNote">Agua · energía · residuos</small></div>
+    <div class="metric"><span>APOYO</span><b id="approval">0%</b><small id="approvalCause">Evaluación ciudadana</small></div>
+  </section>
+  <main class="layout">
+    <aside class="left panel"><div class="panel-head"><span>HERRAMIENTAS</span><span class="eyebrow">PLANIFICACIÓN</span></div>
+      <div class="tool-list">
+        <button class="tool active" data-tool="inspect"><span class="tool-icon">⌖</span><span><b>Inspeccionar</b><small>Consultar parcela y obras</small></span><kbd>1</kbd></button>
+        <button class="tool" data-tool="road"><span class="tool-icon road-icon">╱</span><span><b>Proyectar calle</b><small>Contrato · $ 1.200</small></span><kbd>2</kbd></button>
+        <button class="tool" data-tool="zoneHome"><span class="tool-icon home-icon">⌂</span><span><b>Zona residencial</b><small>Planificar suelo · requiere calle</small></span><kbd>3</kbd></button>
+        <button class="tool" data-tool="zoneShop"><span class="tool-icon shop-icon">▤</span><span><b>Zona comercial</b><small>Planificar suelo · requiere calle</small></span><kbd>4</kbd></button>
+        <button class="tool" data-tool="civic"><span class="tool-icon civic-icon">▥</span><span><b>Centro de salud</b><small>Obra pública · $ 8.000</small></span><kbd>5</kbd></button>
+        <button class="tool" data-tool="depot"><span class="tool-icon shop-icon">▦</span><span><b>Depósito municipal</b><small>Almacén logístico · $ 5.600</small></span><kbd>6</kbd></button>
+      </div>
+      <div class="divider"></div><div class="panel-head"><span>TIEMPO</span><span id="speedLabel" class="eyebrow">EN MARCHA</span></div>
+      <div class="time-controls"><button id="pauseBtn" title="Pausar">Ⅱ</button><button data-speed="1" class="speed selected">×1</button><button data-speed="2" class="speed">×2</button><button data-speed="4" class="speed">×4</button></div>
+      <div class="divider"></div><div class="panel-head"><span>CIUDAD</span><button class="text-button" id="saveBtn">GUARDAR</button></div>
+      <div class="city-actions"><button id="loadBtn">Cargar ciudad guardada</button><button id="newBtn">Nueva partida</button><input id="fileInput" type="file" accept="application/json" hidden></div>
+      <div class="lan-card"><span class="lan-dot"></span><div><b>Sala de red local</b><small id="inviteAddress">Preparando dirección…</small></div></div>
+    </aside>
+    <section class="world-wrap"><div class="world-toolbar"><div><b id="mapCityName">Puerto Claro</b><span id="mapDate"> · Año 1 · Enero</span></div><div class="map-legend"><span><i class="legend-road"></i> Vías</span><span><i class="legend-work"></i> Obras</span><span><i class="legend-zone"></i> Parcelas</span></div><button class="camera-button" id="rotateLeft" title="Girar cámara a la izquierda">↶</button><button class="camera-button" id="rotateRight" title="Girar cámara a la derecha">↷</button><button class="camera-button" id="zoomOut" title="Alejar cámara">−</button><button class="camera-button" id="zoomIn" title="Acercar cámara">+</button></div><canvas id="city" aria-label="Mapa 3D isométrico de la ciudad"></canvas><div class="map-hint">ARRASTRAR · MOVER &nbsp; · &nbsp; RUEDA · ZOOM &nbsp; · &nbsp; Q/E · GIRAR</div><div id="toast" class="toast"></div></section>
+    <aside class="right panel"><div class="panel-head"><span>INFORME MUNICIPAL</span><span class="live"><i></i> EN VIVO</span></div><div id="selection" class="selection"><span class="eyebrow">VISTA GENERAL</span><h2>Una ciudad en marcha</h2><p>Seleccioná una parcela para consultar su terreno, acceso y actividad.</p></div>
+      <div class="divider"></div><div class="panel-head"><span>ABASTECIMIENTO</span><span class="eyebrow">CONSTRUCTORAS</span></div><div id="supply" class="supply"></div>
+      <div class="divider"></div><div class="panel-head"><span>OBRAS Y CONTRATOS</span><span id="projectCount" class="count">0</span></div><div id="projects" class="projects"></div>
+      <div class="divider"></div><div class="panel-head"><span>REGISTRO DE ACONTECIMIENTOS</span></div><div id="events" class="events"></div></aside>
+  </main>
+  <div id="bidBackdrop" class="modal-backdrop hidden"><section class="bid-modal" role="dialog" aria-modal="true" aria-labelledby="bidTitle"><div class="modal-head"><div><span id="bidEyebrow" class="eyebrow">LICITACIÓN · TRES OFERTAS</span><h2 id="bidTitle">Elegir constructora</h2></div><button id="bidClose" class="modal-close" aria-label="Cerrar">×</button></div><p id="bidSummary" class="bid-summary"></p><div id="bidOffers" class="bid-offers"></div><div id="bidError" class="bid-error"></div><div class="modal-actions"><button id="bidCancel" class="modal-cancel">Cancelar</button><button id="bidConfirm" class="modal-confirm" disabled>Adjudicar contrato</button></div></section></div>
+  <div id="supplyBackdrop" class="modal-backdrop hidden"><section class="bid-modal supply-modal" role="dialog" aria-modal="true" aria-labelledby="orderTitle"><div class="modal-head"><div><span class="eyebrow">LOGÍSTICA DE OBRA</span><h2 id="orderTitle">Pedir materiales</h2></div><button id="orderClose" class="modal-close" aria-label="Cerrar">×</button></div><p id="orderProject" class="bid-summary"></p><label class="form-label" for="orderSupplier">Proveedor</label><select id="orderSupplier" class="supplier-select"></select><label class="form-label" for="orderDestination">Destino de la carga</label><select id="orderDestination" class="supplier-select"></select><label class="form-label" for="orderPriority">Prioridad de descarga</label><select id="orderPriority" class="supplier-select"><option value="normal">Normal · respeta el turno de llegada</option><option value="alta">Alta · adelanta en la cola de descarga</option></select><p id="orderSupplierNote" class="supplier-note"></p><div id="orderItems" class="order-items"></div><p id="orderError" class="bid-error"></p><div class="modal-actions"><button id="orderCancel" class="modal-cancel">Cancelar</button><button id="orderConfirm" class="modal-confirm">Confirmar pedido</button></div></section></div>
+  <footer><span>CIUDAD VIVA <b>·</b> La ciudad crece con tiempo, inversión y trabajo.</span><span id="playersLabel">GOBIERNO COMPARTIDO · 1 CONECTADO</span></footer>
+</div><script type="module" src="game.js"></script></body></html>

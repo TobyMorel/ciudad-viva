@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+ciudad_guardada.json
+scratch/
+Ciudad_Viva_Alfa_*.zip
+Captura_Alfa_0_*.png
+.DS_Store
+.codex-attachments/

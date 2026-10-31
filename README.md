@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.67
+# Ciudad Viva · Alfa 0.68
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -160,3 +160,8 @@ Cuando la condición de una calle baja de 25%, se cierra por seguridad. Las ruta
 ## Alfa 0.67 · capacidad de plantas y mantenimiento
 
 La condición de centrales eléctricas, plantas potabilizadoras y depuradoras afecta ahora su producción real. Con 82% de condición entregan la capacidad de diseño; el desgaste reduce electricidad, agua o tratamiento disponibles y puede aumentar los déficits si la red está exigida. En Ciudad → Mantenimiento se ve el porcentaje funcional y la salida efectiva de cada planta. La rehabilitación existente recupera 82% y su capacidad base. Online/Offline; los guardados migran al esquema 51.
+
+
+## Alfa 0.68 · inspecciones preventivas de plantas
+
+Centrales eléctricas, plantas potabilizadoras y depuradoras requieren una revisión preventiva cada 180 días. Al vencer el plazo, el cierre mensual crea un expediente. La inspección cuesta $150 y demora un día: puede aprobar la planta sin obra o habilitar constructoras si el desgaste redujo su capacidad. La rehabilitación restaura 82% y reinicia el calendario. Disponible Online y Offline; guardados migran al esquema 52.

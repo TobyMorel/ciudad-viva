@@ -192,7 +192,12 @@ def ensure_heritage_state():
         else:
             building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
         building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state["version"]=max(51,int(state.get("version",1)))
+    state["version"]=max(52,int(state.get("version",1)))
+
+def ensure_critical_inspection_schedule(building):
+    if building.get("kind") not in ("powerPlant","waterPlant","wastewaterPlant"):return
+    building.setdefault("inspectionIntervalDays",180)
+    building.setdefault("nextInspectionDay",int(state.get("day",1))+building["inspectionIntervalDays"])
 
 def road_maintenance_report(funding_factor=None,advance=False):
     roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
@@ -222,9 +227,11 @@ def road_maintenance_report(funding_factor=None,advance=False):
     facilities=[]
     for b in state.get("buildings",[]):
         if b.get("kind") not in public_kinds or b.get("status") in ("cerrado","abandonado"):continue
+        ensure_critical_inspection_schedule(b)
         quality=max(0,min(100,float(b.get("quality",82))));load=1+min(2,(b.get("jobSlots",0)*.012+b.get("occupants",0)*.002))
         base=round(18+load*5);cost=round(base*policy/100);required+=cost
         if advance:
+            needs=state.setdefault("recoveryNeeds",[])
             quality=max(0,quality-(.18+load*.1))
             if funding_factor is not None:quality=min(100,quality+(.52*policy/100*max(0,min(1,float(funding_factor)))))
             b["quality"]=round(quality,1);b["maintenanceLoad"]=round(load,2)
@@ -232,9 +239,13 @@ def road_maintenance_report(funding_factor=None,advance=False):
                 estimate=max(900,round(850+(60-quality)*38))
                 state["recoveryNeeds"].append({"id":f"maintenance-building-{b['x']}-{b['y']}-{state.get('day',1)}","targetType":"building","x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"day":state.get("day",1),"condition":round(quality),"estimate":estimate,"cause":"desgaste por uso y antigüedad","inspectionStatus":"pendiente","status":"abierta"})
                 ev("Inspección de mantenimiento requerida",f"{b.get('name',b['kind'])} bajó de 60% de condición. Solicitá una inspección y compará ofertas de rehabilitación antes de que pierda capacidad.")
+            if b.get("kind") in ("powerPlant","waterPlant","wastewaterPlant") and state.get("day",1)>=b["nextInspectionDay"] and not any(n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada" for n in needs):
+                needs.append({"id":f"inspection-plant-{b['x']}-{b['y']}-{state.get('day',1)}","targetType":"building","x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"day":state.get("day",1),"condition":round(quality),"estimate":max(900,round(850+(82-quality)*38)),"cause":"inspección preventiva programada","inspectionStatus":"pendiente","scheduledInspection":True,"status":"abierta"})
+                ev("Inspección preventiva vencida",f"{b.get('name',b['kind'])} llegó a su revisión de seguridad de los {b['inspectionIntervalDays']} días. La inspección cuesta $150 y comprueba estructura, conexiones y capacidad antes de contratar una rehabilitación.")
         factor=max(0,min(1,quality/82));base_output=b.get("generationKw",900) if b["kind"]=="powerPlant" else b.get("treatmentM3Day",220 if b["kind"]=="waterPlant" else 260) if b["kind"] in ("waterPlant","wastewaterPlant") else None
         output_unit="kW" if b["kind"]=="powerPlant" else "m³/día"
-        facilities.append({"x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"kind":b["kind"],"quality":round(quality,1),"functionalCapacityPct":round(factor*100),"effectiveOutput":round(base_output*factor) if base_output is not None else None,"outputUnit":output_unit,"useLoad":round(load,2),"maintenanceCost":cost})
+        active_inspection=next((n for n in state.get("recoveryNeeds",[]) if n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada"),None)
+        facilities.append({"x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"kind":b["kind"],"quality":round(quality,1),"functionalCapacityPct":round(factor*100),"effectiveOutput":round(base_output*factor) if base_output is not None else None,"outputUnit":output_unit,"inspectionIntervalDays":b.get("inspectionIntervalDays"),"inspectionDueDay":b.get("nextInspectionDay"),"inspectionDaysRemaining":max(0,b.get("nextInspectionDay",state.get("day",1))-state.get("day",1)),"inspectionOverdue":state.get("day",1)>=b.get("nextInspectionDay",state.get("day",1)),"inspectionStatus":active_inspection.get("inspectionStatus") if active_inspection else None,"useLoad":round(load,2),"maintenanceCost":cost})
     road_rows.sort(key=lambda r:(r["quality"],r["y"],r["x"]))
     values=[r["quality"] for r in road_rows];building_values=[b["quality"] for b in facilities]
     funded=max(0,min(1,float(funding_factor if funding_factor is not None else state.get("utilities",{}).get("maintenanceFundingFactor",1))))
@@ -390,7 +401,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":51,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":52,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -486,7 +497,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(51,state.get("version",1))
+    state["version"]=max(52,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("roadMaintenancePct",100)
@@ -499,6 +510,7 @@ def ensure_supply_state():
     state.setdefault("busRoutes",[])
     ensure_heritage_state()
     for building in state["buildings"]:
+        ensure_critical_inspection_schedule(building)
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
         if building.get("kind")=="school":building.setdefault("jobSlots",12);building.setdefault("classrooms",4)
         if building["kind"]=="home":
@@ -1207,7 +1219,13 @@ def advance_recovery_contracts():
             need["inspectionRemainingDays"]=max(0,int(need.get("inspectionRemainingDays",1))-1)
             if need["inspectionRemainingDays"]==0:
                 need["inspectionStatus"]="inspeccionada";need["inspectedDay"]=state.get("day",0)
-                ev("Inspección municipal completada",f"{need['name']}: diagnóstico y presupuesto confirmados en $ {need['estimate']:,}. La obra puede licitarse.".replace(",","."))
+                if need.get("scheduledInspection"):
+                    building=next((b for b in state.get("buildings",[]) if b.get("x")==need["x"] and b.get("y")==need["y"]),None)
+                    if building and building.get("quality",82)>=82:
+                        building["lastInspectionDay"]=state.get("day",1);building["nextInspectionDay"]=state.get("day",1)+building.get("inspectionIntervalDays",180);need.update({"status":"reparada","completedDay":state.get("day",1)})
+                        ev("Inspección preventiva aprobada",f"{need['name']} superó la revisión sin requerir obra. Próxima inspección en {building['inspectionIntervalDays']} días.")
+                    else:ev("Inspección preventiva completada",f"{need['name']}: diagnóstico confirmó condición {need['condition']}% y presupuesto de $ {need['estimate']:,}. Se puede licitar una rehabilitación.".replace(",","."))
+                else:ev("Inspección municipal completada",f"{need['name']}: diagnóstico y presupuesto confirmados en $ {need['estimate']:,}. La obra puede licitarse.".replace(",","."))
     for contract in state.setdefault("recoveryContracts",[]):
         if contract.get("status")!="en obra":continue
         contract["remainingDays"]=max(0,int(contract.get("remainingDays",1))-1)
@@ -1222,6 +1240,8 @@ def advance_recovery_contracts():
                 if building:
                     building["quality"]=82
                     building["floodRepairCost"]=0
+                    if building.get("kind") in ("powerPlant","waterPlant","wastewaterPlant"):
+                        building["lastInspectionDay"]=state.get("day",1);building["nextInspectionDay"]=state.get("day",1)+building.get("inspectionIntervalDays",180)
             need.update({"status":"reparada","completedDay":state["day"]})
         contract.update({"status":"completada","completedDay":state["day"],"stage":"Inspección final aprobada"})
         ev("Rehabilitación municipal terminada",f"{contract['name']}: {contract['contractor']} restauró el activo tras {contract['duration']} días. La condición vuelve a 82% y el registro de necesidad se cierra.")
@@ -3050,7 +3070,7 @@ class Handler(BaseHTTPRequestHandler):
                     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
                     if available<150:self._send(409,{"error":f"Quedan $ {available}; la inspección municipal cuesta $ 150."});return
                     state["money"]-=150;need.update({"inspectionStatus":"en curso","inspectionRemainingDays":1,"inspectionCost":150})
-                    ev("Inspección de emergencia iniciada",f"Una cuadrilla revisará {need['name']} durante un día; costo municipal $ 150. La licitación se habilita al finalizar el informe.")
+                    ev("Inspección preventiva iniciada" if need.get("scheduledInspection") else "Inspección de emergencia iniciada",f"Una cuadrilla revisará {need['name']} durante un día; costo municipal $ 150. El informe determinará si requiere una rehabilitación.")
                 elif action=="awardRecovery":
                     need=next((n for n in state.setdefault("recoveryNeeds",[]) if n.get("id")==str(data.get("id")) and n.get("status")=="abierta" and n.get("inspectionStatus")=="inspeccionada"),None)
                     contractor=data.get("contractor")

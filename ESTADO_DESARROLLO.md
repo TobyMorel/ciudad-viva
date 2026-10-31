@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.67 · 31 de octubre de 2026
+**Entrega:** Alfa 0.68 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.68 · Fase 31 (parcial): centrales, plantas de agua y depuradoras reciben inspección preventiva cada 180 días; si el vencimiento ocurre entre cierres, se abre en el siguiente cierre mensual. El expediente informa condición/costo, la revisión cuesta $150 y demora un día. Si la salida sigue en capacidad base, se aprueba sin contrato y reinicia el plazo; si hay desgaste, se licita por el flujo de recuperación existente y la rehabilitación restaura capacidad a 82%. Online/Offline, esquema 52. Online comprobó generación del expediente, inspección aprobada y nueva fecha al día 361; una planta con desgaste conservó licitación. Offline Chromium simuló el cierre día 181, cobro de $150, inspección de un día y cierre aprobado al día 189 con próxima revisión al 369. Interfaz móvil 390×844 y escritorio 1440×900: subpestañas de Mantenimiento/Recuperación activas, acción visible, sin overflow horizontal, scroll vertical ni errores JS. Calendario aún limitado a las tres clases de plantas.
 
 - Alfa 0.67 · Fase 31 (parcial): la condición física de centrales eléctricas, plantas potabilizadoras y depuradoras ajusta proporcionalmente su generación/tratamiento; el 82% es el punto de capacidad base y el deterioro reduce la producción que llega al balance de la red. Mantenimiento muestra condición, porcentaje funcional y salida actual. La rehabilitación existente a 82% recupera capacidad. Online/Offline, guardados esquema 51. Verificado Online/Offline con una central de 900 kW: a 82% se agregan 900 kW a la capacidad, a 41% agrega 450 kW y a 0% no aporta generación; el déficit eléctrico y de agua aumenta cuando la demanda excede la reserva de red. La prueba Offline también verificó las tres plantas: capacidad de salida 82%→100%, 0%→0%, y guardado migrado a esquema 51. Sin errores JS. Mantenimiento revisado en Chromium móvil 390×844: salida visible, scroll vertical y sin overflow horizontal; medido a 390×844 y 1440×900 sin desborde horizontal ni errores JS; el contenido largo usa scroll vertical. Calendario preventivo por criticidad y activos privados siguen pendientes.
 

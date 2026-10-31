@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.67",
+  "currentVersion": "0.68",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.68",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): centrales eléctricas, plantas potabilizadoras y depuradoras reciben una inspección preventiva cada 180 días. Al vencer el plazo, el siguiente cierre mensual abre un expediente con condición y costo estimado.",
+        "La revisión cuesta $150 y ocupa un día. Si la planta conserva al menos su capacidad de diseño, la inspección se cierra sin obra y reinicia el plazo; si detecta deterioro, habilita las constructoras del ciclo de rehabilitación existente. Restaurar a 82% recupera la capacidad.",
+        "Online/Offline persisten calendario, inspecciones y necesidades en esquema 52. Recuperación y Mantenimiento informan el vencimiento y estado. Se verificó aprobación preventiva y rehabilitación pendiente en el flujo existente."
+      ]
+    },
     {
       "version": "0.67",
       "date": "2026-10-31",
@@ -572,12 +581,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 31 · inspección y mantenimiento preventivo",
-      "detail": "Programar inspecciones por criticidad y antigüedad para actuar antes del deterioro; extender costos y rehabilitación a activos privados y reparaciones con reducción temporal de capacidad."
+      "title": "Fase 30 · reconversión de inmuebles y vivienda",
+      "detail": "Adaptar edificios productivos a nuevos usos mediante permisos, inversión y obra; conectar cambios de empleo, alquileres, oferta de vivienda y desplazamiento de hogares."
     },
     {
-      "title": "Fase 30 · reconversión urbana",
-      "detail": "Cambiar usos de inmuebles productivos con adaptación, inversión y empleo, y registrar efectos sobre alquileres y desplazamiento."
+      "title": "Fase 31 · mantenimiento de activos privados",
+      "detail": "Llevar desgaste y reinversión a viviendas y negocios, con cierres, ocupación y costos a cargo de sus propietarios."
     }
   ]
 }

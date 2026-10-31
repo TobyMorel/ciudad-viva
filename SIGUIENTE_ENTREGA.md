@@ -20,4 +20,4 @@ Alfa 0.31 exige dos conductores distintos por colectivo, uno por turno pico; con
 
 Alfa 0.32 habilita un transbordo físico entre dos líneas por una parada construida, con ocupación y cobro por tramo. Próximo: viaje de regreso separado, horario por franja, boleto integrado y validación LAN entre dos computadoras.
 
-Alfa 0.33 descuenta el segundo tramo del transbordo y separa ingresos por línea sin duplicar pagos. Próximo: viaje de regreso en el turno de tarde, capacidad bidireccional y horario por franja; después trenes y carga. La prueba LAN física continúa pendiente.
+Alfa 0.34 agrega viaje de regreso vespertino con asientos y recaudación separados y visualización de ida/vuelta en movilidad. Próximo incremento de fase 22: ampliar operación fuera de las horas pico, con más franjas de salida y tiempos de espera que dependan de frecuencia; después trenes, metro y carga. Antes de dar por cerrada esta fase, falta validar LAN en dos computadoras físicas y probar estabilidad de ciudades largas. La prueba LAN física continúa pendiente.

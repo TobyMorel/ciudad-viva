@@ -511,6 +511,60 @@ def choose_bus_itinerary(emp):
                         offers.append({"lines":[first,second],"legFares":leg_fares,"access":access_from+access_to,"ride":ride,"transferMinutes":round(transfer),"transferStop":stop.get("name","Parada de intercambio"),"fare":fare,"travelRoute":first["route"][start:leave+1]+second["route"][board:end+1],"minutes":minutes})
     return min(offers,key=lambda item:(item["minutes"],len(item["lines"]),tuple(str(line["id"]) for line in item["lines"]))) if offers else None
 
+def add_return_commutes(employees,commutes):
+    """Reserva capacidad vespertina por separado y publica el regreso al hogar."""
+    lines={line["id"]:line for line in state.get("busRoutes",[])}
+    grouped={};fare_due={};counts={"bus":0,"auto":0,"walk":0};minutes_total=0;auto_emissions=0.0;auto_vehicles=0
+    for emp in employees:
+        person=emp["person"]
+        ids=list(reversed(emp.get("busLineIds",[])))
+        bus_ready=bool(ids) and all(lines[line_id].get("operational") and lines[line_id].get("returnRidersThisPass",0)<lines[line_id].get("capacity",0) for line_id in ids)
+        if bus_ready:
+            for line_id in ids:lines[line_id]["returnRidersThisPass"]+=1
+            fares=[lines[ids[0]].get("fare",BUS_FARE)]
+            if len(ids)>1:fares.append(round(lines[ids[1]].get("fare",BUS_FARE)*BUS_TRANSFER_DISCOUNT,2))
+            mode="bus";distance=emp["busDistance"];route=list(reversed(emp["busTravelRoute"]))
+            transfer=emp.get("transferMinutes",0)
+            if len(ids)>1:
+                old_second=lines[emp["busLineIds"][1]]
+                transfer=max(0,transfer-round(old_second["headwayMinutes"]/2)+round(lines[ids[1]]["headwayMinutes"]/2))
+            access=emp.get("busAccessSegments",0)*4
+        else:
+            ids=[];fares=[];mode="walk" if emp["distance"]<=3 or not person.get("carAccess") else "auto"
+            distance=emp["distance"];route=list(reversed(emp["route"]));transfer=0;access=2
+        emp["returnBusLineIds"]=ids;emp["returnBusLegFares"]=fares
+        person.update({"returnCommuteMode":mode,"returnBusLineIds":ids,"returnBusLegFares":fares})
+        cents={}
+        for leg_ids,leg_fares in ((emp.get("busLineIds",[]),emp.get("busLegFares",[])),(ids,fares)):
+            for line_id,fare in zip(leg_ids,leg_fares):cents[line_id]=cents.get(line_id,0)+round(fare*100)*22
+        total_due=(sum(cents.values())+50)//100
+        due={line_id:amount//100 for line_id,amount in cents.items()}
+        remainder=total_due-sum(due.values())
+        for line_id,_ in sorted(cents.items(),key=lambda item:(-(item[1]%100),str(item[0])))[:remainder]:due[line_id]+=1
+        emp["monthlyBusFareByLine"]=due;person["monthlyBusFareByLine"]=due
+        for line_id,amount in due.items():fare_due[line_id]=fare_due.get(line_id,0)+amount
+        group=(emp["site"]["x"],emp["site"]["y"],emp["home"]["x"],emp["home"]["y"],mode,tuple(ids))
+        grouped.setdefault(group,[]).append((emp,route,distance,access,transfer,fares))
+    return_trips=[]
+    for (sx,sy,hx,hy,mode,ids),rows in grouped.items():
+        emp,route,distance,access,transfer,fares=rows[0]
+        line=lines[ids[0]] if ids else None
+        wait=round(line["headwayMinutes"]/2) if line else 0 if mode=="walk" else 3
+        factor=1 if mode=="walk" else traffic_factor(route)
+        ride=round(distance*(1.8 if line else 4 if mode=="walk" else 2.5)*factor)
+        parking=2 if mode=="auto" else 0
+        minutes=access+wait+ride+parking+transfer
+        vehicles=math.ceil(len(rows)/1.4) if mode=="auto" else 0
+        emissions=round(vehicles*distance*.18,2)
+        counts[mode]+=len(rows);minutes_total+=len(rows)*minutes;auto_vehicles+=vehicles;auto_emissions+=emissions
+        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":line.get("headwayMinutes") if line else None,"reason":"regreso","departureWindow":"17:00–19:00","walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor,2),"attendance":1})
+    commutes.extend(return_trips)
+    for line_id,line in lines.items():
+        line["dailyRiders"]=line.get("ridersThisPass",0)+line.get("returnRidersThisPass",0)
+        line["forecastMonthlyFareRevenue"]=fare_due.get(line_id,0)
+        if line.get("operational") and line.get("fareCollectedDay")!=state["day"]:line["monthlyFareRevenue"]=fare_due.get(line_id,0)
+    return {"returnCommuters":len(employees),"returnBusCommuters":counts["bus"],"returnAutoCommuters":counts["auto"],"returnWalkingCommuters":counts["walk"],"returnTransferCommuters":sum(t["workers"] for t in return_trips if len(t["busLineIds"])==2),"returnMeanMinutes":round(minutes_total/max(1,len(employees))) if employees else 0,"returnVehicles":auto_vehicles+sum(line.get("effectiveBuses",0) for line in lines.values() if line.get("operational")),"returnEmissionsKg":round(auto_emissions+sum(line.get("effectiveBuses",0)*max(0,len(line.get("route",[]))-1)*.55 for line in lines.values() if line.get("operational")),2)}
+
 def commute_model():
     """Asigna residentes identificables a una vacante y una ruta laboral cada uno."""
     global _commute_cache_key,_commute_cache
@@ -527,6 +581,7 @@ def commute_model():
         line["operational"]=bool(line.get("status")=="active" and path)
         line["pauseReason"]="Sin conexión vial entre las paradas" if line.get("status")=="active" and not path else line.get("pauseReason")
         line["ridersThisPass"]=0
+        line["returnRidersThisPass"]=0
         line["forecastMonthlyFareRevenue"]=0
         if not line["operational"]:line.update({"monthlyOperatingCost":0,"monthlyFareRevenue":0})
     key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
@@ -681,7 +736,7 @@ def commute_model():
         transfer_minutes=items[0].get("transferMinutes",0)
         minutes=walk_access+wait+ride+parking+transfer_minutes;attendance=max(.25,1-max(0,minutes-15)/240)
         trip_vehicles=math.ceil(len(items)/1.4) if mode=="auto" else 0
-        trip_emissions=round(2*trip_vehicles*distance*.18,2)
+        trip_emissions=round(trip_vehicles*distance*.18,2)
         walking+=len(items) if mode=="walk" else 0;auto_commuters+=len(items) if mode=="auto" else 0;bus_commuters+=len(items) if mode=="bus" else 0;vehicles+=trip_vehicles;emissions+=trip_emissions
         commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"busTravelRoute":items[0].get("busTravelRoute"),"mode":mode,"busLineId":line.get("id") if line else None,"busLineIds":list(line_ids),"busLegFares":items[0].get("busLegFares",[]),"transferStop":items[0].get("transferStop"),"fare":items[0].get("busFare",0),"headwayMinutes":line.get("headwayMinutes") if line else None,"reason":"trabajo","departureWindow":"07:00–09:00","walkAccessMinutes":walk_access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer_minutes,"estimatedMinutes":minutes,"vehicles":trip_vehicles,"dailyEmissionsKg":trip_emissions,"trafficFactor":round(factor,2),"attendance":round(attendance,2)})
         weighted_minutes+=len(items)*minutes
@@ -740,12 +795,15 @@ def commute_model():
         staffed+=effective
         if workplace["kind"]=="shop":private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
-    model["transferCommuters"]=sum(trip["workers"] for trip in commutes if len(trip.get("busLineIds",[]))==2)
+    model["transferCommuters"]=sum(trip["workers"] for trip in commutes if trip.get("reason")=="trabajo" and len(trip.get("busLineIds",[]))==2)
     model["carAccessWorkers"]=sum(1 for _,_,person in residents if person.get("carAccess"))
     for line in state["busRoutes"]:
         if line.get("status")=="cancelled":continue
         workplaces.append({"name":f"Colectivo · {line.get('originName','Línea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0)*2,"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"Logística","minimumSkill":42,"offeredWage":10})
     model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":round((staffed+driver_count)/max(1,state["population"]*.42)*100)})
+    returning=add_return_commutes(employees,commutes)
+    model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
+    model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
     jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
     search_days=[max(0,state.get("day",1)-int(person.get("unemployedSinceDay",state.get("day",1)))) for person in jobseekers]
@@ -779,6 +837,7 @@ def bus_line_stops(path):
 def bus_route_catalog(commute=None):
     commute=commute or commute_model();grouped={}
     for trip in commute["routes"]:
+        if trip.get("reason")!="trabajo":continue
         key=(*trip["from"],*trip["to"]);row=grouped.setdefault(key,{"from":trip["from"],"to":trip["to"],"route":trip["route"],"distance":trip["distance"],"potentialRiders":0})
         row["potentialRiders"]+=trip["workers"]
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
@@ -1120,8 +1179,8 @@ def collect_bus_fares(workforce):
         if not line.get("operational"):continue
         for employee in workforce.get("employees",[]):
             if line.get("id") not in employee.get("busLineIds",[employee.get("busLineId")]):continue
-            home=employee["home"];index=employee["busLineIds"].index(line["id"])
-            cost=round(employee.get("busLegFares",[])[index]*44)
+            home=employee["home"]
+            cost=employee.get("monthlyBusFareByLine",{}).get(line["id"],0)
             paid=min(max(0,home.get("householdCash",0)),cost)
             home["householdCash"]=home.get("householdCash",0)-paid
             line["monthlyFareRevenue"]+=paid;line["fareCollectedDay"]=state["day"]
@@ -1287,6 +1346,7 @@ def public_state(player_id=None):
     view["supply"]={**state["supply"],"orders":order_views}
     commute=commute_model()
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
+    for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)

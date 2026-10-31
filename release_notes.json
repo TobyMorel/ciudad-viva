@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.33",
+  "currentVersion": "0.34",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.34",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los recorridos laborales ahora incluyen un viaje de regreso al hogar entre 17:00 y 19:00, con modo, ruta, duración y emisiones propios; el regreso revierte el itinerario matutino de colectivos.",
+        "Las líneas reservan asientos de ida y vuelta por separado. La tarifa mensual se calcula desde ambos viajes y se liquida por línea; los transbordos aplican billete integrado en los dos sentidos.",
+        "La visualización de movilidad separa aforo de ida y vuelta y muestra los colectivos animados sobre el trayecto en ambas direcciones. El panel se verificó en 1440×960 y 390×844, sin desborde horizontal, textos fuera de la ventana ni errores JavaScript."
+      ]
+    },
     {
       "version": "0.33",
       "date": "31 de octubre de 2026",

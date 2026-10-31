@@ -9,7 +9,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 11–15 | Parcial: estado compartido LAN y UI; aprobación básica | Elecciones, destitución, roles municipales, crisis y metas equilibradas |
 | 16–20 | Parcial en empresas y cadenas de comercio; resto pendiente | Derecho de suelo, industria, licitaciones complejas y alquileres |
 | 21 | Parcial: salarios, habilidades, búsqueda y cursos | Desigualdad territorial, carga habitacional, movilidad social y educación formal |
-| 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas y rutas | Horarios completos, regreso separado, trenes, metro, carga, accidentes y capacidad vial detallada |
+| 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Franjas horarias extendidas, trenes, metro, carga, accidentes y capacidad vial detallada |
 | 23–28 | Pendiente como sistemas completos | Puertos, aeropuertos, turismo, redes completas, clima y servicios profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
@@ -26,3 +26,6 @@ Alfa 0.31 cubre dos turnos pico con residentes distintos por colectivo; aún fal
 Alfa 0.32 añade un transbordo físico de hasta dos líneas. Sigue pendiente simular el regreso, las franjas horarias y un billete integrado.
 
 Alfa 0.33 incorpora tarifa integrada de dos tramos con liquidación por línea. Aún falta el recorrido vespertino como viaje separado.
+
+
+Alfa 0.34 agrega el regreso laboral de 17:00–19:00 como trayecto diferenciado, con reserva separada por línea, cobro integrado en ambos sentidos, emisiones y animación de flota. La fase 22 sigue parcial; faltan franjas horarias completas, tren/metro, carga, accidentes, detalle de capacidad vial y prueba en LAN físico.

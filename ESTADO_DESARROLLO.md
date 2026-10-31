@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.28 · 31 de octubre de 2026
+**Entrega:** Alfa 0.34 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -202,3 +202,18 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - El segundo tramo cuesta 40% de su tarifa; con líneas de $0,25 se pagan $0,25 + $0,10 por viaje. Cada línea reconoce solo su parte y el hogar se debita por separado. El costo menor influye en la elección de itinerario. El informe expone tarifas por tramo y total.
 - Motor LAN: un escenario de dos líneas con parada compartida asignó tres pasajeros con transbordo. La previsión fue $33 para el primer tramo y $12 para el segundo; el cobro real sumó $45, igual al débito doméstico. Otro escenario sin caja doméstica cobró $0 y conservó ese valor después de refrescar el estado, corrigiendo una previsión que antes reemplazaba el cobro.
 - Offline: un viajero pagó $11 a la primera línea y $4 a la segunda en el cierre mensual; su itinerario publicado mostró $0,35 por viaje. Chromium revisó los importes y el panel abierto a 1440×960 y 390×844, sin desborde horizontal, texto oculto ni errores JS. Para medir la interfaz se aisló WebGL. La conexión LAN entre dos computadoras físicas continúa pendiente.
+
+
+## Alfa 0.34 · regreso vespertino y aforo por sentido
+
+- Online y Offline generan un registro de regreso por grupo hogar–empleo entre 17:00 y 19:00. El viaje revierte el trayecto matutino de bus cuando hay servicio y asiento; si no, vuelve a pie o en auto según acceso y distancia. No se duplica la reserva: la capacidad de tarde se calcula por separado.
+- El día laboral ahora cuenta dos recorridos de autobús para emisiones y flota visible. Se expone el aforo de ida y vuelta en cada línea y se visualizan los vehículos desplazándose en ambos sentidos. Las ofertas de nuevos corredores se basan solo en la ida laboral para no duplicar destinos invertidos.
+- La tarifa mensual considera ambos sentidos, aplica el descuento del segundo tramo en cada viaje y distribuye centavos por línea sin redondear cada tramo de forma que cobre de más al hogar. La recaudación se limita al efectivo disponible.
+
+### Verificación Alfa 0.34
+
+- `python3 -m py_compile server.py`, `node --check offline.js`, `node --check game.js`, `node --check world3d.js`, JSON de `release_notes.json` y `git diff --check` pasan.
+- Smoke LAN: 203 trabajadores tienen viaje de vuelta; en un corredor activo el escenario asignó 16 pasajeros matutinos y 16 vespertinos, reservó 32 de 90 plazas diarias y registró previsión mensual de $176. El fallback sin colectivo produjo 203 regresos a pie o auto. El catálogo de nuevas líneas no incluyó rutas de regreso invertidas.
+- Chromium Offline con la semilla local comprobó 203 viajes de ida y 203 de regreso, con 10 pasajeros en cada sentido de la línea fixture y $110 de ingreso previsto.
+- El panel Movilidad en Chromium a 1440×960 y 390×844 queda dentro del viewport; no tiene desborde horizontal. El contenido largo conserva scroll vertical. Ida y vuelta y la ocupación por sentido son visibles; no se detectaron errores JS ni texto recortado.
+- El test Chromium aisló WebGL con un stub de render para medir la interfaz. La escena 3D de colectivos se validó por el recorrido de animación; no se hizo una prueba visual de píxeles del render. La LAN entre dos equipos físicos sigue pendiente.

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.56
+# Ciudad Viva · Alfa 0.57
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -51,7 +51,7 @@ La migración mensual se limita por plazas de vivienda vacantes y capacidad de e
 
 La alfa incluye vista 3D generada localmente, localidad inicial con 22 edificios, cámara giratoria, tráfico ambiental, calendario, presupuesto, vivienda, calles, zonificación, licitaciones, constructoras, depósitos logísticos, pedidos logísticos, inventarios, trabajadores por contrato, servicios municipales, guardado y sincronización LAN por HTTP.
 
-Pendientes: niveles educativos, hospitalización y ambulancias, seguridad pública y programas sociales, hacienda plurianual, contratos y horarios, habilidades avanzadas, demanda diferenciada, agentes ciudadanos, redes completas de saneamiento/drenaje/residuos/gas/telecomunicaciones, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
+Pendientes: niveles educativos adicionales, hospitalización y ambulancias, protección social, prevención urbana, hacienda plurianual, contratos y horarios, habilidades avanzadas, demanda diferenciada, agentes ciudadanos, redes completas de saneamiento/drenaje/residuos/gas/telecomunicaciones, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
 
 ## Publicación en Vercel
 
@@ -113,3 +113,8 @@ La fase 26 incorpora tuberías de gas y fibra óptica tendidas en calles termina
 ## Averías y reparación de redes · Alfa 0.47
 
 Las tormentas pueden anegar calles donde pasan tendidos conectados y averiar un tramo. El tramo averiado queda fuera de servicio; la conectividad y el suministro se recalculan por continuidad, así que los edificios aguas abajo pueden perder servicios. Ciudad > Servicios muestra red, causa, ubicación y presupuesto requerido. Al asignar una cuadrilla se paga el costo indicado y la reparación demora tres días; al concluir, la línea vuelve a transportar suministro. El tramo dañado se marca en rojo al inspeccionar la capa de esa red. Disponible en ambos modos y compatible con ciudades anteriores (esquema 32).
+
+
+## Seguridad pública · Alfa 0.57
+
+Construí una comisaría municipal por $12.800 y 78 días base. La obra abre 12 puestos cualificados; los oficiales formados en Seguridad pública integran hasta tres patrullas de cuatro. Incidentes de robo o vandalismo se relacionan con edificios abandonados o deteriorados, y la patrulla necesita calles conectadas para responder. El tiempo de viaje limita pérdidas; una salida ocupa el equipo dos días. Ciudad > Seguridad informa cobertura, dotación, historial y pérdidas. Online usa materiales y rutas reales; Offline comparte despacho y efectos, pero mantiene compras de materiales simplificadas. La seguridad es parcial; faltan prevención urbana y protección social.

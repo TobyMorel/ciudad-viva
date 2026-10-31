@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.37 · 31 de octubre de 2026
+**Entrega:** Alfa 0.38 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -259,3 +259,17 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Smoke Online en la ciudad inicial: 15 recorridos de compras/45 pasajeros y 15 recorridos cívicos/21 pasajeros; los servicios generaron 2 autos por ida y vuelta y 2,52 kg de CO₂ estimado. `public_state` expone los contadores.
 - Chromium Offline a 1440×960 y 390×844 mostró el resumen con ambas clases de viajes. El panel cabe dentro del viewport, conserva scroll vertical, no desborda horizontalmente y no produjo errores JS. La selección de una parcela seguida por el botón Ciudad abrió “Una ciudad en marcha”, sin conservar el panel de parcela; la pestaña Empleo contiene ahora los cinco indicadores laborales apartados del Resumen.
 - Sigue siendo demanda diaria agregada y no simula horarios, espera, entrada, uso de colectivos ni ocio; LAN física y simulación larga pendientes.
+
+
+## Alfa 0.38 · terminal portuaria y comercio exterior inicial
+
+- La costa este ahora admite una terminal en la franja edificable junto al agua. Se construye como contrato municipal largo de cinco etapas, con materiales y empresa Online, 14 trabajadores de obra y acceso por calle. Se permite una terminal municipal por ciudad.
+- Una venta regional positiva crea un pedido de exportación de esa tienda. El camión avanza por la ruta vial hacia el puerto, se queda esperando si no existe ruta o el patio no tiene espacio, y almacena las unidades al llegar. El patio tiene 500 unidades.
+- Con 60 unidades, y diez días como intervalo mínimo, zarpa un buque visible con hasta 180 unidades; la exportación se entrega dos días después. La tasa de $0,60/unidad entra a la tesorería municipal. Operación: $320/mes y 12 puestos de logística. El tablero Ciudad > Puerto presenta patio, pedidos, buques e ingresos. Online y Offline tienen el circuito y guardan el estado en esquema 22.
+
+### Verificación Alfa 0.38
+
+- Python: compilación y smoke Online generaron órdenes desde ventas regionales; prueba con 90 unidades avanzó el camión, despachó un buque y acreditó $54.
+- Offline: se aceptó la terminal como contrato de 82 días con una cuadrilla de 14; prueba de exportación generó el viaje de barco y el ingreso portuario.
+- Chromium en 390×844 mostró Ciudad > Puerto sin desplazamiento horizontal, sin desbordes de contenido ni elementos internos recortados; el tablero de construcción incluye la obra portuaria.
+- La fase 23 es parcial: faltan importaciones, tipos de terminal, calado, dragado, capacidad de grúas, colas de atraque, acceso ferroviario, competencia portuaria y balance de pérdidas/ganancias específico. No se estima porcentaje global: sigue faltando una matriz estable de pesos y criterios que cubra las 34 fases.

@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.37",
+  "currentVersion": "0.38",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.38",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Nueva obra portuaria de costa: terminal municipal con licitación, etapas, materiales en Online, cuadrilla y acceso vial. Se ubica en la franja costera este; el acceso se amplía construyendo calle hasta el muelle.",
+        "Las ventas regionales reales de comercios generan pedidos de exportación. Camiones recorren calles conectadas; sin acceso esperan y el patio de 500 unidades limita la recepción.",
+        "Al reunir 60 unidades, un buque de carga visible zarpa con hasta 180, entrega en dos días y genera una tasa de $0,60 por unidad. El puerto abre 12 puestos logísticos y cuesta $320/mes. Online y Offline comparten el circuito.",
+        "Ciudad agrega la categoría Puerto con capacidad de patio, pedidos, buques e ingresos. La interfaz se revisó en móvil: sin desborde horizontal ni elementos ocultos."
+      ]
+    },
     {
       "version": "0.37",
       "date": "31 de octubre de 2026",
@@ -308,12 +318,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Regreso vespertino",
-      "detail": "Simular la vuelta del trabajo al hogar como recorrido separado, con capacidad y espera del turno de tarde."
+      "title": "Fase 24 · Aeropuerto funcional inicial",
+      "detail": "Obra por etapas, acceso terrestre, demanda verificable de pasajeros y carga, capacidad de terminal y pista, costos e impacto urbano."
     },
     {
-      "title": "Fase 22 · Ferrocarril y carga",
-      "detail": "Añadir trazado ferroviario, obra e inspección, trenes y energía antes de habilitar pasajeros y mercancías."
+      "title": "Fases 25–28 · Turismo y redes urbanas",
+      "detail": "Hoteles y visitantes con actividad visible; continuar agua, energía y saneamiento conectados a edificios, además de clima y riesgos."
     }
   ]
 }

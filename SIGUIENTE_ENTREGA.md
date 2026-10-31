@@ -22,4 +22,4 @@ Alfa 0.31 exige dos conductores distintos por colectivo, uno por turno pico; con
 
 Alfa 0.32 habilita un transbordo físico entre dos líneas por una parada construida, con ocupación y cobro por tramo. Próximo: viaje de regreso separado, horario por franja, boleto integrado y validación LAN entre dos computadoras.
 
-Alfa 0.37 agrega viajes cotidianos a centros cívicos además de compras. Próximo: convertir el ocio en destinos reales y abrir un corredor ferroviario de superficie por obra y operación. Ampliar movilidad por fases, no volver a profundizar colectivos salvo bloqueo. La LAN física continúa pendiente.
+Alfa 0.38 agrega la primera cadena exportadora portuaria, desde ventas regionales hasta camión, patio y buque. El puerto es parcial; faltan importación, calado, grúas, tren de carga y competencia. Próximo: fase 24, aeropuerto operativo inicial con obra, acceso terrestre, demanda concreta de pasajeros/carga, capacidad y costos, manteniendo la interfaz compacta. Después sumar turismo/hoteles y continuar redes físicas; no profundizar el puerto salvo bloqueos jugables. La LAN física continúa pendiente.

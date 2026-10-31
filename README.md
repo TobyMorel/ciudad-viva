@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.37
+# Ciudad Viva · Alfa 0.38
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -13,6 +13,10 @@ Al abrir la página se puede elegir **Offline** u **Online · red local**. Onlin
 ## Movilidad cotidiana · Alfa 0.36
 
 Además de los viajes al empleo, hogares con acceso vial generan recorridos de compras hacia comercios abiertos. La elección prioriza cercanía y actividad comercial reciente, alterna entre destinos accesibles, estima peatones o autos según distancia y acceso familiar, y registra el regreso, emisiones y presencia animada en la escena. El resumen de Ciudad los muestra por separado. Es una primera capa de demanda no laboral: todavía no compra productos de nuevo ni contempla ocio, salud, educación, bicicletas o transporte público para esos viajes.
+
+## Puerto comercial · Alfa 0.38
+
+La terminal portuaria es un contrato municipal por etapas junto a la costa este y una calle conectada. Los comercios convierten sus ventas regionales en pedidos; camiones llevan las unidades al patio del puerto por calles reales. Un patio de 500 unidades, cuadrilla logística de 12 puestos y costo fijo de $320/mes ponen límites a la operación. Al reunirse 60 unidades puede zarpar un barco de hasta 180; la tasa aporta $0,60 por unidad al presupuesto y el cargamento tarda dos días en llegar al mercado regional. El muelle, grúa, contenedores y buques se ven en el mapa. Online y Offline guardan pedidos y viajes. Esta primera parte no incluye importaciones, tipos de carga, dragado, atraque, tren de mercancías ni competencia entre puertos.
 
 ## Viajes cotidianos · Alfa 0.37
 
@@ -29,7 +33,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo y Formación. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.37 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación y Puerto. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.38 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 

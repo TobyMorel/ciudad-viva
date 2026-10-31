@@ -25,9 +25,9 @@ Este documento es el punto de relevo de Ciudad Viva. Léelo junto con `ROADMAP_J
 - `release_notes.json`: historial de versiones y datos de la guía visual de fases. Actualizar la versión y los cambios de la interfaz con cada subida.
 - Documentación: auditoría, estado, decisiones y próxima tarea deben concordar con código y pruebas.
 
-## Estado al cerrar Alfa 0.77
+## Estado al cerrar Alfa 0.78
 
-- Roadmap: hito F; fase activa 33, parcial (35%). La fase 21 está al 60% tras enlazar migración y perfiles de personas. Estos son porcentajes por fase, no del juego completo. El avance global permanece “sin estimar” por falta de pesos globales basados en criterios verificables.
+- Roadmap: hito F; fase activa 33, parcial (40%). La fase 21 está al 60% tras enlazar migración y perfiles de personas. Estos son porcentajes por fase, no del juego completo. El avance global permanece “sin estimar” por falta de pesos globales basados en criterios verificables.
 - Estado de partida: el servidor inicia/salva en esquema 59; el adaptador Offline completa los campos y eleva el guardado local a 59. `offline_seed.json` conserva el valor legado 21, se normaliza al iniciar y no debe editarse solo para cambiar ese número. Versión de cliente: Alfa 0.76. La mecánica de migración no añade campos persistentes nuevos.
 - Mercado exterior de fase 33 tiene volúmenes y presupuestos finitos. La oferta cambia de acuerdo con trabajadores, precio, condición, servicios y acceso.
 - Si queda demanda regional sin atender, hay una parcela comercial libre conectada, existe capital privado y reserva, el permiso cabe en caja municipal y una constructora tiene cupo y siete trabajadores, se crea una sola propuesta privada de comercio. La oferta expira a 90 días. Rechazarla no gasta fondos ni reserva parcela y activa una espera de 90 días.
@@ -59,3 +59,10 @@ Continuar la fase 33 con simulación reproducible de varias décadas. Hacer prue
 - Prueba comprobada Online: permiso $432, capital $3.168, anticipo $634, siete trabajadores. Tope $0 deja oferta pendiente sin crear obra. Chromium comprobó Ciudad > Puerto en móvil 390×844 y escritorio 1440×844, sin overflow horizontal ni errores JS.
 - Antes de dar el sistema por verificado en Offline, reproducir la misma propuesta bajo el motor local y probar topes $0/$500. Próximo contenido: escenarios largos de la fase 33, comenzando por 30 años en los perfiles básico y metropolitano; no invertir entregas sucesivas solo en UI.
 - Versión en index y notas: Alfa 0.77. Esquema persistente sigue en 59; sin migración.
+
+
+### Alfa 0.78 (actual)
+
+- Proyecto estándar registra `contractedMandate` y `contractedDay`. Gobierno muestra cartera activa, pagos/saldos municipales y privados, etapa y cuadrilla, con etiqueta de obra heredada. La instantánea de la cartera se anota en cada elección; una victoria no reinicia pagos ni proyectos.
+- Online, contrato escolar heredado por $10.000, pagado $4.000 y saldo $6.000; tras la elección renovada conservó el mismo proyecto. Offline, una elección en día 1.440 renovó del mandato 2 al 3, guardó el saldo $5.885 tras el pago diario y mantuvo proyecto/etapa activos. UI revisada en Chromium 390×844 y 1440×844; sin errores JS o desborde horizontal.
+- Límite: cartera cubre proyectos estándar, no centraliza contratos especiales, deuda y mantenimiento. Fase 33 al 40%; ejecutar escenarios de 30 años sigue siendo la prioridad. Esquema 59.

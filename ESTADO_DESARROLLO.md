@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.77 · 31 de octubre de 2026
+**Entrega:** Alfa 0.78 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -496,6 +496,13 @@ Avance fase 21: 60% orientativo por el criterio de cobertura; fase 33 permanece 
 
 ## Alfa 0.77 · delegación municipal opcional
 
-La gestión puede delegar la aprobación de comercios privados hasta un tope elegible ($0, $500, $1.000 o $1.500). Si el permiso queda dentro del límite, la oferta cumple los requisitos de mercado y hay caja, capital privado y cuadrilla disponibles, Online y Offline generan el contrato y registran permiso, anticipo, siete trabajadores y materiales pendientes. La obra conserva las etapas e inspección existentes. Fuera del límite queda como propuesta manual. Sin migración de esquema: la política se agrega al libro de inversiones y se normaliza al usarlo.
+La gestión puede delegar la aprobación de comercios privados hasta un tope elegible ($0, $500, $1.000 o $1.500). Si el permiso queda dentro del límite, la oferta cumple los requisitos de mercado y hay caja, capital privado y cuadrilla disponibles, Online y Offline generan el contrato y registran permiso, anticipo y siete trabajadores. Conservan las etapas e inspección; Offline aún no bloquea su avance por inventario de materiales. Fuera del límite queda como propuesta manual. Sin migración de esquema: la política se agrega al libro de inversiones y se normaliza al usarlo.
 
 Verificación: prueba autoritativa Online creó la propuesta y contrato con $432 de permiso, $3.168 de inversión privada, anticipo de $634 y 7 trabajadores; con tope $0 no creó obra ni movió fondos. Chromium móvil 390×844 y escritorio 1440×844: panel Ciudad > Puerto legible, sin overflow horizontal, solapamientos ni errores JS. La simulación multidecenal completa y LAN física siguen pendientes.
+
+
+## Alfa 0.78 · contratos visibles entre mandatos
+
+Cada nuevo contrato de construcción registra el mandato y el día en que se adjudicó. Gobierno > Obras y compromisos resume los proyectos activos con etapa, empresa, trabajadores, pagos realizados y saldo pendiente, separado entre fondos municipales y privados; señala cuáles provienen de mandatos anteriores. El acta electoral guarda la cartera al momento del voto, y la renovación del gobierno conserva el proyecto, su etapa y los pagos. No se modificó el esquema 59. La cobertura actual incluye proyectos estándar; no integra todavía todas las rehabilitaciones especiales, deuda y planes de mantenimiento en una sola cartera.
+
+Prueba Online: una obra pública heredada con saldo $6.000 apareció en la cartera electoral; tras la renovación mantuvo el mismo ID y saldo. Offline Chromium avanzó la misma obra un día durante la elección, guardó en el acta el saldo de $5.885 y la dejó activa bajo el mandato siguiente. Chromium 390×844 y 1440×844: tarjeta de compromisos en Gobierno legible, sin overflow horizontal ni errores JS. Simulación de 30 años, LAN física y Vercel siguen pendientes.

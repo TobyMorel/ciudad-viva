@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.77
+# Auditoría del roadmap · Alfa 0.78
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -268,3 +268,8 @@ Llegadas limitadas por aprobación, vivienda vacante y empleo potencial añaden 
 ### Fase 33 · Alfa 0.77: delegación opcional de inversiones (parcial, 35%)
 
 Automatización de una tarea administrativa rutinaria con un tope de permiso definido por el jugador. Solo contrata cuando se satisfacen demanda no cubierta, parcela conectada, caja municipal, capital privado y disponibilidad de cuadrilla. La obra resultante consume recursos reales y avanza por la cadena contractual existente. El tope y la decisión se guardan en el estado compartido; Online y Offline implementan la regla. El resto de la fase sigue pendiente: escenarios de décadas y especializaciones urbanas, herramientas de previsión comparativa y pruebas de aceptación a 30 años.
+
+
+### Fase 33 · Alfa 0.78: registro de contratos heredados (parcial, 40%)
+
+La aprobación de una obra guarda el mandato de origen. El panel de Gobierno presenta los contratos activos, su etapa, contratista, trabajadores, pagos, saldo público/privado y si se heredaron de otra gestión. El acta electoral incluye la cartera financiera a la fecha de elección; renovar el mandato no interrumpe el proyecto ni reembolsa pagos. Probado en Online y Offline con una obra de escuela y elecciones que renuevan al gobierno. El reporte cubre los proyectos estándar; la contabilidad conjunta de todas las rehabilitaciones, deuda y mantenimiento de largo plazo y los escenarios de décadas aún necesitan validación.

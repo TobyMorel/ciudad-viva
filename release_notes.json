@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.77",
+  "currentVersion": "0.78",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.78",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 33: portafolio de obras entre mandatos. Los contratos activos registran su mandato y día de adjudicación; el panel Gobierno muestra avance, constructora, trabajadores y saldo público o privado pendiente. El acta electoral guarda una instantánea financiera; renovar el mandato conserva la obra y sus pagos en ambos motores.",
+        "Verificado en Online y Offline: una escuela heredada conservó identidad, etapa y saldo al renovarse el gobierno; la nueva gestión recibió el saldo restante. Gobierno comprobado en móvil 390×844 y escritorio 1440×844, sin overflow horizontal ni errores de consola."
+      ],
+      "roadmapPhase": 33,
+      "phaseProgress": 40,
+      "overallProgress": null
+    },
     {
       "version": "0.77",
       "date": "2026-10-31",
@@ -990,11 +1001,11 @@
     {
       "phase": 33,
       "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
-      "progress": 35,
-      "summary": "Envejecimiento y rehabilitación, mercados finitos, inversiones condicionadas y delegación municipal con tope",
+      "progress": 40,
+      "summary": "Edades y rehabilitación, inversión privada delegada y registro de contratos heredados entre mandatos",
       "pending": [
+        "Probar la continuidad financiera de deudas, obras públicas y privadas, mantenimiento y compromisos plurianuales",
         "Ensayar partidas de 30 años y ciclos económicos entre mandatos",
-        "Completar cierres y aperturas empresariales bajo demanda, capital e insumos",
         "Probar ciudades pequeñas, metropolitanas, portuarias y turísticas"
       ]
     }

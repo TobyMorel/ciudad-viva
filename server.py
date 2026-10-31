@@ -460,6 +460,17 @@ def update_government_cycle():
         if g.get("crisisStatus")=="alerta":ev("Crisis institucional superada","La tesorería, los servicios o el apoyo se recuperaron antes de la destitución.")
         g["crisisMonths"]=0;g["crisisStatus"]="estable"
 
+def government_contract_portfolio():
+    """Current public/private work commitments visible across mandates."""
+    mandate=int(state.get("government",{}).get("mandate",1));rows=[];public_due=private_due=0
+    for project in state.get("projects",[]):
+        if project.get("status") in ("cancelada","finalizada","completada"):continue
+        remaining=max(0,int(project.get("cost",0))-int(project.get("paid",0)))
+        private=bool(project.get("privatePaid"));public_due+=0 if private else remaining;private_due+=remaining if private else 0
+        rows.append({"id":str(project.get("id","")),"label":project.get("label",project.get("kind","Obra")),"contractor":project.get("contractor","Constructora"),"x":project.get("x"),"y":project.get("y"),"stage":(project.get("stages") or ["Contratada"])[min(int(project.get("stageIndex",0)),max(0,len(project.get("stages",[]))-1))] if project.get("stages") else "Contratada","status":project.get("status","contratada"),"private":private,"remaining":remaining,"paid":int(project.get("paid",0)),"workers":int(project.get("workersAssigned",0)),"contractedMandate":project.get("contractedMandate"),"inherited":project.get("contractedMandate") is not None and int(project.get("contractedMandate"))<mandate})
+    rows.sort(key=lambda row:(row["private"],row["y"] if row["y"] is not None else 0,row["x"] if row["x"] is not None else 0,row["label"]))
+    return {"active":len(rows),"inherited":sum(row["inherited"] for row in rows),"municipalOutstanding":public_due,"privateOutstanding":private_due,"items":rows[:24]}
+
 def government_report():
     ensure_government_state()
     g=state["government"];day=int(state.get("day",1));remaining=max(0,int(g["nextElectionDay"])-day)
@@ -470,7 +481,7 @@ def government_report():
         if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
     plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
     vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"defeatReason":g.get("defeatReason")}
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
 
 def process_government_election():
     ensure_government_state();g=state["government"]
@@ -480,7 +491,7 @@ def process_government_election():
         voters=round(d["population"]*.72);votes=round(voters*d["support"]/100)
         districts.append({"name":d["name"],"eligible":d["population"],"turnout":voters,"governmentVotes":votes,"governmentPct":round(100*votes/max(1,voters)),"issue":d["issue"]})
     total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
-    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
+    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"contractPortfolio":government_contract_portfolio(),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
     g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
     if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elección consideró empleo, vivienda, servicios y confianza de los distritos.")
     else:g["status"]="derrotado";state["paused"]=True;ev("Derrota compartida en las elecciones",f"El gobierno obtuvo {pct}% y perdió la mayoría. Todo el equipo deja el mandato; la ciudad queda pausada en modo observación.")
@@ -2353,7 +2364,7 @@ def refresh_private_investment_opportunity(report):
     if policy.get("enabled") and permit<=int(policy.get("maxPermit",0)):
         # Delegación municipal: contratación ordinaria, con los mismos pagos y cuadrilla que una aprobación manual.
         project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
-        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":material_plan("shop"),"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True}
+        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":material_plan("shop"),"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True}
         state["money"]-=permit;state["privateCapital"]-=private_cost;state["supply"]["contractorCash"][contractor]+=advance;state["projects"].append(project)
         proposal.update({"status":"aceptada","decisionDay":state.get("day",1),"projectId":project_id,"delegated":True});book["history"].append(dict(proposal));book["history"]=book["history"][-24:];book["nextOfferDay"]=state.get("day",1)+90;book["reason"]="Delegación: obra contratada automáticamente dentro del tope; capital, permiso y cuadrilla fueron asignados.";ev("Delegación municipal: comercio contratado",f"Permiso $ {permit}; capital privado $ {private_cost}; anticipo $ {advance}; siete trabajadores asignados. La obra conserva etapas e inspección.".replace(",","."))
 
@@ -3462,7 +3473,7 @@ class Handler(BaseHTTPRequestHandler):
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     spec=PROJECTS[kind]; c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
                     if kind in ("home","shop","hotel"):
                         p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
@@ -3657,7 +3668,7 @@ class Handler(BaseHTTPRequestHandler):
                     kind=abandoned["kind"]; initial=abandoned["progress"]; spec=PROJECTS[kind]; c=CONTRACTORS[contractor]
                     if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} no tiene {LABOR_NEEDS[kind]} trabajadores libres para el rescate."}); return
                     total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
                     private=kind in ("home","shop","hotel")
                     if private:

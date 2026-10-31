@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.77
+# Ciudad Viva · Alfa 0.78
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -214,3 +214,8 @@ Las mudanzas ahora crean y retiran personas identificables en Online y Offline. 
 ## Alfa 0.77 · delegación administrativa
 
 En Ciudad > Puerto podés delegar la aprobación automática de comercios hasta un tope de permiso configurable. La contratación solo ocurre si las cuentas, el capital inversor y la constructora pueden cubrirla; conserva construcción por etapas e inspección. Las propuestas que exceden el límite requieren decisión manual. Funciona en Online y Offline.
+
+
+## Alfa 0.78 · obras que cruzan mandatos
+
+Cada contrato estándar conserva el mandato en que se aprobó. La pantalla Gobierno muestra las obras activas/heredadas, etapas, cuadrilla y saldos municipal y privado. El acta electoral guarda la cartera y, si el gobierno gana, los contratos siguen con sus pagos y avances.

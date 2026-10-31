@@ -226,3 +226,8 @@ Una mudanza del cierre mensual modifica ocupación, padrón y población en la m
 ## Alfa 0.77 · delegación administrativa con tope
 
 La política `privateInvestments.delegation` es opt-in y contiene `enabled` y `maxPermit`. El tope se limita a $1.500. Al generar una oferta comercial, la simulación solo la contrata si el permiso no supera el límite. Revalida capital, tesorería, disponibilidad contractual y demanda al momento de asignar. El proyecto conserva el contrato estándar, etapas y materiales; la delegación paga el permiso, descuenta capital privado y paga el anticipo al contratista. Las ofertas por encima del tope permanecen disponibles para decisión manual. En Online continúa la logística de materiales; Offline todavía no integra abastecimiento como condición para avanzar obras. Se normaliza sin subir el esquema de guardado.
+
+
+## Alfa 0.78 · cartera contractual intermandatos
+
+Los proyectos de construcción registran `contractedMandate` y `contractedDay` al adjudicarse. `government_contract_portfolio()` / `governmentContractPortfolio()` suman el saldo `max(0, cost-paid)` en categorías pública y privada, y clasifican como heredados los proyectos adjudicados antes del mandato vigente. La instantánea se incluye en el resultado electoral, y el reporte actual alimenta el panel Gobierno. No hay reinicio ni movimiento de fondos en la elección; los pagos siguen su flujo contractual. El cambio es aditivo al estado de proyecto/resultado y se mantiene esquema 59. Esta primera cartera no cubre aún todos los contratos especializados de rehabilitación, crédito municipal y obligaciones de mantenimiento.

@@ -207,6 +207,7 @@ def ensure_government_state():
     government.setdefault("crisisStatus","estable")
     government.setdefault("complaints",[])
     government.setdefault("complaintSequence",0)
+    government.setdefault("agreements",[])
     if "plan" not in government:government["plan"]=new_mandate_plan()
 
 def government_districts():
@@ -228,7 +229,8 @@ def government_districts():
         housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
         base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23))
         active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
-        complaint_pressure=min(10,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints))
+        overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
+        complaint_pressure=min(12,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints)+len(overdue_agreements)*2)
         score=max(0,base_score-complaint_pressure)
         issues=[]
         if employment<55:issues.append("empleo")
@@ -256,6 +258,49 @@ def government_plan_report():
         rows.append({**goal,"current":current,"fulfilled":current>=target,"progress":round(min(100,100*current/max(1,target)))})
     return {"createdDay":plan.get("createdDay",state.get("day",1)),"goals":rows,"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics}
 
+def government_issue_sources(district_id,issue):
+    def in_area(x):return ("oeste" if x<10 else "centro" if x<18 else "puerto")==district_id
+    homes=[h for h in state.get("buildings",[]) if h.get("kind")=="home" and in_area(h.get("x",0))]
+    links=[]
+    if issue=="empleo":
+        for home in homes:
+            searching=sum(1 for r in home.get("residents",[]) if r.get("workerEligible") and r.get("status")!="empleado")
+            if searching:links.append({"id":f"home-{home['x']}-{home['y']}-jobseekers","kind":"personas","label":home.get("name","Hogares del barrio"),"detail":f"{searching} residentes buscan empleo","status":"búsqueda activa"})
+        for b in state.get("buildings",[]):
+            if b.get("kind")=="shop" and in_area(b.get("x",0)) and b.get("business",{}).get("status")=="cerrado":links.append({"id":f"firm-{b['x']}-{b['y']}","kind":"empresa","label":b.get("name","Comercio cerrado"),"detail":"Puestos de trabajo fuera de servicio","status":"cerrado"})
+    elif issue=="vivienda":
+        for home in homes:
+            capacity=max(1,int(home.get("capacity",home.get("occupants",0))));occupied=int(home.get("occupants",0));quality=float(home.get("quality",80))
+            if occupied/capacity>=.93 or quality<65:links.append({"id":f"home-{home['x']}-{home['y']}","kind":"vivienda","label":home.get("name","Vivienda del barrio"),"detail":f"{occupied}/{capacity} plazas · calidad {round(quality)}%","status":"presión habitacional" if occupied/capacity>=.93 else "calidad baja"})
+    elif issue=="servicios":
+        for f in state.get("utilities",{}).get("failures",[]):
+            if f.get("status")!="reparada" and in_area(f.get("x",0)):links.append({"id":str(f.get("id")),"kind":"red","label":f"Red {f.get('network','de servicios')}","detail":f"Avería en calle {f.get('x',0)+1}, {f.get('y',0)+1}","status":f.get("status","avería")})
+        for n in state.get("recoveryNeeds",[]):
+            if n.get("status")=="abierta" and in_area(n.get("x",0)):links.append({"id":str(n.get("id")),"kind":"obra","label":n.get("name","Activo municipal"),"detail":n.get("cause","Rehabilitación pendiente"),"status":"necesita atención"})
+        for r in state.get("roadAssets",[]):
+            if in_area(r.get("x",0)) and r.get("quality",100)<60:links.append({"id":f"road-{r['x']}-{r['y']}","kind":"calle","label":f"Calle {r['x']+1}, {r['y']+1}","detail":f"Condición {round(r.get('quality',0))}%","status":"deteriorada"})
+    elif issue=="confianza":
+        arrears=state.get("taxes",{}).get("arrearsByAsset",{})
+        for h in homes:
+            due=arrears.get(f"home-{h.get('x')}-{h.get('y')}",0)
+            if due:links.append({"id":f"tax-home-{h['x']}-{h['y']}","kind":"impuesto","label":h.get("name","Hogares del barrio"),"detail":f"Mora municipal acumulada $ {int(due)}","status":"impago"})
+    if not links:links=[{"id":f"indicator-{district_id}-{issue}","kind":"indicador","label":"Indicador territorial agregado","detail":{"empleo":"Residentes elegibles sin empleo estable","vivienda":"Ocupación y calidad del parque residencial","servicios":"Cobertura municipal y redes locales","confianza":"Aprobación ciudadana y resultados del barrio"}.get(issue,"Indicador municipal"),"status":"requiere revisión"}]
+    return links[:5]
+
+def government_agreement_report():
+    g=state.get("government",{});items=[a for a in g.get("agreements",[]) if a.get("mandate")==g.get("mandate")]
+    return {"items":items[-24:],"active":sum(a.get("status")=="seguimiento" for a in items),"completed":sum(a.get("status")=="cumplido" for a in items),"overdue":sum(a.get("status")=="vencido" for a in items)}
+
+def record_government_agreement(complaint_id,author):
+    ensure_government_state();g=state["government"]
+    complaint=next((c for c in g.get("complaints",[]) if c.get("id")==str(complaint_id) and c.get("status")=="abierto"),None)
+    if not complaint:raise ValueError("El reclamo ya se resolvió o no está disponible.")
+    if any(a.get("complaintId")==complaint["id"] and a.get("mandate")==g["mandate"] and a.get("status")=="seguimiento" for a in g.get("agreements",[])):raise ValueError("Este reclamo ya tiene un seguimiento municipal vigente.")
+    agreement={"id":uuid.uuid4().hex,"complaintId":complaint["id"],"districtId":complaint["districtId"],"district":complaint["district"],"issue":complaint["issue"],"issueTitle":complaint["title"],"mandate":g["mandate"],"createdDay":state["day"],"deadlineDay":state["day"]+180,"status":"seguimiento","createdBy":str(author or "Equipo municipal")[:24],"evidenceIds":[x.get("id") for x in complaint.get("evidenceLinks",[])]}
+    g.setdefault("agreements",[]).append(agreement);g["agreements"]=g["agreements"][-60:]
+    ev("Acuerdo de seguimiento registrado",f"El equipo acuerda recuperar {complaint['title'].lower()} en {complaint['district']} antes del día {agreement['deadlineDay']}. El plazo y el resultado quedan en el registro compartido.")
+    return agreement
+
 def update_government_cycle():
     ensure_government_state();g=state["government"]
     if g.get("status")!="en_mandato":return
@@ -265,15 +310,20 @@ def update_government_cycle():
     for d in districts:
         for issue in d["issues"]:
             key=(d["id"],issue);active.add(key);record=existing.get(key)
-            if record:record["monthsOpen"]=int(record.get("monthsOpen",0))+1;record["lastEvidence"]={"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]};record["lastReviewedDay"]=state["day"]
+            if record:record["monthsOpen"]=int(record.get("monthsOpen",0))+1;record["lastEvidence"]={"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]};record["evidenceLinks"]=government_issue_sources(d["id"],issue);record["lastReviewedDay"]=state["day"]
             else:
                 g["complaintSequence"]=int(g.get("complaintSequence",0))+1
-                record={"id":f"claim-{g['complaintSequence']}","districtId":d["id"],"district":d["name"],"issue":issue,"title":labels[issue],"status":"abierto","openedDay":state["day"],"lastReviewedDay":state["day"],"monthsOpen":1,"lastEvidence":{"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]}}
+                record={"id":f"claim-{g['complaintSequence']}","districtId":d["id"],"district":d["name"],"issue":issue,"title":labels[issue],"status":"abierto","openedDay":state["day"],"lastReviewedDay":state["day"],"monthsOpen":1,"lastEvidence":{"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]},"evidenceLinks":government_issue_sources(d["id"],issue)}
                 g["complaints"].append(record);ev("Reclamo vecinal registrado",f"{d['name']}: {labels[issue].lower()} detectado en los indicadores del barrio. Se revisará al próximo cierre mensual.")
     for record in g["complaints"]:
         key=(record.get("districtId"),record.get("issue"))
         if record.get("status")=="abierto" and key not in active:
             record.update({"status":"resuelto","resolvedDay":state["day"]});ev("Reclamo vecinal resuelto",f"{record.get('district')}: mejoró el indicador de {record.get('issue')}; se cerró el seguimiento.")
+    for agreement in g.setdefault("agreements",[]):
+        if agreement.get("status")!="seguimiento":continue
+        complaint=next((c for c in g["complaints"] if c.get("id")==agreement.get("complaintId")),None)
+        if complaint and complaint.get("status")=="resuelto":agreement.update({"status":"cumplido","completedDay":state["day"]});ev("Acuerdo municipal cumplido",f"{agreement['district']}: se resolvió {agreement['issueTitle'].lower()} antes del vencimiento.")
+        elif state["day"]>=agreement.get("deadlineDay",0):agreement.update({"status":"vencido","overdueDay":state["day"]});ev("Acuerdo municipal vencido",f"{agreement['district']}: venció el plazo para {agreement['issueTitle'].lower()}; queda pendiente en el registro público.")
     g["complaints"]=g["complaints"][-36:]
     reports=government_plan_report()
     for goal in reports["goals"]:
@@ -297,9 +347,11 @@ def government_report():
     districts=government_districts();eligible=sum(d["population"] for d in districts)
     turnout=sum(round(d["population"]*.72) for d in districts)
     incumbent=sum(round(round(d["population"]*.72)*d["support"]/100) for d in districts)
-    plan=government_plan_report();adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])
+    for complaint in g.get("complaints",[]):
+        if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
+    plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
     vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"defeatReason":g.get("defeatReason")}
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"defeatReason":g.get("defeatReason")}
 
 def process_government_election():
     ensure_government_state();g=state["government"]
@@ -308,8 +360,8 @@ def process_government_election():
     for d in report["districts"]:
         voters=round(d["population"]*.72);votes=round(voters*d["support"]/100)
         districts.append({"name":d["name"],"eligible":d["population"],"turnout":voters,"governmentVotes":votes,"governmentPct":round(100*votes/max(1,voters)),"issue":d["issue"]})
-    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"]);pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
-    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"openComplaints":len(report["complaints"]),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas del mandato cumplidas: {plan['fulfilled']}/{plan['total']}"]}
+    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
+    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
     g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
     if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elección consideró empleo, vivienda, servicios y confianza de los distritos.")
     else:g["status"]="derrotado";state["paused"]=True;ev("Derrota compartida en las elecciones",f"El gobierno obtuvo {pct}% y perdió la mayoría. Todo el equipo deja el mandato; la ciudad queda pausada en modo observación.")
@@ -552,7 +604,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":55,"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":56,"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -661,7 +713,7 @@ def ensure_supply_state():
     state.setdefault("busRoutes",[])
     ensure_heritage_state()
     ensure_government_state()
-    state["version"]=max(55,int(state.get("version",1)))
+    state["version"]=max(56,int(state.get("version",1)))
     for building in state["buildings"]:
         ensure_critical_inspection_schedule(building)
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
@@ -2926,7 +2978,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.71"
+    server_version="CiudadViva/0.72"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2983,6 +3035,10 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action=="recordGovernmentAgreement":
+                    try:record_government_agreement(data.get("complaintId"),pid)
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action=="startAdaptiveReuse":
                     ensure_supply_state();x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""))
                     building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)

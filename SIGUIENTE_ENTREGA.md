@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.71
+## Estado al cerrar Alfa 0.72
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -59,3 +59,16 @@ La fase 32 ahora establece metas de empleo, vivienda y servicios por mandato; ca
 ## Punto exacto para continuar
 
 Conectar los reclamos a incidentes observables existentes (servicios cortados, listas de espera, deterioro vial) y registrar quién toma acuerdos municipales en la sala, sin introducir formularios desconectados del estado del juego. Luego ampliar fase 33 con envejecimiento y transformación de barrios por décadas.
+
+
+## Sistema agregado en Alfa 0.72
+
+Los reclamos muestran causas territoriales existentes; los acuerdos de equipo fijan autor y 180 días. Resolver la causa los cumple; dejar vencer el plazo afecta apoyo local y voto. Online/Offline, esquema 56. El panel Cambios lista las 34 fases con barra, alcance y pendientes.
+
+## Próxima entrega: fase 33
+
+Priorizar un primer circuito jugable de evolución por décadas: avanzar edad/época del tejido construido, habilitar cambios visibles de uso o arquitectura según demanda, conservación, inversión y presión de vivienda, y persistir los resultados en Online/Offline. Mostrar por qué cambia cada edificio o barrio. Dejar pendientes de fase 32 para futuras pasadas y evitar otra entrega dedicada solo a paneles o detalle visual.
+
+## Verificación de Alfa 0.72
+
+Pendiente de completar antes de publicar: compilación Python/JavaScript, flujo de acuerdo en ambos motores y revisión visual móvil/escritorio de Cambios y Gobierno. LAN con dos equipos físicos permanece sin probar.

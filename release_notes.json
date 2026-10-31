@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.71",
+  "currentVersion": "0.72",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.72",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 32 (parcial): los reclamos vecinales ahora muestran causas rastreables en hogares, residentes sin empleo, comercios cerrados, redes averiadas, obras pendientes, calles deterioradas o mora tributaria del barrio.",
+        "El equipo municipal puede acordar el seguimiento compartido de un reclamo con plazo de 180 días. Resolver la causa a tiempo cumple el acuerdo y mejora el resultado electoral; un vencimiento reduce el apoyo local y penaliza el escrutinio. Los acuerdos quedan en el estado anfitrión LAN y en el guardado.",
+        "Ciudad > Gobierno muestra evidencia asociada, autor del acuerdo, días restantes, estado y registro de acuerdos. Disponible Online y Offline; guardados migrados al esquema 56. El resto de fase 32 permanece parcial.",
+        "Se agregó bajo el historial de versiones una guía visual de las 34 fases: alcance implementado, barra porcentual de avance y pendientes. Cada porcentaje se deriva de un criterio fijo documentado; las fases no se declaran completas sin verificar sus criterios de aceptación."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.71",
       "date": "2026-10-31",
@@ -612,12 +623,324 @@
   ],
   "upcoming": [
     {
-      "title": "Protección social y compromisos de barrio",
-      "detail": "Fase 32: conectar reclamos con proyectos, fallas y tiempos de respuesta; añadir registro transparente de acuerdos compartidos y efectos en la confianza local."
+      "title": "Fase 33 · evolución urbana por décadas",
+      "detail": "Agregar cambios demográficos y arquitectónicos persistentes a través de décadas, conectados con edad, conservación, vivienda, migraciones y economía; primero un ciclo jugable breve en Online y Offline."
     },
     {
-      "title": "Décadas de evolución urbana",
-      "detail": "Fase 33: ampliar envejecimiento, sustitución y transformación por décadas con cambios visibles en población, patrimonio e infraestructura."
+      "title": "Fases abiertas · cerrar circuitos causales",
+      "detail": "Completar pendientes de gobiernos y sistemas con mecánicas de ciudad: decisiones, recursos, plazos y consecuencias visibles; ampliar un circuito por entrega, no acumular solo detalle de interfaz."
+    }
+  ],
+  "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
+  "roadmapPhases": [
+    {
+      "phase": 0,
+      "title": "Construir el «esqueleto» jugable",
+      "progress": 75,
+      "summary": "Calendario, velocidad/pausa, tesorería, residentes, actividad y eventos básicos",
+      "pending": [
+        "Año completo sin estados contradictorios",
+        "causas completas para todos los indicadores."
+      ]
+    },
+    {
+      "phase": 1,
+      "title": "Terreno, parcelas, calles y urbanización",
+      "progress": 65,
+      "summary": "Parcelas, selección, calles, zonas y expansión del mapa",
+      "pending": [
+        "Catastro completo, propiedad/derechos de suelo y mapas extensibles sin límites."
+      ]
+    },
+    {
+      "phase": 2,
+      "title": "Constructoras, contrataciones y obras por etapas",
+      "progress": 75,
+      "summary": "Constructoras, ofertas, contratos, cuadrillas y obras con etapas/inspección",
+      "pending": [
+        "Permisos y planificación completos para todos los usos",
+        "riesgos y retrasos integrales."
+      ]
+    },
+    {
+      "phase": 3,
+      "title": "Materiales, equipos y logística de construcción",
+      "progress": 60,
+      "summary": "Stock de materiales, proveedores, pedidos, transporte y entregas para obras Online",
+      "pending": [
+        "Logística equivalente en Offline",
+        "maquinaria especializada y cadena completa de suministro."
+      ]
+    },
+    {
+      "phase": 4,
+      "title": "Zonificación, mercado inmobiliario y crecimiento privado",
+      "progress": 45,
+      "summary": "Zonificación y crecimiento privado básico condicionado por ciudad",
+      "pending": [
+        "Promotores con decisión de inversión, permisos y competencia inmobiliaria completa."
+      ]
+    },
+    {
+      "phase": 5,
+      "title": "Población, hogares, necesidades y migración",
+      "progress": 60,
+      "summary": "Hogares/residentes, mudanzas, empleo y necesidades básicas",
+      "pending": [
+        "Necesidades individuales completas, migración multidimensional y desigualdad."
+      ]
+    },
+    {
+      "phase": 6,
+      "title": "Servicios e infraestructura urbana básica",
+      "progress": 70,
+      "summary": "Electricidad, agua, cloacas, drenaje y balances físicos",
+      "pending": [
+        "Cobertura integral de redes, redundancia y respuesta completa a déficits."
+      ]
+    },
+    {
+      "phase": 7,
+      "title": "Movilidad, tránsito y transporte público",
+      "progress": 65,
+      "summary": "Peatones, autos y buses con rutas, horarios parciales, capacidad, tarifa y trabajo",
+      "pending": [
+        "Bicicletas, ocio, capacidad vial detallada, accidentes y transporte multimodal."
+      ]
+    },
+    {
+      "phase": 8,
+      "title": "Economía, empleo, impuestos y presupuesto",
+      "progress": 70,
+      "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
+      "pending": [
+        "Planificación plurianual, escenarios económicos completos y control presupuestario."
+      ]
+    },
+    {
+      "phase": 9,
+      "title": "Servicios públicos, salud, educación y seguridad",
+      "progress": 40,
+      "summary": "Atención primaria/urgente, escuelas y respuesta de bomberos con personal",
+      "pending": [
+        "Hospitales, ambulancias, policía, protección social y niveles educativos completos."
+      ]
+    },
+    {
+      "phase": 10,
+      "title": "Medioambiente, calidad de vida y desarrollo urbano",
+      "progress": 35,
+      "summary": "Contaminación, clima y algunos impactos de servicios/desastres",
+      "pending": [
+        "Calidad de vida integrada, impactos ambientales amplios y desarrollo urbano completo."
+      ]
+    },
+    {
+      "phase": 11,
+      "title": "Apoyo ciudadano, elecciones y destitución",
+      "progress": 60,
+      "summary": "Aprobación, elecciones por distrito, metas, reclamos, crisis y destitución",
+      "pending": [
+        "Participación demográfica, consultas, transparencia y evaluación electoral completa."
+      ]
+    },
+    {
+      "phase": 12,
+      "title": "Juego cooperativo: decisiones y responsabilidades",
+      "progress": 20,
+      "summary": "Estado común de sala LAN y acciones compartidas",
+      "pending": [
+        "Roles municipales, permisos/responsabilidades y reconexión robusta en red real."
+      ]
+    },
+    {
+      "phase": 13,
+      "title": "Crisis, inspecciones, protestas y acontecimientos",
+      "progress": 30,
+      "summary": "Incidentes climáticos, averías, inspecciones y registro de acontecimientos",
+      "pending": [
+        "Protestas, emergencias sistémicas e inspecciones y recuperación completas."
+      ]
+    },
+    {
+      "phase": 14,
+      "title": "Progresión, especialización y metas de ciudad",
+      "progress": 15,
+      "summary": "Metas municipales de mandato y objetivos parciales de ciudad",
+      "pending": [
+        "Progresión y especialización sostenidas con objetivos integrados."
+      ]
+    },
+    {
+      "phase": 15,
+      "title": "Experiencia de juego, información y equilibrio",
+      "progress": 60,
+      "summary": "Herramientas de ciudad, paneles, controles, historial y accesibilidad básica",
+      "pending": [
+        "Equilibrio de experiencia probado con sesiones largas y ciudades extensas."
+      ]
+    },
+    {
+      "phase": 16,
+      "title": "Geografía, geología, catastro y derecho de suelo",
+      "progress": 15,
+      "summary": "Terreno, elevación básica, parcelas y zonificación",
+      "pending": [
+        "Geología, titularidad, catastro legal y derecho de suelo."
+      ]
+    },
+    {
+      "phase": 17,
+      "title": "Empresas privadas, inversión y competencia real",
+      "progress": 50,
+      "summary": "Empresas con inventario, empleo, salarios, liquidez y cierres",
+      "pending": [
+        "Inversión y competencia dinámica, expansión, quiebras y obras abandonadas."
+      ]
+    },
+    {
+      "phase": 18,
+      "title": "Industrias, cadenas de suministro y comercio regional",
+      "progress": 40,
+      "summary": "Comercio local/regional y cadenas de insumos básicas",
+      "pending": [
+        "Industria, mercancías detalladas, cadenas completas y comercio regional avanzado."
+      ]
+    },
+    {
+      "phase": 19,
+      "title": "Licitaciones avanzadas y dirección de obras complejas",
+      "progress": 30,
+      "summary": "Licitaciones comparables, adjudicación y avance contractual por etapas",
+      "pending": [
+        "Dirección de proyectos complejos, hitos, penalidades, disputa y auditoría."
+      ]
+    },
+    {
+      "phase": 20,
+      "title": "Mercado de vivienda, alquileres, desarrolladores y abandono",
+      "progress": 45,
+      "summary": "Vivienda ocupada, alquiler básico, abandono y reconversión de locales",
+      "pending": [
+        "Desarrolladores, mercado de alquileres, protección de inquilinos y desplazamiento."
+      ]
+    },
+    {
+      "phase": 21,
+      "title": "Mercado laboral, salarios, cualificaciones y desigualdad",
+      "progress": 55,
+      "summary": "Perfiles laborales, habilidades, búsqueda, contratación y cursos",
+      "pending": [
+        "Desigualdad, movilidad social y educación enlazada a salarios a largo plazo."
+      ]
+    },
+    {
+      "phase": 22,
+      "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
+      "progress": 45,
+      "summary": "Autos, peatones y red de colectivos con flota, paradas, horarios y transbordos parciales",
+      "pending": [
+        "Trenes, metro, carga, accidentes y todos los viajes no laborales."
+      ]
+    },
+    {
+      "phase": 23,
+      "title": "Puertos marítimos, fluviales y logística de terminales",
+      "progress": 35,
+      "summary": "Puerto visible y operativo para exportación con acceso y capacidad limitada",
+      "pending": [
+        "Importación, grúas, calado, atraque, ferrocarril y competencia logística."
+      ]
+    },
+    {
+      "phase": 24,
+      "title": "Aeropuertos y redes aéreas que funcionan de verdad",
+      "progress": 35,
+      "summary": "Aeropuerto con obras, personal, vuelos, demanda, pasajeros y tasas",
+      "pending": [
+        "Carga aérea, cartera de aerolíneas, clima, ruido y accesos especializados."
+      ]
+    },
+    {
+      "phase": 25,
+      "title": "Turismo, hoteles, eventos y economía visitante",
+      "progress": 30,
+      "summary": "Hoteles privados, huéspedes de vuelos, ocupación, tarifas e impuestos",
+      "pending": [
+        "Eventos, temporadas, múltiples orígenes e impactos territoriales del turismo."
+      ]
+    },
+    {
+      "phase": 26,
+      "title": "Redes de servicios completas y seguridad de suministro",
+      "progress": 80,
+      "summary": "Redes físicas, gas/telecom, residuos, reciclaje, fallas y reparación básica",
+      "pending": [
+        "Redundancia, seguridad avanzada, proveedores y respuesta a cortes en detalle."
+      ]
+    },
+    {
+      "phase": 27,
+      "title": "Clima, hidrología, desastres y resiliencia urbana",
+      "progress": 45,
+      "summary": "Tormentas, pronóstico, calor, sequía y medidas preventivas",
+      "pending": [
+        "Regiones climáticas, inundaciones prolongadas, incendios y reconstrucción total."
+      ]
+    },
+    {
+      "phase": 28,
+      "title": "Salud, educación, seguridad y protección social profundas",
+      "progress": 50,
+      "summary": "Salud primaria, escuela con docentes y bomberos con dotaciones/rutas",
+      "pending": [
+        "Hospitalización, ambulancias, jardines, policía y protección social."
+      ]
+    },
+    {
+      "phase": 29,
+      "title": "Hacienda municipal, deuda, crédito y planificación plurianual",
+      "progress": 55,
+      "summary": "Créditos, impuestos/mora, reserva de deuda y presupuestos por programa",
+      "pending": [
+        "Escenarios, refinanciación y compromisos plurianuales."
+      ]
+    },
+    {
+      "phase": 30,
+      "title": "Barrios históricos, patrimonio y evolución arquitectónica",
+      "progress": 45,
+      "summary": "Inventario y protección patrimonial, rehabilitación y reconversión de locales",
+      "pending": [
+        "Evolución arquitectónica por época, protección de alquiler y desplazamiento."
+      ]
+    },
+    {
+      "phase": 31,
+      "title": "Ciclo de vida, mantenimiento, degradación y rehabilitación",
+      "progress": 60,
+      "summary": "Desgaste y contratos para calles, redes, edificios públicos y plantas críticas",
+      "pending": [
+        "Puentes, activos privados, reemplazo, obras sobre plantas y mantenimiento universal."
+      ]
+    },
+    {
+      "phase": 32,
+      "title": "Gobierno municipal, ordenamiento y confianza ciudadana",
+      "progress": 65,
+      "summary": "Mandatos/electoral, metas, reclamos con causas, acuerdos de seguimiento y destitución",
+      "pending": [
+        "Padrón demográfico, consultas, transparencia completa y reclamos ligados a reparación directa."
+      ]
+    },
+    {
+      "phase": 33,
+      "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
+      "progress": 10,
+      "summary": "Calendario acelerado y registros persistentes que permiten partidas largas",
+      "pending": [
+        "Simulación equilibrada de décadas y transformaciones demográficas/arquitectónicas."
+      ]
     }
   ]
 }

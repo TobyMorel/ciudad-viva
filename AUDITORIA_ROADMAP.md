@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.69
+# Auditoría del roadmap · Alfa 0.72
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -19,7 +19,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
 | 30 | Parcial: patrimonio y rehabilitación; locales cerrados sin deudas pueden convertirse en vivienda privada con permiso, inversión, cuadrilla, etapas, inspección, alquiler y migración condicionada | Evolución arquitectónica por épocas, protección de alquileres y desplazamiento social medido |
 | 31 | Parcial: calles, edificios públicos y redes técnicas con condición, mantenimiento, averías y contratos; calles críticas cierran rutas; tres clases de planta pierden capacidad por desgaste y reciben inspecciones programadas cada 180 días | Calendario preventivo para otras clases de activos, restricciones de planta durante obra, puentes, activos privados, rehabilitación mayor y reemplazo |
-| 32 | Parcial: mandatos, elecciones por distrito, objetivos mensurables, reclamos automáticos y crisis con alerta/recuperación/destitución | Acuerdos y transparencia, reclamos conectados a expedientes, padrón demográfico y consultas vecinales |
+| 32 | Parcial: mandatos, elecciones, objetivos, reclamos con evidencia territorial y acuerdos de seguimiento con vencimiento | Navegación/reparación directa desde evidencia, transparencia completa, padrón demográfico y consultas vecinales |
 | 33 | Pendiente como sistema completo | Simulación urbana de décadas, transformaciones demográficas y arquitectura de largo plazo |
 
 ## Evidencia de esta revisión
@@ -222,8 +222,23 @@ Fase 30 queda parcial: no hay protección de inquilinos, desplazamientos, reconv
 **Pendiente:** plan municipal medible, promesas y seguimiento, reclamos localizados conectados con incidentes/servicios, transparencia y registro de acuerdos, diferencias de participación/voto por composición vecinal, crisis prolongadas con aviso y recuperación, destitución extraordinaria. No declarar completa la fase.
 
 
-### Fase 32 · Alfa 0.71: plan, reclamos y crisis (parcial)
+### Fase 32 · Alfa 0.71: plan, reclamos y crisis (parcial; ampliada en 0.72)
 
 **Nuevo:** tres metas de mandato medidas mensualmente; reclamos automáticos por distrito con evidencia y resolución causal; penalización temporal de apoyo; alerta al segundo cierre y destitución tras tercer mes de crisis simultánea; recuperación posible antes del desenlace.
 
-**Pendiente:** enlazar los reclamos con expedientes/averías y plazos reales; confianza y voto según composición demográfica; consultas vecinales; registro de transparencia, acuerdos y decisiones cooperativas. Sigue pendiente completar criterios de toda la fase.
+**Pendiente en 0.71:** enlazar los reclamos con expedientes/averías y plazos reales; confianza y voto según composición demográfica; consultas vecinales; transparencia y acuerdos. La alfa 0.72 añade acuerdos y vínculos informativos; sigue pendiente completar los criterios de toda la fase.
+
+
+### Fase 32 · Alfa 0.72: evidencia y acuerdos (parcial)
+
+**Implementado:** cada reclamo enlaza entidades de su distrito existentes en hogares, residentes sin empleo, comercios cerrados, redes averiadas, recuperación municipal, calles deterioradas o mora tributaria. El equipo registra acuerdos de seguimiento con autor y plazo; la resolución causal los cumple y el vencimiento genera consecuencias en apoyo y resultado electoral. Online y Offline, guardado esquema 56.
+
+**Pendiente:** convertir vínculos informativos en navegación/intervención directa sobre expediente; ampliar consultas ciudadanas, transparencia y padrón demográfico.
+
+### Criterio del panel de progreso por fase
+
+Cada barra es una estimación orientativa de cobertura de los sistemas centrales y dependientes enumerados para esa fase, redondeada a 5 puntos. Se registra qué circuitos ya existen y cuáles faltan en `release_notes.json`; las fases permanecen parciales y ninguna se marca al 100% sin verificar todos sus criterios de aceptación. No se infiere progreso global como promedio: el roadmap tiene fases de alcance desigual y dependencias entre ellas. Los pendientes se muestran dentro de cada fase para permitir revisar y corregir la valoración con evidencia futura.
+
+### Próximo objetivo
+
+Fase 33: implementar evolución urbana persistente a través de décadas y conectar edad/conservación de edificios con transformaciones arquitectónicas, demografía, demanda de vivienda e inversión. Probar un ciclo en Online y Offline antes de ampliar contenido.

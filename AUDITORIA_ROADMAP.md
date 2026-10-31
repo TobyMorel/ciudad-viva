@@ -105,3 +105,8 @@ Los camiones municipales y de depósitos calculan circuitos sobre calles conecta
 ## Alfa 0.51 · pronóstico y preparación ante tormentas (fase 27, parcial)
 
 En la costa templada del mapa, una tormenta de 18 mm se pronostica cinco días antes. El cálculo identifica escorrentía y sectores expuestos según suelo, urbanización y drenaje actual. El registro compara áreas previstas y anegamiento real. Con riesgo moderado/alto se pueden gastar $850 en limpieza de sumideros y bombas móviles, que aportan 25% de capacidad durante el episodio y pueden reducir inundaciones y daños de servicios. Online/Offline. Verificación en el escenario inicial: 1.202 → 228 m³ de agua acumulada y 13 → 3 parcelas afectadas con preparación. Pendiente: mapas editables de exposición, riesgos regionales adicionales y reconstrucción completa.
+
+
+## Alfa 0.52 · inspección y contratos de recuperación (fase 27, parcial)
+
+Las inundaciones que afectan calles y activos municipales generan expedientes distintos. La inspección cuesta $150 y demora un día de juego; el informe abre tres ofertas de constructoras con costos y plazos propios. La adjudicación paga el trabajo, ocupa una cuadrilla de cuatro empleados, reserva capacidad empresarial y restaura la condición al terminar tras 3–5 días. Los casos y contratos persisten en guardados y funcionan Online/Offline. La cobertura no incluye seguros privados, reconstrucción total ni ola de calor/sequía.

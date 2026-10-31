@@ -93,3 +93,6 @@
 
 
 - **Alfa 0.51 · alerta y preparación climática:** el escenario actual es una costa templada; el ciclo hidrológico ya definido anuncia una tormenta de 18 mm cinco días antes. La previsión calcula escorrentía esperada con el suelo, techos/calles y tendidos pluviales presentes, clasifica riesgo por volumen expuesto y conserva activos destacados. El despliegue cuesta $850, se asigna a una única fecha y agrega capacidad temporal de bombeo equivalente al 25% de la red durante ese día. El registro compara pronóstico, agua y parcelas realmente afectadas; no se presenta como probabilidad ni se extrapola a otras regiones. Online y Offline usan el mismo ciclo.
+
+
+- **Alfa 0.52 · recuperación de activos públicos:** cada tormenta crea un expediente por tramo vial y edificio municipal que recibió daño. El equipo técnico cobra $150 y trabaja un día de juego antes de habilitar la licitación. Las tres constructoras ofrecen precio multiplicado por su perfil y plazo derivado de su tasa base; aceptar descuenta el contrato completo, ocupa cuatro trabajadores y consume un cupo de obra hasta terminar. La obra dura 3–5 días. Al finalizar devuelve el activo a calidad 82 y marca el expediente reparado. Los daños de hogares y empresas siguen por cuenta privada; cortes de redes continúan en el panel de Servicios.

@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.51",
+  "currentVersion": "0.52",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.52",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 27 (parcial): los anegamientos generan casos de recuperación para calles y activos municipales dañados. Un informe técnico cuesta $150 y tarda un día de juego; solo después se puede adjudicar la obra.",
+        "Tres constructoras compiten por precio y plazo. El contrato paga al iniciar, reserva cuatro trabajadores y avanza por días; al completar, restaura la condición del activo. Modo Online/Offline, guardados migran al esquema 37."
+      ]
+    },
     {
       "version": "0.51",
       "date": "2026-10-31",

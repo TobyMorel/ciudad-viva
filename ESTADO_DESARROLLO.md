@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.73 · 31 de octubre de 2026
+**Entrega:** Alfa 0.74 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -446,3 +446,18 @@ Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulaci
 - Offline en Chromium: el control Ciudad > Evolución ejecutó inicio de contrato, consumió materiales y capital y registró la obra; sin errores JS.
 - Interfaz: móvil 390×844 y escritorio 1440×900; panel sin desborde horizontal. En móvil se puede desplazar hasta el botón de rehabilitación; las categorías y tarjetas permanecen legibles. Resultado: pasó.
 - Pendiente de esta fase: corrida de aceptación continua de 30 años y las variantes pequeña/metropolitana/portuaria/turística. Multijugador entre dos computadoras físicas y despliegue Vercel no se validaron en este entorno.
+
+
+## Alfa 0.74 · mercados regionales finitos (fase 33, parcial)
+
+Tres ciudades externas reciben bienes con demanda mensual total de 265 unidades y presupuesto comprador conjunto de $6.450. La oferta disponible para Puerto Claro se calcula según la capacidad competitiva de sus comercios abiertos con personal y acceso por calles a la salida regional (x=23) o a un puerto operativo. Precio, calidad/condición, servicios, plantilla y distancia por ruta afectan la participación. Se reparte el cupo y el presupuesto por cuota ponderada; cada firma queda limitada por ambos. Las unidades exportadas se descuentan del inventario y el ingreso exportador no supera el presupuesto asignado. La falta de insumos o solvencia sigue causando ventas bajas/cierres mediante el sistema empresarial existente. Los mercados se renuevan mensualmente; no generan compradores ilimitados dentro del período.
+
+Ciudad > Puerto presenta volumen potencial, presupuesto, destinos competidores, participación y exportaciones vendidas. Motor autoritativo Online y motor Offline implementan la misma regla; esquema de guardado 58 conserva el informe y el historial mensual. Fase 33: 25% orientativo, con el criterio por fase previamente documentado. No es una estimación global del juego: el roadmap no define pesos comparables entre fases y el total no se promedia.
+
+### Verificación Alfa 0.74
+
+- Verificado: Python compileall, `node --check` para game.js/offline.js y validez JSON de notas.
+- Motor Online: una ruta ausente asigna cero compradores; al conectar la salida regional hubo 118 unidades disponibles en prueba de asignación. Un cierre mensual realista vendió 127 de 127 unidades asignadas por su propio estado y registró $1.778 frente a un presupuesto capturado de $3.091; los límites de unidades y dinero pasaron.
+- Motor Offline en Chromium: guardado de esquema 57 migró a 58, avanzó del día 29 al cierre mensual con salida conectada y seis comercios; se asignaron y vendieron 116 de 116 unidades, con $1.624 de $2.826 de presupuesto capturado. No hubo errores JavaScript.
+- Interfaz Puerto: Chromium a 390×844 y 1440×900 comprobó texto, panel completo desplazable y ausencia de desborde horizontal o de popup. La inspección visual móvil mostró encabezados, navegación, informe y embarques legibles. Se corrigió puntuación redundante en la guía de acceso.
+- LAN entre dos equipos físicos, Vercel y aceptación de fase 33 a 30 años quedan pendientes.

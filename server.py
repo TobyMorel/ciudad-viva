@@ -1,3599 +1,5485 @@
-#!/usr/bin/env python3
-"""Servidor LAN local de Ciudad Viva. Solo biblioteca estÃ¡ndar de Python."""
-import json, math, os, socket, sys, threading, time, uuid, webbrowser
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent
-SAVE = ROOT / "ciudad_guardada.json"
-LOCK = threading.RLock()
-ROOM_OPEN = False
-ROOM_CODE = uuid.uuid4().hex[:6].upper()
-DISCOVERED_ROOMS = {}
-DISCOVERY_PORT = 8766
-PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
-MATERIAL_NAMES = {"aggregate":"Ã¡ridos","steel":"acero","timber":"madera","components":"componentes"}
-INITIAL_CONTRACTOR_STOCK = {"aggregate":20,"steel":6,"timber":6,"components":3}
-INITIAL_REGIONAL_STOCK = {"aggregate":600,"steel":240,"timber":200,"components":180}
-REGIONAL_PRODUCTION = {"aggregate":70,"steel":35,"timber":28,"components":24}
-MATERIAL_PRICE = {"aggregate":38,"steel":210,"timber":75,"components":240}
-SUPPLIERS = {
-    "CorralÃ³n del Puerto":{"price":1.0,"days":2,"profile":"Stock local Â· tarifa media Â· entrega por calle"},
-    "Distribuidora Regional":{"price":.82,"days":9,"profile":"Compra mayorista Â· menor precio Â· viaje largo"},
-    "Flete Urgente":{"price":1.75,"days":1,"profile":"Prioridad de carga Â· tarifa alta Â· despacho inmediato"}}
-SUPPLIER_STOCK = {
-    "CorralÃ³n del Puerto":{"aggregate":260,"steel":90,"timber":110,"components":45},
-    "Distribuidora Regional":{"aggregate":1200,"steel":520,"timber":420,"components":300},
-    "Flete Urgente":{"aggregate":70,"steel":35,"timber":35,"components":32}}
-CONTRACTOR_CASH = {"Sur Obras":5000,"Constructora Delta":9000,"Estudio y Obra Norte":14000}
-MATERIAL_NEEDS = {
-    "road":{"aggregate":22,"steel":0,"timber":0,"components":2},
-    "home":{"aggregate":27,"steel":9,"timber":15,"components":10},
-    "shop":{"aggregate":24,"steel":14,"timber":8,"components":12},
-    "civic":{"aggregate":52,"steel":22,"timber":12,"components":24},
-    "school":{"aggregate":58,"steel":25,"timber":30,"components":28},
-    "fireStation":{"aggregate":62,"steel":34,"timber":24,"components":36},
-    "depot":{"aggregate":38,"steel":18,"timber":14,"components":12},
-    "busGarage":{"aggregate":30,"steel":16,"timber":8,"components":10},
-    "busStop":{"aggregate":10,"steel":0,"timber":5,"components":2},
-    "port":{"aggregate":58,"steel":34,"timber":18,"components":30},
-    "airport":{"aggregate":90,"steel":65,"timber":22,"components":55},
-    "hotel":{"aggregate":55,"steel":25,"timber":24,"components":32},
-    "powerPlant":{"aggregate":72,"steel":48,"timber":12,"components":35},
-    "waterPlant":{"aggregate":68,"steel":36,"timber":20,"components":32},
-    "wastewaterPlant":{"aggregate":64,"steel":38,"timber":18,"components":36},
-    "landfill":{"aggregate":78,"steel":24,"timber":8,"components":18},
-    "recyclingPlant":{"aggregate":62,"steel":34,"timber":16,"components":42}}
-CONTRACTOR_NAMES = ("Sur Obras","Constructora Delta","Estudio y Obra Norte")
-MARKET_SUPPLIERS = {
-    "Cooperativa Regional":{"unitCost":3.7,"stock":120,"maxStock":260,"monthlyOutput":65,"leadDays":4,"profile":"Precio bajo Â· lotes limitados Â· entrega lenta"},
-    "Mayorista del Puerto":{"unitCost":4.6,"stock":260,"maxStock":420,"monthlyOutput":100,"leadDays":2,"profile":"Stock amplio Â· precio medio Â· entrega estable"},
-    "Abasto Expreso":{"unitCost":5.5,"stock":150,"maxStock":240,"monthlyOutput":115,"leadDays":1,"profile":"ReposiciÃ³n rÃ¡pida Â· precio alto"}}
-
-def new_market_supply():
-    return {name:{**values,"cash":18000,"lastSales":0} for name,values in MARKET_SUPPLIERS.items()}
-
-def new_business(building, job_slots, starting_cash=5000):
-    slots=max(1,int(job_slots))
-    return {"id":f"firm-{building['x']}-{building['y']}","name":building.get("name","Comercio local"),
-            "status":"abierto","cash":starting_cash,"jobSlots":slots,"inventory":0,
-            "price":18,"inputCost":5,"inputInventory":24,"wage":10,"productivity":.06,"fixedCost":40,
-            "creditDebt":0,"creditLimit":slots*200,"creditRate":.02,"creditDelinquencyMonths":0,"lastCreditDraw":0,"lastInterest":0,"lastRepayment":0,
-            "lastSales":0,"lastLocalSales":0,"lastRegionalSales":0,"lastLocalDemand":0,"lastRevenue":0,"lastInputs":0,"lastInputUnits":0,"lastInputSupplier":"Sin compras","lastInputShortage":0,"lastProduction":0,"lastPayroll":0,"lastProfit":0,"lastWorkers":0,"lastDemand":0}
-
-JOB_PROFILES = {
-    "shop": ("comercio", "Comercio", 35),
-    "civic": ("salud", "AtenciÃ³n sanitaria", 48),
-    "school": ("educacion", "Docencia", 48),
-    "fireStation": ("bomberos", "Bomberos", 48),
-    "depot": ("logistica", "LogÃ­stica", 42),
-    "port": ("logistica", "LogÃ­stica", 42),
-    "airport": ("logistica", "LogÃ­stica", 42),
-    "hotel": ("comercio", "HotelerÃ­a", 35),
-    "powerPlant": ("logistica", "OperaciÃ³n elÃ©ctrica", 42),
-    "waterPlant": ("logistica", "OperaciÃ³n de agua", 42),
-    "wastewaterPlant": ("logistica", "OperaciÃ³n sanitaria", 42),
-    "landfill": ("logistica", "GestiÃ³n de residuos", 42),
-    "recyclingPlant": ("logistica", "RecuperaciÃ³n de materiales", 42),
-}
-TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("AdministraciÃ³n",48),"logistica":("LogÃ­stica",42),"salud":("Salud",48),"educacion":("EducaciÃ³n",48),"bomberos":("Bomberos",48)}
-TRAINING_SEATS=6
-TRAINING_MONTHS=2
-TRAINING_BASE_MONTHLY_COST=180
-TRAINING_COST_PER_STUDENT=40
-TRAINING_SKILL_GAIN=18
-BUS_PURCHASE_COST=700
-BUS_MONTHLY_OPERATING_COST=140
-BUS_FARE=0.25
-BUS_TRANSFER_DISCOUNT=0.4
-BUS_SEATS=30
-BUS_WINDOW_DEPARTURES=(
-    ("early","05:00â€“07:00",1.5),("morningPeak","07:00â€“09:00",1.0),("dayMorning","09:00â€“11:00",1.75),("dayNoon","11:00â€“13:00",1.75),
-    ("midday","13:00â€“15:00",1.5),("afternoon","15:00â€“17:00",1.5),
-    ("eveningPeak","17:00â€“19:00",1.0),("evening","19:00â€“21:00",1.75),("late","21:00â€“23:00",2.0))
-BUS_WORK_SHIFTS=(("early","afternoon"),("morningPeak","eveningPeak"),("midday","late"))
-
-def stable_skill(person_id, category):
-    """Valor reproducible compartido con Offline, independiente del orden de carga."""
-    value=2166136261
-    for char in f"{person_id}:{category}":
-        value=((value ^ ord(char))*16777619)&0xffffffff
-    return value
-
-def ensure_person_work_profile(person):
-    person.setdefault("skills",{})
-    for category in ("comercio","administracion","logistica","salud","educacion","bomberos"):
-        person["skills"].setdefault(category,25+stable_skill(person.get("id",""),category)%76)
-    person.setdefault("expectedMonthlyWage",7+stable_skill(person.get("id",""),"salario")%3)
-    person.setdefault("carAccess",stable_skill(person.get("id",""),"auto")%100<65)
-
-def workplace_profile(site):
-    category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
-    firm=site.get("business",{}) if site.get("kind") in ("shop","hotel") else {}
-    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel") else 14 if site.get("kind") in ("powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school","fireStation") else 8))
-    return category,label,minimum,wage
-
-def training_candidates(category,center,excluded=None):
-    if category not in TRAINING_CATEGORIES:return []
-    excluded=excluded or set();_,minimum=TRAINING_CATEGORIES[category];candidates=[]
-    for home in (b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0):
-        path=route_between((home["x"],home["y"]),(center["x"],center["y"]))
-        if not path:continue
-        for person in home.get("residents",[]):
-            if not person.get("workerEligible") or person.get("status") not in ("buscando","empleado") or person.get("id") in excluded:continue
-            ensure_person_work_profile(person);skill=person["skills"].get(category,0)
-            if skill>=minimum:continue
-            candidates.append({"person":person,"home":home,"skill":skill,"searchDays":max(0,state.get("day",1)-int(person.get("unemployedSinceDay") or state.get("day",1))),"distance":len(path)-1})
-    candidates.sort(key=lambda row:(0 if row["person"].get("status")=="buscando" else 1,-row["searchDays"],row["skill"],row["distance"],row["person"].get("id","")))
-    return candidates
-
-def training_catalog():
-    centers=[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")]
-    programs=state.setdefault("trainingPrograms",[]);occupied={p.get("centerId") for p in programs if p.get("status") in ("active","paused")}
-    active_trainees={person_id for p in programs if p.get("status") in ("active","paused") for person_id in p.get("traineeIds",[])}
-    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,state.get("money",0)-reserved)
-    result=[]
-    for category,(label,minimum) in TRAINING_CATEGORIES.items():
-        center=next((b for b in centers if b.get("id",f"civic-{b['x']}-{b['y']}") not in occupied),centers[0] if centers else None)
-        center_id=center.get("id",f"civic-{center['x']}-{center['y']}") if center else None
-        candidates=training_candidates(category,center,active_trainees) if center else []
-        seats=min(TRAINING_SEATS,len(candidates));monthly=TRAINING_BASE_MONTHLY_COST+TRAINING_COST_PER_STUDENT*seats;total=monthly*TRAINING_MONTHS
-        reason="" if center and center_id not in occupied and seats and available>=total else "Sin aula municipal" if not center else "Aula ocupada" if center_id in occupied else "Sin residentes accesibles que necesiten esta formaciÃ³n" if not seats else "Fondos municipales comprometidos"
-        result.append({"category":category,"label":label,"minimumSkill":minimum,"centerId":center_id,"centerName":center.get("name","Aula municipal") if center else "Sin aula","availableCandidates":len(candidates),"seats":seats,"durationMonths":TRAINING_MONTHS,"monthlyCost":monthly,"totalCost":total,"skillGainPerMonth":TRAINING_SKILL_GAIN,"canStart":not reason,"reason":reason})
-    return result
-
-def process_training_programs():
-    """Devenga una cuota prefinanciada y capacita una cohorte en cada cambio de mes."""
-    for program in state.setdefault("trainingPrograms",[]):
-        if program.get("status")!="active":continue
-        center=next((b for b in state["buildings"] if b.get("kind")=="civic" and b.get("id",f"civic-{b['x']}-{b['y']}")==program.get("centerId") and b.get("status","operativo") in ("operativo","habilitado")),None)
-        if not center:
-            program.update({"status":"paused","pauseReason":"El aula municipal no estÃ¡ operativa"});ev("Curso pausado",f"{program['label']}: el aula municipal dejÃ³ de estar operativa; el saldo reservado se conserva.");continue
-        homes={person.get("id"):home for home in state["buildings"] if home.get("kind")=="home" for person in home.get("residents",[])};accessible=[]
-        for person_id in program.get("traineeIds",[]):
-            home=homes.get(person_id)
-            if home and route_between((home["x"],home["y"]),(center["x"],center["y"])):
-                person=next((p for p in home.get("residents",[]) if p.get("id")==person_id),None)
-                if person:accessible.append(person)
-        if not accessible:
-            program.update({"status":"paused","pauseReason":"La cohorte perdiÃ³ acceso vial al aula"});ev("Curso pausado",f"{program['label']}: la cohorte no puede llegar al aula; el saldo reservado se conserva.");continue
-        installment=min(program.get("monthlyCost",0),program.get("remainingBudget",0))
-        for person in accessible:
-            ensure_person_work_profile(person);person["skills"][program["category"]]=min(100,person["skills"].get(program["category"],0)+program.get("skillGainPerMonth",TRAINING_SKILL_GAIN))
-        program["remainingBudget"]=max(0,program.get("remainingBudget",0)-installment);program["spent"]=program.get("spent",0)+installment;program["monthsCompleted"]=program.get("monthsCompleted",0)+1;program["lastTrainingDay"]=state["day"]
-        program["traineeProgress"]={person.get("id"):person["skills"][program["category"]] for person in accessible}
-        if program["monthsCompleted"]>=program.get("durationMonths",TRAINING_MONTHS):
-            program["status"]="completed";program["completedDay"]=state["day"];ev("Curso municipal completado",f"{program['label']}: {len(accessible)} residentes terminaron tras {program['durationMonths']} ciclos; aumentaron su habilidad {program['category']}.")
-        else:ev("Ciclo de formaciÃ³n",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
-
-def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"lastReport":{},"history":[]}}
-
-def new_tax_state():
-    return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
-
-HERITAGE_FOUNDING_YEARS={"Municipalidad":1942,"Mercado Central":1948,"Barrio EstaciÃ³n":1951,"Casas del Oeste":1957,"Pasaje del Molino":1959,"CafÃ© EstaciÃ³n":1963,"AlmacÃ©n del Oeste":1965,"GalerÃ­a Central":1968}
-HERITAGE_MATERIALS={"aggregate":6,"steel":3,"timber":4,"components":3}
-
-def ensure_heritage_state():
-    current_year=2026+(max(0,int(state.get("day",1))-1)//360)
-    state.setdefault("heritageWorks",[]);state.setdefault("heritageHistory",[])
-    for building in state.get("buildings",[]):
-        name=building.get("name","")
-        default_year=HERITAGE_FOUNDING_YEARS.get(name,current_year)
-        building.setdefault("yearBuilt",default_year)
-        building.setdefault("architecturalEra","FundaciÃ³n urbana" if building["yearBuilt"]<1950 else "ExpansiÃ³n cÃ­vica" if building["yearBuilt"]<1970 else "ModernizaciÃ³n")
-        building.setdefault("architecturalStyle",architectural_style_for(building["yearBuilt"]))
-        building.setdefault("originalUse",{"home":"Vivienda","shop":"Comercio","civic":"Servicio pÃºblico"}.get(building.get("kind"),building.get("kind","Inmueble")))
-        building.setdefault("renovations",[]);building.setdefault("conservation",92 if building["yearBuilt"]<1970 else 100)
-        if name in HERITAGE_FOUNDING_YEARS:
-            building.setdefault("heritageEligible",True);building.setdefault("heritageSignificance",3 if name in ("Municipalidad","Mercado Central","Barrio EstaciÃ³n") else 2)
-            building.setdefault("heritageLevel","inventariado")
-        else:
-            building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
-        building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state.setdefault("adaptiveReuseWorks",[]);state.setdefault("adaptiveReuseHistory",[])
-    state["version"]=max(53,int(state.get("version",1)))
-
-def architectural_style_for(year):
-    if year<1950:return "Tradicional"
-    if year<1970:return "ExpansiÃ³n cÃ­vica"
-    if year<1990:return "Moderno"
-    if year<2010:return "ContemporÃ¡neo"
-    return "Actual"
-
-def ensure_urban_evolution_state():
-    year=2026+(max(0,int(state.get("day",1))-1)//360)
-    evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year,"history":[],"lastBirthYear":2026})
-    evolution.setdefault("lastProcessedYear",year);evolution.setdefault("history",[]);evolution.setdefault("lastBirthYear",2026)
-    state.setdefault("urbanRenewalNeeds",[]);state.setdefault("urbanRenewalWorks",[]);state.setdefault("urbanRenewalHistory",[])
-    for building in state.get("buildings",[]):
-        if building.get("kind") in ("home","shop","hotel"):
-            building.setdefault("urbanCondition",float(building.get("quality",80 if building.get("kind")=="home" else 100)))
-            building["urbanCondition"]=max(0,min(100,float(building["urbanCondition"])))
-    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
-        for index,person in enumerate(home.setdefault("residents",[])):
-            if person.get("age") is None:
-                fallback_id=f"{home.get('x',0)}-{home.get('y',0)}-{index}"
-                seed=str(person.get('id') or fallback_id)
-                cohort=stable_skill(seed,"edad")%100
-                person["age"]=(18+stable_skill(seed,"edad-laboral")%43) if person.get("workerEligible") else (5+cohort%13 if cohort<76 else 67+cohort%20)
-            person["age"]=max(0,int(person["age"]))
-            person.setdefault("lifeStage","infancia" if person["age"]<18 else "jubilaciÃ³n" if person["age"]>=67 else "vida laboral")
-
-def urban_evolution_report():
-    year=2026+(max(0,int(state.get("day",1))-1)//360);districts=[]
-    for district_id,name,xmin,xmax in (("oeste","Oeste",0,10),("centro","Centro",10,18),("puerto","Puerto",18,100)):
-        homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and xmin<=b.get("x",0)<xmax]
-        people=[p for h in homes for p in h.get("residents",[])]
-        buildings=[b for b in state.get("buildings",[]) if xmin<=b.get("x",0)<xmax]
-        ages=[p.get("age",0) for p in people]
-        districts.append({"id":district_id,"name":name,"population":sum(int(h.get("occupants",0)) for h in homes),"children":sum(a<18 for a in ages),"workingAge":sum(18<=a<67 for a in ages),"retired":sum(a>=67 for a in ages),"averageAge":round(sum(ages)/max(1,len(ages)),1),"buildings":len(buildings),"olderBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"renewalNeeds":sum(n.get("districtId")==district_id and n.get("status")=="disponible" for n in state.get("urbanRenewalNeeds",[]))})
-    buildings=state.get("buildings",[]);conditions=[b.get("urbanCondition",100) for b in buildings if b.get("kind") in ("home","shop","hotel")]
-    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:]}
-
-def advance_urban_evolution():
-    year=2026+(max(0,int(state.get("day",1))-1)//360);evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year-1,"history":[],"lastBirthYear":2026})
-    previous=int(evolution.get("lastProcessedYear",year-1))
-    if year<=previous:return
-    years=min(50,year-previous);adults=retired=births=0
-    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
-        for person in home.setdefault("residents",[]):
-            old=int(person.get("age",0));new=min(120,old+years);person["age"]=new
-            if old<18<=new:
-                person.update({"workerEligible":True,"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1),"unemploymentReason":"alcanzÃ³ edad laboral"});person["lifeStage"]="vida laboral";adults+=1
-                ev("Residente se incorpora al mercado laboral",f"Un residente de {home.get('name','un hogar')} alcanzÃ³ los 18 aÃ±os y busca un puesto compatible con sus habilidades.")
-            elif old<67<=new:
-                if person.get("status")=="empleado":person.update({"previousEmployer":person.get("employerName"),"previousEmployerId":person.get("employerId"),"employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-                person.update({"workerEligible":False,"status":"jubilado","unemployedSinceDay":None,"unemploymentReason":None,"lifeStage":"jubilaciÃ³n"});retired+=1
-                ev("Residente inicia su jubilaciÃ³n",f"Una persona de {home.get('name','un hogar')} dejÃ³ la vida laboral; la vacante queda disponible para el mercado de empleo.")
-            else:person["lifeStage"]="infancia" if new<18 else "jubilaciÃ³n" if new>=67 else "vida laboral"
-    for building in (b for b in (state.get("buildings",[])) if b.get("kind") in ("home","shop","hotel")):
-        age=max(0,year-int(building.get("yearBuilt",year)))
-        if age<=20:continue
-        renewal=next((w for w in state.get("urbanRenewalWorks",[]) if w.get("x")==building.get("x") and w.get("y")==building.get("y")),None)
-        if renewal:continue
-        wear=.3 if age<=40 else .55 if age<=60 else .8
-        building["urbanCondition"]=round(max(25,float(building.get("urbanCondition",80))-wear),1)
-        if building.get("kind")=="home":building["quality"]=round(min(float(building.get("quality",80)),building["urbanCondition"]),1)
-        if building["urbanCondition"]<70 and not any(n.get("x")==building.get("x") and n.get("y")==building.get("y") and n.get("status")=="disponible" for n in state.setdefault("urbanRenewalNeeds",[])):
-            district="oeste" if building.get("x",0)<10 else "centro" if building.get("x",0)<18 else "puerto";name=building.get("name",building.get("kind","Inmueble"));estimate=2400+round((70-building["urbanCondition"])*95)+(500 if building.get("kind")=="shop" else 0)
-            need={"id":f"renewal-{building['x']}-{building['y']}-{year}","x":building["x"],"y":building["y"],"districtId":district,"name":name,"kind":building["kind"],"yearBuilt":building.get("yearBuilt",year),"age":age,"condition":building["urbanCondition"],"estimate":estimate,"status":"disponible","openedYear":year}
-            state["urbanRenewalNeeds"].append(need);ev("Inmueble envejecido necesita renovaciÃ³n",f"{name} tiene {age} aÃ±os y condiciÃ³n {building['urbanCondition']}%. El propietario puede financiar una rehabilitaciÃ³n con materiales, cuadrilla y permiso; si no se invierte, el desgaste continuarÃ¡.")
-    if year>2026 and (year-2026)%4==0 and int(evolution.get("lastBirthYear",2026))<year:
-        for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)<b.get("capacity",0) and b.get("householdCash",0)>=180 and b.get("birthsSince2026",0)<3):
-            fertile=any(24<=int(p.get("age",0))<=40 for p in home.get("residents",[]))
-            if not fertile:continue
-            home["householdCash"]-=180;home["occupants"]+=1;home["birthsSince2026"]=home.get("birthsSince2026",0)+1;births+=1
-            person={"id":f"birth-{year}-{home['x']}-{home['y']}","age":0,"lifeStage":"infancia","workerEligible":False,"status":"inactivo","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"birthYear":year}
-            ensure_person_work_profile(person);home.setdefault("residents",[]).append(person)
-        if births:
-            state["population"]=state.get("population",0)+births
-            ev("Nacimientos en hogares de la ciudad",f"Nacieron {births} residentes en hogares con adultos de 24â€“40 aÃ±os, vacantes y fondos familiares para cuidados iniciales ($180 por hogar). La demanda de salud y educaciÃ³n crecerÃ¡ con ellos.")
-        evolution["lastBirthYear"]=year
-    evolution["lastProcessedYear"]=year
-    if year%10==0:
-        report=urban_evolution_report();record={k:report[k] for k in ("year","population","children","workingAge","retired","averageAge","agingBuildings","averageCondition")};evolution.setdefault("history",[]).append(record);evolution["history"]=evolution["history"][-20:]
-        ev("Balance de dÃ©cada urbana",f"AÃ±o {year}: poblaciÃ³n {record['population']} Â· edad media {record['averageAge']} Â· {record['children']} menores, {record['workingAge']} en edad laboral y {record['retired']} jubilados Â· {record['agingBuildings']} inmuebles con 30 aÃ±os o mÃ¡s. Las obras y mudanzas siguen activas al cambiar de dÃ©cada.")
-
-def advance_urban_renewals():
-    for work in list(state.setdefault("urbanRenewalWorks",[])):
-        work["elapsedDays"]=work.get("elapsedDays",0)+1;work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]));work["stage"]="Refuerzo estructural" if work["progress"]<.35 else "Instalaciones y renovaciÃ³n de fachada" if work["progress"]<.85 else "InspecciÃ³n y habilitaciÃ³n"
-        if work["progress"]<1:continue
-        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
-        if building:
-            building["urbanCondition"]=85;building["quality"]=max(building.get("quality",0),85) if building.get("kind")=="home" else building.get("quality",85);building["lastUrbanRenewalYear"]=2026+(state.get("day",1)-1)//360;building["architecturalStyle"]="ContemporÃ¡neo rehabilitado";building.setdefault("renovations",[]).append({"year":2026+(state.get("day",1)-1)//360,"day":state.get("day",1),"contractor":work["contractor"],"cost":work["cost"],"scope":"RehabilitaciÃ³n privada de ciclo largo"})
-            if building.get("kind")=="home":building["capacity"]=building.get("capacity",0)+2
-        need=next((n for n in state.get("urbanRenewalNeeds",[]) if n.get("id")==work.get("needId")),None)
-        if need:need.update({"status":"rehabilitada","completedDay":state.get("day",1)})
-        state.setdefault("urbanRenewalHistory",[]).append({**work,"status":"completada","completedDay":state.get("day",1)});state["urbanRenewalHistory"]=state["urbanRenewalHistory"][-40:];state["urbanRenewalWorks"].remove(work)
-        ev("RenovaciÃ³n urbana completada",f"{work['name']} fue rehabilitado por {work['contractor']} en {work['durationDays']} dÃ­as. RecuperÃ³ condiciÃ³n 85%, cambiÃ³ a arquitectura contemporÃ¡nea y ampliÃ³ dos plazas habitacionales cuando correspondÃ­a.")
-
-def start_urban_renewal(need_id,contractor):
-    ensure_supply_state()
-    need=next((n for n in state.get("urbanRenewalNeeds",[]) if n.get("id")==need_id and n.get("status")=="disponible"),None)
-    if not need:raise ValueError("La necesidad de rehabilitaciÃ³n ya no estÃ¡ disponible.")
-    if contractor not in CONTRACTORS:raise ValueError("SeleccionÃ¡ una constructora habilitada.")
-    if any(w.get("x")==need["x"] and w.get("y")==need["y"] for w in state.get("urbanRenewalWorks",[])):raise ValueError("El inmueble ya tiene una obra en marcha.")
-    spec=CONTRACTORS[contractor];active=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")]
-    other=[w for key in ("heritageWorks","adaptiveReuseWorks","urbanRenewalWorks") for w in state.get(key,[]) if w.get("contractor")==contractor]
-    used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in active)+sum(w.get("workers",4) for w in other)
-    if len(active)+len(other)>=spec["capacity"] or used+4>spec["workers"]:raise ValueError(f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores.")
-    materials={"aggregate":4,"steel":2,"timber":2,"components":1};stock=state["supply"]["contractors"][contractor]
-    if any(stock.get(k,0)<v for k,v in materials.items()):raise ValueError(f"{contractor} no tiene el lote de rehabilitaciÃ³n (4 Ã¡ridos, 2 acero, 2 madera y 1 componente).")
-    material_cost=sum(v*MATERIAL_PRICE[k] for k,v in materials.items());labor_cost=round((1700+max(0,70-need["condition"])*70)*spec["price"]);cost=material_cost+labor_cost
-    if state.get("privateCapital",0)<cost:raise ValueError(f"El capital privado disponible no cubre la rehabilitaciÃ³n de $ {cost:,}.".replace(",","."))
-    for k,v in materials.items():stock[k]-=v
-    state["privateCapital"]-=cost;state["money"]+=100;state["supply"]["contractorCash"][contractor]=state["supply"]["contractorCash"].get(contractor,0)+labor_cost
-    duration=max(24,round(30*spec["days"]/30));work={"id":f"urban-{need['x']}-{need['y']}-{state['day']}","needId":need["id"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"materials":materials,"materialCost":material_cost,"laborCost":labor_cost,"cost":cost,"permitFee":100,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"DiagnÃ³stico y refuerzo estructural","startDay":state["day"],"status":"en obra"}
-    state["urbanRenewalWorks"].append(work);need.update({"status":"en obra","contractor":contractor,"workId":work["id"]})
-    ev("RehabilitaciÃ³n urbana contratada",f"{need['name']}: inversiÃ³n privada $ {cost:,}, permiso municipal $100, cuatro trabajadores, materiales de {contractor} y {duration} dÃ­as de obra.".replace(",","."))
-    return work
-
-def ensure_government_state():
-    day=max(1,int(state.get("day",1)))
-    government=state.setdefault("government",{})
-    government.setdefault("mandate",1)
-    government.setdefault("startDay",day)
-    government.setdefault("nextElectionDay",day+1440)
-    government.setdefault("status","en_mandato")
-    government.setdefault("elections",[])
-    government.setdefault("crisisMonths",0)
-    government.setdefault("crisisStatus","estable")
-    government.setdefault("complaints",[])
-    government.setdefault("complaintSequence",0)
-    government.setdefault("agreements",[])
-    if "plan" not in government:government["plan"]=new_mandate_plan()
-
-def government_districts():
-    districts=[{"id":"oeste","name":"Oeste","homes":[]},{"id":"centro","name":"Centro","homes":[]},{"id":"puerto","name":"Puerto","homes":[]}]
-    for home in state.get("buildings",[]):
-        if home.get("kind")!="home":continue
-        idx=0 if home.get("x",0)<10 else 1 if home.get("x",0)<18 else 2
-        districts[idx]["homes"].append(home)
-    rows=[]
-    for d in districts:
-        residents=[r for h in d["homes"] for r in h.get("residents",[])]
-        population=sum(int(h.get("occupants",len(h.get("residents",[])))) for h in d["homes"])
-        eligible=[r for r in residents if r.get("workerEligible")]
-        employed=sum(1 for r in eligible if r.get("status")=="empleado")
-        crowding=sum(int(h.get("occupants",0)) for h in d["homes"])/max(1,sum(int(h.get("capacity",h.get("occupants",0))) for h in d["homes"]))
-        quality=sum(float(h.get("quality",80)) for h in d["homes"])/max(1,len(d["homes"]))
-        services=max(0,min(100,float(state.get("services",0))))
-        employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
-        housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
-        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23))
-        active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
-        overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
-        complaint_pressure=min(12,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints)+len(overdue_agreements)*2)
-        score=max(0,base_score-complaint_pressure)
-        issues=[]
-        if employment<55:issues.append("empleo")
-        if housing<65:issues.append("vivienda")
-        if services<55:issues.append("servicios")
-        if base_score<45:issues.append("confianza")
-        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "GestiÃ³n estable"})
-    return rows
-
-def government_plan_metrics():
-    districts=government_districts();population=sum(d["population"] for d in districts)
-    workers=sum(d["eligibleWorkers"] for d in districts);employed=sum(d["employed"] for d in districts)
-    homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
-    occupied=sum(int(h.get("occupants",0)) for h in homes);capacity=sum(int(h.get("capacity",h.get("occupants",0))) for h in homes)
-    return {"employment":round(100*employed/max(1,workers)) if workers else int(state.get("employment",0)),"housingReserve":round(100*max(0,capacity-occupied)/max(1,capacity)),"services":int(round(state.get("services",0))),"population":population}
-
-def new_mandate_plan():
-    metrics=government_plan_metrics() if "state" in globals() else {"employment":78,"housingReserve":10,"services":76}
-    return {"createdDay":int(state.get("day",1)) if "state" in globals() else 1,"goals":[{"id":"employment","title":"Empleo formal","unit":"% de trabajadores elegibles","target":max(60,min(85,metrics["employment"]+5))},{"id":"housingReserve","title":"Reserva de vivienda","unit":"% de plazas libres","target":min(20,max(5,metrics["housingReserve"]+3))},{"id":"services","title":"Cobertura de servicios","unit":"% de cobertura municipal","target":max(60,min(85,metrics["services"]+5))}]}
-
-def government_plan_report():
-    g=state.get("government",{});plan=g.get("plan") or new_mandate_plan();metrics=government_plan_metrics();rows=[]
-    for goal in plan.get("goals",[]):
-        current=metrics.get(goal["id"],0);target=goal["target"]
-        rows.append({**goal,"current":current,"fulfilled":current>=target,"progress":round(min(100,100*current/max(1,target)))})
-    return {"createdDay":plan.get("createdDay",state.get("day",1)),"goals":rows,"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics}
-
-def government_issue_sources(district_id,issue):
-    def in_area(x):return ("oeste" if x<10 else "centro" if x<18 else "puerto")==district_id
-    homes=[h for h in state.get("buildings",[]) if h.get("kind")=="home" and in_area(h.get("x",0))]
-    links=[]
-    if issue=="empleo":
-        for home in homes:
-            searching=sum(1 for r in home.get("residents",[]) if r.get("workerEligible") and r.get("status")!="empleado")
-            if searching:links.append({"id":f"home-{home['x']}-{home['y']}-jobseekers","kind":"personas","label":home.get("name","Hogares del barrio"),"detail":f"{searching} residentes buscan empleo","status":"bÃºsqueda activa"})
-        for b in state.get("buildings",[]):
-            if b.get("kind")=="shop" and in_area(b.get("x",0)) and b.get("business",{}).get("status")=="cerrado":links.append({"id":f"firm-{b['x']}-{b['y']}","kind":"empresa","label":b.get("name","Comercio cerrado"),"detail":"Puestos de trabajo fuera de servicio","status":"cerrado"})
-    elif issue=="vivienda":
-        for home in homes:
-            capacity=max(1,int(home.get("capacity",home.get("occupants",0))));occupied=int(home.get("occupants",0));quality=float(home.get("quality",80))
-            if occupied/capacity>=.93 or quality<65:links.append({"id":f"home-{home['x']}-{home['y']}","kind":"vivienda","label":home.get("name","Vivienda del barrio"),"detail":f"{occupied}/{capacity} plazas Â· calidad {round(quality)}%","status":"presiÃ³n habitacional" if occupied/capacity>=.93 else "calidad baja"})
-    elif issue=="servicios":
-        for f in state.get("utilities",{}).get("failures",[]):
-            if f.get("status")!="reparada" and in_area(f.get("x",0)):links.append({"id":str(f.get("id")),"kind":"red","label":f"Red {f.get('network','de servicios')}","detail":f"AverÃ­a en calle {f.get('x',0)+1}, {f.get('y',0)+1}","status":f.get("status","averÃ­a")})
-        for n in state.get("recoveryNeeds",[]):
-            if n.get("status")=="abierta" and in_area(n.get("x",0)):links.append({"id":str(n.get("id")),"kind":"obra","label":n.get("name","Activo municipal"),"detail":n.get("cause","RehabilitaciÃ³n pendiente"),"status":"necesita atenciÃ³n"})
-        for r in state.get("roadAssets",[]):
-            if in_area(r.get("x",0)) and r.get("quality",100)<60:links.append({"id":f"road-{r['x']}-{r['y']}","kind":"calle","label":f"Calle {r['x']+1}, {r['y']+1}","detail":f"CondiciÃ³n {round(r.get('quality',0))}%","status":"deteriorada"})
-    elif issue=="confianza":
-        arrears=state.get("taxes",{}).get("arrearsByAsset",{})
-        for h in homes:
-            due=arrears.get(f"home-{h.get('x')}-{h.get('y')}",0)
-            if due:links.append({"id":f"tax-home-{h['x']}-{h['y']}","kind":"impuesto","label":h.get("name","Hogares del barrio"),"detail":f"Mora municipal acumulada $ {int(due)}","status":"impago"})
-    if not links:links=[{"id":f"indicator-{district_id}-{issue}","kind":"indicador","label":"Indicador territorial agregado","detail":{"empleo":"Residentes elegibles sin empleo estable","vivienda":"OcupaciÃ³n y calidad del parque residencial","servicios":"Cobertura municipal y redes locales","confianza":"AprobaciÃ³n ciudadana y resultados del barrio"}.get(issue,"Indicador municipal"),"status":"requiere revisiÃ³n"}]
-    return links[:5]
-
-def government_agreement_report():
-    g=state.get("government",{});items=[a for a in g.get("agreements",[]) if a.get("mandate")==g.get("mandate")]
-    return {"items":items[-24:],"active":sum(a.get("status")=="seguimiento" for a in items),"completed":sum(a.get("status")=="cumplido" for a in items),"overdue":sum(a.get("status")=="vencido" for a in items)}
-
-def record_government_agreement(complaint_id,author):
-    ensure_government_state();g=state["government"]
-    complaint=next((c for c in g.get("complaints",[]) if c.get("id")==str(complaint_id) and c.get("status")=="abierto"),None)
-    if not complaint:raise ValueError("El reclamo ya se resolviÃ³ o no estÃ¡ disponible.")
-    if any(a.get("complaintId")==complaint["id"] and a.get("mandate")==g["mandate"] and a.get("status")=="seguimiento" for a in g.get("agreements",[])):raise ValueError("Este reclamo ya tiene un seguimiento municipal vigente.")
-    agreement={"id":uuid.uuid4().hex,"complaintId":complaint["id"],"districtId":complaint["districtId"],"district":complaint["district"],"issue":complaint["issue"],"issueTitle":complaint["title"],"mandate":g["mandate"],"createdDay":state["day"],"deadlineDay":state["day"]+180,"status":"seguimiento","createdBy":str(author or "Equipo municipal")[:24],"evidenceIds":[x.get("id") for x in complaint.get("evidenceLinks",[])]}
-    g.setdefault("agreements",[]).append(agreement);g["agreements"]=g["agreements"][-60:]
-    ev("Acuerdo de seguimiento registrado",f"El equipo acuerda recuperar {complaint['title'].lower()} en {complaint['district']} antes del dÃ­a {agreement['deadlineDay']}. El plazo y el resultado quedan en el registro compartido.")
-    return agreement
-
-def update_government_cycle():
-    ensure_government_state();g=state["government"]
-    if g.get("status")!="en_mandato":return
-    districts=government_districts();existing={(c.get("districtId"),c.get("issue")):c for c in g.setdefault("complaints",[]) if c.get("status")=="abierto"}
-    active=set()
-    labels={"empleo":"Empleo insuficiente","vivienda":"PresiÃ³n sobre la vivienda","servicios":"DÃ©ficit de servicios municipales","confianza":"Confianza ciudadana baja"}
-    for d in districts:
-        for issue in d["issues"]:
-            key=(d["id"],issue);active.add(key);record=existing.get(key)
-            if record:record["monthsOpen"]=int(record.get("monthsOpen",0))+1;record["lastEvidence"]={"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]};record["evidenceLinks"]=government_issue_sources(d["id"],issue);record["lastReviewedDay"]=state["day"]
-            else:
-                g["complaintSequence"]=int(g.get("complaintSequence",0))+1
-                record={"id":f"claim-{g['complaintSequence']}","districtId":d["id"],"district":d["name"],"issue":issue,"title":labels[issue],"status":"abierto","openedDay":state["day"],"lastReviewedDay":state["day"],"monthsOpen":1,"lastEvidence":{"employment":d["employment"],"housing":d["housing"],"services":d["services"],"support":d["support"]},"evidenceLinks":government_issue_sources(d["id"],issue)}
-                g["complaints"].append(record);ev("Reclamo vecinal registrado",f"{d['name']}: {labels[issue].lower()} detectado en los indicadores del barrio. Se revisarÃ¡ al prÃ³ximo cierre mensual.")
-    for record in g["complaints"]:
-        key=(record.get("districtId"),record.get("issue"))
-        if record.get("status")=="abierto" and key not in active:
-            record.update({"status":"resuelto","resolvedDay":state["day"]});ev("Reclamo vecinal resuelto",f"{record.get('district')}: mejorÃ³ el indicador de {record.get('issue')}; se cerrÃ³ el seguimiento.")
-    for agreement in g.setdefault("agreements",[]):
-        if agreement.get("status")!="seguimiento":continue
-        complaint=next((c for c in g["complaints"] if c.get("id")==agreement.get("complaintId")),None)
-        if complaint and complaint.get("status")=="resuelto":agreement.update({"status":"cumplido","completedDay":state["day"]});ev("Acuerdo municipal cumplido",f"{agreement['district']}: se resolviÃ³ {agreement['issueTitle'].lower()} antes del vencimiento.")
-        elif state["day"]>=agreement.get("deadlineDay",0):agreement.update({"status":"vencido","overdueDay":state["day"]});ev("Acuerdo municipal vencido",f"{agreement['district']}: venciÃ³ el plazo para {agreement['issueTitle'].lower()}; queda pendiente en el registro pÃºblico.")
-    g["complaints"]=g["complaints"][-36:]
-    reports=government_plan_report()
-    for goal in reports["goals"]:
-        stored=next((x for x in g["plan"]["goals"] if x["id"]==goal["id"]),None)
-        if stored:stored["current"]=goal["current"];stored["fulfilled"]=goal["fulfilled"];stored["lastReviewedDay"]=state["day"]
-    average=sum(d["support"]*d["population"] for d in districts)/max(1,sum(d["population"] for d in districts))
-    severe=state.get("money",0)<=0 and state.get("services",0)<=30 and average<35
-    if severe:
-        g["crisisMonths"]=int(g.get("crisisMonths",0))+1
-        if g["crisisMonths"]==2:
-            g["crisisStatus"]="alerta";ev("Alerta de crisis institucional", "La ciudad lleva dos cierres con tesorerÃ­a agotada, servicios crÃ­ticos y apoyo muy bajo. Recuperar caja o servicios durante el prÃ³ximo mes evita la destituciÃ³n extraordinaria.")
-        elif g["crisisMonths"]>=3:
-            g["crisisStatus"]="destituido";g["status"]="destituido";g["defeatReason"]="DestituciÃ³n extraordinaria tras tres cierres mensuales de crisis sin recuperaciÃ³n";state["paused"]=True;ev("Gobierno destituido por crisis prolongada","La tesorerÃ­a, los servicios y el apoyo ciudadano permanecieron en niveles crÃ­ticos durante tres cierres mensuales. La ciudad queda en observaciÃ³n.")
-    else:
-        if g.get("crisisStatus")=="alerta":ev("Crisis institucional superada","La tesorerÃ­a, los servicios o el apoyo se recuperaron antes de la destituciÃ³n.")
-        g["crisisMonths"]=0;g["crisisStatus"]="estable"
-
-def government_report():
-    ensure_government_state()
-    g=state["government"];day=int(state.get("day",1));remaining=max(0,int(g["nextElectionDay"])-day)
-    districts=government_districts();eligible=sum(d["population"] for d in districts)
-    turnout=sum(round(d["population"]*.72) for d in districts)
-    incumbent=sum(round(round(d["population"]*.72)*d["support"]/100) for d in districts)
-    for complaint in g.get("complaints",[]):
-        if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
-    plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
-    vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"defeatReason":g.get("defeatReason")}
-
-def process_government_election():
-    ensure_government_state();g=state["government"]
-    if g["status"]!="en_mandato" or int(state.get("day",1))<int(g["nextElectionDay"]):return
-    report=government_report();districts=[]
-    for d in report["districts"]:
-        voters=round(d["population"]*.72);votes=round(voters*d["support"]/100)
-        districts.append({"name":d["name"],"eligible":d["population"],"turnout":voters,"governmentVotes":votes,"governmentPct":round(100*votes/max(1,voters)),"issue":d["issue"]})
-    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
-    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} Â· vencidos: {agreements['overdue']}"]}
-    g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
-    if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elecciÃ³n considerÃ³ empleo, vivienda, servicios y confianza de los distritos.")
-    else:g["status"]="derrotado";state["paused"]=True;ev("Derrota compartida en las elecciones",f"El gobierno obtuvo {pct}% y perdiÃ³ la mayorÃ­a. Todo el equipo deja el mandato; la ciudad queda pausada en modo observaciÃ³n.")
-    if won:g["plan"]=new_mandate_plan();g["complaints"]=[c for c in g.get("complaints",[]) if c.get("status")=="abierto"]
-
-def ensure_critical_inspection_schedule(building):
-    if building.get("kind") not in ("powerPlant","waterPlant","wastewaterPlant"):return
-    building.setdefault("inspectionIntervalDays",180)
-    building.setdefault("nextInspectionDay",int(state.get("day",1))+building["inspectionIntervalDays"])
-
-def road_maintenance_report(funding_factor=None,advance=False):
-    roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
-    for x,y in roads:
-        if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15})
-    policy=max(0,min(200,int(state.get("roadMaintenancePct",100))))
-    road_set={tuple(r) for r in roads};road_rows=[];required=0
-    for asset in assets:
-        x,y=asset["x"],asset["y"];adjacent=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
-        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
-        load=1+min(2,adjacent*.25+degree*.08);quality=max(0,min(100,float(asset.get("quality",82))))
-        base=round(8+load*4);required+=round(base*policy/100)
-        if advance:
-            quality=max(0,quality-(.22+load*.12))
-            if funding_factor is not None:quality=min(100,quality+(.72*policy/100*max(0,min(1,float(funding_factor)))))
-            asset["quality"]=round(quality,1);asset["useLoad"]=round(load,2)
-            if quality<25 and not asset.get("safetyClosure"):
-                asset["safetyClosure"]=True
-                ev("Cierre preventivo de calle",f"La calle {x+1},{y+1} se cerrÃ³ al trÃ¡nsito por condiciÃ³n estructural crÃ­tica ({round(quality)}%). Los viajes y servicios buscarÃ¡n rutas alternativas hasta rehabilitar el tramo.")
-            elif quality>=25:asset["safetyClosure"]=False
-            if quality<45 and not any(n.get("targetType")=="road" and n.get("x")==x and n.get("y")==y and n.get("status")!="reparada" for n in state.setdefault("recoveryNeeds",[])):
-                estimate=max(850,round(850+(45-quality)*28))
-                state["recoveryNeeds"].append({"id":f"maintenance-road-{x}-{y}-{state.get('day',1)}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":state.get("day",1),"condition":round(quality),"estimate":estimate,"cause":"desgaste por uso y antigÃ¼edad","inspectionStatus":"pendiente","status":"abierta"})
-                ev("InspecciÃ³n vial requerida",f"La calle {x+1},{y+1} bajÃ³ de 45% de condiciÃ³n. SolicitÃ¡ diagnÃ³stico y reparaciÃ³n antes de que el tramo pierda seguridad.")
-        road_rows.append({"x":x,"y":y,"quality":round(quality,1),"useLoad":round(load,2),"maintenanceCost":round(base*policy/100),"status":"cerrada" if quality<25 else "abierta"})
-    public_kinds={"civic","school","fireStation","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
-    facilities=[]
-    for b in state.get("buildings",[]):
-        if b.get("kind") not in public_kinds or b.get("status") in ("cerrado","abandonado"):continue
-        ensure_critical_inspection_schedule(b)
-        quality=max(0,min(100,float(b.get("quality",82))));load=1+min(2,(b.get("jobSlots",0)*.012+b.get("occupants",0)*.002))
-        base=round(18+load*5);cost=round(base*policy/100);required+=cost
-        if advance:
-            needs=state.setdefault("recoveryNeeds",[])
-            quality=max(0,quality-(.18+load*.1))
-            if funding_factor is not None:quality=min(100,quality+(.52*policy/100*max(0,min(1,float(funding_factor)))))
-            b["quality"]=round(quality,1);b["maintenanceLoad"]=round(load,2)
-            if quality<60 and not any(n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada" for n in state.setdefault("recoveryNeeds",[])):
-                estimate=max(900,round(850+(60-quality)*38))
-                state["recoveryNeeds"].append({"id":f"maintenance-building-{b['x']}-{b['y']}-{state.get('day',1)}","targetType":"building","x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"day":state.get("day",1),"condition":round(quality),"estimate":estimate,"cause":"desgaste por uso y antigÃ¼edad","inspectionStatus":"pendiente","status":"abierta"})
-                ev("InspecciÃ³n de mantenimiento requerida",f"{b.get('name',b['kind'])} bajÃ³ de 60% de condiciÃ³n. SolicitÃ¡ una inspecciÃ³n y comparÃ¡ ofertas de rehabilitaciÃ³n antes de que pierda capacidad.")
-            if b.get("kind") in ("powerPlant","waterPlant","wastewaterPlant") and state.get("day",1)>=b["nextInspectionDay"] and not any(n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada" for n in needs):
-                needs.append({"id":f"inspection-plant-{b['x']}-{b['y']}-{state.get('day',1)}","targetType":"building","x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"day":state.get("day",1),"condition":round(quality),"estimate":max(900,round(850+(82-quality)*38)),"cause":"inspecciÃ³n preventiva programada","inspectionStatus":"pendiente","scheduledInspection":True,"status":"abierta"})
-                ev("InspecciÃ³n preventiva vencida",f"{b.get('name',b['kind'])} llegÃ³ a su revisiÃ³n de seguridad de los {b['inspectionIntervalDays']} dÃ­as. La inspecciÃ³n cuesta $150 y comprueba estructura, conexiones y capacidad antes de contratar una rehabilitaciÃ³n.")
-        factor=max(0,min(1,quality/82));base_output=b.get("generationKw",900) if b["kind"]=="powerPlant" else b.get("treatmentM3Day",220 if b["kind"]=="waterPlant" else 260) if b["kind"] in ("waterPlant","wastewaterPlant") else None
-        output_unit="kW" if b["kind"]=="powerPlant" else "mÂ³/dÃ­a"
-        active_inspection=next((n for n in state.get("recoveryNeeds",[]) if n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada"),None)
-        facilities.append({"x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"kind":b["kind"],"quality":round(quality,1),"functionalCapacityPct":round(factor*100),"effectiveOutput":round(base_output*factor) if base_output is not None else None,"outputUnit":output_unit,"inspectionIntervalDays":b.get("inspectionIntervalDays"),"inspectionDueDay":b.get("nextInspectionDay"),"inspectionDaysRemaining":max(0,b.get("nextInspectionDay",state.get("day",1))-state.get("day",1)),"inspectionOverdue":state.get("day",1)>=b.get("nextInspectionDay",state.get("day",1)),"inspectionStatus":active_inspection.get("inspectionStatus") if active_inspection else None,"useLoad":round(load,2),"maintenanceCost":cost})
-    road_rows.sort(key=lambda r:(r["quality"],r["y"],r["x"]))
-    values=[r["quality"] for r in road_rows];building_values=[b["quality"] for b in facilities]
-    funded=max(0,min(1,float(funding_factor if funding_factor is not None else state.get("utilities",{}).get("maintenanceFundingFactor",1))))
-    report={"policyPct":policy,"segments":len(road_rows),"averageCondition":round(sum(values)/max(1,len(values))*10)/10,"poorSegments":sum(v<45 for v in values),"criticalSegments":sum(v<25 for v in values),"closedSegments":sum(v<25 for v in values),"facilityCount":len(facilities),"averageFacilityCondition":round(sum(building_values)/max(1,len(building_values))*10)/10,"wornFacilities":sum(v<60 for v in building_values),"monthlyRequired":required,"roadMonthlyRequired":sum(r["maintenanceCost"] for r in road_rows),"facilityMonthlyRequired":sum(b["maintenanceCost"] for b in facilities),"monthlyFunded":round(required*funded),"assets":road_rows[:80],"facilities":facilities[:40]}
-    state["roadMaintenanceReport"]=report
-    return report
-
-def heritage_report():
-    listed=[b for b in state.get("buildings",[]) if b.get("heritageEligible")]
-    protected=[b for b in listed if b.get("heritageLevel") in ("protecciÃ³n parcial","protecciÃ³n integral")]
-    score=sum(b.get("heritageSignificance",1)*b.get("conservation",0)/100 for b in protected)
-    candidates=[]
-    active={(w.get("x"),w.get("y")) for w in state.get("adaptiveReuseWorks",[])}
-    for b in state.get("buildings",[]):
-        if b.get("kind")!="shop" or b.get("business",{}).get("status")!="cerrado":continue
-        firm=b.get("business",{});arrears=state.get("taxes",{}).get("arrearsByAsset",{}).get(firm.get("id",f"shop-{b['x']}-{b['y']}"),0)
-        heritage_locked=b.get("heritageLevel") in ("protecciÃ³n parcial","protecciÃ³n integral")
-        reason="En reconversiÃ³n" if (b.get("x"),b.get("y")) in active else "ProtecciÃ³n patrimonial" if heritage_locked else "Deuda empresarial pendiente" if firm.get("creditDebt",0)>0 or arrears>0 else "Disponible para vivienda"
-        candidates.append({"x":b["x"],"y":b["y"],"name":b.get("name","Local cerrado"),"reason":reason,"eligible":reason=="Disponible para vivienda"})
-    return {"year":2026+(max(0,int(state.get("day",1))-1)//360),"listed":len(listed),"protected":len(protected),"restored":sum(bool(b.get("renovations")) for b in listed),"identity":round(min(100,score*9)),"works":[dict(w) for w in state.get("heritageWorks",[])],"sites":[{k:b.get(k) for k in ("x","y","name","kind","yearBuilt","architecturalEra","architecturalStyle","originalUse","renovations","conservation","heritageSignificance","heritageLevel","occupants")} for b in listed],"reuseWorks":[dict(w) for w in state.get("adaptiveReuseWorks",[])],"reuseHistory":state.get("adaptiveReuseHistory",[])[-8:],"reuseCandidates":candidates,"reuseHomes":sum(1 for b in state.get("buildings",[]) if b.get("adaptiveReuseDay"))}
-
-def advance_adaptive_reuse():
-    for work in list(state.get("adaptiveReuseWorks",[])):
-        work["elapsedDays"]=work.get("elapsedDays",0)+1
-        work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]))
-        work["stage"]=("Desmontaje y diagnÃ³stico" if work["progress"]<.2 else "Refuerzo y nuevas divisiones" if work["progress"]<.55 else "Agua, saneamiento y electricidad" if work["progress"]<.85 else "InspecciÃ³n de habitabilidad")
-        if work["progress"]<1:continue
-        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
-        if building:
-            old_name=building.get("name","Local recuperado")
-            building.pop("business",None);building["kind"]="home";building["name"]=f"Viviendas Â· {old_name}";building["status"]="habilitado";building["capacity"]=24;building["occupants"]=0;building["quality"]=work["quality"];building["householdCash"]=0;building["monthlyWageIncome"]=0;building["residents"]=[];building["adaptiveReuseDay"]=state["day"];building["rentalLeaseDays"]=[];building["rentalPricePerResident"]=work["rent"]
-            building.setdefault("renovations",[]).append({"year":2026+(max(0,state["day"]-1)//360),"day":state["day"],"contractor":work["contractor"],"cost":work["investment"],"scope":"ReconversiÃ³n de local a vivienda con redes y habitabilidad"})
-        state.setdefault("adaptiveReuseHistory",[]).append({**work,"status":"completada","completedDay":state["day"]});del state["adaptiveReuseHistory"][:-40];state["adaptiveReuseWorks"].remove(work)
-        ev("Viviendas reconvertidas",f"{work['name']} aprobÃ³ agua, saneamiento y seguridad: 24 plazas nuevas. Alquiler inicial ${work['rent']} por residente/mes; siguiente mudanza sujeta a empleo y aprobaciÃ³n ciudadana.")
-
-def collect_adaptive_rents():
-    paid_total=arrears=0
-    for home in (b for b in state.get("buildings",[]) if b.get("adaptiveReuseDay") and b.get("occupants",0)>0 and state.get("day",1)-b.get("leaseStartDay",b.get("adaptiveReuseDay",1))>=30):
-        lease_days=home.setdefault("rentalLeaseDays",[home.get("adaptiveReuseDay",1)]*home.get("occupants",0));due=max(0,int(home.get("rentalPricePerResident",24)*sum(1 for started in lease_days if state.get("day",1)-started>=30)));paid=min(due,max(0,int(home.get("householdCash",0))))
-        home["householdCash"]-=paid;home["rentalOwnerCash"]=home.get("rentalOwnerCash",0)+paid;home["rentArrears"]=home.get("rentArrears",0)+due-paid;paid_total+=paid;arrears+=due-paid
-    if paid_total:ev("Alquileres de viviendas reconvertidas",f"Propietarios cobraron ${paid_total} por {sum(1 for b in state['buildings'] if b.get('adaptiveReuseDay') and b.get('occupants',0)>0)} inmuebles; deuda de alquiler pendiente ${arrears}.")
-    if arrears>=600:state["approval"]=max(0,state.get("approval",0)-1);ev("PresiÃ³n por alquileres",f"Quedaron ${arrears} de alquiler sin pagar en inmuebles reconvertidos; los hogares pierden margen y baja la aprobaciÃ³n.")
-
-def advance_heritage_works():
-    day=int(state.get("day",1))
-    if day>1 and (day-1)%360==0:
-        for building in state.get("buildings",[]):
-            if building.get("heritageEligible"):
-                loss=2 if building.get("heritageLevel") in ("protecciÃ³n parcial","protecciÃ³n integral") else 3
-                building["conservation"]=max(0,building.get("conservation",100)-loss)
-                if building["conservation"]<35:ev("Riesgo de deterioro patrimonial",f"{building.get('name')} conserva {building['conservation']}% de su estado; financiar refuerzos antes de que el inmueble cierre por seguridad.")
-    for work in list(state.get("heritageWorks",[])):
-        if state["day"]<work.get("deliveryDay",state["day"]):continue
-        work["elapsedDays"]=work.get("elapsedDays",0)+1
-        work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]))
-        work["stage"]=("ConsolidaciÃ³n estructural" if work["progress"]<.4 else "Instalaciones y accesibilidad" if work["progress"]<.72 else "RestauraciÃ³n de fachada e inspecciÃ³n")
-        if work["progress"]<1:continue
-        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
-        if building:
-            quality=CONTRACTORS.get(work["contractor"],{}).get("quality",.75)
-            building["conservation"]=round(94+quality*6);building.setdefault("renovations",[]).append({"year":2026+(max(0,state["day"]-1)//360),"day":state["day"],"contractor":work["contractor"],"cost":work["cost"],"scope":"Refuerzo, accesibilidad e instalaciones"})
-            building["lastRestoredDay"]=state["day"]
-        state.setdefault("heritageHistory",[]).append({**work,"status":"completada","completedDay":state["day"]});del state["heritageHistory"][:-40]
-        state["heritageWorks"].remove(work);ev("RehabilitaciÃ³n patrimonial terminada",f"{work['name']} fue inspeccionado y recuperÃ³ su conservaciÃ³n con {work['contractor']}; inversiÃ³n $ {work['cost']:,}.".replace(",","."))
-
-def ensure_tax_state():
-    taxes=state.setdefault("taxes",new_tax_state())
-    for key,value in new_tax_state().items():taxes.setdefault(key,value)
-    return taxes
-
-def collect_municipal_taxes():
-    """Cobra gravÃ¡menes sobre caja existente; la mora queda como cuenta por cobrar."""
-    taxes=ensure_tax_state();month=(state.get("day",1)-1)//30
-    if taxes.get("lastProcessedMonth")==month:return taxes.get("lastReport",{})
-    rates={"property":max(0,int(taxes.get("propertyRateBp",60))),"business":max(0,int(taxes.get("businessRateBp",200)))}
-    accounts=taxes.setdefault("arrearsByAsset",{});property_due=property_paid=business_due=business_paid=late_homes=late_firms=0
-    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0):
-        key=f"home-{home['x']}-{home['y']}";due=round(home.get("occupants",0)*2400*rates["property"]/120000)+accounts.get(key,0);cash=max(0,round(home.get("householdCash",0)));paid=min(cash,due)
-        home["householdCash"]=cash-paid;accounts[key]=due-paid;home["propertyTaxDue"]=due;home["propertyTaxPaid"]=paid;home["propertyTaxArrears"]=due-paid
-        property_due+=due;property_paid+=paid;late_homes+=int(due>paid)
-    for shop in (b for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"):
-        firm=shop["business"];key=firm.get("id",f"shop-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates["business"]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
-        firm["cash"]=cash-paid;accounts[key]=due-paid;firm["municipalTaxDue"]=due;firm["municipalTaxPaid"]=paid;firm["municipalTaxArrears"]=due-paid
-        firm["taxDelinquencyMonths"]=firm.get("taxDelinquencyMonths",0)+1 if due>paid else 0
-        business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
-    taxes["lastProcessedMonth"]=month
-    report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":property_paid+business_paid,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
-    taxes["lastReport"]=report;taxes.setdefault("history",[]).append(report.copy());del taxes["history"][:-12]
-    if report["collected"]:ev("RecaudaciÃ³n municipal",f"Se cobraron $ {report['collected']:,} de impuestos sobre viviendas y ventas; $ {report['arrears']:,} quedan en mora.".replace(",","."))
-    if late_homes and late_homes>=max(3,round(sum(1 for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0)*.35)):
-        state["approval"]=max(0,state.get("approval",0)-1);ev("Mora tributaria extendida",f"{late_homes} hogares no pudieron pagar el impuesto completo; la confianza municipal cae un punto.")
-    return report
-
-def municipal_finance_report(monthly_income=None, monthly_expenses=None):
-    finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
-    outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
-    service=round(sum(max(0,x.get("payment",0)) for x in loans if x.get("status")=="active"))
-    income=max(0,round(monthly_income if monthly_income is not None else state.get("monthlyIncome",0)))
-    expenses=max(0,round(monthly_expenses if monthly_expenses is not None else state.get("monthlyExpenses",0)))
-    net=income-expenses-service
-    # ProyecciÃ³n de referencia; mantiene las bases actuales y los pagos contratados constantes.
-    debt_reserve=max(0,round(finance.get("debtReserve",0)))
-    budgets=finance.setdefault("programBudgets",new_finance()["programBudgets"])
-    for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
-    for name in ("services","mobility","networks"):
-        budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
-    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+debt_reserve+net*12),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"loans":loans}
-
-def municipal_debt_payment():
-    finance=state.setdefault("finance",new_finance());total=0
-    for loan in finance.setdefault("municipalLoans",[]):
-        if loan.get("status")!="active":continue
-        balance=max(0,loan.get("balance",0));payment=min(balance+balance*loan.get("monthlyRate",.01),max(0,loan.get("payment",0)))
-        interest=round(balance*loan.get("monthlyRate",.01));principal=max(0,round(payment-interest))
-        loan["lastInterest"]=interest;loan["lastPrincipal"]=min(balance,principal);loan["lastPayment"]=round(payment)
-        loan["balance"]=max(0,round(balance-loan["lastPrincipal"]));loan["monthsRemaining"]=max(0,loan.get("monthsRemaining",0)-1);loan["delinquentMonths"]=0;total+=round(payment)
-        if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan.update({"balance":0,"status":"paid","paidDay":state.get("day",1)});ev("CrÃ©dito municipal cancelado",f"El municipio terminÃ³ de pagar {loan.get('label','el prÃ©stamo')}.")
-    return total
-
-def settle_municipal_program_budgets(costs,available):
-    """Paga primero servicios, redes y movilidad segÃºn apropiaciones; lo pendiente queda en mora fiscal."""
-    finance=state.setdefault("finance",new_finance());ensure_finance_state();budgets=finance["programBudgets"]
-    names={"services":"Servicios pÃºblicos","networks":"Redes y residuos","mobility":"Transporte"};remaining=max(0,round(available));rows={}
-    for key in ("services","networks","mobility"):
-        current=max(0,round(costs.get(key,0)));old=max(0,round(budgets["arrears"].get(key,0)))
-        rate=max(0,min(200,int(budgets.get(f"{key}Pct",100))));ceiling=round(current*rate/100)
-        due=old+current;scheduled=min(due,ceiling);paid=min(scheduled,remaining);remaining-=paid
-        new_arrears=max(0,due-paid);unpaid_current=min(current,max(0,new_arrears-old));factor=1-unpaid_current/max(1,current) if current else 1
-        budgets["arrears"][key]=new_arrears
-        budgets["underfundedMonths"][key]=budgets["underfundedMonths"].get(key,0)+1 if unpaid_current else 0
-        row={"program":key,"label":names[key],"monthlyCost":current,"budgetPct":rate,"scheduled":scheduled,"paid":paid,"arrears":new_arrears,"fundingPct":round(factor*100)}
-        rows[key]=row
-        if key=="services":
-            budgets["servicesFundingFactor"]=factor
-            if unpaid_current:
-                loss=max(1,math.ceil((1-factor)*4));state["services"]=max(5,state.get("services",0)-loss)
-                if budgets["underfundedMonths"][key]>=2:state["approval"]=max(5,state.get("approval",0)-1)
-        elif key=="mobility":budgets["mobilityFundingFactor"]=factor
-        elif key=="networks":
-            state.setdefault("utilities",{})["maintenanceFundingFactor"]=factor
-            state.setdefault("waste",{})["fundingFactor"]=factor
-    report={"month":(state.get("day",1)-1)//30,"programs":rows,"scheduled":sum(x["scheduled"] for x in rows.values()),"paid":sum(x["paid"] for x in rows.values()),"arrears":sum(x["arrears"] for x in rows.values()),"cashRemaining":remaining}
-    budgets["lastReport"]=report;budgets.setdefault("history",[]).append(report.copy());del budgets["history"][:-24]
-    if report["arrears"]:
-        ev("Presupuesto municipal insuficiente",f"Programas pendientes: " + " Â· ".join(f"{r['label']} $ {r['arrears']:,}".replace(",",".") for r in rows.values() if r["arrears"]))
-    return report
-
-def new_supply():
-    return {"regional":INITIAL_REGIONAL_STOCK.copy(),
-            "contractors":{name:INITIAL_CONTRACTOR_STOCK.copy() for name in CONTRACTOR_NAMES},
-            "contractorCash":CONTRACTOR_CASH.copy(),
-            "suppliers":{name:stock.copy() for name,stock in SUPPLIER_STOCK.items()},
-            "orders":[],"market":new_market_supply(),"marketOrders":[],"portOrders":[],"portVoyages":[],"storageCapacity":240,"yardCapacity":240,"depots":[]}
-
-def initial_state():
-    roads = [[x, 10] for x in range(4, 22)] + [[12, y] for y in range(5, 16)] + [[18, y] for y in range(10, 16)]
-    buildings = [
-        {"x":8,"y":9,"kind":"home","name":"Viviendas del Parque","level":2,"occupants":126,"status":"operativo"},
-        {"x":10,"y":9,"kind":"home","name":"Barrio EstaciÃ³n","level":2,"occupants":78,"status":"operativo"},
-        {"x":15,"y":9,"kind":"shop","name":"Mercado Central","level":1,"occupants":0,"status":"operativo"},
-        {"x":20,"y":11,"kind":"home","name":"Las Moreras","level":2,"occupants":92,"status":"operativo"},
-        {"x":9,"y":11,"kind":"civic","name":"Municipalidad","level":1,"occupants":0,"status":"operativo"},
-        {"x":15,"y":11,"kind":"shop","name":"Talleres del Puerto","level":1,"occupants":0,"status":"operativo"},
-        {"x":5,"y":9,"kind":"home","name":"Casas del Oeste","level":1,"occupants":22,"status":"operativo"},
-        {"x":6,"y":11,"kind":"home","name":"Pasaje del Molino","level":1,"occupants":28,"status":"operativo"},
-        {"x":7,"y":9,"kind":"home","name":"Jardines de Abril","level":1,"occupants":26,"status":"operativo"},
-        {"x":8,"y":11,"kind":"home","name":"Residencias del Centro","level":1,"occupants":30,"status":"operativo"},
-        {"x":11,"y":9,"kind":"home","name":"Casas de la Plaza","level":1,"occupants":33,"status":"operativo"},
-        {"x":13,"y":8,"kind":"home","name":"Conjunto EstaciÃ³n","level":1,"occupants":27,"status":"operativo"},
-        {"x":13,"y":11,"kind":"home","name":"Los Tilos","level":1,"occupants":24,"status":"operativo"},
-        {"x":16,"y":9,"kind":"home","name":"Viviendas del Mercado","level":1,"occupants":32,"status":"operativo"},
-        {"x":17,"y":11,"kind":"home","name":"Casas del Canal","level":1,"occupants":26,"status":"operativo"},
-        {"x":19,"y":11,"kind":"home","name":"Lomas del Puerto","level":1,"occupants":26,"status":"operativo"},
-        {"x":11,"y":14,"kind":"home","name":"Barrio del Sur","level":1,"occupants":25,"status":"operativo"},
-        {"x":13,"y":14,"kind":"home","name":"Los Aromos","level":1,"occupants":25,"status":"operativo"},
-        {"x":5,"y":11,"kind":"shop","name":"AlmacÃ©n del Oeste","level":1,"occupants":0,"status":"operativo"},
-        {"x":14,"y":9,"kind":"shop","name":"GalerÃ­a Central","level":1,"occupants":0,"status":"operativo"},
-        {"x":19,"y":13,"kind":"shop","name":"DepÃ³sito Costero","level":1,"occupants":0,"status":"operativo"},
-        {"x":11,"y":7,"kind":"shop","name":"CafÃ© EstaciÃ³n","level":1,"occupants":0,"status":"operativo"}
-    ]
-    for building in buildings:
-        if building["kind"]=="home":
-            building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
-        elif building["kind"]=="shop":
-            building["business"]=new_business(building,42,5000)
-    return {"version":57,"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestiÃ³n","detail":"TesorerÃ­a disponible: $48.000. La conexiÃ³n regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
-
-state = initial_state()
-
-def local_ips():
-    ips=set()
-    try:
-        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET): ips.add(info[4][0])
-        s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        try: s.connect(("192.0.2.1",80)); ips.add(s.getsockname()[0])
-        finally: s.close()
-    except OSError: pass
-    return sorted(ip for ip in ips if not ip.startswith("127."))
-
-def ev(title, detail):
-    state["events"].insert(0,{"day":state["day"],"title":title,"detail":detail})
-    del state["events"][30:]
-
-CONTRACTORS = {
- "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta econÃ³mica Â· mayor riesgo de demora"},
- "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada Â· cumplimiento estable"},
- "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada Â· calidad alta, precio mayor"}}
-PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","PreparaciÃ³n del terreno","Base y drenaje","PavimentaciÃ³n","InspecciÃ³n y habilitaciÃ³n"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiaciÃ³n","PreparaciÃ³n de parcela","Estructura","Instalaciones y terminaciones","InspecciÃ³n y ocupaciÃ³n"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiaciÃ³n","PreparaciÃ³n de parcela","Estructura","Instalaciones y terminaciones","InspecciÃ³n y habilitaciÃ³n"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","LicitaciÃ³n y movilizaciÃ³n","Cimientos y estructura","Instalaciones y equipamiento","InspecciÃ³n y habilitaciÃ³n"]},"depot":{"label":"DepÃ³sito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","PreparaciÃ³n del terreno","Estructura y playa de carga","EstanterÃ­as y seguridad","InspecciÃ³n y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","PreparaciÃ³n del terreno","Estructura y cubierta","Taller y portones","InspecciÃ³n y habilitaciÃ³n"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y seÃ±alizaciÃ³n","IluminaciÃ³n","InspecciÃ³n y habilitaciÃ³n"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y licitaciÃ³n","Pilotaje y muelle","Patio de carga y grÃºa","Pruebas de atraque","InspecciÃ³n y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["EvaluaciÃ³n y adquisiciÃ³n del suelo","Terraplenado y drenaje","Pista y seÃ±alizaciÃ³n","Terminal y equipos de seguridad","Pruebas de operaciÃ³n e inspecciÃ³n"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energÃ­a","Habitaciones y cocina","InspecciÃ³n y apertura"]}}
-PROJECTS["powerPlant"]={"label":"Central elÃ©ctrica","cost":18800,"days":96,"stageNames":["Estudio y permisos","Cimientos y turbina","ConexiÃ³n elÃ©ctrica","Pruebas de generaciÃ³n","InspecciÃ³n y puesta en marcha"]}
-PROJECTS["school"]={"label":"Escuela primaria","cost":9600,"days":68,"stageNames":["Proyecto y permisos","Cimientos y aulas","Instalaciones y patio","Equipamiento y contrataciÃ³n inicial","InspecciÃ³n y habilitaciÃ³n"]}
-PROJECTS["fireStation"]={"label":"Cuartel de bomberos","cost":11200,"days":74,"stageNames":["Proyecto y permisos","Cimientos y estructura","Taller y dormitorios","Equipos y vehÃ­culos","Pruebas de despacho e inspecciÃ³n"]}
-PROJECTS["waterPlant"]={"label":"Planta potabilizadora","cost":14200,"days":84,"stageNames":["Estudio de fuente y permisos","CaptaciÃ³n y filtros","ConexiÃ³n y bombeo","Pruebas sanitarias","InspecciÃ³n y puesta en marcha"]}
-PROJECTS["wastewaterPlant"]={"label":"Planta depuradora","cost":16600,"days":90,"stageNames":["Estudio ambiental y permisos","Colectores y tanques","Digestores y filtros","Pruebas de calidad","InspecciÃ³n y puesta en marcha"]}
-PROJECTS["landfill"]={"label":"Relleno sanitario municipal","cost":9800,"days":72,"stageNames":["EvaluaciÃ³n ambiental y licitaciÃ³n","ImpermeabilizaciÃ³n del terreno","Celdas de disposiciÃ³n","BÃ¡scula y control de acceso","InspecciÃ³n y habilitaciÃ³n"]}
-PROJECTS["recyclingPlant"]={"label":"Planta de reciclaje","cost":14800,"days":88,"stageNames":["Estudio ambiental y licitaciÃ³n","SeparaciÃ³n y clasificaciÃ³n","LÃ­nea de lavado","Pruebas de recuperaciÃ³n","InspecciÃ³n y habilitaciÃ³n"]}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"school":12,"fireStation":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
-
-def material_fraction(material, progress):
-    # La preparaciÃ³n consume Ã¡ridos; estructura consume acero/madera; instalaciones consumen componentes.
-    start, span = {"aggregate":(0,.45),"steel":(.15,.5),"timber":(.25,.55),"components":(.55,.4)}[material]
-    return max(0,min(1,(progress-start)/span))
-
-def material_plan(kind, initial_progress=0):
-    return {key:max(1,round(amount*(1-initial_progress))) if amount else 0
-            for key,amount in MATERIAL_NEEDS[kind].items()}
-
-def ensure_business_state():
-    shops=[b for b in state["buildings"] if b.get("kind")=="shop"]
-    public=[b for b in state["buildings"] if b.get("kind") in ("civic","depot","landfill","recyclingPlant")]
-    weights={"shop":1.0,"civic":.8,"school":.8,"depot":.65,"landfill":.65,"recyclingPlant":.8,"port":.85,"airport":.9}
-    total_weight=max(.01,sum(weights[b["kind"]] for b in shops+public))
-    estimated_slots=max(1,round(state.get("jobs",0)/total_weight))
-    for building in shops:
-        if "business" not in building:
-            building["business"]=new_business(building,estimated_slots,5000)
-        firm=building["business"]
-        for key,value in new_business(building,firm.get("jobSlots",estimated_slots),firm.get("cash",5000)).items():
-            firm.setdefault(key,value)
-        firm.setdefault("inputInventory",20)
-        firm.setdefault("creditDebt",0)
-        firm.setdefault("creditLimit",max(1000,int(firm.get("jobSlots",estimated_slots))*200))
-        firm.setdefault("creditRate",.02)
-        firm.setdefault("creditDelinquencyMonths",0)
-        firm.setdefault("lastCreditDraw",0);firm.setdefault("lastInterest",0);firm.setdefault("lastRepayment",0)
-        if firm.get("status")=="cerrado":building["status"]="cerrado"
-
-def ensure_finance_state():
-    state.setdefault("finance",new_finance())
-    state["finance"].setdefault("municipalLoans",[])
-    state["finance"].setdefault("debtReserve",0)
-    state["finance"].setdefault("debtReserveHistory",[])
-    budgets=state["finance"].setdefault("programBudgets",new_finance()["programBudgets"])
-    for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
-    for name in ("services","mobility","networks"):
-        budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
-    bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
-    for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
-
-def ensure_resident_roster():
-    for home in (b for b in state["buildings"] if b.get("kind")=="home"):
-        members=home.setdefault("residents",[]);home.setdefault("householdCash",0);home.setdefault("monthlyWageIncome",0)
-        eligible_target=round(max(0,home.get("occupants",0))*.42)
-        eligible_now=sum(1 for person in members if person.get("workerEligible"))
-        while len(members)<max(0,home.get("occupants",0)):
-            eligible=eligible_now<eligible_target
-            person={"id":uuid.uuid4().hex,"workerEligible":eligible,"status":"buscando" if eligible else "inactivo",
-                    "employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,
-                    "unemployedSinceDay":state.get("day",1) if eligible else None,"unemploymentReason":"primer empleo" if eligible else None}
-            members.append(person)
-            if eligible:eligible_now+=1
-        if len(members)>home.get("occupants",0):del members[home["occupants"]:]
-        for person in members:
-            person.setdefault("previousEmployer",None);person.setdefault("previousEmployerId",None)
-            person.setdefault("lastUnemploymentDurationDays",None);person.setdefault("unemploymentEpisodes",0)
-            if person.get("workerEligible"):
-                ensure_person_work_profile(person)
-                person.setdefault("unemployedSinceDay",state.get("day",1) if person.get("status")!="empleado" else None)
-                person.setdefault("unemploymentReason","bÃºsqueda general" if person.get("status")!="empleado" else None)
-
-def ensure_supply_state():
-    legacy_version=state.get("version",1)
-    state["version"]=max(52,state.get("version",1))
-    ensure_tax_state()
-    state.setdefault("roadAssets",[])
-    state.setdefault("roadMaintenancePct",100)
-    state.setdefault("recoveryNeeds",[])
-    state.setdefault("recoveryContracts",[])
-    state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
-    state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
-    state.setdefault("trainingPrograms",[])
-    state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
-    state.setdefault("busRoutes",[])
-    ensure_heritage_state()
-    ensure_urban_evolution_state()
-    ensure_government_state()
-    state["version"]=max(57,int(state.get("version",1)))
-    for building in state["buildings"]:
-        ensure_critical_inspection_schedule(building)
-        if building.get("kind")=="civic":building.setdefault("jobSlots",12)
-        if building.get("kind")=="school":building.setdefault("jobSlots",12);building.setdefault("classrooms",4)
-        if building["kind"]=="home":
-            building.setdefault("capacity",max(building.get("occupants",0),round(building.get("occupants",0)*1.15)))
-    supply=state.setdefault("supply",new_supply())
-    supply.setdefault("regional",INITIAL_REGIONAL_STOCK.copy())
-    supply.setdefault("contractors",{})
-    supply.setdefault("contractorCash",CONTRACTOR_CASH.copy())
-    supply.setdefault("suppliers",{name:stock.copy() for name,stock in SUPPLIER_STOCK.items()})
-    supply.setdefault("orders",[])
-    supply.setdefault("market",new_market_supply())
-    supply.setdefault("marketOrders",[])
-    supply.setdefault("portOrders",[])
-    supply.setdefault("portVoyages",[])
-    for name,values in new_market_supply().items():
-        supplier=supply["market"].setdefault(name,values)
-        for key,value in values.items():supplier.setdefault(key,value)
-    for order in supply["orders"]:
-        order.setdefault("priority","normal")
-        if order.get("status") in ("esperando equipo","descargando"):
-            order.setdefault("arrivedDay",min(state["day"],order.get("arrivalDay",state["day"])))
-        if order.get("status")=="en trÃ¡nsito":
-            route=order.get("route",[]);distance=max(0,len(route)-1)
-            if legacy_version<10:
-                order["travelDistance"]=distance
-                order["supplierReadyDay"]=max(order.get("orderedDay",state["day"]),order.get("arrivalDay",state["day"])-max(1,math.ceil(distance/6)))
-                drive_days=max(1,math.ceil(distance/6))
-                order["travelledDistance"]=distance*max(0,min(1,(state["day"]-order["supplierReadyDay"])/drive_days))
-                order["routeProgress"]=0 if not distance else order["travelledDistance"]/distance
-            else:
-                order.setdefault("travelDistance",distance)
-                order.setdefault("travelledDistance",distance*max(0,min(1,order.get("progress",0))))
-                order.setdefault("supplierReadyDay",max(order.get("orderedDay",state["day"]),order.get("arrivalDay",state["day"])-max(1,math.ceil(distance/6))))
-    supply.setdefault("depots",[])
-    if legacy_version<8:
-        for order in supply.get("orders",[]):
-            if order.get("status")=="descargando":
-                order["status"]="esperando equipo";order["statusCause"]="ReasignaciÃ³n de cuadrilla tras actualizar la simulaciÃ³n";order["unloadWorkers"]=0;order.pop("forkliftId",None);order["unloadProgress"]=0;order["arrivalDay"]=state["day"]
-    supply.setdefault("yardCapacity",240)
-    supply.setdefault("storageCapacity",240+500*sum(1 for b in state["buildings"] if b.get("kind")=="depot"))
-    for name in CONTRACTOR_NAMES:
-        supply["contractors"].setdefault(name,INITIAL_CONTRACTOR_STOCK.copy())
-        supply["contractorCash"].setdefault(name,CONTRACTOR_CASH[name])
-        for key,value in INITIAL_CONTRACTOR_STOCK.items():
-            supply["contractors"][name].setdefault(key,value)
-    for name,stock in SUPPLIER_STOCK.items():
-        supply["suppliers"].setdefault(name,stock.copy())
-        for key,value in stock.items(): supply["suppliers"][name].setdefault(key,value)
-    known={d.get("id") for d in supply["depots"]}
-    for building in state["buildings"]:
-        if building.get("kind")!="depot":continue
-        depot_id=f"depot-{building['x']}-{building['y']}"
-        if depot_id not in known:
-            supply["depots"].append({"id":depot_id,"x":building["x"],"y":building["y"],"capacity":building.get("capacityAdded",500),"label":building.get("name","DepÃ³sito municipal"),"stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
-    for depot in supply["depots"]:
-        depot.setdefault("stocks",{})
-        for name in CONTRACTOR_NAMES:
-            depot["stocks"].setdefault(name,{key:0 for key in MATERIAL_NAMES})
-            for key in MATERIAL_NAMES:depot["stocks"][name].setdefault(key,0)
-    if legacy_version<7:
-        for name in CONTRACTOR_NAMES:
-            yard=supply["contractors"][name]
-            overflow=max(0,sum(yard.values())-supply["yardCapacity"])
-            for depot in supply["depots"]:
-                free=max(0,depot["capacity"]-sum(sum(stock.values()) for stock in depot["stocks"].values()))
-                move=min(overflow,free)
-                for material in MATERIAL_NAMES:
-                    quantity=min(yard[material],move)
-                    yard[material]-=quantity;depot["stocks"][name][material]+=quantity;move-=quantity
-                    if not move:break
-                overflow-=min(overflow,free)
-            if overflow:
-                supply["yardCapacity"]+=overflow
-    stored=sum(sum(stock.values()) for stock in supply["contractors"].values())+sum(sum(stock.values()) for d in supply["depots"] for stock in d["stocks"].values())
-    inbound=sum(sum(order.get("items",{}).values()) for order in supply["orders"] if order.get("status") in ("en trÃ¡nsito","esperando equipo","descargando"))
-    if legacy_version<7:
-        yard_inbound=sum(sum(order.get("items",{}).values()) for order in supply["orders"]
-                         if order.get("status") in ("en trÃ¡nsito","esperando equipo","descargando") and order.get("destinationId","yard")=="yard")
-        supply["yardCapacity"]=max(supply["yardCapacity"],sum(sum(stock.values()) for stock in supply["contractors"].values())+yard_inbound)
-    # A saved city can already have more stock in flight than its new default capacity.
-    # Preserve those paid deliveries during migration instead of making the old save impossible to load.
-    capacity_floor=supply["yardCapacity"]+sum(depot["capacity"] for depot in supply["depots"])
-    supply["storageCapacity"]=max(int(supply["storageCapacity"]),capacity_floor,stored+inbound)
-    for p in state["projects"]:
-        p.setdefault("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
-        if "materialsRequired" not in p:
-            p["materialsRequired"]=material_plan(p["kind"],p.get("initialProgress",0))
-            local_progress=p.get("elapsed",0)/max(1,p.get("duration",1))
-            # Compatibilidad: obras de versiones anteriores no vuelven a gastar materiales ya ejecutados.
-            p["materialsUsed"]={key:math.ceil(amount*material_fraction(key,local_progress))
-                                for key,amount in p["materialsRequired"].items()}
-        p.setdefault("materialsUsed",{key:0 for key in MATERIAL_NAMES})
-    ensure_business_state()
-    ensure_finance_state()
-    ensure_resident_roster()
-
-def material_delta(p, next_elapsed):
-    local_progress=next_elapsed/max(1,p["duration"])
-    return {key:max(0,math.ceil(amount*material_fraction(key,local_progress))-p["materialsUsed"].get(key,0))
-            for key,amount in p["materialsRequired"].items()}
-
-def material_sources(contractor, project):
-    sources=[("patio",state["supply"]["contractors"][contractor],route_between((4,10),(project["x"],project["y"])))]
-    for depot in state["supply"].get("depots",[]):
-        route=route_between((depot["x"],depot["y"]),(project["x"],project["y"]))
-        if route:sources.append((depot["id"],depot["stocks"][contractor],route))
-    return sorted((source for source in sources if source[2]),key=lambda source:len(source[2]))
-
-def missing_materials(p, next_elapsed):
-    sources=material_sources(p["contractor"],p)
-    available={key:sum(stock[key] for _,stock,_ in sources) for key in MATERIAL_NAMES}
-    return [key for key,amount in material_delta(p,next_elapsed).items() if available[key]<amount]
-
-def consume_materials(project, amounts):
-    sources=material_sources(project["contractor"],project)
-    for material,amount in amounts.items():
-        remaining=amount
-        for _,stock,_ in sources:
-            used=min(stock[material],remaining);stock[material]-=used;remaining-=used
-            if not remaining:break
-        if remaining:raise RuntimeError("Inventario logÃ­stico cambiÃ³ durante el consumo")
-
-def contractor_has_capacity(name):
-    assigned=sum(p["contractor"]==name and p.get("status")!="pausada" for p in state["projects"])
-    assigned+=sum(p.get("contractor")==name and p.get("status")=="en obra" for p in state.get("recoveryContracts",[]))
-    return assigned<CONTRACTORS[name]["capacity"]
-
-def contractor_free_workers(name):
-    assigned=sum(p.get("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
-                 for p in state["projects"] if p["contractor"]==name)
-    assigned+=sum(p.get("workers",4) for p in state.get("recoveryContracts",[]) if p.get("contractor")==name and p.get("status")=="en obra")
-    assigned+=sum(o.get("unloadWorkers",0) for o in state["supply"].get("orders",[]) if o.get("contractor")==name and o.get("status")=="descargando")
-    return CONTRACTORS[name]["workers"]-assigned
-
-def free_forklift(name):
-    in_use={o.get("forkliftId") for o in state["supply"].get("orders",[]) if o.get("contractor")==name and o.get("status")=="descargando"}
-    return next((i for i in range(1,CONTRACTORS[name]["forklifts"]+1) if i not in in_use),None)
-
-def begin_unloading(order):
-    contractor=order["contractor"];spec=CONTRACTORS[contractor];forklift=free_forklift(contractor)
-    workers=spec["unloadWorkers"]
-    if forklift is None:
-        order["statusCause"]="Esperando autoelevador disponible";return False
-    if contractor_free_workers(contractor)<workers:
-        order["statusCause"]="Esperando cuadrilla de descarga";return False
-    amount=sum(order["items"].values());days=max(1,math.ceil(amount/spec["unloadRate"]))
-    order["status"]="descargando";order["statusCause"]="";order["forkliftId"]=forklift;order["unloadWorkers"]=workers
-    order["unloadRate"]=spec["unloadRate"];order["unloadStartDay"]=state["day"];order["unloadUntilDay"]=state["day"]+days;order["unloadProgress"]=0
-    ev("Descarga en curso",f"{contractor} asignÃ³ {workers} operarios y el autoelevador {forklift}; descarga estimada: {days} dÃ­a(s).")
-    return True
-
-def is_water(x,y):
-    return x>=24 or (y<3 and x>18)
-
-def route_between(start_coord, destination_coord):
-    condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}
-    roads={tuple(r) for r in state["roads"] if condition.get(tuple(r),82)>=25}
-    adjacent=lambda point:{(point[0]+dx,point[1]+dy) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))}
-    starts={start_coord} if start_coord in roads else adjacent(start_coord)&roads
-    goals={destination_coord} if destination_coord in roads else adjacent(destination_coord)&roads
-    if not starts or not goals:return None
-    queue=list(starts);previous={point:None for point in starts};target=None
-    for current in queue:
-        if current in goals: target=current;break
-        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-            neighbor=(current[0]+dx,current[1]+dy)
-            if neighbor in roads and neighbor not in previous:
-                previous[neighbor]=current;queue.append(neighbor)
-    if target is None:return None
-    path=[];current=target
-    while current is not None:path.append([current[0],current[1]]);current=previous[current]
-    path.reverse()
-    if start_coord not in roads:path.insert(0,list(start_coord))
-    if destination_coord not in roads:path.append(list(destination_coord))
-    return path
-
-def build_waste_collection_routes(containers,depots,facilities):
-    trucks=[{"id":"municipal-1","name":"CamiÃ³n municipal","start":{"x":4,"y":10},"depot":None,"bins":[]}]
-    for i,depot in enumerate(depots):
-        trucks.append({"id":f"depot-{depot['x']}-{depot['y']}","name":f"CamiÃ³n de {depot.get('name','depÃ³sito municipal')}","start":{"x":depot["x"],"y":depot["y"]},"depot":depot,"bins":[]})
-    for index,truck in enumerate(trucks):truck["payloadTons"]=1.15 if index==0 else .75
-    for container in sorted(containers,key=lambda c:(c.get("y",0),c.get("x",0))):
-        options=[]
-        for index,truck in enumerate(trucks):
-            if len(truck["bins"])*.15>=truck["payloadTons"]-.001:continue
-            origin=truck["bins"][-1] if truck["bins"] else truck["start"]
-            path=route_between((origin["x"],origin["y"]),(container["x"],container["y"]))
-            if path:options.append((len(path)+len(truck["bins"])*5,index))
-        if options:
-            _,index=min(options);trucks[index]["bins"].append(container)
-    routes=[]
-    for truck in trucks:
-        start=truck["start"];destination=truck["depot"]
-        if destination is None:
-            destination=min(depots,key=lambda b:len(route_between((4,10),(b["x"],b["y"])) or [0])) if depots else None
-        if destination is None and facilities:
-            reachable=[(len(route_between((4,10),(b["x"],b["y"])) or []),b) for b in facilities]
-            reachable=[row for row in reachable if row[0]>0]
-            if reachable:destination=min(reachable,key=lambda row:row[0])[1]
-        path=[];stops=[];current=start
-        for container in truck["bins"]:
-            segment=route_between((current["x"],current["y"]),(container["x"],container["y"]))
-            if not segment:continue
-            path.extend(segment if not path else segment[1:]);stops.append({"kind":"container","x":container["x"],"y":container["y"],"id":container.get("id",f"bin-{container['x']}-{container['y']}")});current=container
-        if destination:
-            segment=route_between((current["x"],current["y"]),(destination["x"],destination["y"]))
-            if segment:path.extend(segment if not path else segment[1:]);stops.append({"kind":"transfer" if destination.get("kind")=="depot" else "disposal","x":destination["x"],"y":destination["y"],"name":destination.get("name","Destino final")});current=destination
-        back=route_between((current["x"],current["y"]),(start["x"],start["y"]))
-        if back:path.extend(back if not path else back[1:])
-        if truck["bins"] and destination is None:stops.append({"kind":"base","x":start["x"],"y":start["y"],"name":"Base municipal"})
-        bin_ids={stop["id"] for stop in stops if stop["kind"]=="container"}
-        routes.append({"id":truck["id"],"name":truck["name"],"payloadTons":truck["payloadTons"],"path":path,"stops":stops,"containerIds":sorted(bin_ids),"distanceTiles":max(0,len(path)-1),"reachable":len(path)>1 and bool(stops),"destination":stops[-1]["kind"] if stops else "sin destino"})
-    return routes
-
-def ensure_utility_state():
-    utilities=state.setdefault("utilities",{})
-    roads=[list(point) for point in state.get("roads",[])]
-    utilities.setdefault("powerLines",roads.copy())
-    utilities.setdefault("failures",[])
-    utilities.setdefault("waterPipes",roads.copy())
-    utilities.setdefault("sewerLines",[list(point) for point in utilities.get("waterPipes",roads)])
-    utilities.setdefault("baseWastewaterTreatmentM3Day",180)
-    utilities.setdefault("drainLines",[list(point) for point in utilities.get("sewerLines",roads)])
-    utilities.setdefault("gasLines",roads.copy())
-    utilities.setdefault("telecomLines",roads.copy())
-    utilities.setdefault("baseGasCapacityM3Day",240)
-    utilities.setdefault("baseTelecomCapacityMbps",500)
-    utilities.setdefault("baseDrainageCapacityM3Day",3300)
-    utilities.setdefault("basePowerCapacityKw",1200)
-    utilities.setdefault("baseWaterCapacityM3Day",180)
-    utilities.setdefault("powerLossRate",.06)
-    utilities.setdefault("waterLeakRate",.08)
-    utilities.setdefault("maintenanceFundingFactor",1)
-    return utilities
-
-def energized_utility_tiles(network):
-    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}.get(network,"waterPipes")
-    failed={(f.get("x"),f.get("y")) for f in utilities.get("failures",[]) if f.get("status")!="reparada" and f.get("network")==network}
-    lines={tuple(point) for point in utilities.get(key,[]) if tuple(point) not in failed};source=(4,10)
-    if source not in lines:return set()
-    connected={source};queue=[source]
-    for x,y in queue:
-        for neighbor in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
-            if neighbor in lines and neighbor not in connected:connected.add(neighbor);queue.append(neighbor)
-    return connected
-
-def utility_building_connected(building,network):
-    tiles=energized_utility_tiles(network)
-    return any((building.get("x",-99)+dx,building.get("y",-99)+dy) in tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1)))
-
-def facility_capacity_factor(building):
-    """Condition 82% is the commissioned baseline; structural wear reduces plant output."""
-    factor=max(0,min(1,float(building.get("quality",82))/82))
-    building["functionalCapacityPct"]=round(factor*100)
-    return factor
-
-def utility_condition_report():
-    utilities=ensure_utility_state();conditions=utilities.setdefault("lineConditions",{})
-    line_keys={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}
-    report={}
-    for network,key in line_keys.items():
-        values=[max(0,min(100,float(conditions.get(f"{network}:{x}:{y}",82)))) for x,y in utilities.get(key,[])]
-        report[network]={"segments":len(values),"averageCondition":round(sum(values)/max(1,len(values)),1),"criticalSegments":sum(q<40 for q in values),"minimumCondition":round(min(values),1) if values else 100}
-    return report
-
-def advance_utility_line_conditions(funding_factor):
-    utilities=ensure_utility_state();conditions=utilities.setdefault("lineConditions",{})
-    line_keys={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}
-    names={"power":"electricidad","water":"agua potable","sewer":"cloacas","drainage":"drenaje pluvial","gas":"gas","telecom":"fibra Ã³ptica"}
-    bases={"power":720,"water":640,"sewer":690,"drainage":690,"gas":580,"telecom":460}
-    funded=max(0,min(1,float(funding_factor)));created=[]
-    for network,key in line_keys.items():
-        lines=utilities.get(key,[]);risks=[];connected=energized_utility_tiles(network)
-        current_buildings=[b for b in state.get("buildings",[]) if utility_building_connected(b,network)]
-        for x,y in lines:
-            nearby=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
-            load=1+min(4,nearby*.5)
-            asset_key=f"{network}:{x}:{y}"
-            quality=max(0,min(100,float(conditions.get(asset_key,82))))
-            quality=max(0,min(100,quality-(.08+load*.03)+.18*funded))
-            conditions[asset_key]=round(quality,1)
-            if quality<25:
-                alternate=set(connected);alternate.discard((x,y));source=(4,10)
-                reached={source} if source in alternate else set();queue=list(reached)
-                for a,b in queue:
-                    for neighbor in ((a+1,b),(a-1,b),(a,b+1),(a,b-1)):
-                        if neighbor in alternate and neighbor not in reached:reached.add(neighbor);queue.append(neighbor)
-                lost=sum(1 for building in current_buildings if not any((building.get("x",-99)+dx,building.get("y",-99)+dy) in reached for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))))
-                risks.append((lost,quality,x,y))
-        active={(f.get("network"),f.get("x"),f.get("y")) for f in utilities.get("failures",[]) if f.get("status")!="reparada"}
-        risks=[r for r in risks if (network,r[2],r[3]) not in active]
-        if risks:
-            lost,quality,x,y=sorted(risks,key=lambda r:(-r[0],r[1],r[3],r[2]))[0]
-            cost=round(bases[network]*(1+(25-quality)/50))
-            failure={"id":uuid.uuid4().hex,"network":network,"x":x,"y":y,"day":state.get("day",1),"reason":"Desgaste por mantenimiento insuficiente","repairCost":cost,"affectedBuildings":lost,"status":"averÃ­a","remainingDays":0}
-            utilities.setdefault("failures",[]).append(failure);created.append(failure)
-            impact=f"Se interrumpiÃ³ el suministro a {lost} edificios." if lost else "Las rutas alternativas mantienen el suministro, pero el tramo quedÃ³ fuera de servicio."
-            ev("AverÃ­a por desgaste de red",f"El tramo de {names[network]} en calle {x+1},{y+1} fallÃ³ tras acumular desgaste. {impact} Repararlo cuesta $ {cost} y requiere una cuadrilla.")
-    utilities["lineConditionReport"]=utility_condition_report()
-    return utilities["lineConditionReport"],created
-
-def ensure_waste_state():
-    waste=state.setdefault("waste",{})
-    waste.setdefault("baseCollectionTonsDay",1.15)
-    waste.setdefault("baseLandfillCapacityTons",900)
-    waste.setdefault("landfillStoredTons",0)
-    waste.setdefault("uncollectedTons",0)
-    waste.setdefault("lastCollectionTons",0)
-    waste.setdefault("lastWasteImpactDay",0)
-    waste.setdefault("lastRecycledTonsDay",0)
-    waste.setdefault("transferStoredTons",0)
-    waste.setdefault("containers",[])
-    waste.setdefault("routes",[])
-    waste.setdefault("fundingFactor",1)
-    return waste
-
-def calculate_waste_balance(advance=False,apply_effects=False):
-    waste=ensure_waste_state();buildings=state.get("buildings",[])
-    population=max(0,state.get("population",0))
-    household=population*.00115
-    businesses=sum(max(1,b.get("business",{}).get("lastWorkers",round(b.get("business",{}).get("jobSlots",0)*.55)))*.00115 for b in buildings if b.get("kind")=="shop" and b.get("business",{}).get("status")!="cerrado")
-    public_staff=sum(max(0,w.get("workersAssigned",0)) for w in state.get("workplaces",[]) if w.get("kind") in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
-    public=public_staff*.00075
-    visitors=sum(max(0,b.get("monthlyGuests",0)) for b in buildings if b.get("kind")=="hotel")/30*.0015
-    generated=household+businesses+public+visitors
-    active_depot_buildings=[b for b in buildings if b.get("kind")=="depot" and b.get("status","habilitado") not in ("cerrado","abandonado") and route_between((4,10),(b.get("x",0),b.get("y",0)))]
-    active_depots=len(active_depot_buildings)
-    trucks=1+active_depots
-    containers=waste.setdefault("containers",[])
-    facilities=[b for b in buildings if b.get("kind") in ("landfill","recyclingPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
-    routes=build_waste_collection_routes(containers,active_depot_buildings,facilities)
-    collection_factor=max(0,min(1,float(waste.get("fundingFactor",1))))
-    for route in routes:route["payloadTons"]*=collection_factor
-    waste["routes"]=routes
-    routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
-    routed_bin_ids=set(routed_by_id)
-    for container in containers:container["routeId"]=routed_by_id.get(container.get("id",f"bin-{container['x']}-{container['y']}"),{}).get("id")
-    collection_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75+len(routed_bin_ids)*.15)*collection_factor
-    transfer_capacity=active_depots*12
-    transfer_dispatch=active_depots*1.5
-    landfills=[b for b in buildings if b.get("kind")=="landfill" and b.get("status","habilitado") not in ("cerrado","abandonado")]
-    recyclers=[b for b in buildings if b.get("kind")=="recyclingPlant" and b.get("status","habilitado") not in ("cerrado","abandonado") and route_between((4,10),(b.get("x",0),b.get("y",0))) and utility_building_connected(b,"power") and utility_building_connected(b,"water")]
-    recycling_capacity=sum(max(0,b.get("processingTonsDay",1.25)) for b in recyclers)
-    landfill_capacity=waste["baseLandfillCapacityTons"]+sum(max(0,b.get("capacityAdded",1800)) for b in landfills)
-    if advance:
-        backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
-        transfer_stored=max(0,waste.get("transferStoredTons",0))
-        routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
-        per_bin=min(.15,generated/max(1,len(containers))) if containers else 0
-        bin_generation=0;bin_overflow=0;bin_picked=0
-        route_load={route["id"]:0.0 for route in routes}
-        for container in containers:
-            container_id=container.get("id",f"bin-{container['x']}-{container['y']}")
-            container["id"]=container_id
-            container["storedTons"]=max(0,float(container.get("storedTons",0)))
-            incoming=per_bin;bin_generation+=incoming
-            capacity=max(.15,float(container.get("capacityTons",2)))
-            overflow=max(0,container["storedTons"]+incoming-capacity)
-            container["storedTons"]=min(capacity,container["storedTons"]+incoming)
-            route=routed_by_id.get(container_id);picked=0
-            if route:
-                room=max(0,route.get("payloadTons",.75)-route_load[route["id"]])
-                picked=min(container["storedTons"],.15,room)
-                route_load[route["id"]]+=picked;container["storedTons"]=round(container["storedTons"]-picked,3)
-            container["lastPickedTons"]=round(picked,3);container["routeId"]=route["id"] if route else None
-            bin_picked+=picked;bin_overflow+=overflow
-        curb_generated=max(0,generated-bin_generation)
-        curb_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75)*collection_factor
-        curb_picked=min(backlog+curb_generated,curb_capacity)
-        picked=curb_picked+bin_picked
-        accepted=min(picked,max(0,transfer_capacity-transfer_stored)) if active_depots else picked
-        if active_depots:
-            waste["transferStoredTons"]=round(transfer_stored+accepted,3)
-            dispatched=min(waste["transferStoredTons"],transfer_dispatch)
-            available_downstream=dispatched
-        else:
-            waste["transferStoredTons"]=0;available_downstream=accepted
-        recycled=min(available_downstream*.35,recycling_capacity)
-        disposed=min(max(0,available_downstream-recycled),max(0,landfill_capacity-stored))
-        processed=recycled+disposed
-        if active_depots:waste["transferStoredTons"]=round(max(0,waste["transferStoredTons"]-processed),3)
-        remaining_curb=max(0,backlog+curb_generated-curb_picked)
-        waste["uncollectedTons"]=round(remaining_curb+bin_overflow+max(0,picked-accepted)+(0 if active_depots else max(0,available_downstream-processed)),3)
-        waste["landfillStoredTons"]=round(stored+disposed,3)
-        waste["lastCollectionTons"]=round(processed,3)
-        waste["lastRouteCollectedTons"]=round(bin_picked,3)
-        waste["lastBinOverflowTons"]=round(bin_overflow,3)
-        waste["lastRecycledTonsDay"]=round(recycled,3)
-    backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
-    backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
-    roads=sorted(state.get("roads",[]),key=lambda p:(p[1],p[0]));pile_count=min(18,math.ceil(backlog/1.5))
-    litter_tiles=[list(roads[(i*max(1,len(roads)//max(1,pile_count)))%len(roads)]) for i in range(pile_count)] if roads and pile_count else []
-    collected=waste.get("lastCollectionTons",0);recycled=waste.get("lastRecycledTonsDay",0)
-    operating=round(280+max(0,trucks-1)*160+len(landfills)*420+len(recyclers)*650+collected*30*7.5)
-    recycling_income=round(recycled*30*18)
-    report={"generatedTonsDay":round(generated,3),"householdTonsDay":round(household,3),"businessTonsDay":round(businesses,3),"publicTonsDay":round(public,3),"visitorTonsDay":round(visitors,3),"collectedTonsDay":round(collected,3),"collectionCapacityTonsDay":round(collection_capacity,2),"activeTrucks":trucks,"landfillStoredTons":round(stored,1),"landfillCapacityTons":round(landfill_capacity,1),"landfillRemainingTons":round(max(0,landfill_capacity-stored),1),"landfillFillPct":round(min(100,stored/max(1,landfill_capacity)*100)),"uncollectedTons":round(backlog,1),"litterTiles":litter_tiles,"landfills":len(landfills),"activeDepots":active_depots,"transferStoredTons":round(waste.get("transferStoredTons",0),1),"transferCapacityTons":round(transfer_capacity,1),"transferDispatchTonsDay":round(transfer_dispatch,2),"containers":len(containers),"recyclingPlants":len(recyclers),"recyclingCapacityTonsDay":round(recycling_capacity,2),"recycledTonsDay":round(recycled,3),"recyclingRevenueMonth":recycling_income,"routeCount":sum(r["reachable"] for r in routes),"routeContainersServed":len(routed_bin_ids),"routeContainersUnserved":max(0,len(containers)-len(routed_bin_ids)),"routeDistanceTiles":sum(r["distanceTiles"] for r in routes if r["reachable"]),"routeCollectedTons":round(waste.get("lastRouteCollectedTons",0),3),"containerStoredTons":round(sum(c.get("storedTons",0) for c in containers),2),"monthlyOperatingCost":operating,"routes":[{"id":r["id"],"name":r["name"],"reachable":r["reachable"],"stops":len(r["containerIds"]),"distanceTiles":r["distanceTiles"],"destination":r["destination"]} for r in routes]}
-    waste["report"]=report
-    if apply_effects and state.get("day",0)%30==0 and waste.get("lastWasteImpactDay")!=state.get("day"):
-        threshold=max(8,population*.035)
-        if backlog>=threshold:
-            state["services"]=max(0,state.get("services",0)-1)
-            if backlog>=max(30,population*.12):state["approval"]=max(0,state.get("approval",0)-1)
-            if state.get("day",0)-waste.get("lastWasteNoticeDay",-999)>=30:
-                ev("RecolecciÃ³n de residuos insuficiente",f"Quedaron {backlog:.1f} toneladas sin retirar. Flota: {trucks} camiones Â· capacidad de recolecciÃ³n {collection_capacity:.2f} t/dÃ­a. La suciedad acumulada afecta los servicios municipales.".replace(".",","))
-                waste["lastWasteNoticeDay"]=state.get("day",0)
-        elif stored>=landfill_capacity:
-            if state.get("day",0)-waste.get("lastLandfillNoticeDay",-999)>=30:
-                ev("Relleno sanitario agotado","La disposiciÃ³n final alcanzÃ³ su capacidad fÃ­sica. La carga no recolectada permanece en la ciudad hasta ampliar la infraestructura.")
-                waste["lastLandfillNoticeDay"]=state.get("day",0)
-        waste["lastWasteImpactDay"]=state.get("day",0)
-    return report
-
-def ensure_climate_state():
-    climate=state.setdefault("climate",{})
-    climate.setdefault("region","Costa templada de Puerto Claro")
-    climate.setdefault("forecast",None)
-    climate.setdefault("preparedForDay",None)
-    climate.setdefault("heatForecast",None)
-    climate.setdefault("droughtForecast",None)
-    climate.setdefault("coolingPreparedForDay",None)
-    climate.setdefault("waterRestrictionsTarget",None)
-    climate.setdefault("waterRestrictions",False)
-    return climate
-
-def climate_year_targets(day):
-    year_start=((max(1,int(day))-1)//360)*360+1
-    heat_day=year_start+24
-    drought_day=year_start+45
-    if day>=heat_day+5:heat_day+=360
-    if day>=drought_day+30:drought_day+=360
-    return heat_day,drought_day
-
-def heat_exposure(x,y):
-    roads={tuple(p) for p in state.get("roads",[])}
-    occupied=roads|{(b.get("x"),b.get("y")) for b in state.get("buildings",[])}|{(p.get("x"),p.get("y")) for p in state.get("projects",[])}
-    shade=0
-    for tx in range(max(1,x-1),min(22,x+1)+1):
-        for ty in range(max(1,y-1),min(18,y+1)+1):
-            if (tx,ty) in occupied or tx>=24 or (ty<3 and tx>18):continue
-            value=math.sin((tx*97+ty*53)*127.1+78.233)*43758.5453
-            if value-math.floor(value)<=.27:shade+=1
-    terrain=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
-    exposure=max(.65,min(1.5,1.35-min(5,shade)*.1+(0.12 if terrain<-.48 else 0)))
-    return round(exposure,2),shade
-
-def apply_climate_impacts():
-    climate=ensure_climate_state();day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
-    forecast=climate.get("heatForecast")
-    if forecast and day==forecast.get("targetDay") and forecast.get("status")=="pronosticada":
-        expected=max(0,int(forecast.get("expectedHealthCases",0)));centers=[]
-        try:workplaces=commute_model().get("workplaces",[])
-        except Exception:workplaces=[]
-        for building in state.get("buildings",[]):
-            if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
-            workplace=next((w for w in workplaces if w.get("x")==building.get("x") and w.get("y")==building.get("y") and w.get("staffedJobs",0)>=2),None)
-            if workplace and building.get("utilityAccess",{}).get("powerServedPct",0)>=75 and route_between((4,10),(building["x"],building["y"])):centers.append({"name":building.get("name","Centro municipal"),"x":building["x"],"y":building["y"],"capacity":min(100,max(40,workplace["staffedJobs"]*2))})
-        cooling_active=climate.get("coolingPreparedForDay")==day
-        shelter_capacity=sum(c["capacity"] for c in centers) if cooling_active else 0
-        sheltered=min(expected,shelter_capacity)
-        actual=max(0,expected-round(sheltered*.72))
-        forecast.update({"status":"ocurrida","actualHealthCases":actual,"shelteredResidents":sheltered,"shelterCapacity":shelter_capacity,"coolingCenters":centers if cooling_active else []})
-        if actual:
-            if actual>=max(8,round(state.get("population",0)*.012)):state["services"]=max(0,state.get("services",0)-1)
-            if actual>=max(25,round(state.get("population",0)*.05)):state["approval"]=max(0,state.get("approval",0)-1)
-        ev("Ola de calor Â· balance sanitario",f"El episodio dejÃ³ {actual} consultas estimadas por estrÃ©s tÃ©rmico; {sheltered} residentes tuvieron refugio con electricidad y personal. ExposiciÃ³n prevista: {forecast.get('exposedPopulation',0)} personas en {len(forecast.get('exposedHomes',[]))} sectores.")
-    drought=climate.get("droughtForecast")
-    if drought and day==drought.get("targetDay") and drought.get("status")=="pronosticada":
-        drought.update({"status":"activa","endDay":day+30})
-        ev("SequÃ­a regional Â· fuente reducida",f"La estaciÃ³n seca reduce 45% la captaciÃ³n de agua durante 30 dÃ­as. Capacidad Ãºtil prevista: {drought.get('effectiveCapacityM3Day',0)} mÂ³/dÃ­a frente a demanda de {drought.get('expectedDemandM3Day',0)} mÂ³/dÃ­a. La restricciÃ³n comercial o los camiones cisterna pueden aliviar la red.")
-    if drought and drought.get("status")=="activa" and day>=drought.get("endDay",day):
-        drought["status"]="finalizada";ev("Fin de la sequÃ­a regional","La captaciÃ³n de agua recuperÃ³ su capacidad estacional normal.")
-    if drought and drought.get("status")=="activa" and day-climate.get("lastDroughtImpactDay",-99)>=10:
-        exposed=sum(b.get("occupants",0)*(1-b.get("utilityAccess",{}).get("waterServedPct",0)/100) for b in state.get("buildings",[]) if b.get("kind")=="home")
-        drought["residentsWithoutFullWaterService"]=round(exposed)
-        if exposed>=max(20,state.get("population",0)*.08):
-            state["services"]=max(0,state.get("services",0)-1)
-            if exposed>=max(50,state.get("population",0)*.2):state["approval"]=max(0,state.get("approval",0)-1)
-            ev("EstrÃ©s de agua en hogares",f"La sequÃ­a dejÃ³ a {round(exposed)} residentes con cobertura incompleta. La capacidad de captaciÃ³n y las restricciones determinan cuÃ¡nto dura el dÃ©ficit.")
-        climate["lastDroughtImpactDay"]=day
-
-def calculate_utility_balance(apply_effects=False):
-    utilities=ensure_utility_state();climate=ensure_climate_state()
-    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","school","fireStation","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
-    month=((state.get("day",1)-1)//30)%12
-    summer=month in (11,0,1)
-    day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
-    heat_active=heat_day<=day<heat_day+5;drought_active=drought_day<=day<drought_day+30
-    restrictions_active=bool(climate.get("waterRestrictions") and climate.get("waterRestrictionsTarget")==drought_day)
-    seasonal_power=(1.1 if summer else 1.0)*(1.22 if heat_active else 1.0)
-    seasonal_water=(1.12 if summer else 1.0)*(1.18 if heat_active else 1.0)
-    def demand(building):
-        kind=building.get("kind");occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
-        workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
-        if kind=="home":return occupants*.72*seasonal_power,occupants*.12*seasonal_water
-        if kind=="shop":return workers*1.35*seasonal_power,workers*.055*seasonal_water
-        if kind=="hotel":return building.get("beds",48)*1.25*seasonal_power,building.get("beds",48)*.09*seasonal_water
-        if kind in ("civic","school","fireStation"):return 32*seasonal_power,14*seasonal_water
-        if kind=="depot":return 12*seasonal_power,4*seasonal_water
-        if kind=="busGarage":return 18*seasonal_power,2*seasonal_water
-        if kind=="port":return 85*seasonal_power,32*seasonal_water
-        if kind=="airport":return 165*seasonal_power,38*seasonal_water
-        if kind=="powerPlant":return 38*seasonal_power,5*seasonal_water
-        if kind=="wastewaterPlant":return 28*seasonal_power,8*seasonal_water
-        if kind=="landfill":return 18*seasonal_power,3*seasonal_water
-        if kind=="recyclingPlant":return 32*seasonal_power,6*seasonal_water
-        return 22*seasonal_power,4*seasonal_water
-    for building in buildings:
-        kw,m3=demand(building)
-        kind=building.get("kind")
-        if restrictions_active and kind in ("shop","hotel","port","airport"):m3*=.65
-        occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
-        workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
-        gas=occupants*.025 if kind=="home" else workers*.08 if kind=="shop" else 4 if kind in ("hotel","airport","port") else 1
-        telecom=occupants*.018 if kind=="home" else workers*.035 if kind in ("shop","civic","school","hotel","airport","port") else .2
-        building["utilityDemand"]={"powerKw":round(kw,1),"waterM3Day":round(m3,1),"gasM3Day":round(gas,2),"telecomMbps":round(telecom,2)}
-        building["utilityAccess"]={"powerConnected":utility_building_connected(building,"power"),"waterConnected":utility_building_connected(building,"water"),"sewerConnected":utility_building_connected(building,"sewer"),"gasConnected":utility_building_connected(building,"gas"),"telecomConnected":utility_building_connected(building,"telecom"),"gasServedPct":0,"telecomServedPct":0,"powerServedPct":0,"waterServedPct":0,"wastewaterTreatedPct":0}
-    power_tiles=energized_utility_tiles("power");water_tiles=energized_utility_tiles("water");sewer_tiles=energized_utility_tiles("sewer")
-    generation=sum(b.get("generationKw",900)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
-    potable=sum(b.get("treatmentM3Day",220)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
-    wastewater=sum(b.get("treatmentM3Day",260)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")))
-    maintenance_factor=max(0,min(1,float(utilities.get("maintenanceFundingFactor",1))))
-    power_capacity=(utilities["basePowerCapacityKw"]+generation)*maintenance_factor
-    source_water_capacity=(utilities["baseWaterCapacityM3Day"]+potable)*maintenance_factor
-    tanker_capacity=30 if climate.get("waterTankerStart",day+1)<=day<climate.get("waterTankerUntil",0) else 0
-    water_capacity=source_water_capacity*(.55 if drought_active else 1.0)+tanker_capacity
-    power_usable=power_capacity*(1-utilities["powerLossRate"])
-    water_usable=water_capacity*(1-utilities["waterLeakRate"])
-    def allocate(network,usable,key,pct_key):
-        connected=[b for b in buildings if b["utilityAccess"][f"{network}Connected"]]
-        total=sum(b["utilityDemand"][key] for b in buildings)
-        connected_demand=sum(b["utilityDemand"][key] for b in connected)
-        remaining=usable;delivered=0
-        priorities=("civic","school","fireStation","home","powerPlant","waterPlant","wastewaterPlant","recyclingPlant","shop","hotel","airport","port","depot","busGarage")
-        for kind in priorities:
-            group=[b for b in connected if b.get("kind")==kind];need=sum(b["utilityDemand"][key] for b in group)
-            fraction=min(1,max(0,remaining/need)) if need else 1
-            for b in group:b["utilityAccess"][pct_key]=round(fraction*100)
-            spent=need*fraction;remaining=max(0,remaining-spent);delivered+=spent
-        return total,connected_demand,delivered
-    power_total,power_connected,power_delivered=allocate("power",power_usable,"powerKw","powerServedPct")
-    critical_backup=[b for b in buildings if b.get("kind") in ("civic","waterPlant","wastewaterPlant")]
-    backup_served=0
-    for building in critical_backup:
-        demand_kw=building["utilityDemand"]["powerKw"]
-        backup_kw=min(float(building.get("backupCapacityKw",0)),demand_kw*(100-building["utilityAccess"]["powerServedPct"])/100,float(building.get("backupFuelKwh",0))/24)
-        building["backupKwToday"]=round(max(0,backup_kw),2)
-        building["utilityAccess"]["backupPowerKw"]=building["backupKwToday"]
-        building["utilityAccess"]["powerServedPct"]=round(min(100,building["utilityAccess"]["powerServedPct"]+backup_kw/max(1,demand_kw)*100))
-        backup_served+=backup_kw
-    power_total,power_connected,power_delivered_grid=power_total,power_connected,power_delivered
-    power_delivered+=backup_served
-    water_total,water_connected,water_delivered=allocate("water",water_usable,"waterM3Day","waterServedPct")
-    generated=sum(b["utilityDemand"]["waterM3Day"]*.8*b["utilityAccess"]["waterServedPct"]/100 for b in buildings)
-    sewer_connected=[b for b in buildings if b["utilityAccess"]["sewerConnected"]]
-    sewer_flow=sum(b["utilityDemand"]["waterM3Day"]*.8*b["utilityAccess"]["waterServedPct"]/100 for b in sewer_connected)
-    wastewater_capacity=utilities["baseWastewaterTreatmentM3Day"]+wastewater
-    treated=min(sewer_flow,wastewater_capacity)
-    sewer_fraction=min(1,treated/sewer_flow) if sewer_flow else 1
-    for building in buildings:
-        access=building["utilityAccess"]
-        flow=building["utilityDemand"]["waterM3Day"]*.8*access["waterServedPct"]/100
-        access["wastewaterGeneratedM3Day"]=round(flow,1)
-        access["wastewaterTreatedPct"]=round(sewer_fraction*100) if access["sewerConnected"] else 0
-    untreated=max(0,generated-treated)
-    sewer_coverage=round(treated/max(1,generated)*100) if generated else 100
-    coverage=round((power_delivered/max(1,power_total)+water_delivered/max(1,water_total)+sewer_coverage/100)/3*100)
-    gas_tiles=energized_utility_tiles("gas");telecom_tiles=energized_utility_tiles("telecom")
-    gas_capacity=utilities["baseGasCapacityM3Day"]+len(gas_tiles)*4
-    telecom_capacity=utilities["baseTelecomCapacityMbps"]+len(telecom_tiles)*8
-    gas_total,gas_connected,gas_delivered=allocate("gas",gas_capacity,"gasM3Day","gasServedPct")
-    telecom_total,telecom_connected,telecom_delivered=allocate("telecom",telecom_capacity,"telecomMbps","telecomServedPct")
-    gas_coverage=gas_delivered/max(1,gas_total);telecom_coverage=telecom_delivered/max(1,telecom_total)
-    coverage=round((power_delivered/max(1,power_total)+water_delivered/max(1,water_total)+sewer_coverage/100+gas_coverage+telecom_coverage)*100/5)
-    drain_tiles=energized_utility_tiles("drainage")
-    day_cycle=(state.get("day",1)-1)%24
-    rainfall=18 if day_cycle==17 else 5 if day_cycle in (6,7) else 0
-    def terrain_runoff(x,y):
-        value=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
-        if value<-.48:return .96,"bajo"
-        if value>.48:return .90,"compacto"
-        return .78,"firme"
-    runoff_sources=[]
-    for x,y in state.get("roads",[]):
-        runoff_sources.append({"x":x,"y":y,"kind":"road","area":1.0,"coefficient":.97,"height":terrain_runoff(x,y)[1]})
-    for building in buildings:
-        area=2.2 if building.get("kind")=="airport" else 1.8 if building.get("kind") in ("port","hotel") else 1.2
-        coefficient,height=terrain_runoff(building["x"],building["y"])
-        runoff_sources.append({"x":building["x"],"y":building["y"],"kind":"building","buildingKind":building.get("kind"),"name":building.get("name",building.get("kind","edificio")),"area":area,"coefficient":coefficient,"height":height})
-    for source_row in runoff_sources:
-        x,y=source_row["x"],source_row["y"]
-        source_row["runoffM3"]=round(rainfall*5*source_row["area"]*source_row["coefficient"],1)
-        source_row["connected"]=(x,y) in drain_tiles or any((x+dx,y+dy) in drain_tiles for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
-    total_runoff=sum(row["runoffM3"] for row in runoff_sources)
-    connected_runoff=sum(row["runoffM3"] for row in runoff_sources if row["connected"])
-    unconnected_runoff=max(0,total_runoff-connected_runoff)
-    permanent_drainage_capacity=utilities["baseDrainageCapacityM3Day"]+len(drain_tiles)*18
-    emergency_capacity=round(permanent_drainage_capacity*.25) if climate.get("preparedForDay")==state.get("day") else 0
-    drainage_capacity=permanent_drainage_capacity+emergency_capacity
-    captured=min(connected_runoff,drainage_capacity)
-    overflow=max(0,connected_runoff-captured)
-    standing_water=unconnected_runoff+overflow
-    flood_rows=[row for row in runoff_sources if row["runoffM3"]>0 and not row["connected"]]
-    overflow_left=overflow
-    for row in sorted((r for r in runoff_sources if r["runoffM3"]>0 and r["connected"]),key=lambda r:(0 if r["height"]=="bajo" else 1 if r["height"]=="firme" else 2,r["y"],r["x"])):
-        if overflow_left<=0:break
-        flood_rows.append(row);overflow_left=max(0,overflow_left-row["runoffM3"])
-    flooded_tiles=sorted({(row["x"],row["y"]) for row in flood_rows},key=lambda xy:(xy[1],xy[0]))
-    flooded_buildings=[{"x":row["x"],"y":row["y"],"kind":row.get("buildingKind"),"name":row.get("name"),"terrain":row["height"],"runoffM3":round(row["runoffM3"]),"repairCost":round(55+row["runoffM3"]*.035)} for row in flood_rows if row["kind"]=="building"]
-    drainage_coverage=round(captured/max(1,total_runoff)*100) if total_runoff else 100
-    forecast=climate.get("forecast")
-    if day_cycle==12 and (not forecast or forecast.get("targetDay")!=state.get("day",1)+5):
-        rain_forecast=18
-        projected=[{**row,"runoffM3":round(rain_forecast*5*row["area"]*row["coefficient"],1)} for row in runoff_sources]
-        projected_total=sum(row["runoffM3"] for row in projected)
-        projected_connected=sum(row["runoffM3"] for row in projected if row["connected"])
-        projected_unconnected=max(0,projected_total-projected_connected)
-        projected_overflow=max(0,projected_connected-permanent_drainage_capacity)
-        projected_floods=[row for row in projected if row["runoffM3"]>0 and not row["connected"]]
-        left=projected_overflow
-        for row in sorted((r for r in projected if r["runoffM3"]>0 and r["connected"]),key=lambda r:(0 if r["height"]=="bajo" else 1 if r["height"]=="firme" else 2,r["y"],r["x"])):
-            if left<=0:break
-            projected_floods.append(row);left=max(0,left-row["runoffM3"])
-        expected_tiles=sorted({(r["x"],r["y"]) for r in projected_floods},key=lambda p:(p[1],p[0]))
-        expected_buildings=[{"name":r.get("name"),"x":r["x"],"y":r["y"],"terrain":r["height"]} for r in projected_floods if r["kind"]=="building"]
-        expected_standing=projected_unconnected+projected_overflow
-        level="alto" if len(expected_buildings)>=3 or expected_standing>permanent_drainage_capacity*.45 else "moderado" if expected_standing>0 else "bajo"
-        forecast={"issuedDay":state.get("day",1),"targetDay":state.get("day",1)+5,"rainfallMm":rain_forecast,"expectedRunoffM3":round(projected_total),"expectedStandingWaterM3":round(expected_standing),"expectedFloodedTiles":len(expected_tiles),"expectedFloodedBuildingCount":len(expected_buildings),"expectedFloodedBuildings":expected_buildings[:8],"warningLevel":level,"status":"pronosticada"}
-        climate["forecast"]=forecast
-        sample_names=", ".join(r.get("name") or f"parcela {r['x']+1},{r['y']+1}" for r in expected_buildings[:3]) or "sin edificios en riesgo calculado"
-        ev("Alerta meteorolÃ³gica Â· tormenta prevista",f"La regiÃ³n {climate['region']} prevÃ© 18 mm de lluvia para el dÃ­a {forecast['targetDay']} (riesgo {level}). Se estiman {len(expected_tiles)} parcelas anegables y {len(expected_buildings)} edificios expuestos; drenaje actual {round(permanent_drainage_capacity)} mÂ³/dÃ­a. Zonas expuestas: {sample_names}.")
-    if day<heat_day<=day+5 and (climate.get("heatForecast") or {}).get("targetDay")!=heat_day:
-        homes=sorted((b for b in buildings if b.get("kind")=="home"),key=lambda b:heat_exposure(b["x"],b["y"])[0]*b.get("occupants",0),reverse=True)
-        exposed=[{"name":b.get("name",f"Barrio {b['x']+1},{b['y']+1}"),"x":b["x"],"y":b["y"],"population":b.get("occupants",0),"exposure":heat_exposure(b["x"],b["y"])[0]} for b in homes if heat_exposure(b["x"],b["y"])[0]>=1.0]
-        risk_population=sum(x["population"] for x in exposed);cases=round(sum(x["population"]*.055*x["exposure"] for x in exposed))
-        climate["heatForecast"]={"issuedDay":day,"targetDay":heat_day,"durationDays":5,"status":"pronosticada","warningLevel":"alto" if cases>=max(25,state.get("population",0)*.04) else "moderado","exposedPopulation":risk_population,"expectedHealthCases":cases,"exposedHomes":exposed[:6]}
-        ev("Alerta de calor Â· refugios y consumo",f"Ola de calor prevista para el dÃ­a {heat_day}, durante cinco dÃ­as. Se estiman {cases} consultas por estrÃ©s tÃ©rmico en {len(exposed)} sectores; la demanda elÃ©ctrica y de agua aumentarÃ¡.")
-    if day<drought_day<=day+5 and (climate.get("droughtForecast") or {}).get("targetDay")!=drought_day:
-        effective=round(source_water_capacity*.55*(1-utilities["waterLeakRate"]))
-        climate["droughtForecast"]={"issuedDay":day,"targetDay":drought_day,"durationDays":30,"status":"pronosticada","warningLevel":"alto" if effective<water_total*.95 else "moderado","capacityLossPct":45,"effectiveCapacityM3Day":effective,"expectedDemandM3Day":round(water_total),"waterRestrictions":restrictions_active}
-        ev("Alerta de sequÃ­a Â· captaciÃ³n en riesgo",f"La estaciÃ³n seca comenzarÃ¡ el dÃ­a {drought_day} y durarÃ¡ 30 dÃ­as. La fuente bajarÃ¡ 45%: capacidad Ãºtil estimada {effective} mÂ³/dÃ­a frente a demanda actual de {round(water_total)} mÂ³/dÃ­a.")
-    if climate.get("heatForecast") and climate["heatForecast"].get("targetDay")==heat_day:climate["heatForecast"]["active"]=heat_active
-    if climate.get("droughtForecast") and climate["droughtForecast"].get("targetDay")==drought_day:
-        climate["droughtForecast"].update({"active":drought_active,"waterRestrictions":restrictions_active})
-    if forecast and climate.get("preparedForDay")==forecast.get("targetDay"):forecast["prepared"]=True
-    elif forecast:forecast["prepared"]=False
-    for building in buildings:
-        access=building["utilityAccess"]
-        factor=min(access["powerServedPct"],access["waterServedPct"],access["wastewaterTreatedPct"],access["gasServedPct"],access["telecomServedPct"])/100
-        if restrictions_active and building.get("kind") in ("shop","hotel"):factor*=.88
-        if building.get("kind") in ("shop","hotel") and building.get("business") is not None:
-            building["business"]["utilityFactor"]=round(factor,3)
-            if restrictions_active:building["business"]["waterRestrictionFactor"]=.88
-            else:building["business"].pop("waterRestrictionFactor",None)
-        if building.get("kind")=="hotel":
-            building["utilityShortage"]="energÃ­a" if access["powerServedPct"]<100 else "agua" if access["waterServedPct"]<100 else "cloacas" if access["wastewaterTreatedPct"]<100 else "gas" if access["gasServedPct"]<100 else "telecomunicaciones" if access["telecomServedPct"]<100 else None
-    report={"day":state.get("day",1),"season":"Verano" if summer else "Templada","serviceCoveragePct":coverage,
-        "power":{"installedKw":round(power_capacity),"usableKw":round(power_usable),"demandKw":round(power_total),"connectedDemandKw":round(power_connected),"servedKw":round(power_delivered),"gridServedKw":round(power_delivered_grid),"backupServedKw":round(backup_served),"backupGenerators":sum(b.get("backupCapacityKw",0)>0 for b in critical_backup),"backupStoredKwh":round(sum(b.get("backupFuelKwh",0) for b in critical_backup)),"backupCapacityKwh":round(sum(b.get("backupCapacityKwh",0) for b in critical_backup)),"shortageKw":round(max(0,power_total-power_delivered)),"lossPct":round(utilities["powerLossRate"]*100),"connectedSegments":len(power_tiles),"connectedBuildings":sum(b["utilityAccess"]["powerConnected"] for b in buildings)},
-        "water":{"installedM3Day":round(water_capacity),"sourceCapacityM3Day":round(source_water_capacity),"emergencyTankerM3Day":tanker_capacity,"droughtReductionPct":45 if drought_active else 0,"usableM3Day":round(water_usable),"demandM3Day":round(water_total),"connectedDemandM3Day":round(water_connected),"servedM3Day":round(water_delivered),"shortageM3Day":round(max(0,water_total-water_delivered)),"leakPct":round(utilities["waterLeakRate"]*100),"connectedSegments":len(water_tiles),"connectedBuildings":sum(b["utilityAccess"]["waterConnected"] for b in buildings)},
-        "wastewater":{"treatmentCapacityM3Day":round(wastewater_capacity),"generatedM3Day":round(generated),"connectedM3Day":round(sewer_flow),"treatedM3Day":round(treated),"untreatedM3Day":round(untreated),"coveragePct":sewer_coverage,"connectedSegments":len(sewer_tiles),"connectedBuildings":sum(b["utilityAccess"]["sewerConnected"] for b in buildings),"plants":sum(b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")) for b in buildings)},
-        "gas":{"capacityM3Day":round(gas_capacity),"demandM3Day":round(gas_total,2),"servedM3Day":round(gas_delivered,2),"shortageM3Day":round(max(0,gas_total-gas_delivered),2),"connectedSegments":len(gas_tiles),"connectedBuildings":sum(b["utilityAccess"]["gasConnected"] for b in buildings)},
-        "telecommunications":{"capacityMbps":round(telecom_capacity),"demandMbps":round(telecom_total,2),"servedMbps":round(telecom_delivered,2),"shortageMbps":round(max(0,telecom_total-telecom_delivered),2),"connectedSegments":len(telecom_tiles),"connectedBuildings":sum(b["utilityAccess"]["telecomConnected"] for b in buildings)},
-        "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"permanentCapacityM3Day":round(permanent_drainage_capacity),"emergencyCapacityM3Day":emergency_capacity,"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings)),"forecast":forecast},
-        "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
-        "climate":{"heatwave":{"active":heat_active,"targetDay":heat_day,"durationDays":5,"powerDemandMultiplier":1.22 if heat_active else 1.0,"waterDemandMultiplier":1.18 if heat_active else 1.0,"coolingPrepared":climate.get("coolingPreparedForDay")==heat_day,"healthCases":(climate.get("heatForecast") or {}).get("actualHealthCases",0)},"drought":{"active":drought_active,"targetDay":drought_day,"durationDays":30,"sourceReductionPct":45 if drought_active else 0,"waterRestrictions":restrictions_active,"waterCapacityM3Day":round(water_capacity),"emergencyTankerM3Day":tanker_capacity,"demandM3Day":round(water_total),"shortageM3Day":round(max(0,water_total-water_delivered))}},
-        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
-        "lineCondition":utility_condition_report(),
-        "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
-    utilities["report"]=report
-    if apply_effects:
-        if coverage<85:
-            loss=2 if coverage<60 else 1;state["services"]=max(0,state.get("services",0)-loss)
-            if coverage<65:state["approval"]=max(0,state.get("approval",0)-1)
-        if sewer_coverage<90:
-            state["services"]=max(0,state.get("services",0)-1)
-            if sewer_coverage<65:state["approval"]=max(0,state.get("approval",0)-1)
-            if state.get("day",0)-utilities.get("lastWastewaterNoticeDay",-999)>=30:
-                ev("Aguas residuales sin tratar",f"Se generaron {round(generated)} mÂ³/dÃ­a y solo se depuraron {round(treated)}. La descarga sin tratar presiona la salud pÃºblica.")
-                utilities["lastWastewaterNoticeDay"]=state.get("day",0)
-        if coverage<85 and state.get("day",0)-utilities.get("lastShortageNoticeDay",-999)>=30:
-            ev("DÃ©ficit en redes de servicios",f"La cobertura efectiva es {coverage}%. Faltan {report['power']['shortageKw']} kW y {report['water']['shortageM3Day']} mÂ³/dÃ­a; las pÃ©rdidas incluyen cables y fugas.")
-            utilities["lastShortageNoticeDay"]=state.get("day",0)
-    return report
-
-def register_recovery_needs(report,day):
-    needs=state.setdefault("recoveryNeeds",[])
-    for x,y in report.get("floodedTiles",[]):
-        if [x,y] not in state.get("roads",[]):continue
-        if any(n.get("targetType")=="road" and n.get("x")==x and n.get("y")==y and n.get("status")!="reparada" for n in needs):continue
-        asset=next((a for a in state.setdefault("roadAssets",[]) if a.get("x")==x and a.get("y")==y),None)
-        if asset is None:
-            asset={"x":x,"y":y,"quality":72,"monthlyCost":15};state["roadAssets"].append(asset)
-        cost=850+max(0,82-int(asset.get("quality",72)))*22
-        needs.append({"id":f"recovery-road-{x}-{y}-{day}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":day,"condition":int(asset.get("quality",72)),"estimate":cost,"cause":"daÃ±o por tormenta","inspectionStatus":"pendiente","status":"abierta"})
-    public_kinds={"civic","school","fireStation","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
-    for row in report.get("floodedBuildings",[]):
-        if row.get("kind") not in public_kinds:continue
-        x,y=row["x"],row["y"]
-        if any(n.get("targetType")=="building" and n.get("x")==x and n.get("y")==y and n.get("status")!="reparada" for n in needs):continue
-        building=next((b for b in state["buildings"] if b.get("x")==x and b.get("y")==y),None)
-        if not building:continue
-        needs.append({"id":f"recovery-building-{x}-{y}-{day}","targetType":"building","x":x,"y":y,"name":building.get("name",row.get("name","Servicio municipal")),"day":day,"condition":int(building.get("quality",72)),"estimate":max(1100,round(row.get("repairCost",0)*3)),"cause":"daÃ±o por tormenta","inspectionStatus":"pendiente","status":"abierta"})
-
-def advance_recovery_contracts():
-    for need in state.setdefault("recoveryNeeds",[]):
-        if need.get("inspectionStatus")=="en curso":
-            need["inspectionRemainingDays"]=max(0,int(need.get("inspectionRemainingDays",1))-1)
-            if need["inspectionRemainingDays"]==0:
-                need["inspectionStatus"]="inspeccionada";need["inspectedDay"]=state.get("day",0)
-                if need.get("scheduledInspection"):
-                    building=next((b for b in state.get("buildings",[]) if b.get("x")==need["x"] and b.get("y")==need["y"]),None)
-                    if building and building.get("quality",82)>=82:
-                        building["lastInspectionDay"]=state.get("day",1);building["nextInspectionDay"]=state.get("day",1)+building.get("inspectionIntervalDays",180);need.update({"status":"reparada","completedDay":state.get("day",1)})
-                        ev("InspecciÃ³n preventiva aprobada",f"{need['name']} superÃ³ la revisiÃ³n sin requerir obra. PrÃ³xima inspecciÃ³n en {building['inspectionIntervalDays']} dÃ­as.")
-                    else:ev("InspecciÃ³n preventiva completada",f"{need['name']}: diagnÃ³stico confirmÃ³ condiciÃ³n {need['condition']}% y presupuesto de $ {need['estimate']:,}. Se puede licitar una rehabilitaciÃ³n.".replace(",","."))
-                else:ev("InspecciÃ³n municipal completada",f"{need['name']}: diagnÃ³stico y presupuesto confirmados en $ {need['estimate']:,}. La obra puede licitarse.".replace(",","."))
-    for contract in state.setdefault("recoveryContracts",[]):
-        if contract.get("status")!="en obra":continue
-        contract["remainingDays"]=max(0,int(contract.get("remainingDays",1))-1)
-        if contract["remainingDays"]:continue
-        need=next((n for n in state["recoveryNeeds"] if n.get("id")==contract.get("needId")),None)
-        if need:
-            if need["targetType"]=="road":
-                asset=next((a for a in state["roadAssets"] if a.get("x")==need["x"] and a.get("y")==need["y"]),None)
-                if asset:asset["quality"]=82;asset["safetyClosure"]=False;ev("Calle reabierta",f"La rehabilitaciÃ³n de calle {n['x']+1},{n['y']+1} superÃ³ la inspecciÃ³n y recuperÃ³ su condiciÃ³n estructural.")
-            else:
-                building=next((b for b in state["buildings"] if b.get("x")==need["x"] and b.get("y")==need["y"]),None)
-                if building:
-                    building["quality"]=82
-                    building["floodRepairCost"]=0
-                    if building.get("kind") in ("powerPlant","waterPlant","wastewaterPlant"):
-                        building["lastInspectionDay"]=state.get("day",1);building["nextInspectionDay"]=state.get("day",1)+building.get("inspectionIntervalDays",180)
-            need.update({"status":"reparada","completedDay":state["day"]})
-        contract.update({"status":"completada","completedDay":state["day"],"stage":"InspecciÃ³n final aprobada"})
-        ev("RehabilitaciÃ³n municipal terminada",f"{contract['name']}: {contract['contractor']} restaurÃ³ el activo tras {contract['duration']} dÃ­as. La condiciÃ³n vuelve a 82% y el registro de necesidad se cierra.")
-
-def apply_drainage_impacts():
-    utilities=ensure_utility_state();report=utilities.get("report",{}).get("drainage",{});day=state.get("day",0)
-    if report.get("rainfallMm",0)<12 or utilities.get("lastDrainageImpactDay")==day:return
-    climate=ensure_climate_state();forecast=climate.get("forecast")
-    if forecast and forecast.get("targetDay")==day:
-        forecast["status"]="ocurrida";forecast["actualFloodedTiles"]=len(report.get("floodedTiles",[]));forecast["actualFloodedBuildings"]=len(report.get("floodedBuildings",[]));forecast["actualStandingWaterM3"]=round(report.get("standingWaterM3Day",0));forecast["forecastHit"]=bool(report.get("standingWaterM3Day",0)>0)
-    if report.get("standingWaterM3Day",0)<=0:
-        utilities["lastDrainageImpactDay"]=day
-        ev("Tormenta contenida",f"Lluvia de {report['rainfallMm']} mm; la red absorbiÃ³ la escorrentÃ­a sin anegamientos. PronÃ³stico: {forecast.get('warningLevel','sin alerta')} Â· preparaciÃ³n de emergencia: {'activa' if report.get('emergencyCapacityM3Day') else 'no desplegada'}.")
-        return
-    homes_affected=0;critical_flood=False;public_cost=0;private_cost=0
-    for row in report.get("floodedBuildings",[]):
-        building=next((b for b in state.get("buildings",[]) if b.get("x")==row["x"] and b.get("y")==row["y"]),None)
-        if not building:continue
-        cost=int(row["repairCost"]);building["floodEvents"]=building.get("floodEvents",0)+1;building["lastFloodDay"]=day;building["floodRepairCost"]=building.get("floodRepairCost",0)+cost;building["quality"]=max(35,int(building.get("quality",75))-2)
-        if building.get("kind")=="home":
-            homes_affected+=max(0,int(building.get("occupants",0)));building["householdCash"]=max(0,building.get("householdCash",0)-cost)
-        elif building.get("business"):
-            firm=building["business"];firm["cash"]=firm.get("cash",0)-cost;firm["lastFloodRepairCost"]=firm.get("lastFloodRepairCost",0)+cost;private_cost+=cost
-        else:
-            public_cost+=cost;critical_flood|=building.get("kind")=="civic"
-    road_tiles={tuple(xy) for xy in report.get("floodedTiles",[])}
-    for asset in state.get("roadAssets",[]):
-        if (asset.get("x"),asset.get("y")) in road_tiles:
-            asset["quality"]=max(30,int(asset.get("quality",75))-4);asset["monthlyCost"]=asset.get("monthlyCost",0)+2;state["monthlyExpenses"]+=2;public_cost+=45
-    state["money"]=max(0,state.get("money",0)-public_cost)
-    affected_count=len(report.get("floodedBuildings",[]))
-    if affected_count:state["services"]=max(0,state.get("services",0)-min(3,max(1,math.ceil(affected_count/4))))
-    if critical_flood or homes_affected>=max(25,round(state.get("population",0)*.08)):state["approval"]=max(0,state.get("approval",0)-1)
-    register_utility_flood_damage(report.get("floodedTiles",[]),day)
-    register_recovery_needs(report,day)
-    utilities["lastDrainageImpactDay"]=day
-    forecast_note=f"PronÃ³stico {forecast.get('warningLevel','sin alerta')}: {forecast.get('expectedFloodedTiles',0)} parcelas / {forecast.get("expectedFloodedBuildingCount",len(forecast.get("expectedFloodedBuildings",[])))} edificios previstos; preparaciÃ³n {'activa (+{report.get("emergencyCapacityM3Day",0)} mÂ³/dÃ­a)' if report.get('emergencyCapacityM3Day') else 'no desplegada'}. " if forecast and forecast.get("targetDay")==day else "Sin pronÃ³stico previo guardado. "
-    ev("Anegamiento por tormenta",f"{forecast_note}La lluvia de {report['rainfallMm']} mm dejÃ³ {len(road_tiles)} parcelas anegadas. {affected_count} edificios recibieron daÃ±os; reparaciones estimadas $ {report.get('repairCostEstimate',0)+public_cost:,} y servicios -{min(3,max(1,math.ceil(affected_count/4)) if affected_count else 0)} puntos. Cloacas y pluviales son redes independientes.".replace(",","."))
-
-def register_utility_flood_damage(flooded_tiles,day):
-    utilities=ensure_utility_state();lines={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","gas":"gasLines","telecom":"telecomLines"}
-    names={"power":"electricidad","water":"agua potable","sewer":"cloacas","gas":"gas","telecom":"telecomunicaciones"}
-    costs={"power":720,"water":640,"sewer":690,"gas":580,"telecom":460}
-    active={(f.get("network"),f.get("x"),f.get("y")) for f in utilities["failures"] if f.get("status")!="reparada"}
-    tiles=sorted({tuple(point) for point in flooded_tiles},key=lambda p:(p[1],p[0]))
-    def reachable_without(network,removed):
-        connected=energized_utility_tiles(network);connected.discard(removed);source=(4,10)
-        if source not in connected:return set()
-        reached={source};queue=[source]
-        for x,y in queue:
-            for neighbor in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
-                if neighbor in connected and neighbor not in reached:reached.add(neighbor);queue.append(neighbor)
-        return reached
-    for network,key in lines.items():
-        connected=energized_utility_tiles(network)
-        current_buildings=[b for b in state.get("buildings",[]) if utility_building_connected(b,network)]
-        candidates=[]
-        for tile in tiles:
-            if tile not in connected or (network,tile[0],tile[1]) in active:continue
-            alternate=reachable_without(network,tile)
-            lost=sum(1 for b in current_buildings if not any((b.get("x",-99)+dx,b.get("y",-99)+dy) in alternate for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))))
-            candidates.append((lost,tile))
-        if not candidates:continue
-        affected,target=max(candidates,key=lambda item:(item[0],-item[1][1],-item[1][0]))
-        x,y=target;failure={"id":uuid.uuid4().hex,"network":network,"x":x,"y":y,"day":day,"reason":"InundaciÃ³n de calzada","repairCost":costs[network],"affectedBuildings":affected,"status":"averÃ­a","remainingDays":0}
-        utilities["failures"].append(failure);active.add((network,x,y))
-        ev("AverÃ­a en red de servicios",f"La inundaciÃ³n daÃ±Ã³ un tramo de {names[network]} en la calle {x+1},{y+1}. El sector perdiÃ³ conexiÃ³n; reparar cuesta $ {costs[network]} y demanda 3 dÃ­as de cuadrilla.")
-        break
-
-def advance_utility_repairs():
-    for failure in ensure_utility_state()["failures"]:
-        if failure.get("status")!="en reparaciÃ³n":continue
-        failure["remainingDays"]=max(0,int(failure.get("remainingDays",1))-1)
-        if failure["remainingDays"]==0:
-            failure["status"]="reparada";failure["completedDay"]=state.get("day",0)
-            ensure_utility_state().setdefault("lineConditions",{})[f"{failure.get('network')}:{failure.get('x')}:{failure.get('y')}"]=82
-            ev("Red de servicios reparada",f"La cuadrilla restableciÃ³ {failure['network']} en la calle {failure['x']+1},{failure['y']+1}. La conexiÃ³n y el servicio se recalculan.")
-
-def bus_line_route(line):
-    base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
-    if not base:return None
-    stops=[]
-    for building in state.get("buildings",[]):
-        if building.get("kind")!="busStop" or building.get("status") not in ("operativo","habilitado"):continue
-        access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(base))
-        if access<=1:stops.append((index,building["x"],building["y"]))
-    route=[list(line["from"])]
-    for _,x,y in sorted(set(stops)):
-        point=(x,y);segment=route_between(tuple(route[-1]),point)
-        if not segment:return None
-        route.extend(segment[1:])
-    segment=route_between(tuple(route[-1]),tuple(line["to"]))
-    if not segment:return None
-    route.extend(segment[1:])
-    return route
-
-def bus_stop_sites(line):
-    if not line or line.get("status") not in ("active","paused"):return []
-    path=line.get("route") or bus_line_route(line) or []
-    roads={tuple(r) for r in state.get("roads",[])}
-    occupied={(b["x"],b["y"]) for b in state.get("buildings",[])}|{(p["x"],p["y"]) for p in state.get("projects",[])}|{(a["x"],a["y"]) for a in state.get("abandoned",[])}|roads
-    candidates=set()
-    for x,y in path:
-        if (x,y) not in roads:continue
-        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-            point=(x+dx,y+dy)
-            if 0<=point[0]<28 and 0<=point[1]<20 and not is_water(*point) and point not in occupied:candidates.add(point)
-    built=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="busStop" and b.get("status") in ("operativo","habilitado") and min((abs(b["x"]-x)+abs(b["y"]-y) for x,y in path),default=99)<=1)
-    reserved=sum(1 for p in state.get("projects",[]) if p.get("kind")=="busStop" and p.get("busLineId")==line.get("id"))
-    limit=max(0,4-built-reserved)
-    return [{"x":x,"y":y,"label":f"Parcela {x+1},{y+1}"} for x,y in sorted(candidates)[:min(12,limit)]]
-
-_commute_cache_key=None
-_commute_cache=None
-def work_shift_for(person_id):
-    person_id=str(person_id);slot=sum((index+1)*ord(char) for index,char in enumerate(person_id))%len(BUS_WORK_SHIFTS)
-    return BUS_WORK_SHIFTS[slot]
-
-def bus_service_schedule(line):
-    route_minutes=max(1,(len(line.get("route",[]))-1)*3.6+6)
-    base=max(6,math.ceil(route_minutes/max(.25,line.get("effectiveBuses",0))))
-    active=bool(line.get("operational") and line.get("effectiveBuses",0)>0)
-    windows=[];headways={};capacities={};departures={}
-    for key,label,multiplier in BUS_WINDOW_DEPARTURES:
-        headway=math.ceil(base*multiplier);count=math.floor(120/headway) if active else 0;capacity=count*BUS_SEATS
-        headways[key]=headway;capacities[key]=capacity;departures[key]=count
-        windows.append({"key":key,"label":label,"headwayMinutes":headway,"departuresPerDirection":count,"capacityPerDirection":capacity})
-    outbound=sum(capacities.values())
-    inbound=outbound
-    extra=sum(departures[k] for k in departures if k not in ("morningPeak","eveningPeak"))*2
-    return {"scheduleWindows":windows,"headwayByWindow":headways,"capacityByWindow":capacities,"departuresByWindow":departures,
-            "ridersByWindow":{},"returnRidersByWindow":{},"capacity":outbound,"returnCapacity":inbound,
-            "headwayMinutes":headways["morningPeak"],"scheduledDeparturesPerDirection":sum(departures.values()),
-            "monthlyServiceCost":round(extra*22*.08)}
-
-def nearest_bus_node(point,path):
-    return min((abs(point[0]-node[0])+abs(point[1]-node[1]),index) for index,node in enumerate(path))
-
-def choose_bus_itinerary(emp):
-    """Devuelve el trayecto mÃ¡s rÃ¡pido con hasta un transbordo en parada construida."""
-    home=(emp["home"]["x"],emp["home"]["y"]);site=(emp["site"]["x"],emp["site"]["y"])
-    alternative=2+emp["distance"]*4 if emp["mode"]=="walk" else 7+emp["distance"]*2.5*1.25
-    window=emp.get("departureWindowKey","morningPeak")
-    lines=[line for line in state.get("busRoutes",[]) if line.get("operational") and len(line.get("route",[]))>1 and line.get("ridersByWindow",{}).get(window,0)<line.get("capacityByWindow",{}).get(window,0)]
-    offers=[]
-    for line in lines:
-        access_from,start=nearest_bus_node(home,line["route"]);access_to,end=nearest_bus_node(site,line["route"])
-        if access_from+access_to>2 or start>=end:continue
-        ride=max(1,end-start)
-        headway=line.get("headwayByWindow",{}).get(window,line["headwayMinutes"])
-        minutes=(access_from+access_to)*4+headway/2+ride*1.8+line.get("fare",BUS_FARE)*6
-        if minutes<alternative:
-            offers.append({"lines":[line],"headways":[headway],"legFares":[line.get("fare",BUS_FARE)],"access":access_from+access_to,"ride":ride,"transferMinutes":0,"transferStop":None,"fare":line.get("fare",BUS_FARE),"travelRoute":line["route"][start:end+1],"minutes":minutes})
-    stops=[b for b in state["buildings"] if b.get("kind")=="busStop" and b.get("status") in ("habilitado","operativo")]
-    if stops and len(lines)>1:
-        for first in lines:
-            access_from,start=nearest_bus_node(home,first["route"])
-            if access_from>2:continue
-            for second in lines:
-                if second is first:continue
-                access_to,end=nearest_bus_node(site,second["route"])
-                if access_from+access_to>2:continue
-                for stop in stops:
-                    access_one,leave=nearest_bus_node((stop["x"],stop["y"]),first["route"])
-                    access_two,board=nearest_bus_node((stop["x"],stop["y"]),second["route"])
-                    if access_one>1 or access_two>1 or start>=leave or board>=end:continue
-                    ride=max(1,leave-start)+max(1,end-board)
-                    first_headway=first.get("headwayByWindow",{}).get(window,first["headwayMinutes"]);second_headway=second.get("headwayByWindow",{}).get(window,second["headwayMinutes"])
-                    transfer=2+(access_one+access_two)*4+second_headway/2
-                    leg_fares=[first.get("fare",BUS_FARE),round(second.get("fare",BUS_FARE)*BUS_TRANSFER_DISCOUNT,2)]
-                    fare=round(sum(leg_fares),2)
-                    minutes=(access_from+access_to)*4+first_headway/2+ride*1.8+transfer+fare*6
-                    if minutes<alternative*(1.5 if emp["mode"]=="walk" else 1.25):
-                        offers.append({"lines":[first,second],"headways":[first_headway,second_headway],"legFares":leg_fares,"access":access_from+access_to,"ride":ride,"transferMinutes":round(transfer),"transferStop":stop.get("name","Parada de intercambio"),"fare":fare,"travelRoute":first["route"][start:leave+1]+second["route"][board:end+1],"minutes":minutes})
-    return min(offers,key=lambda item:(item["minutes"],len(item["lines"]),tuple(str(line["id"]) for line in item["lines"]))) if offers else None
-
-def add_return_commutes(employees,commutes):
-    """Reserva capacidad vespertina por separado y publica el regreso al hogar."""
-    lines={line["id"]:line for line in state.get("busRoutes",[])}
-    grouped={};fare_due={};counts={"bus":0,"auto":0,"walk":0};minutes_total=0;auto_emissions=0.0;auto_vehicles=0
-    for emp in employees:
-        person=emp["person"]
-        ids=list(reversed(emp.get("busLineIds",[])))
-        window=emp.get("returnWindowKey","eveningPeak")
-        bus_ready=bool(ids) and all(lines[line_id].get("operational") and lines[line_id].get("returnRidersByWindow",{}).get(window,0)<lines[line_id].get("capacityByWindow",{}).get(window,0) for line_id in ids)
-        if bus_ready:
-            for line_id in ids:
-                lines[line_id]["returnRidersThisPass"]+=1
-                counters=lines[line_id].setdefault("returnRidersByWindow",{});counters[window]=counters.get(window,0)+1
-            fares=[lines[ids[0]].get("fare",BUS_FARE)]
-            if len(ids)>1:fares.append(round(lines[ids[1]].get("fare",BUS_FARE)*BUS_TRANSFER_DISCOUNT,2))
-            mode="bus";distance=emp["busDistance"];route=list(reversed(emp["busTravelRoute"]))
-            transfer=emp.get("transferMinutes",0)
-            if len(ids)>1:
-                old_second=lines[emp["busLineIds"][1]]
-                transfer=max(0,transfer-round(old_second.get("headwayByWindow",{}).get(emp.get("departureWindowKey","morningPeak"),old_second["headwayMinutes"])/2)+round(lines[ids[1]].get("headwayByWindow",{}).get(window,lines[ids[1]]["headwayMinutes"])/2))
-            access=emp.get("busAccessSegments",0)*4
-        else:
-            ids=[];fares=[];mode="walk" if emp["distance"]<=3 or not person.get("carAccess") else "auto"
-            distance=emp["distance"];route=list(reversed(emp["route"]));transfer=0;access=2
-        emp["returnBusLineIds"]=ids;emp["returnBusLegFares"]=fares
-        person.update({"returnCommuteMode":mode,"returnBusLineIds":ids,"returnBusLegFares":fares})
-        cents={}
-        for leg_ids,leg_fares in ((emp.get("busLineIds",[]),emp.get("busLegFares",[])),(ids,fares)):
-            for line_id,fare in zip(leg_ids,leg_fares):cents[line_id]=cents.get(line_id,0)+round(fare*100)*22
-        total_due=(sum(cents.values())+50)//100
-        due={line_id:amount//100 for line_id,amount in cents.items()}
-        remainder=total_due-sum(due.values())
-        for line_id,_ in sorted(cents.items(),key=lambda item:(-(item[1]%100),str(item[0])))[:remainder]:due[line_id]+=1
-        emp["monthlyBusFareByLine"]=due;person["monthlyBusFareByLine"]=due
-        for line_id,amount in due.items():fare_due[line_id]=fare_due.get(line_id,0)+amount
-        group=(emp["site"]["x"],emp["site"]["y"],emp["home"]["x"],emp["home"]["y"],mode,tuple(ids),window)
-        grouped.setdefault(group,[]).append((emp,route,distance,access,transfer,fares))
-    return_trips=[]
-    for (sx,sy,hx,hy,mode,ids,window),rows in grouped.items():
-        emp,route,distance,access,transfer,fares=rows[0]
-        line=lines[ids[0]] if ids else None
-        headway=line.get("headwayByWindow",{}).get(window,line["headwayMinutes"]) if line else None
-        wait=round(headway/2) if line else 0 if mode=="walk" else 3
-        factor=1 if mode=="walk" else traffic_factor(route)
-        ride=round(distance*(1.8 if line else 4 if mode=="walk" else 2.5)*factor)
-        parking=2 if mode=="auto" else 0
-        minutes=access+wait+ride+parking+transfer
-        vehicles=math.ceil(len(rows)/1.4) if mode=="auto" else 0
-        emissions=round(vehicles*distance*.18,2)
-        counts[mode]+=len(rows);minutes_total+=len(rows)*minutes;auto_vehicles+=vehicles;auto_emissions+=emissions
-        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":headway,"reason":"regreso","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"17:00â€“19:00"),"departureWindowKey":window,"walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor,2),"attendance":1})
-    commutes.extend(return_trips)
-    for line_id,line in lines.items():
-        line["dailyRiders"]=line.get("ridersThisPass",0)+line.get("returnRidersThisPass",0)
-        line["forecastMonthlyFareRevenue"]=fare_due.get(line_id,0)
-        if line.get("operational") and line.get("fareCollectedDay")!=state["day"]:line["monthlyFareRevenue"]=fare_due.get(line_id,0)
-    return {"returnCommuters":len(employees),"returnBusCommuters":counts["bus"],"returnAutoCommuters":counts["auto"],"returnWalkingCommuters":counts["walk"],"returnTransferCommuters":sum(t["workers"] for t in return_trips if len(t["busLineIds"])==2),"returnMeanMinutes":round(minutes_total/max(1,len(employees))) if employees else 0,"returnVehicles":auto_vehicles+sum(line.get("effectiveBuses",0) for line in lines.values() if line.get("operational")),"returnEmissionsKg":round(auto_emissions+sum(line.get("effectiveBuses",0)*max(0,len(line.get("route",[]))-1)*.55 for line in lines.values() if line.get("operational")),2)}
-
-def nonwork_shopping_trips(homes, shops, roads):
-    """Capa inicial de viajes cotidianos: visitas a comercios abiertos, sin alterar compras ya liquidadas."""
-    grouped={}
-    if not shops:return []
-    for home in homes:
-        candidates=[]
-        for shop in shops:
-            route=route_between((home["x"],home["y"]),(shop["x"],shop["y"]))
-            if not route:continue
-            distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
-            if distance:candidates.append((distance,shop.get("business",{}).get("lastLocalSales",0),shop,route))
-        if not candidates:continue
-        candidates.sort(key=lambda row:(row[0],-row[1],row[2]["x"],row[2]["y"]))
-        # El destino rota de manera reproducible entre las tres alternativas accesibles mÃ¡s convenientes.
-        slot=(home["x"]*73856093+home["y"]*19349663+state.get("day",1))%min(3,len(candidates))
-        distance,_,shop,route=candidates[slot]
-        visitors=min(3,max(1,round(home.get("occupants",0)*.12)))
-        residents=home.get("residents",[])
-        car_share=sum(bool(p.get("carAccess")) for p in residents)/max(1,len(residents))
-        mode="auto" if distance>3 and car_share>=.35 else "walk"
-        key=(home["x"],home["y"],shop["x"],shop["y"],mode)
-        grouped.setdefault(key,{"from":[home["x"],home["y"]],"to":[shop["x"],shop["y"]],"route":route,"mode":mode,"distance":distance,"workers":0,"reason":"compras","destinationName":shop.get("name","Comercio local")})["workers"]+=visitors
-    trips=[]
-    for trip in grouped.values():
-        count=trip["workers"];vehicles=math.ceil(count/1.4) if trip["mode"]=="auto" else 0
-        factor=traffic_factor(trip["route"]) if trip["mode"]=="auto" else 1
-        ride=round(trip["distance"]*(2.5 if vehicles else 4)*factor)
-        trip.update({"vehicles":vehicles,"dailyEmissionsKg":round(vehicles*trip["distance"]*.18*2,2),"walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":ride,"parkingMinutes":2 if vehicles else 0,"estimatedMinutes":ride+(2 if vehicles else 2),"trafficFactor":round(factor,2),"attendance":1,"roundTrip":True})
-        trips.append(trip)
-    return trips
-
-def nonwork_service_trips(homes, centers, roads):
-    """Desplazamientos bÃ¡sicos a equipamiento cÃ­vico, separados de las compras."""
-    grouped={}
-    for home in homes:
-        choices=[]
-        for center in centers:
-            route=route_between((home["x"],home["y"]),(center["x"],center["y"]))
-            if not route:continue
-            distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
-            if distance:choices.append((distance,center,route))
-        if not choices:continue
-        choices.sort(key=lambda row:(row[0],row[1]["x"],row[1]["y"]))
-        distance,center,route=choices[(home["x"]+home["y"]+state.get("day",1))%min(2,len(choices))]
-        visitors=min(2,max(1,round(home.get("occupants",0)*.05)))
-        residents=home.get("residents",[]);car_share=sum(bool(p.get("carAccess")) for p in residents)/max(1,len(residents))
-        mode="auto" if distance>3 and car_share>=.35 else "walk"
-        key=(home["x"],home["y"],center["x"],center["y"],mode)
-        grouped.setdefault(key,{"from":[home["x"],home["y"]],"to":[center["x"],center["y"]],"route":route,"mode":mode,"distance":distance,"workers":0,"reason":"servicios","destinationName":center.get("name","Servicio cÃ­vico")})["workers"]+=visitors
-    trips=[]
-    for trip in grouped.values():
-        vehicles=math.ceil(trip["workers"]/1.4) if trip["mode"]=="auto" else 0
-        factor=traffic_factor(trip["route"]) if vehicles else 1
-        ride=round(trip["distance"]*(2.5 if vehicles else 4)*factor)
-        trip.update({"vehicles":vehicles,"dailyEmissionsKg":round(vehicles*trip["distance"]*.18*2,2),"walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":ride,"parkingMinutes":2 if vehicles else 0,"estimatedMinutes":ride+2,"trafficFactor":round(factor,2),"attendance":1,"roundTrip":True})
-        trips.append(trip)
-    return trips
-
-def commute_model():
-    """Asigna residentes identificables a una vacante y una ruta laboral cada uno."""
-    global _commute_cache_key,_commute_cache
-    ensure_resident_roster()
-    roads={tuple(r) for r in state["roads"]}
-    homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
-    sites=[b for b in state["buildings"] if b.get("status","operativo") in ("operativo","habilitado") and
-           (b.get("kind") in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant") or (b.get("kind") in ("shop","hotel") and b.get("business",{}).get("status")=="abierto"))]
-    state.setdefault("busRoutes",[])
-    for line in state["busRoutes"]:
-        path=bus_line_route(line)
-        line["route"]=path or []
-        line["stops"]=bus_line_stops(line["route"])
-        line["operational"]=bool(line.get("status")=="active" and path)
-        line["pauseReason"]="Sin conexiÃ³n vial entre las paradas" if line.get("status")=="active" and not path else line.get("pauseReason")
-        line["ridersThisPass"]=0
-        line["returnRidersThisPass"]=0
-        line["ridersByWindow"]={};line["returnRidersByWindow"]={}
-        line["forecastMonthlyFareRevenue"]=0
-        if not line["operational"]:line.update({"monthlyOperatingCost":0,"monthlyFareRevenue":0})
-    key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
-         tuple((b.get("x"),b.get("y"),b.get("kind"),b.get("occupants",0),b.get("status"),b.get("business",{}).get("status"),b.get("business",{}).get("jobSlots"),b.get("business",{}).get("wage"),tuple((r.get("id"),r.get("workerEligible"),r.get("status"),tuple(sorted(r.get("skills",{}).items())),r.get("expectedMonthlyWage")) for r in b.get("residents",[]))) for b in homes+sites),
-         tuple((o.get("id"),o.get("status"),round(o.get("travelledDistance",0),1)) for o in state.get("supply",{}).get("orders",[]) if o.get("status")=="en trÃ¡nsito"),
-         tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])))
-    if key==_commute_cache_key and not state["busRoutes"]:
-        for line in state.get("busRoutes",[]):
-            riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
-            line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
-        return _commute_cache
-    weights={"shop":1.0,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
-    company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel"))
-    public_sites=[b for b in sites if b["kind"] in ("civic","school","fireStation","depot","landfill","port","airport","powerPlant","waterPlant","wastewaterPlant","recyclingPlant")]
-    public_jobs=max(0,state["jobs"]-company_jobs)
-    public_weight=sum(weights[b["kind"]] for b in public_sites)
-    caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","hotel") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
-    routes={}; distances={}
-    for hi,home in enumerate(homes):
-        for si,site in enumerate(sites):
-            path=route_between((home["x"],home["y"]),(site["x"],site["y"]))
-            if path:
-                routes[hi,si]=path
-                distances[hi,si]=sum(1 for aa,bb in zip(path,path[1:]) if tuple(aa) in roads and tuple(bb) in roads)
-    residents=[(hi,home,person) for hi,home in enumerate(homes) for person in home.get("residents",[]) if person.get("workerEligible")]
-    airport_jobs=sum(max(0,int(site.get("jobSlots",0))) for site in sites if site.get("kind") in ("airport","hotel","powerPlant","waterPlant","wastewaterPlant","landfill"))
-    target=min(round(len(residents)*max(0,min(100,state["employment"]))/100)+airport_jobs,round(sum(caps)))
-    remaining={si:int(math.floor(cap)) for si,cap in enumerate(caps)}
-    # Priorizar residentes sin empleo; rutas cortas primero. Cada residente recibe un solo empleador.
-    reserved_drivers={pid for line in state["busRoutes"] if line.get("status")=="active" and line.get("route") for pid in line.get("driverIds",[])}
-    candidates=[];seeking_without_route=[];seeking_without_skill=[];seeking_below_wage=[]
-    for hi,home,person in residents:
-        prior_status=person.get("status");prior_employer=person.get("employerName");prior_employer_id=person.get("employerId")
-        person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-        ensure_person_work_profile(person)
-        if person.get("id") in reserved_drivers:continue
-        reachable=sorted((distances[hi,si],si) for si in range(len(sites)) if (hi,si) in routes)
-        qualified=[(distance,si) for distance,si in reachable if person["skills"].get(workplace_profile(sites[si])[0],0)>=workplace_profile(sites[si])[2]]
-        choices=[(distance,si) for distance,si in qualified if workplace_profile(sites[si])[3]>=person["expectedMonthlyWage"]]
-        row=(home,person,prior_status,prior_employer,prior_employer_id)
-        if choices:
-            choices.sort(key=lambda row:(0 if sites[row[1]].get("kind")=="airport" else 1,row[0],row[1]))
-            candidates.append((choices[0][0],hi,home,person,choices,prior_status,prior_employer,prior_employer_id))
-        elif not reachable:seeking_without_route.append(row)
-        elif not qualified:seeking_without_skill.append(row)
-        else:seeking_below_wage.append(row)
-    candidates.sort(key=lambda row:(row[0],row[1],row[3]["id"]))
-    employees=[]; site_people={si:[] for si in range(len(sites))}
-    for _,hi,home,person,choices,prior_status,prior_employer,prior_employer_id in candidates:
-        if len(employees)>=target:break
-        si=next((candidate for _,candidate in choices if remaining[candidate]>0),None)
-        if si is None:continue
-        site=sites[si];firm=site.get("business",{}) if site["kind"] in ("shop","hotel") else {}
-        wage=workplace_profile(site)[3]
-        employer_id=firm.get("id",f"public-{site['kind']}-{site['x']}-{site['y']}")
-        person.update({"status":"empleado","employerId":employer_id,"employerName":site.get("name",site["kind"]),"monthlyWage":wage})
-        search_start=person.get("unemployedSinceDay")
-        if prior_status!="empleado" and search_start is not None:
-            search_days=max(0,state.get("day",1)-int(search_start));person["lastUnemploymentDurationDays"]=search_days
-            person["lastHireDay"]=state.get("day",1)
-            person["lastEmployerBeforeHire"]=prior_employer or person.get("previousEmployer")
-            if search_days>0:
-                person["unemploymentEpisodes"]=person.get("unemploymentEpisodes",0)+1
-                history=state.setdefault("laborHistory",[])
-                history.append({"day":state.get("day",1),"personId":person.get("id"),"fromEmployer":prior_employer or person.get("previousEmployer"),"toEmployer":site.get("name",site["kind"]),"searchDays":search_days})
-                del history[:-500]
-            person["unemployedSinceDay"]=None;person["unemploymentReason"]=None
-        remaining[si]-=1
-        distance=distances[hi,si];mode="walk" if distance<=3 or not person["carAccess"] else "auto"
-        person["commuteMode"]=mode
-        depart_window,return_window=work_shift_for(person["id"])
-        person.update({"workShiftWindow":depart_window,"returnShiftWindow":return_window})
-        item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distance,"mode":mode,"departureWindowKey":depart_window,"returnWindowKey":return_window}
-        employees.append(item);site_people[si].append(item)
-    employed_ids={emp["person"].get("id") for emp in employees}
-    for home,person,prior_status,prior_employer,prior_employer_id in seeking_without_route:
-        person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-        if person.get("unemployedSinceDay") is None:person["unemployedSinceDay"]=state.get("day",1)
-        person["unemploymentReason"]="sin acceso vial"
-        if prior_status=="empleado":
-            person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
-    for group,reason in ((seeking_without_skill,"sin cualificaciÃ³n para las vacantes alcanzables"),(seeking_below_wage,"salario ofrecido inferior al esperado")):
-        for home,person,prior_status,prior_employer,prior_employer_id in group:
-            person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-            if person.get("unemployedSinceDay") is None:person["unemployedSinceDay"]=state.get("day",1)
-            person["unemploymentReason"]=reason
-            if prior_status=="empleado":
-                person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
-    for _,_,_,person,_,prior_status,prior_employer,prior_employer_id in candidates:
-        if person.get("id") in employed_ids:continue
-        person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-        if person.get("unemployedSinceDay") is None:person["unemployedSinceDay"]=state.get("day",1)
-        person["unemploymentReason"]="sin vacante alcanzable"
-        if prior_status=="empleado":
-            person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
-    driver_count=0
-    for line in state["busRoutes"]:
-        previous=set(line.get("driverIds",[]))
-        line["driverIds"]=[];line["driverShifts"]=[]
-        if line.get("status")=="active" and len(line.get("route",[]))>1:
-            candidates_for_line=[]
-            for _,home,person in residents:
-                if person.get("status")!="buscando" or person["skills"].get("logistica",0)<42 or person.get("expectedMonthlyWage",0)>10:continue
-                path=route_between((home["x"],home["y"]),tuple(line["from"]))
-                if path:candidates_for_line.append((0 if person["id"] in previous else 1,len(path),str(person["id"]),person))
-            selected=sorted(candidates_for_line)[:line.get("buses",1)*2]
-            # Una unidad presta servicio completo solo si cubre ambos turnos.
-            for index,(_,_,_,person) in enumerate(selected[:len(selected)//2*2]):
-                person.update({"status":"empleado","employerId":f"bus-{line['id']}","employerName":f"Colectivo Â· {line.get('originName','LÃ­nea')}","monthlyWage":10,"attendance":1,"commuteMode":"walk","busLineId":None,"unemployedSinceDay":None,"unemploymentReason":None})
-                line["driverIds"].append(person["id"])
-                line["driverShifts"].append({"personId":person["id"],"busIndex":index//2+1,"shift":"maÃ±ana" if index%2==0 else "tarde","window":"05:00â€“14:00" if index%2==0 else "14:00â€“23:00"})
-        line["driverCapacityBuses"]=len(line["driverIds"])//2
-        factor=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("mobilityFundingFactor",1))))
-        line["effectiveBuses"]=round(min(line.get("buses",1),line["driverCapacityBuses"])*factor,2)
-        line["operational"]=line.get("status")=="active" and len(line.get("route",[]))>1 and line["effectiveBuses"]>0
-        line["pauseReason"]=("Faltan dos conductores compatibles por colectivo para cubrir maÃ±ana y tarde" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexiÃ³n vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
-        line.update(bus_service_schedule(line))
-        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST+line["monthlyServiceCost"] if line["operational"] else 0
-        if not line["operational"]:line["monthlyFareRevenue"]=0
-        driver_count+=len(line["driverIds"])
-    garages=sorted((b for b in state["buildings"] if b.get("kind")=="busGarage" and b.get("status") in ("habilitado","operativo")),key=lambda b:(b["x"],b["y"]))
-    free_bays={f"garage-{g['x']}-{g['y']}":g.get("busBayCapacity",4) for g in garages}
-    for line in sorted(state["busRoutes"],key=lambda b:str(b.get("id"))):
-        line["garageAssignments"]=[]
-        if line["operational"]:
-            reachable=[]
-            for garage in garages:
-                path=route_between((garage["x"],garage["y"]),tuple(line["from"]))
-                if path:reachable.append((len(path),garage["x"],garage["y"],garage))
-            for _,_,_,garage in sorted(reachable):
-                garage_id=f"garage-{garage['x']}-{garage['y']}"
-                assigned=min(free_bays[garage_id],line["effectiveBuses"]-sum(a["buses"] for a in line["garageAssignments"]))
-                if assigned>0:line["garageAssignments"].append({"garageId":garage_id,"buses":assigned});free_bays[garage_id]-=assigned
-        line["garageBuses"]=sum(a["buses"] for a in line["garageAssignments"])
-        line["leasedBuses"]=line["effectiveBuses"]-line["garageBuses"]
-        line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST-line["garageBuses"]*30+line.get("monthlyServiceCost",0) if line["operational"] else 0
-    segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
-    grouped={}
-    for emp in employees:
-        window=emp.get("departureWindowKey","morningPeak")
-        itinerary=choose_bus_itinerary(emp)
-        if itinerary:
-            for line,leg_fare in zip(itinerary["lines"],itinerary["legFares"]):
-                line["ridersThisPass"]+=1
-                counts=line.setdefault("ridersByWindow",{});counts[window]=counts.get(window,0)+1
-            ids=[line["id"] for line in itinerary["lines"]]
-            emp.update({"mode":"bus","busLineId":ids[0],"busLineIds":ids,"busLegFares":itinerary["legFares"],"busHeadways":itinerary.get("headways",[]),"busLine":itinerary["lines"][0],"busAccessSegments":itinerary["access"],"busDistance":itinerary["ride"],"transferMinutes":itinerary["transferMinutes"],"transferStop":itinerary["transferStop"],"busFare":itinerary["fare"],"busTravelRoute":itinerary["travelRoute"]})
-            emp["person"].update({"busHeadways":itinerary.get("headways",[])})
-            emp["person"].update({"commuteMode":"bus","busLineId":ids[0],"busLineIds":ids,"busLegFares":itinerary["legFares"]})
-        else:
-            emp["busLineId"]=None;emp["busLineIds"]=[];emp["busLegFares"]=[];emp["person"].update({"commuteMode":emp["mode"],"busLineId":None,"busLineIds":[],"busLegFares":[]})
-        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"],tuple(emp.get("busLineIds",[])),window)
-        grouped.setdefault(group,[]).append(emp)
-        distance_total+=emp["distance"]
-    walking=auto_commuters=bus_commuters=vehicles=0;emissions=0.0
-    for (hx,hy,sx,sy,mode,line_ids,window),items in grouped.items():
-        route=items[0]["route"];distance=items[0].get("busDistance",items[0]["distance"]);factor=1.0
-        line=items[0].get("busLine") if mode=="bus" else None
-        headway=line.get("headwayByWindow",{}).get(window,line.get("headwayMinutes",60)) if line else None
-        walk_access=items[0].get("busAccessSegments",0)*4 if line else 2;wait=0 if mode=="walk" else round(headway/2) if line else 3;ride=round(distance*(4 if mode=="walk" else 1.8 if line else 2.5)*factor);parking=0 if mode in ("walk","bus") else 2
-        transfer_minutes=items[0].get("transferMinutes",0)
-        minutes=walk_access+wait+ride+parking+transfer_minutes;attendance=max(.25,1-max(0,minutes-15)/240)
-        trip_vehicles=math.ceil(len(items)/1.4) if mode=="auto" else 0
-        trip_emissions=round(trip_vehicles*distance*.18,2)
-        walking+=len(items) if mode=="walk" else 0;auto_commuters+=len(items) if mode=="auto" else 0;bus_commuters+=len(items) if mode=="bus" else 0;vehicles+=trip_vehicles;emissions+=trip_emissions
-        commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"busTravelRoute":items[0].get("busTravelRoute"),"mode":mode,"busLineId":line.get("id") if line else None,"busLineIds":list(line_ids),"busLegFares":items[0].get("busLegFares",[]),"transferStop":items[0].get("transferStop"),"fare":items[0].get("busFare",0),"headwayMinutes":headway,"reason":"trabajo","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"07:00â€“09:00"),"departureWindowKey":window,"walkAccessMinutes":walk_access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer_minutes,"estimatedMinutes":minutes,"vehicles":trip_vehicles,"dailyEmissionsKg":trip_emissions,"trafficFactor":round(factor,2),"attendance":round(attendance,2)})
-        weighted_minutes+=len(items)*minutes
-        si=items[0]["siteIndex"];site_effective[si]+=len(items)*attendance;site_minutes[si]+=len(items)*minutes
-        for aa,bb in zip(route,route[1:]):
-            aa=tuple(aa);bb=tuple(bb)
-            if aa in roads and bb in roads and mode=="auto":
-                edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+trip_vehicles/75
-    for line in state.get("busRoutes",[]):
-        if not line.get("operational"):continue
-        vehicles+=line.get("effectiveBuses",0);emissions+=round(line.get("effectiveBuses",0)*max(0,len(line["route"])-1)*.55,2)
-        for aa,bb in zip(line["route"],line["route"][1:]):
-            edge=tuple(sorted((tuple(aa),tuple(bb))))
-            if edge[0] in roads and edge[1] in roads:segment_flow[edge]=segment_flow.get(edge,0)+line.get("effectiveBuses",0)/80
-        line["dailyRiders"]=line.get("ridersThisPass",0)
-        if line.get("fareCollectedDay")!=state["day"]:line["monthlyFareRevenue"]=line.get("forecastMonthlyFareRevenue",0)
-        line["monthlyOperatingCost"]=line.get("effectiveBuses",0)*BUS_MONTHLY_OPERATING_COST-line.get("garageBuses",0)*30+line.get("monthlyServiceCost",0)
-    workplaces=[];staffed=private_staffed=0
-    for si,site in enumerate(sites):
-        slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
-        if site["kind"]=="shop":private_staffed+=effective
-        people=site_people[si]
-        category,label,minimum,job_wage=workplace_profile(site)
-        workplaces.append({"name":site.get("name",site["kind"].title()),"kind":site["kind"],"x":site["x"],"y":site["y"],"jobSlots":round(slots),"workersAssigned":len(people),"staffedJobs":round(effective),"payroll":sum(x["wage"] for x in people),"attendance":round(effective/max(1,len(people)),2),"meanMinutes":round(site_minutes[si]/len(people)) if people else None,"jobCategory":category,"jobCategoryLabel":label,"minimumSkill":minimum,"offeredWage":job_wage})
-    total_eligible=len(residents);without_access=sum(1 for _,home,person in residents if person.get("status")!="empleado" and not any((hi,si) in routes for si in range(len(sites)) for hi,h in enumerate(homes) if h is home))
-    model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"busCommuters":bus_commuters,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
-    _commute_cache_key=key;_commute_cache=model
-    # Now that segment flows are cached, congestion can include both commuters and trucks.
-    minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
-    for trip in commutes:
-        bus_line=next((b for b in state.get("busRoutes",[]) if b.get("id")==trip.get("busLineId")),None) if trip["mode"]=="bus" else None
-        factor=1.0 if trip["mode"]=="walk" else traffic_factor(trip.get("busTravelRoute") or trip["route"])
-        ride_rate=4 if trip["mode"]=="walk" else 1.8 if trip["mode"]=="bus" else 2.5
-        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]+trip.get("transferMinutes",0)
-        trip["rideMinutes"]=round(trip["distance"]*ride_rate*factor)
-        trip["estimatedMinutes"]=minutes
-        attendance=max(.25,1-max(0,minutes-15)/240)
-        trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
-        if trip.get("reason")=="regreso":continue
-        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"],tuple(trip.get("busLineIds",[])),trip.get("departureWindowKey","morningPeak"))
-        for emp in grouped.get(group,[]):
-            emp["attendance"]=attendance
-            emp["earnedWage"]=round(emp["wage"]*attendance)
-            emp["person"]["attendance"]=round(attendance,2)
-        minutes_sum+=trip["workers"]*minutes
-        si=next((i for i,site in enumerate(sites) if site["x"]==trip["to"][0] and site["y"]==trip["to"][1]),None)
-        if si is not None:
-            effective_by_site[si]=effective_by_site.get(si,0)+trip["workers"]*attendance
-            minutes_by_site[si]=minutes_by_site.get(si,0)+trip["workers"]*minutes
-            workers_by_site[si]=workers_by_site.get(si,0)+trip["workers"]
-    staffed=private_staffed=0
-    for si,workplace in enumerate(workplaces):
-        effective=min(workplace["jobSlots"],effective_by_site.get(si,0));workplace["staffedJobs"]=round(effective)
-        workplace["attendance"]=round(effective/max(1,workplace["workersAssigned"]),2)
-        workplace["meanMinutes"]=round(minutes_by_site[si]/workers_by_site[si]) if workers_by_site.get(si) else None
-        workplace["payroll"]=sum(emp.get("earnedWage",emp["wage"]) for emp in site_people[si])
-        staffed+=effective
-        if workplace["kind"]=="shop":private_staffed+=effective
-    model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
-    model["transferCommuters"]=sum(trip["workers"] for trip in commutes if trip.get("reason")=="trabajo" and len(trip.get("busLineIds",[]))==2)
-    model["carAccessWorkers"]=sum(1 for _,_,person in residents if person.get("carAccess"))
-    for line in state["busRoutes"]:
-        if line.get("status")=="cancelled":continue
-        workplaces.append({"name":f"Colectivo Â· {line.get('originName','LÃ­nea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0)*2,"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"LogÃ­stica","minimumSkill":42,"offeredWage":10})
-    model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":round((staffed+driver_count)/max(1,state["population"]*.42)*100)})
-    returning=add_return_commutes(employees,commutes)
-    model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
-    model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
-    shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
-    services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
-    for trip in shopping+services:
-        commutes.append(trip)
-        model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
-        model["vehicles"]+=trip["vehicles"]
-        for a,b in zip(trip["route"],trip["route"][1:]):
-            edge=tuple(sorted((tuple(a),tuple(b))))
-            segment_flow[edge]=segment_flow.get(edge,0)+trip["vehicles"]*2
-    model["shoppingTrips"]=len(shopping)
-    model["shoppingPassengers"]=sum(t["workers"] for t in shopping)
-    model["shoppingVehicles"]=sum(t["vehicles"]*2 for t in shopping)
-    model["shoppingEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in shopping),2)
-    model["serviceTrips"]=len(services)
-    model["serviceVisitors"]=sum(t["workers"] for t in services)
-    model["serviceVehicles"]=sum(t["vehicles"]*2 for t in services)
-    model["serviceEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in services),2)
-    model["dailyTrips"] = sum(t["workers"] for t in commutes)
-    model["routes"]=commutes
-    eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
-    jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
-    search_days=[max(0,state.get("day",1)-int(person.get("unemployedSinceDay",state.get("day",1)))) for person in jobseekers]
-    jobseeker_rows=[(hi,home,person) for hi,home,person in residents if person.get("status")=="buscando"]
-    reachable_sites={si for hi,_,_ in jobseeker_rows for si in range(len(sites)) if (hi,si) in routes}
-    model["laborMarket"]={"workingAge":len(eligible_people),"employed":sum(1 for person in eligible_people if person.get("status")=="empleado"),
-        "jobSeekers":len(jobseekers),"outsideLaborForce":sum(1 for person in eligible_people if person.get("status")=="inactivo"),
-        "seekersWithoutQualification":sum(1 for person in jobseekers if person.get("unemploymentReason")=="sin cualificaciÃ³n para las vacantes alcanzables"),
-        "seekersBelowExpectedWage":sum(1 for person in jobseekers if person.get("unemploymentReason")=="salario ofrecido inferior al esperado"),
-        "seekersWithoutRoadAccess":sum(1 for person in jobseekers if person.get("unemploymentReason")=="sin acceso vial"),
-        "reachableVacancies":sum(max(0,round(workplaces[si].get("jobSlots",0))-workplaces[si].get("workersAssigned",0)) for si in reachable_sites),
-        "openVacancies":sum(max(0,round(w.get("jobSlots",0))-w.get("workersAssigned",0)) for w in workplaces),
-        "averageSearchDays":round(sum(search_days)/max(1,len(search_days)),1),"longestSearchDays":max(search_days,default=0),
-        "previouslyEmployed":sum(1 for person in jobseekers if person.get("previousEmployer")),
-        "completedSearches30Days":sum(1 for item in state.get("laborHistory",[]) if state.get("day",1)-30<item.get("day",0)<=state.get("day",1))}
-    return model
-
-def bus_line_stops(path):
-    if not path:return []
-    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot","busStop") and b.get("status","operativo") in ("operativo","habilitado") and (b.get("kind")!="shop" or b.get("business",{}).get("status")=="abierto")]
-    stops=[]
-    for building in buildings:
-        access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(path))
-        if access>1:continue
-        stops.append({"index":index,"at":path[index],"name":building.get("name",building.get("kind","Parada")),"kind":building["kind"],"accessSegments":access})
-    unique={}
-    for stop in sorted(stops,key=lambda x:(x["index"],x["accessSegments"],x["name"])):
-        unique.setdefault((stop["index"],tuple(stop["at"])),stop)
-    return list(unique.values())
-
-def bus_route_catalog(commute=None):
-    commute=commute or commute_model();grouped={}
-    for trip in commute["routes"]:
-        if trip.get("reason")!="trabajo":continue
-        key=(*trip["from"],*trip["to"]);row=grouped.setdefault(key,{"from":trip["from"],"to":trip["to"],"route":trip["route"],"distance":trip["distance"],"potentialRiders":0})
-        row["potentialRiders"]+=trip["workers"]
-    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-    result=[]
-    for row in sorted(grouped.values(),key=lambda x:(-x["potentialRiders"],-x["distance"],x["from"],x["to"])):
-        if row["distance"]<4:continue
-        line_id=f"bus-{row['from'][0]}-{row['from'][1]}-{row['to'][0]}-{row['to'][1]}"
-        origin=next((b.get("name","Barrio residencial") for b in state["buildings"] if b.get("kind")=="home" and [b["x"],b["y"]]==row["from"]),"Barrio residencial")
-        destination=next((b.get("name",b.get("kind","Destino")) for b in state["buildings"] if [b["x"],b["y"]]==row["to"]),"Centro de empleo")
-        existing=next((b for b in state.get("busRoutes",[]) if b.get("from")==row["from"] and b.get("to")==row["to"] and b.get("status")!="cancelled"),None)
-        result.append({**row,"id":line_id,"originName":origin,"destinationName":destination,"stops":bus_line_stops(row["route"]),"buses":1,"purchaseCost":BUS_PURCHASE_COST,"canStart":not existing and available>=BUS_PURCHASE_COST,"reason":"Ya existe una lÃ­nea para este corredor" if existing else "Fondos municipales comprometidos" if available<BUS_PURCHASE_COST else ""})
-    return result[:8]
-
-def traffic_factor(route, exclude_order=None):
-    """Tiempo relativo por tramo: empleo local mÃ¡s camiones que ocupan ese tramo hoy."""
-    if not route or len(route)<2:return 1.0
-    factors=[]
-    supply=state.get("supply",{})
-    active=[o for o in supply.get("orders",[])+supply.get("marketOrders",[])
-            if o is not exclude_order and o.get("status")=="en trÃ¡nsito" and state["day"]>o.get("supplierReadyDay",o.get("orderedDay",0)) and len(o.get("route",[]))>1]
-    for i in range(len(route)-1):
-        a=tuple(route[i]);b=tuple(route[i+1]);edge=tuple(sorted((a,b)))
-        arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
-        background=(_commute_cache or commute_model())["segmentFlow"].get(edge,0)
-        capacity=2.4 if arterial else 1.2
-        trucks=0
-        for order in active:
-            path=order.get("route",[]);idx=min(len(path)-2,max(0,int(order.get("travelledDistance",0))))
-            if tuple(sorted((tuple(path[idx]),tuple(path[idx+1]))))==edge:trucks+=1
-        ratio=(background+trucks)/capacity
-        factors.append(1+.35*ratio*ratio+2.4*max(0,ratio-1)**2)
-    return sum(factors)/len(factors)
-
-def order_route_eta(order):
-    distance=max(0,order.get("travelDistance",len(order.get("route",[]))-1))
-    factor=traffic_factor(order.get("route",[]),order)
-    remaining=max(0,distance-order.get("travelledDistance",0))
-    travel_days=math.ceil(remaining*factor/6)
-    ready=max(state["day"],order.get("supplierReadyDay",state["day"]))
-    arrival=max(state["day"]+1,max(state["day"],ready)+travel_days)
-    planned=order.get("supplierReadyDay",state["day"])+math.ceil(distance/6)
-    return factor,max(0,arrival-planned),arrival
-
-def pay_public_wages(workforce):
-    payroll=0
-    for emp in workforce.get("employees",[]):
-        if emp["site"].get("kind") not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"):continue
-        wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
-        home["householdCash"]=round(home.get("householdCash",0)+wage)
-        home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
-        payroll+=wage
-    # El salario del conductor ya estÃ¡ dentro del costo operativo de la lÃ­nea.
-    active_ids={pid for line in state.get("busRoutes",[]) if line.get("operational") for pid in line.get("driverIds",[])}
-    for home in state["buildings"]:
-        if home.get("kind")!="home":continue
-        for person in home.get("residents",[]):
-            if person.get("id") in active_ids and person.get("status")=="empleado":
-                wage=person.get("monthlyWage",0)
-                home["householdCash"]=round(home.get("householdCash",0)+wage)
-                home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
-    return payroll
-
-def draw_business_credit(firm, amount):
-    if amount<=0:return 0
-    ensure_finance_state();bank=state["finance"]["businessBank"]
-    room=max(0,int(firm.get("creditLimit",0)-firm.get("creditDebt",0)))
-    draw=min(int(math.ceil(amount)),room,max(0,int(bank.get("liquidity",0))))
-    if draw:
-        firm["creditDebt"]=firm.get("creditDebt",0)+draw
-        firm["cash"]=firm.get("cash",0)+draw
-        firm["lastCreditDraw"]=firm.get("lastCreditDraw",0)+draw
-        bank["liquidity"]-=draw
-    return draw
-
-def close_business(shop, workforce, reason):
-    firm=shop.get("business",{})
-    if firm.get("status")!="abierto":return 0
-    firm["status"]="cerrado";firm["closedDay"]=state["day"];firm["closureReason"]=reason;shop["status"]="cerrado"
-    state["jobs"]=max(0,state.get("jobs",0)-firm.get("jobSlots",0));dismissed=0
-    for home in (b for b in state["buildings"] if b.get("kind")=="home"):
-        for person in home.get("residents",[]):
-            if person.get("employerId")!=firm.get("id"):continue
-            person["previousEmployer"]=firm.get("name",shop.get("name","Comercio"));person["previousEmployerId"]=firm.get("id");person["unemployedSinceDay"]=state["day"];person["unemploymentReason"]="cierre por insolvencia"
-            person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-            dismissed+=1
-    state.setdefault("unemploymentEvents",[]).append({"day":state["day"],"employerId":firm.get("id"),"employerName":firm.get("name"),"workers":dismissed,"cause":reason})
-    ev("Empresa insolvente",f"{firm.get('name',shop.get('name','Comercio'))} cerrÃ³: {reason}. {dismissed} trabajadores perdieron el puesto y vuelven a buscar empleo; se eliminan {firm.get('jobSlots',0)} vacantes.")
-    return dismissed
-
-def refill_market_suppliers():
-    for supplier in state["supply"].get("market",{}).values():
-        supplier["stock"]=min(supplier.get("maxStock",0),supplier.get("stock",0)+supplier.get("monthlyOutput",0))
-
-def process_market_orders():
-    for order in state["supply"].get("marketOrders",[]):
-        if order.get("status")!="en trÃ¡nsito":continue
-        route=route_between((4,10),(order["x"],order["y"]))
-        if not route:
-            if order.get("statusCause")!="Sin acceso vial":ev("Entrega comercial demorada",f"{order['supplier']} no encuentra una ruta vial hasta {order['businessName']}; la mercaderÃ­a espera una calle conectada.")
-            order["route"]=[];order["statusCause"]="Sin acceso vial";order["arrivalDay"]=state["day"]+1;continue
-        order["route"]=route;order["statusCause"]=""
-        distance=max(0,len(route)-1);order["travelDistance"]=distance
-        factor=traffic_factor(route,order);order["trafficFactor"]=round(factor,2)
-        if state["day"]>order["supplierReadyDay"] and order.get("travelledDistance",0)<distance:
-            order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,factor))
-        remaining=max(0,distance-order.get("travelledDistance",0))
-        order["arrivalDay"]=max(state["day"]+1,max(state["day"],order["supplierReadyDay"])+math.ceil(remaining*factor/6))
-        if state["day"]<=order["supplierReadyDay"] or order.get("travelledDistance",0)<distance:continue
-        firm=next((b.get("business") for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("id")==order["businessId"]),None)
-        if firm and firm.get("status")=="abierto":
-            firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
-            order["status"]="entregado";order["deliveredDay"]=state["day"]
-            ev("Insumos recibidos",f"{order['supplier']} entregÃ³ {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
-        else:
-            order["status"]="cancelado";order["statusCause"]="Empresa cerrada antes de recibir la carga"
-
-def simulate_business_month(workforce):
-    shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
-    homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
-    demand={(b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand};roads={tuple(r) for r in state["roads"]}
-    ensure_finance_state();workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]};payroll_paid={}
-    for shop in list(shops):
-        firm=shop["business"];site=workplace.get((shop["x"],shop["y"]),{});payroll=max(0,int(site.get("payroll",0)))
-        firm["lastCreditDraw"]=0;firm["lastInterest"]=0;firm["lastRepayment"]=0
-        if firm.get("cash",0)<0:
-            close_business(shop,workforce,"caja negativa antes de cubrir la nÃ³mina");continue
-        if firm.get("cash",0)<payroll:draw_business_credit(firm,payroll-firm.get("cash",0))
-        if firm.get("cash",0)<payroll:
-            close_business(shop,workforce,"la caja y el crÃ©dito disponible no alcanzaron para pagar salarios");continue
-        firm["cash"]-=payroll;payroll_paid[firm["id"]]=payroll
-        for emp in workforce.get("employees",[]):
-            if emp["site"] is shop:
-                wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
-                home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
-    shops=[b for b in shops if b.get("business",{}).get("status")=="abierto"]
-    demand={ (b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand}
-    # Las empresas ajustan el precio con las ventas y el inventario del perÃ­odo anterior.
-    prior_prices={(b["x"],b["y"]):max(1,b["business"].get("price",18)) for b in shops}
-    for shop in shops:
-        firm=shop["business"];price=prior_prices[shop["x"],shop["y"]]
-        if firm.get("lastLocalDemand",0)>0:
-            turnover=firm.get("lastLocalSales",0)/max(1,firm["lastLocalDemand"])
-            competitors=[p for xy,p in prior_prices.items() if xy!=(shop["x"],shop["y"])]
-            competition=min(competitors) if competitors else price
-            if turnover<.72 and firm.get("inventory",0)>12:price=max(8,min(price-1,competition))
-            elif turnover>1.05 and firm.get("inventory",0)<8:price=min(32,price+1)
-        firm["price"]=price
-    for home in homes:
-        choices=[]
-        for shop in shops:
-            route=route_between((home["x"],home["y"]),(shop["x"],shop["y"]))
-            if not route:continue
-            distance=sum(1 for x,y in zip(route,route[1:]) if tuple(x) in roads and tuple(y) in roads)
-            proximity=1/max(1,distance+1)**1.4
-            preference=proximity*(18/max(1,shop["business"].get("price",18)))**2
-            choices.append((shop,preference))
-        if not choices:continue
-        choices.sort(key=lambda x:(-x[1],x[0]["x"],x[0]["y"]))
-        desired=max(0,round(home.get("occupants",0)*.12))
-        cheapest=min(max(1,shop["business"].get("price",18)) for shop,_ in choices)
-        units=min(desired,max(0,int(home.get("householdCash",0)//cheapest)))
-        total_weight=sum(w for _,w in choices)
-        shares=[units*w/total_weight for _,w in choices]
-        allocations=[int(value) for value in shares]
-        for index in sorted(range(len(choices)),key=lambda i:(-(shares[i]-allocations[i]),-choices[i][1]))[:max(0,units-sum(allocations))]:allocations[index]+=1
-        for (shop,_),quantity in zip(choices,allocations):
-            if quantity:
-                key=(shop["x"],shop["y"]);demand[key]+=quantity;shopping[key].append((home,quantity))
-    visitors=state.get("airportVisitorsThisMonth",0)
-    if visitors and shops:
-        accessible=[]
-        airport=next((b for b in state["buildings"] if b.get("kind")=="airport" and b.get("operational")),None)
-        for shop in shops:
-            route=route_between((airport["x"],airport["y"]),(shop["x"],shop["y"])) if airport else None
-            if route:accessible.append(shop)
-        units=min(visitors,max(0,round(visitors*.65)))
-        for index,shop in enumerate(sorted(accessible,key=lambda b:(b["x"],b["y"]))):
-            quantity=units//len(accessible)+(1 if index<units%len(accessible) else 0)
-            if quantity:
-                key=(shop["x"],shop["y"]);price=max(1,int(shop["business"].get("price",18)))
-                demand[key]+=quantity;shopping[key].append(({"householdCash":quantity*price},quantity))
-    market_suppliers=state["supply"].setdefault("market",new_market_supply())
-    market_orders=state["supply"].setdefault("marketOrders",[])
-    revenue_total=payroll_total=sales_total=closed=inputs_total=0
-    for shop in shops:
-        firm=shop["business"];key=(shop["x"],shop["y"]);site=workplace.get(key,{})
-        staffed=max(0,round(site.get("staffedJobs",0)));headcount=max(0,int(site.get("workersAssigned",0)))
-        local_demand=demand.get(key,0);regional_demand=max(0,round(firm.get("jobSlots",0)*.35));total_demand=local_demand+regional_demand
-        inventory=max(0,int(firm.get("inventory",0)));input_inventory=max(0,int(firm.get("inputInventory",0)))
-        production_target=min(max(0,200-inventory),max(0,math.ceil(total_demand-inventory)),max(0,round(staffed*firm.get("productivity",.06)*30*firm.get("utilityFactor",1))))
-        production=min(production_target,input_inventory)
-        local_target=min(inventory+production,local_demand);local_left=local_target;sold_local=0
-        unit_price=max(1,int(firm.get("price",18)))
-        for home,quantity in shopping.get(key,[]):
-            if local_left<=0:break
-            bought=min(quantity,local_left,max(0,int(home.get("householdCash",0)//unit_price)))
-            if bought:
-                home["householdCash"]-=bought*unit_price;sold_local+=bought;local_left-=bought
-        regional_sales=min(max(0,inventory+production-sold_local),regional_demand)
-        sales=sold_local+regional_sales;export_price=max(1,round(unit_price*.78))
-        revenue=sold_local*unit_price+regional_sales*export_price
-        payroll=payroll_paid.get(firm["id"],0);overhead=max(0,int(firm.get("fixedCost",40)))
-        firm["inputInventory"]=input_inventory-production
-        cash_before_orders=firm.get("cash",0)+revenue-overhead
-        if cash_before_orders<0:
-            draw_business_credit(firm,-cash_before_orders);cash_before_orders=firm.get("cash",0)+revenue-overhead
-        if cash_before_orders<0:
-            firm["cash"]=round(cash_before_orders);close_business(shop,workforce,"las ventas no cubrieron gastos fijos y agotÃ³ su lÃ­nea de crÃ©dito");closed+=1;continue
-        target_inputs=min(110,max(12,round(staffed*firm.get("productivity",.06)*30*1.15)))
-        pending=sum(order.get("quantity",0) for order in market_orders if order.get("businessId")==firm.get("id") and order.get("status")=="en trÃ¡nsito")
-        needed=max(0,target_inputs-firm["inputInventory"]-pending);purchases=procurement_cost=0;chosen=[]
-        source=(4,10)
-        providers=[]
-        for name,supplier in market_suppliers.items():
-            if supplier.get("stock",0)<=0:continue
-            route=route_between(source,(shop["x"],shop["y"]))
-            if not route:continue
-            distance=max(0,len(route)-1);factor=traffic_factor(route)
-            freight=distance*.055+max(0,factor-1)*.22
-            landed=supplier["unitCost"]+freight+supplier.get("leadDays",0)*.035
-            providers.append((landed,name,supplier,route,distance))
-        providers.sort(key=lambda item:(item[0],item[2].get("leadDays",0),item[1]))
-        cash_for_orders=max(0,int(cash_before_orders+min(max(0,firm.get("creditLimit",0)-firm.get("creditDebt",0)),state["finance"]["businessBank"].get("liquidity",0))))
-        for landed,name,supplier,route,distance in providers:
-            if needed<=0 or cash_for_orders<=0:break
-            quantity=min(needed,int(supplier.get("stock",0)),int(cash_for_orders//max(.01,landed)))
-            if quantity<=0:continue
-            cost=round(quantity*landed)
-            if cost>cash_for_orders:quantity=max(0,int(cash_for_orders//max(.01,landed)));cost=round(quantity*landed)
-            if not quantity:continue
-            if cash_before_orders<cost:
-                draw_business_credit(firm,cost-cash_before_orders);cash_before_orders=firm.get("cash",0)+revenue-overhead
-                if cash_before_orders<cost:
-                    quantity=max(0,int(max(0,cash_before_orders)//max(.01,landed)));cost=round(quantity*landed)
-            if not quantity:continue
-            supplier["stock"]-=quantity;supplier["cash"]=supplier.get("cash",0)+cost;supplier["lastSales"]+=quantity
-            order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en trÃ¡nsito","statusCause":"PreparaciÃ³n en proveedor"}
-            market_orders.append(order);needed-=quantity;cash_for_orders-=cost;purchases+=quantity;procurement_cost+=cost;chosen.append(name)
-        cash_after_ops=cash_before_orders-procurement_cost
-        debt=firm.get("creditDebt",0);interest=round(debt*firm.get("creditRate",.02));firm["lastInterest"]=interest
-        if cash_after_ops<interest:draw_business_credit(firm,interest-cash_after_ops);cash_after_ops=firm.get("cash",0)+revenue-overhead-procurement_cost
-        if cash_after_ops<0:
-            firm["cash"]=round(cash_after_ops);close_business(shop,workforce,"agotÃ³ caja y crÃ©dito antes de cubrir sus costos operativos");closed+=1;continue
-        if cash_after_ops>=interest:
-            cash_after_ops-=interest;firm["creditDelinquencyMonths"]=0;state["finance"]["businessBank"]["liquidity"]+=interest
-        else:
-            paid_interest=max(0,cash_after_ops);cash_after_ops=0;state["finance"]["businessBank"]["liquidity"]+=paid_interest
-            firm["creditDebt"]+=interest-paid_interest;firm["creditDelinquencyMonths"]=firm.get("creditDelinquencyMonths",0)+1
-        repayment=min(firm.get("creditDebt",0),max(0,int(cash_after_ops-500)))
-        if repayment:
-            cash_after_ops-=repayment;firm["creditDebt"]-=repayment;firm["lastRepayment"]=repayment;state["finance"]["businessBank"]["liquidity"]+=repayment
-        firm["cash"]=round(cash_after_ops)
-        firm["inventory"]=inventory+production-sales;firm["lastSales"]=sales;firm["lastLocalSales"]=sold_local;firm["lastRegionalSales"]=regional_sales
-        if regional_sales>0:
-            for port in (b for b in state["buildings"] if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo")):
-                state["supply"].setdefault("portOrders",[]).append({"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"businessId":firm.get("id"),"businessName":firm.get("name",shop.get("name","Comercio")),"quantity":regional_sales,"orderedDay":state["day"],"travelledDistance":0,"status":"pendiente","route":[]})
-        firm["lastLocalDemand"]=local_demand;firm["lastRevenue"]=revenue;firm["lastInputs"]=procurement_cost;firm["lastInputUnits"]=purchases;firm["lastInputSupplier"]=" Â· ".join(chosen) if chosen else "Sin stock o fondos"
-        firm["lastInputShortage"]=max(0,needed);firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=revenue-payroll-overhead-procurement_cost-interest
-        firm["creditAvailable"]=max(0,min(firm.get("creditLimit",0)-firm.get("creditDebt",0),state["finance"]["businessBank"].get("liquidity",0)))
-        firm["creditStatus"]="mora" if firm.get("creditDelinquencyMonths",0) else ("utilizada" if firm.get("creditDebt",0)>0 else "disponible")
-        firm["lastWorkers"]=headcount;firm["lastDemand"]=round(total_demand)
-        revenue_total+=revenue;payroll_total+=payroll;sales_total+=sales;inputs_total+=procurement_cost
-        if firm["cash"]<0 or firm.get("creditDelinquencyMonths",0)>=2:
-            close_business(shop,workforce,"incumpliÃ³ dos vencimientos de intereses" if firm.get("creditDelinquencyMonths",0)>=2 else "caja negativa y crÃ©dito agotado");closed+=1
-    return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed}
-
-def route_to_project(project):return route_between((4,10),(project["x"],project["y"]))
-
-def storage_location(location_id):
-    if not location_id or location_id=="yard":return {"id":"yard","x":4,"y":10,"capacity":state["supply"].get("yardCapacity",240),"label":"Patio de constructoras"}
-    return next((d for d in state["supply"].get("depots",[]) if d["id"]==location_id),None)
-
-def storage_used(location_id):
-    if location_id=="yard":
-        return sum(sum(stock.values()) for stock in state["supply"]["contractors"].values())
-    depot=storage_location(location_id)
-    return sum(sum(stock.values()) for stock in depot["stocks"].values()) if depot else 0
-
-def storage_reserved(location_id):
-    return sum(sum(order.get("items",{}).values()) for order in state["supply"]["orders"]
-               if order.get("status") in ("en trÃ¡nsito","esperando equipo","descargando") and order.get("destinationId","yard")==location_id)
-
-def order_urgency(order):
-    """Prioridad visible de cola; exposiciÃ³n es una estimaciÃ³n y nunca un dÃ©bito."""
-    waiting=max(0,state["day"]-order.get("arrivedDay",order.get("arrivalDay",state["day"]))) if order.get("status") in ("esperando equipo","descargando") else 0
-    project=next((p for p in state["projects"] if p["id"]==order.get("projectId")),None)
-    critical=[]
-    if project and project.get("status") not in ("pausada","terminada"):
-        sources=material_sources(project["contractor"],project)
-        needed=material_delta(project,project.get("elapsed",0)+1)
-        available={key:sum(stock[key] for _,stock,_ in sources) for key in MATERIAL_NAMES}
-        accessible={source_id for source_id,_,_ in sources}
-        destination=order.get("destinationId","yard")
-        source_id="patio" if destination=="yard" else destination
-        if source_id in accessible:
-            critical=[key for key,amount in needed.items() if available[key]<amount<=available[key]+order.get("items",{}).get(key,0)]
-    exposure=round(project.get("cost",0)/max(1,project.get("duration",1))*waiting) if critical and project else 0
-    manual=order.get("priority")=="alta"
-    # Keep explicit mayoral priority ahead of every automatically accumulated wait.
-    score=(100000 if manual else 0)+(50000 if critical else 0)+min(waiting,365)*100+min(9999,exposure)
-    reason=("Prioridad municipal alta" if manual else "")
-    if critical:
-        names=" y ".join(MATERIAL_NAMES[k] for k in critical)
-        reason=(reason+" Â· " if reason else "")+f"destraba falta de {names}"
-    if not reason: reason="Turno de llegada"
-    return {"waitingDays":waiting,"criticalMaterials":critical,"delayExposure":exposure,"urgencyScore":score,"urgencyReason":reason}
-
-def process_supply_orders():
-    ensure_supply_state()
-    for order in sorted(state["supply"]["orders"],key=lambda o:(-order_urgency(o)["urgencyScore"],o.get("arrivedDay",o.get("arrivalDay",0)),o.get("orderedDay",0))):
-        if order["status"] not in ("en trÃ¡nsito","esperando equipo","descargando"):continue
-        destination=order.get("destinationId","yard")
-        location=storage_location(destination)
-        route=route_between((4,10),(location["x"],location["y"])) if location else None
-        if route is None:
-            if order.get("statusCause")!="Sin acceso de camiones":
-                ev("Entrega retrasada","El camiÃ³n no encuentra una calle conectada hasta el depÃ³sito; el pedido espera una ruta abierta.")
-            order["status"]="en trÃ¡nsito";order["statusCause"]="Sin acceso de camiones";order["arrivalDay"]=state["day"]+1;order["route"]=[]
-            order.pop("forkliftId",None);order["unloadWorkers"]=0;order["unloadProgress"]=0
-            continue
-        order["route"]=route
-        if order["status"]=="en trÃ¡nsito":
-            order.setdefault("travelDistance",max(0,len(route)-1))
-            order.setdefault("travelledDistance",0)
-            order.setdefault("supplierReadyDay",order.get("orderedDay",state["day"]))
-            order["travelDistance"]=max(0,len(route)-1)
-            if state["day"]>order["supplierReadyDay"] and order["travelledDistance"]<order["travelDistance"]:
-                factor=traffic_factor(route,order)
-                order["travelledDistance"]=min(order["travelDistance"],order["travelledDistance"]+6/max(1,factor))
-            factor,delay,arrival=order_route_eta(order)
-            order["trafficFactor"]=round(factor,2);order["trafficDelayDays"]=delay;order["arrivalDay"]=arrival
-            order["routeProgress"]=1 if not order["travelDistance"] else min(1,order["travelledDistance"]/order["travelDistance"])
-            order["progress"]=order["routeProgress"]
-            if state["day"]<=order["supplierReadyDay"] or order["travelledDistance"]<order["travelDistance"]:
-                order["statusCause"]=("PreparaciÃ³n en proveedor" if state["day"]<=order["supplierReadyDay"] else
-                                       f"TrÃ¡nsito lento Â· congestiÃ³n Ã—{factor:.2f}" if factor>=1.35 else "En ruta")
-                continue
-            order["status"]="esperando equipo";order["unloadWorkers"]=0;order["progress"]=1;order["arrivedDay"]=state["day"]
-            ev("CamiÃ³n en zona de descarga",f"{order['supplier']} llegÃ³ a {order.get('destinationLabel','Patio de constructoras')}; espera autoelevador y operarios de {order['contractor']}.")
-        if order["status"]=="esperando equipo":
-            begin_unloading(order)
-            continue
-        order["unloadProgress"]=min(1,max(0,(state["day"]-order.get("unloadStartDay",state["day"]))/max(1,order.get("unloadUntilDay",state["day"]+1)-order.get("unloadStartDay",state["day"]))))
-        if state["day"]<order.get("unloadUntilDay",state["day"]):continue
-        order["status"]="entregado";order["deliveredDay"]=state["day"];order["statusCause"]="";order["unloadWorkers"]=0;order.pop("forkliftId",None)
-        stock=(state["supply"]["contractors"][order["contractor"]] if destination=="yard"
-               else location["stocks"][order["contractor"]])
-        for material,amount in order["items"].items():stock[material]+=amount
-        summary=" Â· ".join(f"{MATERIAL_NAMES[k]} {v}" for k,v in order["items"].items())
-        ev("Materiales entregados",f"{order['supplier']} llevÃ³ {summary} a {order['label']} por {len(route)-1} tramos de calle.")
-
-def collect_bus_fares(workforce):
-    for line in state.get("busRoutes",[]):
-        line["monthlyFareRevenue"]=0
-        if not line.get("operational"):continue
-        for employee in workforce.get("employees",[]):
-            if line.get("id") not in employee.get("busLineIds",[employee.get("busLineId")]):continue
-            home=employee["home"]
-            cost=employee.get("monthlyBusFareByLine",{}).get(line["id"],0)
-            paid=min(max(0,home.get("householdCash",0)),cost)
-            home["householdCash"]=home.get("householdCash",0)-paid
-            line["monthlyFareRevenue"]+=paid;line["fareCollectedDay"]=state["day"]
-
-def move_households():
-    homes=[b for b in state["buildings"] if b["kind"]=="home"]
-    desired=max(-5,min(12,round((state["approval"]-45)/8)))
-    if desired>0:
-        vacancies=sum(max(0,b["capacity"]-b["occupants"]) for b in homes)
-        jobs_room=max(0,round(state["jobs"]/.42-state["population"]))
-        arrivals=min(desired,vacancies,jobs_room)
-        for _ in range(arrivals):
-            available=[b for b in homes if b["occupants"]<b["capacity"]]
-            if not available: break
-            home=min(available,key=lambda b:b["occupants"]/max(1,b["capacity"]))
-            home["occupants"]+=1
-            if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
-        if arrivals:
-            state["population"]+=arrivals
-            state["monthlyIncome"]+=arrivals*3
-            ev("Nuevos hogares",f"{arrivals} residentes se mudaron a viviendas con vacantes y acceso a empleo. Ingreso tributario futuro +$ {arrivals*3}/mes.")
-        elif vacancies==0:
-            ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes estÃ¡n completos.")
-        elif jobs_room==0:
-            ev("MigraciÃ³n frenada por empleo","Hay viviendas disponibles, pero faltan empleos para atraer nuevos hogares.")
-    elif desired<0:
-        departures=min(-desired,sum(b["occupants"] for b in homes))
-        for _ in range(departures):
-            occupied=[b for b in homes if b["occupants"]>0]
-            if not occupied: break
-            home=min(occupied,key=lambda b:b.get("quality",70))
-            home["occupants"]-=1
-            if home.get("adaptiveReuseDay") and home.get("rentalLeaseDays"):home["rentalLeaseDays"].pop()
-        state["population"]=max(0,state["population"]-departures)
-        state["monthlyIncome"]=max(0,state["monthlyIncome"]-departures*3)
-        if departures: ev("Salida de residentes",f"{departures} personas dejaron viviendas de la ciudad; se reducen los ingresos tributarios en $ {departures*3}/mes.")
-
-def process_port_logistics():
-    """Exportaciones reales de comercios: camiÃ³n por calles, patio limitado y barco por demanda."""
-    supply=state["supply"];ports=[b for b in state["buildings"] if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo")]
-    orders=supply.setdefault("portOrders",[]);voyages=supply.setdefault("portVoyages",[])
-    for order in orders:
-        if order.get("status") not in ("pendiente","en trÃ¡nsito","esperando acceso","esperando patio"):continue
-        port=next((b for b in ports if b.get("id")==order.get("portId")),None)
-        shop=next((b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("id")==order.get("businessId")),None)
-        if not port or not shop:order["status"]="cancelado";continue
-        route=route_between((shop["x"],shop["y"]),(port["x"],port["y"]))
-        if not route:order.update({"status":"esperando acceso","route":[]});continue
-        order["route"]=route;distance=max(1,len(route)-1);order["status"]="en trÃ¡nsito"
-        order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
-        if order["travelledDistance"]<distance:continue
-        if port.get("cargoStored",0)+order["quantity"]>port.get("cargoCapacity",500):order["status"]="esperando patio";continue
-        port["cargoStored"]=port.get("cargoStored",0)+order["quantity"];order.update({"status":"en puerto","arrivedDay":state["day"]})
-        ev("Carga recibida en el puerto",f"{order['quantity']} unidades de {order['businessName']} llegaron por camiÃ³n; patio {port['cargoStored']}/{port.get('cargoCapacity',500)}.")
-    for port in ports:
-        if port.get("cargoStored",0)<60 or state["day"]-port.get("lastShipDay",0)<10:continue
-        quantity=min(port.get("shipCapacity",180),port["cargoStored"]);port["cargoStored"]-=quantity;port["lastShipDay"]=state["day"];port["shipsDeparted"]=port.get("shipsDeparted",0)+1
-        fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee
-        voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
-        voyages.append(voyage);ev("Buque de carga zarpÃ³",f"Un buque partiÃ³ con {quantity} unidades exportadas; tasa portuaria $ {fee} ingresÃ³ a tesorerÃ­a.")
-    for voyage in voyages:
-        if voyage.get("status")=="en ruta" and state["day"]>=voyage.get("arrivalDay",999999):voyage["status"]="entregado";voyage["deliveredDay"]=state["day"];ev("ExportaciÃ³n entregada",f"El cargamento de {voyage['quantity']} unidades llegÃ³ al mercado regional.")
-    supply["portOrders"]=orders[-80:];supply["portVoyages"]=voyages[-30:]
-
-def simulate_airport_month(workforce):
-    airports=[b for b in state["buildings"] if b.get("kind")=="airport" and b.get("status") in ("habilitado","operativo")]
-    state["airportVisitorsThisMonth"]=0;state["airportMonthlyIncome"]=0
-    for airport in airports:
-        workplace=next((w for w in workforce.get("workplaces",[]) if w.get("x")==airport["x"] and w.get("y")==airport["y"]),{})
-        connected=bool(route_between((4,10),(airport["x"],airport["y"])))
-        eligible=sum(1 for home in state["buildings"] if home.get("kind")=="home" for person in home.get("residents",[]) if person.get("status")=="empleado" and home.get("householdCash",0)>=200)
-        demand=min(800,round(eligible*.15));staffed=workplace.get("staffedJobs",0);utility_factor=min(airport.get("utilityAccess",{}).get("powerServedPct",100),airport.get("utilityAccess",{}).get("waterServedPct",100),airport.get("utilityAccess",{}).get("wastewaterTreatedPct",100))/100
-        ready=connected and staffed>=4 and demand>=8 and utility_factor>=.65
-        flights=min(12,math.ceil(demand/80)) if ready else 0
-        passengers=min(airport.get("passengerCapacity",800),flights*80,demand) if flights else 0
-        airline_revenue=passengers*70;airline_cost=flights*500
-        if airline_revenue<airline_cost:flights=0;passengers=0
-        arrivals=passengers//2;fee=passengers*4+flights*75
-        airport.update({"operational":bool(flights),"airline":"AerolÃ­neas del Litoral" if flights else None,"monthlyPassengers":passengers,"monthlyArrivals":arrivals,"monthlyDepartures":passengers-arrivals,"monthlyFlights":flights,"monthlyDemand":demand,"airlineRevenue":airline_revenue if flights else 0,"airlineCost":airline_cost if flights else 0,"airportFeeIncome":fee,"accessConnected":connected,"staffedJobs":staffed,"pauseReason":"Sin acceso vial regional" if not connected else "Faltan 4 trabajadores aeroportuarios" if staffed<4 else "Demanda baja: la aerolÃ­nea no cubre el costo de ruta" if not flights else None})
-        state["airportVisitorsThisMonth"]+=arrivals;state["airportMonthlyIncome"]+=fee
-        if flights:ev("Ruta aÃ©rea operativa",f"{airport['airline']} atendiÃ³ {passengers} pasajeros ({arrivals} visitantes) en {flights} vuelo(s); tasa municipal $ {fee}.")
-        elif airport.get("monthlyPassengers",0):ev("Ruta aÃ©rea suspendida",f"La ruta requiere acceso, personal y demanda suficientes para cubrir sus costos.")
-    return state["airportVisitorsThisMonth"]
-
-def simulate_hotel_month(workforce):
-    hotels=[b for b in state["buildings"] if b.get("kind")=="hotel" and b.get("business")]
-    arrivals=state.get("airportVisitorsThisMonth",0)
-    open_count=max(1,sum(1 for h in hotels if h.get("business",{}).get("status")=="abierto" and route_between((4,10),(h["x"],h["y"]))))
-    for hotel in hotels:
-        firm=hotel["business"]
-        if firm.get("status")!="abierto":
-            firm["lastTourismTax"]=0
-            continue
-        connected=bool(route_between((4,10),(hotel["x"],hotel["y"])))
-        has_airport=any(a.get("kind")=="airport" and a.get("operational") and route_between((a["x"],a["y"]),(hotel["x"],hotel["y"])) for a in state["buildings"])
-        utility_factor=min(hotel.get("utilityAccess",{}).get("powerServedPct",100),hotel.get("utilityAccess",{}).get("waterServedPct",100),hotel.get("utilityAccess",{}).get("wastewaterTreatedPct",100))/100
-        guests=min(hotel.get("beds",48),math.floor(arrivals*.45/open_count*utility_factor)) if connected and has_airport and utility_factor>=.5 else 0
-        nights=guests*2;capacity=max(1,hotel.get("beds",48)*30);occupancy=round(nights/capacity*100)
-        revenue=guests*max(50,hotel.get("nightlyRate",90));workplace=next((w for w in workforce.get("workplaces",[]) if w.get("x")==hotel["x"] and w.get("y")==hotel["y"]),{})
-        payroll=max(0,int(workplace.get("payroll",0)));costs=payroll+guests*18+260;profit=revenue-costs;tax=round(revenue*.05)
-        for emp in workforce.get("employees",[]):
-            if emp.get("site") is hotel:
-                wage=emp.get("earnedWage",emp.get("wage",0));home=emp.get("home",{});home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
-        hotel.update({"monthlyGuests":guests,"monthlyGuestNights":nights,"occupancy":occupancy,"accessConnected":connected})
-        firm.update({"lastRevenue":revenue,"lastPayroll":payroll,"lastProfit":profit,"lastTourismTax":tax,"cash":firm.get("cash",0)+profit})
-        if occupancy<25:hotel["nightlyRate"]=max(55,hotel.get("nightlyRate",90)-5)
-        elif occupancy>78:hotel["nightlyRate"]=min(180,hotel.get("nightlyRate",90)+5)
-        firm["closureMonths"]=firm.get("closureMonths",0)+1 if profit<0 else 0
-        if firm["cash"]<0:
-            firm["status"]="cerrado";hotel["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",10))
-            for home in (b for b in state["buildings"] if b.get("kind")=="home"):
-                for person in home.get("residents",[]):
-                    if person.get("employerId")==firm.get("id"):
-                        person.update({"previousEmployer":firm.get("name"),"previousEmployerId":firm.get("id"),"unemployedSinceDay":state["day"],"unemploymentReason":"cierre del hotel por falta de huÃ©spedes","status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-            ev("Hotel cerrado",f"{hotel.get('name')}: la caja llegÃ³ a $ {round(firm['cash'])}; sin huÃ©spedes no pudo cubrir sus costos y liberÃ³ sus vacantes.")
-        elif guests:ev("Actividad turÃ­stica",f"{hotel.get('name')}: {guests} huÃ©spedes Â· {nights} noches Â· ocupaciÃ³n {occupancy}% Â· ventas $ {revenue} Â· impuesto turÃ­stico $ {tax}.")
-    return sum(h.get("business",{}).get("lastTourismTax",0) for h in hotels)
-
-def advance_utility_backup_fuel():
-    for building in state.get("buildings",[]):
-        used=min(float(building.get("backupFuelKwh",0)),float(building.get("backupKwToday",0))*24)
-        if used>0:
-            building["backupFuelKwh"]=round(max(0,building["backupFuelKwh"]-used),2)
-            if building["backupFuelKwh"]<=0:
-                ev("Grupo electrÃ³geno sin combustible",f"{building.get('name','Servicio crÃ­tico')} agotÃ³ su reserva. Reabastecer para recuperar el respaldo elÃ©ctrico.")
-
-def tick_one_day():
-    if state["paused"]: return
-    ensure_supply_state()
-    state["day"] += 1
-    day=state["day"]
-    advance_heritage_works()
-    advance_urban_evolution()
-    advance_urban_renewals()
-    advance_adaptive_reuse()
-    advance_utility_repairs()
-    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
-    month=(day-1)//30
-    if month>state["lastMonth"]:
-        for home in state["buildings"]:
-            if home.get("kind")=="home":home["monthlyWageIncome"]=0
-        supplier_stock=state["supply"]["suppliers"]
-        refill_market_suppliers()
-        for key,amount in REGIONAL_PRODUCTION.items():
-            supplier_stock["Distribuidora Regional"][key]+=round(amount*.6)
-            supplier_stock["CorralÃ³n del Puerto"][key]+=round(amount*.25)
-            supplier_stock["Flete Urgente"][key]+=round(amount*.15)
-        ev("ProducciÃ³n regional", "Canteras, acerÃ­as y talleres repusieron parte de las existencias de proveedores.")
-        process_training_programs()
-        calculate_utility_balance(apply_effects=True)
-        economic=commute_model()
-        public_payroll=pay_public_wages(economic)
-        simulate_airport_month(economic)
-        tourism_tax=simulate_hotel_month(economic)
-        activity=simulate_business_month(economic)
-        tax_report=collect_municipal_taxes()
-        economic=commute_model()
-        collect_bus_fares(economic)
-        business_income=round(economic["privateStaffedJobs"]*2)
-        transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-        transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-        airport_income=state.get("airportMonthlyIncome",0)
-        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)
-        utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
-        road_maintenance=road_maintenance_report().get("monthlyRequired",0)
-        waste_report=calculate_waste_balance()
-        recycling_income=waste_report.get("recyclingRevenueMonth",0)
-        monthly_income+=recycling_income
-        waste_cost=waste_report.get("monthlyOperatingCost",0)
-        health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
-        full_operating_cost=sum(operating_costs.values())
-        debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
-        available=state["money"]+monthly_income
-        budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
-        road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
-        advance_utility_line_conditions(budget_report["programs"]["networks"]["fundingPct"]/100)
-        road_report=state.get("roadMaintenanceReport",{});poor=road_report.get("poorSegments",0);total=road_report.get("segments",0)
-        facilities=road_report.get("facilityCount",0);worn=road_report.get("wornFacilities",0)
-        if (total and poor/max(1,total)>=.35) or (facilities and worn/max(1,facilities)>=.25):
-            state["services"]=max(5,state["services"]-1);ev("Calles con mantenimiento diferido",f"Calles deterioradas: {poor}/{total}; edificios pÃºblicos bajo 60%: {worn}/{facilities}. El nivel de servicios municipales baja hasta financiar reparaciones.")
-        due=full_operating_cost+debt_due
-        net=monthly_income-due
-        if available>=debt_due:
-            state["money"]=available-debt_due
-            if debt_due:municipal_debt_payment()
-        else:
-            # El fondo de deuda cubre faltantes de servicio; no cuenta como caja de libre disposiciÃ³n.
-            finance=state.setdefault("finance",new_finance());reserve=max(0,int(finance.get("debtReserve",0)))
-            reserve_used=min(debt_due,max(0,debt_due-available),reserve)
-            if reserve_used and available+reserve_used>=debt_due:
-                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-debt_due+reserve_used
-                municipal_debt_payment();finance.setdefault("debtReserveHistory",[]).append({"day":day,"amount":-reserve_used,"reason":"Servicio mensual de deuda"});del finance["debtReserveHistory"][:-24]
-                ev("Reserva de deuda aplicada",f"El fondo de deuda aportÃ³ $ {reserve_used:,} para completar las cuotas municipales. Saldo protegido: $ {finance['debtReserve']:,}.".replace(",","."))
-            else:
-                # No sobregiro implÃ­cito: se agota la caja y cae la capacidad de servicio financiada.
-                shortfall=debt_due-available
-                state["money"]=0
-                loss=max(1,min(8,round(shortfall/900)))
-                state["services"]=max(5,state["services"]-loss)
-                state["approval"]=max(5,state["approval"]-max(1,loss//2))
-                for loan in state.get("finance",{}).get("municipalLoans",[]):
-                    if loan.get("status")=="active":
-                        loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1
-                        if loan["delinquentMonths"]>=2:state["services"]=max(5,state["services"]-1)
-                ev("Servicios sin financiaciÃ³n completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
-        state["lastMonth"]=month
-        ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nÃ³mina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
-        ev("Balance mensual",f"Ingresos $ {monthly_income:,} Â· programas abonados $ {budget_report['paid']:,} Â· mora programÃ¡tica $ {budget_report['arrears']:,} Â· cuotas $ {debt_due:,} Â· caja final $ {state['money']:,}.".replace(",","."))
-        move_households()
-        collect_adaptive_rents()
-        update_government_cycle()
-        if net<0: ev("PresiÃ³n sobre la tesorerÃ­a","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
-    process_government_election()
-    process_market_orders()
-    process_supply_orders()
-    process_port_logistics()
-    for p in list(state["projects"]):
-        if p.get("status")=="pausada": continue
-        if p.get("status")=="suspendida":
-            if not p.get("cause","").startswith("Faltan materiales") or missing_materials(p,p["elapsed"]+1): continue
-            p["status"]="contratada";p["cause"]="Insumos recibidos; la cuadrilla vuelve a trabajar"
-            ev("Obra reanudada por abastecimiento",f"{p['label']} recibiÃ³ materiales y retoma el avance.")
-        c=CONTRACTORS[p["contractor"]]
-        next_elapsed=p["elapsed"]+1
-        missing=missing_materials(p,next_elapsed)
-        if missing:
-            p["status"]="suspendida"
-            p["cause"]="Faltan materiales: "+", ".join(MATERIAL_NAMES[key] for key in missing)
-            ev("Obra demorada por insumos",f"{p['label']} en {p['x']+1},{p['y']+1}: {p['cause']}. PedÃ­ los materiales faltantes desde la tarjeta de la obra.")
-            continue
-        targetPaid=p["cost"]*(.2+.8*next_elapsed/p["duration"])
-        due=max(0,targetPaid-p["paid"])
-        if not p.get("privatePaid") and due>state["money"]:
-            p["status"]="suspendida"; p["cause"]="TesorerÃ­a insuficiente para el pago por avance"; continue
-        material_cost=material_delta(p,next_elapsed)
-        consume_materials(p,material_cost)
-        for key,amount in material_cost.items():p["materialsUsed"][key]=p["materialsUsed"].get(key,0)+amount
-        if not p.get("privatePaid"): state["money"]-=due
-        if due>0: state["supply"]["contractorCash"][p["contractor"]]+=due
-        p["paid"]=targetPaid
-        p["elapsed"]=next_elapsed
-        p["progress"]=min(1,p.get("initialProgress",0)+(1-p.get("initialProgress",0))*next_elapsed/p["duration"])
-        stage=int(p["progress"]*len(p["stages"]))
-        p["stageIndex"]=min(len(p["stages"])-1,stage)
-        if p["progress"]>=1:
-            quality=round(c["quality"]*100)
-            if p["kind"]=="road":
-                state["roads"].append([p["x"],p["y"]])
-                state["monthlyIncome"]+=85
-                maintenance=round(70*(1.2-c["quality"]))
-                state["monthlyExpenses"]+=maintenance
-                state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
-            elif p["kind"]=="home":
-                b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality}; state["buildings"].append(b)
-                residents=min(28,max(0,state["jobs"]-state["population"]*.42)); b["occupants"]=round(residents); state["population"]+=round(residents); state["monthlyIncome"]+=round(residents*3)
-                ev("Primeros hogares se mudan",f"{round(residents)} residentes ocuparon las nuevas viviendas; ya tienen acceso vial.")
-            elif p["kind"]=="shop":
-                building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality}
-                opening_capital=min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=opening_capital
-                building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
-            elif p["kind"]=="depot":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":"DepÃ³sito municipal","level":1,"status":"habilitado","capacityAdded":500,"quality":quality})
-                depot_id=f"depot-{p['x']}-{p['y']}"
-                state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":500,"label":"DepÃ³sito municipal","stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
-                state["supply"]["storageCapacity"]+=500;state["monthlyExpenses"]+=180
-                ev("DepÃ³sito logÃ­stico habilitado",f"El depÃ³sito abre con 500 unidades de capacidad adicional. OperaciÃ³n y seguridad $ 180/mes.")
-            elif p["kind"]=="busGarage":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
-                state["monthlyExpenses"]+=50
-                ev("Cochera habilitada",f"La cochera ofrece cuatro plazas para colectivos con acceso vial. Mantenimiento $ 50/mes; cada vehÃ­culo alojado ahorra $ 30/mes frente al alquiler externo.")
-            elif p["kind"]=="powerPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"powerPlant","name":"Central elÃ©ctrica","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"generationKw":900,"monthlyCost":460}
-                state["buildings"].append(plant);state["jobs"]+=18;state["monthlyExpenses"]+=460
-                ev("Central elÃ©ctrica habilitada",f"Aporta hasta 900 kW si se conecta a las redes elÃ©ctrica y de agua. OperaciÃ³n $460/mes; 18 puestos tÃ©cnicos.")
-            elif p["kind"]=="waterPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"waterPlant","name":"Planta potabilizadora","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"treatmentM3Day":220,"monthlyCost":340}
-                state["buildings"].append(plant);state["jobs"]+=12;state["monthlyExpenses"]+=340
-                ev("Planta potabilizadora habilitada",f"Trata hasta 220 mÂ³/dÃ­a si tiene conexiones de electricidad y agua. OperaciÃ³n $340/mes; 12 puestos tÃ©cnicos.")
-            elif p["kind"]=="wastewaterPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"wastewaterPlant","name":"Planta depuradora","level":1,"status":"habilitado","quality":quality,"jobSlots":14,"treatmentM3Day":260,"monthlyCost":380}
-                state["buildings"].append(plant);state["jobs"]+=14;state["monthlyExpenses"]+=380
-            elif p["kind"]=="recyclingPlant":
-                facility={"x":p["x"],"y":p["y"],"kind":"recyclingPlant","name":"Planta municipal de reciclaje","level":1,"status":"habilitado","quality":quality,"jobSlots":16,"processingTonsDay":1.25,"monthlyCost":650}
-                state["buildings"].append(facility);state["jobs"]+=16
-                ev("Planta de reciclaje habilitada","Puede clasificar hasta 1,25 t/dÃ­a: recupera 35% de lo recolectado y vende material recuperado. OperaciÃ³n $650/mes; 16 puestos.")
-            elif p["kind"]=="landfill":
-                facility={"x":p["x"],"y":p["y"],"kind":"landfill","name":"Relleno sanitario municipal","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"capacityAdded":1800,"monthlyCost":420}
-                state["buildings"].append(facility);state["jobs"]+=12
-                ev("Celda sanitaria habilitada",f"El nuevo relleno amplÃ­a la disposiciÃ³n final en 1.800 toneladas y suma 12 puestos. OperaciÃ³n $420/mes.")
-                ev("Planta depuradora habilitada",f"Trata hasta 260 mÂ³/dÃ­a si estÃ¡ conectada a cloacas, energÃ­a y agua. OperaciÃ³n $380/mes; 14 puestos tÃ©cnicos.")
-            elif p["kind"]=="hotel":
-                opening=min(4500,max(0,state.get("privateCapital",0)));state["privateCapital"]-=opening
-                hotel={"x":p["x"],"y":p["y"],"kind":"hotel","name":"Hotel Independiente","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"rooms":24,"beds":48,"nightlyRate":90,"monthlyGuests":0,"monthlyGuestNights":0,"business":{**new_business({"x":p["x"],"y":p["y"],"name":"Hotel Independiente"},10,opening),"wage":10,"fixedCost":260,"closureMonths":0,"lastTourismTax":0}}
-                state["buildings"].append(hotel);state["jobs"]+=10
-                ev("Hotel privado habilitado",f"AbriÃ³ con 24 habitaciones, 48 plazas y 10 empleos. Depende de llegadas, acceso vial y caja privada para seguir operando.")
-            elif p["kind"]=="airport":
-                airport={"x":p["x"],"y":p["y"],"kind":"airport","name":"Aeropuerto regional","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"passengerCapacity":800,"runwayMovements":12,"monthlyPassengers":0,"monthlyArrivals":0,"monthlyDepartures":0,"monthlyFlights":0,"airportFeeIncome":0,"monthlyCost":600,"operational":False}
-                state["buildings"].append(airport);state["jobs"]+=18;state["monthlyExpenses"]+=600
-                ev("Aeropuerto regional habilitado",f"Pista y terminal pasan a pruebas. Capacidad 800 pasajeros y 12 vuelos por mes; 18 puestos y $ 600/mes de operaciÃ³n.")
-            elif p["kind"]=="port":
-                port={"x":p["x"],"y":p["y"],"kind":"port","name":"Terminal portuaria","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"cargoCapacity":500,"cargoStored":0,"shipCapacity":180,"shipsDeparted":0,"lastShipDay":0,"monthlyCost":320,"feeIncome":0}
-                state["buildings"].append(port);state["jobs"]+=12;state["monthlyExpenses"]+=320
-                ev("Terminal portuaria habilitada",f"Muelle y patio de 500 unidades abiertos; 12 puestos logÃ­sticos y costo operativo $ 320/mes. Requiere ruta vial para recibir cargas.")
-            elif p["kind"]=="busStop":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busStop","name":"Parada de colectivo","level":1,"status":"habilitado","quality":quality,"monthlyCost":25})
-                state["monthlyExpenses"]+=25
-                ev("Parada de colectivo habilitada",f"La parada abriÃ³ junto a la vÃ­a con calidad {quality}%. OperaciÃ³n y mantenimiento $ 25/mes.")
-            elif p["kind"]=="civic":
-                operating_cost=round(650*(1.4-c["quality"]*.5))
-                coverage=round(5+5*c["quality"])
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"civic","name":"Centro de salud","level":1,"occupants":0,"jobSlots":16,"status":"habilitado","monthlyCost":operating_cost,"quality":quality}); state["monthlyExpenses"]+=operating_cost; state["services"]=min(100,state["services"]+coverage); state["approval"]=min(100,state["approval"]+3)
-                ev("Centro de salud habilitado",f"InspecciÃ³n aprobada con calidad {quality}%. Cobertura +{coverage} puntos; operaciÃ³n y mantenimiento $ {operating_cost}/mes.")
-            elif p["kind"]=="school":
-                operating_cost=820
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"school","name":"Escuela primaria municipal","level":1,"occupants":0,"jobSlots":12,"classrooms":4,"status":"habilitado","monthlyCost":operating_cost,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=operating_cost
-                ev("Escuela habilitada","Cuatro aulas para 96 estudiantes potenciales. El municipio financia $820/mes; la capacidad operativa depende de docentes, servicios y rutas.")
-            elif p["kind"]=="fireStation":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":"Cuartel de bomberos municipal","level":1,"occupants":0,"jobSlots":12,"fireEngineCapacity":3,"dispatchReadyDay":state["day"],"status":"habilitado","monthlyCost":950,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=950
-                ev("Cuartel de bomberos habilitado","El cuartel ofrece 12 puestos y hasta tres dotaciones de cuatro bomberos. Sin personal cualificado o ruta no puede responder; operaciÃ³n y mantenimiento $950/mes.")
-            if p["kind"] not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregÃ³ la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completÃ³ la inspecciÃ³n y entregÃ³ la obra con calidad {quality}%.")
-            state["projects"].remove(p)
-    if day%30==0 and state["projects"]: ev("RevisiÃ³n de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
-
-def health_service_report(workplaces=None,advance=False):
-    health=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
-    state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
-    homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0]
-    workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
-    staff={(w.get("x"),w.get("y")):w for w in workplaces if w.get("kind")=="civic"}
-    utilities=state.get("utilities",{}).get("report",{})
-    heat=(state.get("climate",{}).get("heatForecast") or {})
-    heat_per_day=(heat.get("actualHealthCases",heat.get("expectedHealthCases",0))/max(1,heat.get("durationDays",5))) if heat.get("active") else 0
-    history=health.setdefault("waterSafetyHistory",{})
-    if advance and health.get("lastAdvancedDay")!=state.get("day"):
-        for home in homes:
-            key=f"{home['x']},{home['y']}"
-            served=home.get("utilityAccess",{}).get("waterServedPct",0)
-            treated=home.get("utilityAccess",{}).get("wastewaterTreatedPct",0)
-            sample=min(served,treated)/100
-            samples=history.setdefault(key,[sample]*30);samples.append(sample);history[key]=samples[-30:]
-        health["lastAdvancedDay"]=state.get("day")
-    clinics=[]
-    for building in state.get("buildings",[]):
-        if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
-        workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0)))
-        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
-        clinics.append({"building":building,"name":building.get("name","Centro de salud"),"staff":people,"utility":utility,
-            "primaryCapacity":people*2.2*utility,"urgentCapacity":people*.35*utility,"primaryRemaining":people*2.2*utility,"urgentRemaining":people*.35*utility,
-            "served":0,"urgentServed":0,"patients":0,"travelMinutes":[]})
-    population=max(1,sum(max(0,b.get("occupants",0)) for b in homes));base_demand=0;urgent_demand=0;primary_served=0;urgent_served=0;areas=[]
-    for home in homes:
-        key=f"{home['x']},{home['y']}";samples=history.get(key,[])
-        if not samples:
-            safety=min(home.get("utilityAccess",{}).get("waterServedPct",0),home.get("utilityAccess",{}).get("wastewaterTreatedPct",0))/100;samples=[safety]*30
-        safety=sum(samples[-30:])/max(1,len(samples));water_risk=1-safety
-        occupants=max(0,home.get("occupants",0));sewer_risk=1-home.get("utilityAccess",{}).get("wastewaterTreatedPct",0)/100
-        need=occupants*.045*(1+water_risk*.45+sewer_risk*.25)
-        urgent_need=occupants*.004+heat_per_day*occupants/population
-        base_demand+=need;urgent_demand+=urgent_need
-        choices=[]
-        for clinic in clinics:
-            building=clinic["building"];path=route_between((home["x"],home["y"]),(building["x"],building["y"]))
-            if not path:continue
-            minutes=round(max(0,len(path)-1)*2.5+4)
-            if minutes<=45:choices.append((minutes,clinic))
-        if choices:
-            minutes,clinic=min(choices,key=lambda row:(row[0],row[1]["name"]))
-            served=min(need,clinic["primaryRemaining"]);clinic["primaryRemaining"]-=served;clinic["served"]+=served;clinic["patients"]+=1;clinic["travelMinutes"].append(minutes);primary_served+=served
-            urgent=min(urgent_need,clinic["urgentRemaining"]);clinic["urgentRemaining"]-=urgent;clinic["urgentServed"]+=urgent;urgent_served+=urgent
-        else:served=0;urgent=0
-        areas.append({"name":home.get("name",f"Barrio {home['x']+1},{home['y']+1}"),"population":occupants,"travelMinutes":minutes if choices else None,"waterRiskPct":round(water_risk*100),"primaryDemand":round(need,1),"primaryServed":round(served,1),"waiting":round(max(0,need-served),1),"urgentDemand":round(urgent_need,1),"urgentUnserved":round(max(0,urgent_need-urgent),1)})
-    backlog=max(0,float(health.get("primaryBacklog",0)));pending=base_demand+backlog;primary_served=min(primary_served,pending)
-    unserved=max(0,pending-primary_served);urgent_unserved=max(0,urgent_demand-urgent_served)
-    if advance and health.get("lastQueueDay")!=state.get("day"):
-        health["primaryBacklog"]=min(population*.25,unserved);health["lastQueueDay"]=state.get("day")
-        month=(state.get("day",1)-1)//30
-        if month>health.get("lastImpactMonth",-1) and (pending and primary_served/pending<.65 or urgent_demand and urgent_served/urgent_demand<.5):
-            state["services"]=max(0,state.get("services",0)-1)
-            if primary_served/max(1,pending)<.4 or urgent_served/max(1,urgent_demand)<.35:state["approval"]=max(0,state.get("approval",0)-1)
-            ev("Demanda sanitaria sin cubrir",f"La red atendiÃ³ {round(primary_served)} de {round(pending)} consultas primarias y {round(urgent_served)} de {round(urgent_demand)} urgencias. Las colas presionan los servicios municipales.")
-            health["lastImpactMonth"]=month
-    area_rows=sorted(areas,key=lambda a:(-a["waiting"]-a["urgentUnserved"],a["name"]))
-    monthly_supplies=round(primary_served*.65*30+urgent_served*2.4*30)
-    delayed_risk=0
-    for home in homes:
-        key=f"{home['x']},{home['y']}";samples=history.get(key,[min(home.get("utilityAccess",{}).get("waterServedPct",0),home.get("utilityAccess",{}).get("wastewaterTreatedPct",0))/100]*30)
-        delayed_risk+=(1-sum(samples[-30:])/max(1,len(samples[-30:])))*home.get("occupants",0)
-    return {"day":state.get("day",1),"population":population,"primary":{"demandPerDay":round(pending,1),"servedPerDay":round(primary_served,1),"capacityPerDay":round(sum(c["primaryCapacity"] for c in clinics),1),"waitlist":round(unserved,1),"coveragePct":round(min(100,primary_served/max(1,pending)*100))},
-        "urgent":{"demandPerDay":round(urgent_demand,1),"servedPerDay":round(urgent_served,1),"capacityPerDay":round(sum(c["urgentCapacity"] for c in clinics),1),"unservedPerDay":round(urgent_unserved,1),"coveragePct":round(min(100,urgent_served/max(1,urgent_demand)*100))},
-        "clinics":[{"name":c["name"],"x":c["building"]["x"],"y":c["building"]["y"],"staff":c["staff"],"primaryCapacity":round(c["primaryCapacity"],1),"urgentCapacity":round(c["urgentCapacity"],1),"utilityPct":round(c["utility"]*100),"averageTravelMinutes":round(sum(c["travelMinutes"])/max(1,len(c["travelMinutes"]))) if c["travelMinutes"] else None,"patients":c["patients"]} for c in clinics],
-        "neighborhoods":area_rows[:6],"unreachableResidents":sum(a["population"] for a in areas if a["travelMinutes"] is None),"delayedWaterRiskPct":round(delayed_risk/population*100),"monthlySupplyCost":monthly_supplies,"primaryBacklog":round(health.get("primaryBacklog",0),1)}
-
-def education_service_report(workplaces=None,advance=False):
-    workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
-    pupils=[]
-    for home in (b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0):
-        for person in home.get("residents",[]):
-            ensure_person_work_profile(person)
-            if person.get("age") is None:
-                seed=stable_skill(person.get("id",""),"edad")
-                person["age"]=18+seed%48 if person.get("workerEligible") else (5+seed%13 if seed%100<62 else 66+seed%20)
-            if 5<=person["age"]<=17:pupils.append((home,person))
-    schools=[]
-    for building in (b for b in state["buildings"] if b.get("kind")=="school" and b.get("status") in ("habilitado","operativo")):
-        work=next((w for w in workplaces if w.get("kind")=="school" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
-        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
-        schools.append({"building":building,"teachers":max(0,work.get("staffedJobs",0)),"utility":utility,"seats":max(0,int(building.get("classrooms",4))*24),"assigned":[]})
-    for home,person in pupils:
-        options=[]
-        for school in schools:
-            path=route_between((home["x"],home["y"]),(school["building"]["x"],school["building"]["y"]))
-            if path:
-                minutes=max(0,len(path)-1)*2.5+4
-                if minutes<=40:options.append((minutes,school))
-        if options:
-            minutes,school=min(options,key=lambda x:(x[0],x[1]["building"]["x"],x[1]["building"]["y"]))
-            school["assigned"].append((person,minutes))
-    rows=[];within=served=0
-    for school in schools:
-        teacher_capacity=school["teachers"]*18;capacity=round(min(school["seats"],teacher_capacity)*school["utility"])
-        enrolled=min(capacity,len(school["assigned"]));within+=len(school["assigned"]);served+=enrolled
-        rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),"seatCapacity":school["seats"],"teacherCapacity":teacher_capacity,"operationalCapacity":capacity,"studentsNearby":len(school["assigned"]),"enrolled":enrolled,"unserved":max(0,len(school["assigned"])-enrolled),"utilityPct":round(school["utility"]*100),"averageTravelMinutes":round(sum(x[1] for x in school["assigned"])/max(1,len(school["assigned"])),1) if school["assigned"] else None})
-    month=(state.get("day",1)-1)//30;education=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
-    if advance and month>education.get("lastProcessedMonth",-1):
-        education["lastProcessedMonth"]=month
-        for school,row in zip(schools,rows):
-            for person,_ in school["assigned"][:row["enrolled"]]:
-                progress=person.setdefault("educationProgress",{"months":0,"level":"inicial"});progress["months"]+=1
-                if progress["months"]%12==0:
-                    progress["level"]="primaria" if progress["months"]<72 else "secundaria"
-                    for skill in ("comercio","administracion","logistica","salud"):person["skills"][skill]=min(100,person["skills"].get(skill,25)+2)
-        ev("Ciclo escolar",f"{served} estudiantes asisten; {within-served} quedan sin plaza operativa. Docentes y aulas limitan la cobertura.")
-    total=len(pupils)
-    return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,"coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(served*.35)}
-
-def fire_service_report(workplaces=None,advance=False):
-    """Incendios urbanos deterministas: cobertura, despacho y daÃ±o dependen de personal y calles."""
-    fire=state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
-    incidents=fire.setdefault("incidents",[]);day=state.get("day",1)
-    workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
-    if advance:
-        month=(day-1)//30
-        if day%30==10 and month>fire.get("lastGeneratedMonth",-1):
-            fire["lastGeneratedMonth"]=month
-            active=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","hotel","airport","port","school") and b.get("status") not in ("cerrado","abandonado")]
-            climate=state.get("climate",{});heat=(climate.get("heatForecast") or {}).get("active",False);drought=(climate.get("droughtForecast") or {}).get("status")=="activa"
-            threshold=min(82,12+len(active)*2+(10 if heat else 0)+(8 if drought else 0))
-            roll=stable_skill(f"{month}:{state.get('population',0)}","incendio")%100
-            if active and roll<threshold and not any(i.get("status")=="ardiendo" for i in incidents):
-                target=active[stable_skill(str(month),"parcela")%len(active)]
-                incident={"id":f"fire-{month}-{target['x']}-{target['y']}","x":target["x"],"y":target["y"],"buildingKind":target["kind"],"name":target.get("name",target["kind"]),"startDay":day,"status":"ardiendo","damage":0}
-                incidents.append(incident);ev("Incendio urbano detectado",f"Se iniciÃ³ un incendio en {incident['name']}. La dotaciÃ³n, el estado de los vehÃ­culos y el tiempo por calles definen si puede llegar a controlarlo.")
-        stations=[]
-        for b in state.get("buildings",[]):
-            if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue
-            work=next((w for w in workplaces if w.get("kind")=="fireStation" and w.get("x")==b.get("x") and w.get("y")==b.get("y")),{})
-            stations.append({"building":b,"staff":max(0,work.get("staffedJobs",0)),"ready":b.get("dispatchReadyDay",day)})
-        for incident in incidents:
-            if incident.get("status")!="ardiendo":continue
-            choices=[]
-            for station in stations:
-                if station["staff"]<4 or station["ready"]>day:continue
-                path=route_between((station["building"]["x"],station["building"]["y"]),(incident["x"],incident["y"]))
-                if path:choices.append((5+max(0,len(path)-1)*2.5,station))
-            if choices:
-                minutes,station=min(choices,key=lambda row:(row[0],row[1]["building"]["x"],row[1]["building"]["y"]))
-                target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
-                damage=max(1,min(18,round(minutes/5)))
-                if target:
-                    target["quality"]=max(20,target.get("quality",75)-damage)
-                    if target.get("kind")=="home":target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
-                    elif target.get("business"):target["business"]["cash"]=max(0,target["business"].get("cash",0)-damage*45)
-                station["building"]["dispatchReadyDay"]=day+2;incident.update({"status":"controlado","responseMinutes":round(minutes),"station":station["building"].get("name","Cuartel municipal"),"stationX":station["building"]["x"],"stationY":station["building"]["y"],"route":path,"damage":damage,"resolvedDay":day})
-                fire["dispatches"]+=1;fire["resolved"]+=1
-                if damage>=10:state["services"]=max(0,state.get("services",0)-1)
-                ev("Incendio controlado",f"{station['building'].get('name','Cuartel municipal')} llegÃ³ en {round(minutes)} min con cuatro bomberos. DaÃ±o de condiciÃ³n: {damage} puntos; la dotaciÃ³n queda ocupada dos dÃ­as.")
-            else:
-                incident["burningDays"]=incident.get("burningDays",0)+1
-                target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
-                if target:target["quality"]=max(20,target.get("quality",75)-2)
-                if incident["burningDays"]>=5:
-                    incident.update({"status":"extinguido sin dotaciÃ³n","resolvedDay":day,"damage":10});fire["unanswered"]+=1
-                    state["services"]=max(0,state.get("services",0)-2);state["approval"]=max(0,state.get("approval",0)-1)
-                    ev("Incendio sin respuesta",f"{incident['name']} ardiÃ³ durante cinco dÃ­as sin una dotaciÃ³n cualificada o una ruta operativa. La condiciÃ³n del inmueble y la confianza pÃºblica empeoraron.")
-    stations=[]
-    for b in state.get("buildings",[]):
-        if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue
-        work=next((w for w in workplaces if w.get("kind")=="fireStation" and w.get("x")==b.get("x") and w.get("y")==b.get("y")),{})
-        stations.append({"name":b.get("name","Cuartel de bomberos"),"x":b["x"],"y":b["y"],"firefighters":max(0,work.get("staffedJobs",0)),"crews":min(3,max(0,work.get("staffedJobs",0)//4)),"readyDay":b.get("dispatchReadyDay",day)})
-    eligible=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","hotel","airport","port","school")]
-    covered=0
-    for target in eligible:
-        if any(s["firefighters"]>=4 and (p:=route_between((s["x"],s["y"]),(target["x"],target["y"]))) and len(p)<=14 for s in stations):covered+=1
-    return {"day":day,"stations":stations,"coveragePct":round(covered/max(1,len(eligible))*100),"coveredBuildings":covered,"eligibleBuildings":len(eligible),"dispatches":fire.get("dispatches",0),"resolved":fire.get("resolved",0),"unanswered":fire.get("unanswered",0),"activeIncidents":[dict(i) for i in incidents if i.get("status")=="ardiendo"],"recentIncidents":[dict(i) for i in incidents[-8:][::-1]],"monthlyOperatingCost":len(stations)*950}
-
-def public_state(player_id=None):
-    ensure_supply_state()
-    ensure_finance_state()
-    cutoff=time.time()-25
-    online=sum(1 for t in state["players"].values() if t>cutoff)
-    ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
-    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
-    view={k:v for k,v in state.items() if k not in ("players","host")}
-    view["governmentReport"]=government_report()
-    view["municipalFinance"]=municipal_finance_report()
-    view["heritageReport"]=heritage_report()
-    view["urbanEvolutionReport"]=urban_evolution_report()
-    view["roadMaintenanceReport"]=road_maintenance_report()
-    order_views=[]
-    for order in state["supply"]["orders"]:
-        extra=order_urgency(order)
-        if order.get("status")=="en trÃ¡nsito":
-            factor,delay,arrival=order_route_eta(order)
-            extra.update({"trafficFactor":round(factor,2),"trafficDelayDays":delay,"arrivalDay":arrival,
-                          "routeProgress":order.get("routeProgress",order.get("progress",0))})
-        order_views.append({**order,**extra})
-    view["supply"]={**state["supply"],"orders":order_views}
-    view["airports"]=[{**p,"accessConnected":bool(route_between((4,10),(p["x"],p["y"]))) } for p in state["buildings"] if p.get("kind")=="airport"]
-    view["hotels"]=[b for b in state["buildings"] if b.get("kind")=="hotel"]
-    view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
-    view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en trÃ¡nsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
-    commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
-    for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
-    view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
-    view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
-    view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
-    view["commutes"]=commute["routes"]
-    view["busRouteCatalog"]=bus_route_catalog(commute)
-    view["busRoutes"]=state.get("busRoutes",[])
-    view["busGarages"]=[{"id":f"garage-{g['x']}-{g['y']}","x":g["x"],"y":g["y"],"name":g.get("name","Cochera municipal"),"capacity":g.get("busBayCapacity",4),"occupied":sum(a["buses"] for line in state["busRoutes"] for a in line.get("garageAssignments",[]) if a["garageId"]==f"garage-{g['x']}-{g['y']}")} for g in state["buildings"] if g.get("kind")=="busGarage" and g.get("status") in ("habilitado","operativo")]
-    view["jobs"]=state["jobs"]+sum(line.get("buses",0)*2 for line in state["busRoutes"] if line.get("status")=="active")
-    view["busStopSites"]={line["id"]:bus_stop_sites(line) for line in state.get("busRoutes",[]) if line.get("status") in ("active","paused")}
-    view["workplaces"]=commute["workplaces"]
-    view["laborMarket"]=commute["laborMarket"]
-    view["trainingCatalog"]=training_catalog()
-    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"])
-    bank=state["finance"]["businessBank"]
-    view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
-    view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
-    view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
-    transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
-    view["transitMonthlyIncome"]=transit_income
-    view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
-    view["transitMonthlyCost"]=transit_cost
-    business_income=round(commute["privateStaffedJobs"]*2)
-    tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
-    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+state.get("taxes",{}).get("lastReport",{}).get("collected",0))
-    view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
-    view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
-    return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
-
-def discovery_loop():
-    """Anuncia y descubre salas en la subred; no usa servicios externos."""
-    sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-    try:
-        sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-        sock.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1)
-        sock.bind(("0.0.0.0",DISCOVERY_PORT));sock.settimeout(1)
-        last=0
-        while True:
-            now=time.time()
-            if ROOM_OPEN and now-last>=3:
-                packet=json.dumps({"tag":"CiudadVivaLAN","name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"port":PORT}).encode()
-                try:sock.sendto(packet,("255.255.255.255",DISCOVERY_PORT))
-                except OSError:pass
-                last=now
-            try:data,address=sock.recvfrom(512)
-            except socket.timeout:continue
-            except OSError:continue
-            try:room=json.loads(data)
-            except (ValueError,UnicodeDecodeError):continue
-            if room.get("tag")!="CiudadVivaLAN" or address[0] in local_ips():continue
-            with LOCK:DISCOVERED_ROOMS[(address[0],room.get("port"))]={"name":str(room.get("name","Ciudad Viva"))[:40],"code":str(room.get("code",""))[:8],"address":f"http://{address[0]}:{room.get('port')}/","seen":now}
-    finally:sock.close()
-
-class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.73"
-    def log_message(self,*args): pass
-    def _send(self,status,body,typ="application/json; charset=utf-8"):
-        data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
-        self.send_response(status); self.send_header("Content-Type",typ); self.send_header("Content-Length",str(len(data))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(data)
-    def do_OPTIONS(self): self._send(405,{"error":"MÃ©todo no permitido"})
-    def do_GET(self):
-        path=self.path.split("?",1)[0]
-        if path=="/api/state":
-            pid=self.headers.get("X-Player-Id","jugador-local")
-            with LOCK:
-                if not ROOM_OPEN:self._send(409,{"error":"La sala todavÃ­a no fue creada por el anfitriÃ³n."});return
-                state["players"][pid]=time.time()
-                for key,last in list(state["players"].items()):
-                    if last<time.time()-25: del state["players"][key]
-                self._send(200,public_state(pid))
-            return
-        if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None}); return
-        if path=="/api/rooms":
-            with LOCK:
-                now=time.time();rooms=[{"name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"address":f"http://{ip}:{PORT}/","host":True} for ip in local_ips()[:1]] if ROOM_OPEN else []
-                rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
-            self._send(200,{"rooms":rooms});return
-        rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
-            self._send(404,{"error":"No encontrado"}); return
-        file=(ROOT/rel).resolve()
-        if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta invÃ¡lida"}); return
-        if not file.is_file(): self._send(404,{"error":"No encontrado"}); return
-        typ="text/html; charset=utf-8" if file.suffix==".html" else "text/css; charset=utf-8" if file.suffix==".css" else "application/javascript; charset=utf-8" if file.suffix==".js" else "application/json; charset=utf-8" if file.suffix==".json" else "image/svg+xml" if file.suffix==".svg" else "application/octet-stream"
-        self._send(200,file.read_bytes(),typ)
-    def do_POST(self):
-        global state
-        try: data=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
-        except Exception: self._send(400,{"error":"JSON invÃ¡lido"}); return
-        path=self.path.split("?",1)[0]
-        pid=self.headers.get("X-Player-Id","jugador-local")
-        with LOCK:
-            global ROOM_OPEN
-            if path=="/api/room/create":
-                if self.client_address[0] not in ("127.0.0.1","::1"):
-                    self._send(403,{"error":"La sala solo puede crearla el anfitriÃ³n desde su equipo."});return
-                if ROOM_OPEN and state.get("host")!=pid:
-                    self._send(409,{"error":"Ya hay una sala creada en este equipo."});return
-                ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
-                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{local_ips()[0]}:{PORT}/"});return
-            if path=="/api/room/join":
-                if not ROOM_OPEN:self._send(409,{"error":"El anfitriÃ³n todavÃ­a no creÃ³ la sala."});return
-                if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
-                    self._send(403,{"error":"CÃ³digo de sala incorrecto."});return
-                state["players"][pid]=time.time();self._send(200,public_state(pid));return
-            if path=="/api/action":
-                if not ROOM_OPEN:self._send(409,{"error":"La sala no estÃ¡ abierta."});return
-                action=data.get("action")
-                ensure_government_state()
-                if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
-                    self._send(409,{"error":"El equipo dejÃ³ el gobierno. La partida quedÃ³ en modo observaciÃ³n; podÃ©s guardar la ciudad o iniciar una nueva."});return
-                if action=="recordGovernmentAgreement":
-                    try:record_government_agreement(data.get("complaintId"),pid)
-                    except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
-                if action=="startAdaptiveReuse":
-                    ensure_supply_state();x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""))
-                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)
-                    if not building or building.get("kind")!="shop" or building.get("business",{}).get("status")!="cerrado":self._send(409,{"error":"Solo se pueden reconvertir locales comerciales cerrados."});return
-                    firm=building.get("business",{});arrears=state.get("taxes",{}).get("arrearsByAsset",{}).get(firm.get("id",f"shop-{x}-{y}"),0)
-                    if building.get("heritageEligible"):self._send(409,{"error":"El inmueble catalogado debe conservar su uso patrimonial."});return
-                    if firm.get("creditDebt",0)>0 or arrears>0:self._send(409,{"error":"El inmueble mantiene deuda empresarial o tributaria pendiente."});return
-                    if any(w.get("x")==x and w.get("y")==y for w in state.get("adaptiveReuseWorks",[])):self._send(409,{"error":"La reconversiÃ³n ya estÃ¡ en marcha."});return
-                    if contractor not in CONTRACTORS:self._send(409,{"error":"SeleccionÃ¡ una constructora habilitada."});return
-                    spec=CONTRACTORS[contractor];active=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")];heritage=[w for w in state.get("heritageWorks",[]) if w.get("contractor")==contractor];reuse=[w for w in state.get("adaptiveReuseWorks",[]) if w.get("contractor")==contractor];used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in active)+sum(w.get("workers",4) for w in heritage+reuse)
-                    if len(active)+len(heritage)+len(reuse)>=spec["capacity"] or used+4>spec["workers"]:self._send(409,{"error":f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores."});return
-                    investment=4200;permit=200
-                    if state.get("privateCapital",0)<investment:self._send(409,{"error":f"El proyecto privado requiere $ {investment:,} de capital disponible.".replace(",",".")});return
-                    state["privateCapital"]-=investment;state["money"]+=permit;state["supply"]["contractorCash"][contractor]+=investment;duration=max(20,round(24*spec["days"]/30));work={"id":f"reuse-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name","Local cerrado"),"contractor":contractor,"investment":investment,"permitFee":permit,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"Desmontaje y diagnÃ³stico","rent":24,"quality":round(spec["quality"]*100),"startDay":state["day"],"status":"en obra"};state.setdefault("adaptiveReuseWorks",[]).append(work);ev("Permiso de reconversiÃ³n aprobado",f"{work['name']} pasa de local cerrado a vivienda: inversiÃ³n privada $ {investment:,}, permiso municipal $ {permit}, cuatro trabajadores y {duration} dÃ­as. Se requiere inspecciÃ³n de agua, saneamiento y seguridad.".replace(",","."));self._send(200,public_state(pid));return
-                if action=="heritageProtect":
-                    ensure_heritage_state()
-                    x=int(data.get("x",-1));y=int(data.get("y",-1));level=str(data.get("level",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible")),None)
-                    if not building or level not in ("protecciÃ³n parcial","protecciÃ³n integral"):self._send(409,{"error":"ElegÃ­ un inmueble histÃ³rico y un nivel de protecciÃ³n vÃ¡lido."});return
-                    if building.get("heritageLevel")=="protecciÃ³n integral":self._send(409,{"error":"El inmueble ya tiene protecciÃ³n integral."});return
-                    building["heritageLevel"]=level;building["protectedDay"]=state.get("day",1);ev("Inmueble histÃ³rico protegido",f"{building.get('name')}: {level}. Se conserva su uso y se habilita una rehabilitaciÃ³n patrimonial financiada.")
-                    self._send(200,public_state(pid));return
-                if action=="startUrbanRenewal":
-                    try:start_urban_renewal(data.get("needId"),str(data.get("contractor","")))
-                    except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
-                if action=="heritageRestore":
-                    ensure_supply_state()
-                    x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible") and b.get("heritageLevel") in ("protecciÃ³n parcial","protecciÃ³n integral")),None)
-                    if not building:self._send(409,{"error":"Primero inventariÃ¡ y protegÃ© el inmueble histÃ³rico."});return
-                    if building.get("conservation",100)>=94:self._send(409,{"error":"La conservaciÃ³n estÃ¡ en buen estado; no necesita esta rehabilitaciÃ³n."});return
-                    if contractor not in CONTRACTORS:self._send(409,{"error":"SeleccionÃ¡ una constructora habilitada."});return
-                    supply=state.setdefault("supply",new_supply());busy=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")]
-                    works=[w for w in state.get("heritageWorks",[]) if w.get("contractor")==contractor]
-                    used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in busy)+sum(w.get("workers",4) for w in works);spec=CONTRACTORS[contractor]
-                    if len(busy)+len(works)>=spec["capacity"] or used+4>spec["workers"]:self._send(409,{"error":f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores."});return
-                    supplier_name=None
-                    for candidate in sorted(SUPPLIERS,key=lambda name:(SUPPLIERS[name]["price"],SUPPLIERS[name]["days"])):
-                        stock=supply.setdefault("suppliers",{}).setdefault(candidate,SUPPLIER_STOCK[candidate].copy())
-                        if all(stock.get(k,0)>=v for k,v in HERITAGE_MATERIALS.items()):supplier_name=candidate;break
-                    if not supplier_name:self._send(409,{"error":"Los proveedores no tienen el lote de refuerzo y terminaciones. EsperÃ¡ la reposiciÃ³n regional."});return
-                    stock=supply["suppliers"][supplier_name];materials_cost=round(sum(HERITAGE_MATERIALS[k]*MATERIAL_PRICE[k] for k in HERITAGE_MATERIALS)*SUPPLIERS[supplier_name]["price"])
-                    labor_cost=round((2200+max(0,100-building.get("conservation",92))*24)*spec["price"]);cost=materials_cost+labor_cost
-                    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available:,} libres; restaurar {building.get('name')} cuesta $ {cost:,}.".replace(",",".")});return
-                    for key,amount in HERITAGE_MATERIALS.items():stock[key]-=amount
-                    state["money"]-=cost;supply.setdefault("contractorCash",CONTRACTOR_CASH.copy())[contractor]=supply.setdefault("contractorCash",CONTRACTOR_CASH.copy()).get(contractor,0)+labor_cost
-                    lead=SUPPLIERS[supplier_name]["days"];days=max(15,round(24*spec["days"]/30));work={"id":f"heritage-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name"),"contractor":contractor,"supplier":supplier_name,"materials":dict(HERITAGE_MATERIALS),"materialCost":materials_cost,"laborCost":labor_cost,"cost":cost,"workers":4,"deliveryDay":state["day"]+lead,"deliveryDays":lead,"durationDays":days,"elapsedDays":0,"progress":0,"stage":"Esperando materiales","startDay":state["day"],"status":"en obra"}
-                    state.setdefault("heritageWorks",[]).append(work);ev("RehabilitaciÃ³n patrimonial contratada",f"{building.get('name')}: cuatro trabajadores, materiales {supplier_name} (llegan en {lead} dÃ­as) y {days} dÃ­as de obra. InversiÃ³n $ {cost:,}.".replace(",","."))
-                    self._send(200,public_state(pid));return
-                if action=="adjustTax":
-                    taxes=ensure_tax_state();kind=str(data.get("kind",""));delta=int(data.get("delta",0))
-                    if kind=="property":key="propertyRateBp";low,high,step=20,140,10
-                    elif kind=="business":key="businessRateBp";low,high,step=0,500,25
-                    else:self._send(409,{"error":"Tipo de impuesto no reconocido."});return
-                    if delta not in (-step,step):self._send(409,{"error":"Cambio de alÃ­cuota invÃ¡lido."});return
-                    old=taxes.get(key,60 if kind=="property" else 200);new=max(low,min(high,old+delta))
-                    if new==old:self._send(409,{"error":"La alÃ­cuota ya estÃ¡ en su lÃ­mite."});return
-                    taxes[key]=new;ev("PolÃ­tica tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% â†’ {new/100:.2f}%. El cobro real y la mora se actualizarÃ¡n al cierre mensual.")
-                    self._send(200,public_state(pid));return
-                if action=="municipalDebtReserve":
-                    ensure_finance_state();finance=state["finance"];direction=str(data.get("direction",""));amount=int(data.get("amount",0))
-                    if direction not in ("deposit","withdraw") or amount not in (500,1000,2500):self._send(409,{"error":"ElegÃ­ un movimiento vÃ¡lido de $500, $1.000 o $2.500."});return
-                    reserve=max(0,int(finance.get("debtReserve",0)))
-                    if direction=="deposit":
-                        reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));free=max(0,int(state.get("money",0))-reserved)
-                        if free<amount:self._send(409,{"error":f"Quedan $ {free:,} libres despuÃ©s de compromisos; no alcanza para apartar $ {amount:,}.".replace(",",".")});return
-                        state["money"]-=amount;finance["debtReserve"]=reserve+amount;label="apartados para deuda"
-                    else:
-                        if reserve<amount:self._send(409,{"error":f"El fondo de deuda solo tiene $ {reserve:,}.".replace(",",".")});return
-                        finance["debtReserve"]=reserve-amount;state["money"]+=amount;label="devueltos a caja"
-                    finance.setdefault("debtReserveHistory",[]).append({"day":state.get("day",1),"amount":amount if direction=="deposit" else -amount,"reason":"Aporte al fondo de deuda" if direction=="deposit" else "Retiro del fondo de deuda"});del finance["debtReserveHistory"][:-24]
-                    ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid));return
-                if action=="adjustRoadMaintenance":
-                    delta=int(data.get("delta",0));old=max(0,min(200,int(state.get("roadMaintenancePct",100))));new=max(0,min(200,old+delta))
-                    if delta not in (-25,25) or new==old:self._send(409,{"error":"El plan cambia en pasos de 25%, entre 0% y 200%."});return
-                    state["roadMaintenancePct"]=new;ev("Plan municipal de mantenimiento actualizado",f"Mantenimiento preventivo de calles y edificios pÃºblicos: {new}% de la necesidad mensual estimada. El presupuesto de redes determina cuÃ¡nto trabajo se ejecuta y la condiciÃ³n cambia por uso.")
-                    self._send(200,public_state(pid));return
-                if action=="adjustProgramBudget":
-                    ensure_finance_state();budgets=state["finance"]["programBudgets"];program=str(data.get("program",""));delta=int(data.get("delta",0))
-                    keys={"services":"servicesPct","mobility":"mobilityPct","networks":"networksPct"}
-                    if program not in keys or delta not in (-10,10):self._send(409,{"error":"Programa o ajuste de presupuesto invÃ¡lido."});return
-                    key=keys[program];old=int(budgets.get(key,100));new=max(0,min(200,old+delta))
-                    if new==old:self._send(409,{"error":"El presupuesto ya estÃ¡ en su lÃ­mite."});return
-                    budgets[key]=new;label={"services":"servicios pÃºblicos","mobility":"transporte","networks":"redes y residuos"}[program]
-                    ev("Presupuesto municipal actualizado",f"AsignaciÃ³n mensual de {label}: {new}% del costo vigente. Se liquida al prÃ³ximo cierre; lo que no alcance queda como obligaciÃ³n del programa.")
-                    self._send(200,public_state(pid));return
-                if action=="municipalLoan":
-                    ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
-                    if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"ElegÃ­ un monto y plazo disponibles."});return
-                    if amount>report["creditLimit"]:self._send(409,{"error":f"El lÃ­mite de solvencia actual es $ {report['creditLimit']:,}.".replace(",",".")});return
-                    rate=.01;monthly=amount*rate*(1+rate)**term/((1+rate)**term-1);gross=max(1,report["monthlyIncome"]);existing=report["monthlyDebtService"]
-                    if monthly+existing>gross*.35:self._send(409,{"error":"La cuota superarÃ­a el 35% de los ingresos mensuales de referencia."});return
-                    loan={"id":f"mun-{uuid.uuid4().hex[:10]}","label":"CrÃ©dito de inversiÃ³n municipal","principal":amount,"balance":amount,"annualRate":.12,"monthlyRate":rate,"termMonths":term,"monthsRemaining":term,"payment":round(monthly),"createdDay":state["day"],"status":"active","delinquentMonths":0,"totalScheduled":round(monthly*term)}
-                    state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("CrÃ©dito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
-                if action in ("speed","pause","new") and pid!=state.get("host"):
-                    self._send(403,{"error":"Esta acciÃ³n estÃ¡ reservada al anfitriÃ³n de la sala."}); return
-                if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
-                elif action=="pause": state["paused"]=not state["paused"]
-                elif action=="startBusRoute":
-                    catalog={x["id"]:x for x in bus_route_catalog()};offer=catalog.get(str(data.get("routeId","")))
-                    buses=max(1,min(3,int(data.get("buses",1))))
-                    if not offer:self._send(409,{"error":"El corredor laboral ya no estÃ¡ disponible."});return
-                    if any(x.get("from")==offer["from"] and x.get("to")==offer["to"] and x.get("status")!="cancelled" for x in state.setdefault("busRoutes",[])):
-                        self._send(409,{"error":"Ya existe una lÃ­nea para ese corredor."});return
-                    cost=buses*BUS_PURCHASE_COST;reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<cost:self._send(409,{"error":f"La flota cuesta $ {cost:,} y quedan $ {available:,} despuÃ©s de contratos.".replace(",",".")});return
-                    line={"id":uuid.uuid4().hex,"from":offer["from"],"to":offer["to"],"route":offer["route"],"stops":offer["stops"],"originName":offer["originName"],"destinationName":offer["destinationName"],"buses":buses,"capacity":buses*BUS_SEATS,"headwayMinutes":max(6,math.ceil((offer["distance"]*3.6)/buses)),"fare":BUS_FARE,"status":"active","operational":True,"dailyRiders":0,"monthlyFareRevenue":0,"monthlyOperatingCost":buses*BUS_MONTHLY_OPERATING_COST,"purchaseCost":cost,"createdDay":state["day"]}
-                    state["money"]-=cost;state["busRoutes"].append(line);ev("LÃ­nea de autobÃºs inaugurada",f"{line['originName']} â€“ {line['destinationName']} Â· {buses} colectivo(s) Â· {len(line['stops'])} paradas Â· frecuencia cada {line['headwayMinutes']} min Â· inversiÃ³n $ {cost:,}. OperaciÃ³n $ {line['monthlyOperatingCost']:,}/mes.".replace(",","."))
-                elif action in ("pauseBusRoute","resumeBusRoute","cancelBusRoute"):
-                    line=next((b for b in state.setdefault("busRoutes",[]) if b.get("id")==str(data.get("id"))),None)
-                    if not line:self._send(404,{"error":"La lÃ­nea ya no existe."});return
-                    if action=="pauseBusRoute":line.update({"status":"paused","operational":False,"pauseReason":"Pausa decidida por el gobierno"});ev("LÃ­nea de autobÃºs pausada",f"{line['originName']} â€“ {line['destinationName']}: se detienen servicio y gasto operativo.")
-                    elif action=="resumeBusRoute":
-                        path=route_between(tuple(line["from"]),tuple(line["to"]))
-                        if not path:self._send(409,{"error":"El corredor todavÃ­a no tiene conexiÃ³n vial."});return
-                        line.update({"route":path,"status":"active","operational":True,"pauseReason":None});ev("LÃ­nea de autobÃºs reanudada",f"{line['originName']} â€“ {line['destinationName']} vuelve a operar con {line['buses']} colectivo(s).")
-                    else:
-                        refund=round(line.get("purchaseCost",line["buses"]*BUS_PURCHASE_COST)*.5);state["money"]+=refund;line.update({"status":"cancelled","operational":False,"cancelledDay":state["day"]});ev("LÃ­nea de autobÃºs retirada",f"Se retirÃ³ {line['originName']} â€“ {line['destinationName']}; se recuperaron $ {refund:,} por los vehÃ­culos.".replace(",","."))
-                elif action=="startTrainingProgram":
-                    category=str(data.get("category",""))
-                    if category not in TRAINING_CATEGORIES:self._send(400,{"error":"Perfil de formaciÃ³n invÃ¡lido."});return
-                    ensure_resident_roster();catalog={x["category"]:x for x in training_catalog()};offer=catalog[category]
-                    if not offer["canStart"]:self._send(409,{"error":offer["reason"] or "El programa no estÃ¡ disponible."});return
-                    center=next((b for b in state["buildings"] if b.get("id",f"civic-{b['x']}-{b['y']}")==offer["centerId"]),None)
-                    programs=state.setdefault("trainingPrograms",[]);excluded={person_id for p in programs if p.get("status") in ("active","paused") for person_id in p.get("traineeIds",[])}
-                    candidates=training_candidates(category,center,excluded);cohort=candidates[:TRAINING_SEATS]
-                    if not cohort:self._send(409,{"error":"No hay residentes con esa necesidad de formaciÃ³n y acceso al aula."});return
-                    monthly=TRAINING_BASE_MONTHLY_COST+TRAINING_COST_PER_STUDENT*len(cohort);total=monthly*TRAINING_MONTHS
-                    reserved=sum(max(0,pending["cost"]-pending.get("paid",0)) for pending in state["projects"] if not pending.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<total:self._send(409,{"error":f"El curso cuesta $ {total:,} y quedan $ {available:,} disponibles despuÃ©s de los contratos.".replace(",",".")});return
-                    trainee_ids=[row["person"].get("id") for row in cohort];label=TRAINING_CATEGORIES[category][0]
-                    program={"id":uuid.uuid4().hex,"category":category,"label":label,"centerId":offer["centerId"],"centerName":offer["centerName"],"status":"active","createdDay":state["day"],"durationMonths":TRAINING_MONTHS,"monthsCompleted":0,"seats":len(cohort),"traineeIds":trainee_ids,"traineeProgress":{row["person"]["id"]:row["skill"] for row in cohort},"skillGainPerMonth":TRAINING_SKILL_GAIN,"monthlyCost":monthly,"cost":total,"paid":total,"spent":0,"remainingBudget":total}
-                    state["money"]-=total;programs.append(program);del programs[:-30]
-                    ev("Programa de formaciÃ³n adjudicado",f"Aula municipal Â· {label} Â· {len(cohort)} participantes Â· {TRAINING_MONTHS} ciclos Â· $ {total:,} prepagados. La formaciÃ³n empieza en el prÃ³ximo cierre mensual.".replace(",","."))
-                elif action in ("pauseTrainingProgram","resumeTrainingProgram","cancelTrainingProgram"):
-                    program=next((p for p in state.setdefault("trainingPrograms",[]) if p.get("id")==str(data.get("id"))),None)
-                    if not program:self._send(404,{"error":"El curso ya no estÃ¡ disponible."});return
-                    if action=="pauseTrainingProgram":
-                        if program.get("status")!="active":self._send(409,{"error":"Solo se puede pausar un curso en marcha."});return
-                        program.update({"status":"paused","pauseReason":"Pausa decidida por el gobierno"});ev("Curso pausado",f"{program['label']}: el saldo de $ {program.get('remainingBudget',0):,} queda reservado.".replace(",","."))
-                    elif action=="resumeTrainingProgram":
-                        if program.get("status")!="paused":self._send(409,{"error":"El curso no estÃ¡ pausado."});return
-                        center=next((b for b in state["buildings"] if b.get("id",f"civic-{b['x']}-{b['y']}")==program.get("centerId") and b.get("kind")=="civic"),None)
-                        homes={p.get("id"):home for home in state["buildings"] if home.get("kind")=="home" for p in home.get("residents",[])}
-                        if not center or not any((home:=homes.get(person_id)) and route_between((home["x"],home["y"]),(center["x"],center["y"])) for person_id in program.get("traineeIds",[])):
-                            self._send(409,{"error":"La cohorte todavÃ­a no tiene acceso vial al aula."});return
-                        program.update({"status":"active","pauseReason":None});ev("Curso reanudado",f"{program['label']} retomarÃ¡ la formaciÃ³n en el prÃ³ximo cierre mensual.")
-                    else:
-                        refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
-                elif action=="place":
-                    kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
-                    if kind not in PROJECTS or x<0 or y<0 or x>=28 or y>=20: self._send(400,{"error":"Proyecto o parcela invÃ¡lidos"}); return
-                    if is_water(x,y) and not (kind=="port" and x==23 and not is_water(x,y) and is_water(x+1,y)): self._send(409,{"error":"La terminal debe ocupar la franja costera edificable, junto al agua."}); return
-                    if kind=="port" and (x!=23 or not is_water(x+1,y)): self._send(409,{"error":"La terminal portuaria debe ubicarse en la costa este (parcela 24) con agua al lado."}); return
-                    if kind=="port" and any(b.get("kind")=="port" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene una terminal portuaria."}); return
-                    if kind=="airport" and any(b.get("kind")=="airport" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene un aeropuerto regional."}); return
-                    contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    if not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles. ElegÃ­ otra empresa o esperÃ¡ la entrega de una obra."}); return
-                    if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} necesita {LABOR_NEEDS[kind]} trabajadores para esta obra y solo tiene {contractor_free_workers(contractor)} libres."}); return
-                    if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])): self._send(409,{"error":"La parcela ya estÃ¡ ocupada"}); return
-                    if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
-                    if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
-                    if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
-                    if kind in ("airport","hotel","school","fireStation","powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexiÃ³n vial continua con la ciudad."}); return
-                    bus_line=None
-                    if kind=="busStop":
-                        bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)
-                        if not bus_line:self._send(409,{"error":"ElegÃ­ una lÃ­nea activa para ubicar la parada."});return
-                        if not any(site["x"]==x and site["y"]==y for site in bus_stop_sites(bus_line)):
-                            self._send(409,{"error":"La parcela ya no estÃ¡ disponible junto al recorrido o la lÃ­nea alcanzÃ³ su lÃ­mite de paradas."});return
-                    zone=next((z for z in state.get("zones",[]) if z["x"]==x and z["y"]==y),None)
-                    if kind in ("home","shop") and (not zone or zone["kind"]!=kind):
-                        required="residencial" if kind=="home" else "comercial"
-                        self._send(409,{"error":f"Primero asignÃ¡ uso {required} a esta parcela."}); return
-                    if kind=="road":
-                        if not any(abs(rx-x)+abs(ry-y)<=1 for rx,ry in state["roads"]): self._send(409,{"error":"La calle debe conectar con la red existente"}); return
-                        contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    elif kind in ("home","shop","hotel"):
-                        # Promotor privado financia la inversiÃ³n; el municipio cubre permisos e inspecciÃ³n.
-                        need=PROJECTS[kind]["cost"]*.12
-                        if state["money"]<need: self._send(409,{"error":f"Fondos municipales insuficientes para permisos ($ {need:.0f})"}); return
-                        state["money"]-=need
-                        contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    else:
-                        contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    spec=PROJECTS[kind]; c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
-                    # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
-                    if kind=="busStop":p["busLineId"]=bus_line["id"]
-                    if kind in ("home","shop","hotel"):
-                        p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
-                        if state["privateCapital"]<p["cost"]:
-                            state["money"]+=round(spec["cost"]*.12); self._send(409,{"error":"Los promotores locales no tienen capital suficiente. EsperÃ¡ nuevos ingresos."}); return
-                        state["privateCapital"]-=p["cost"]
-                        advance=round(p["cost"]*.2);p["paid"]=advance
-                        state["supply"]["contractorCash"][contractor]+=advance
-                    else:
-                        reserved=sum(max(0,pending["cost"]-pending.get("paid",0)) for pending in state["projects"] if not pending.get("privatePaid"))
-                        available=max(0,state["money"]-reserved)
-                        if available<total: self._send(409,{"error":f"Fondos disponibles insuficientes. Contrato: $ {total:,}; disponible despuÃ©s de compromisos: $ {available:,}.".replace(",",".")}); return
-                        advance=round(total*.2)
-                        state["money"]-=advance; p["paid"]=advance
-                        state["supply"]["contractorCash"][contractor]+=advance
-                    state["projects"].append(p); ev(f"Contrato adjudicado: {spec['label']}",f"{contractor} Â· $ {total:,} Â· {LABOR_NEEDS[kind]} trabajadores Â· plazo estimado {duration} dÃ­as. Se reservÃ³ el anticipo.".replace(",","."))
-                elif action=="orderMaterials":
-                    project=next((p for p in state["projects"] if p["id"]==str(data.get("projectId"))),None)
-                    supplier=data.get("supplier");items=data.get("items")
-                    if not project:self._send(404,{"error":"La obra ya no estÃ¡ activa."});return
-                    if supplier not in SUPPLIERS:self._send(400,{"error":"Proveedor invÃ¡lido."});return
-                    if not isinstance(items,dict):self._send(400,{"error":"Detalle de materiales invÃ¡lido."});return
-                    clean={}
-                    try:
-                        for material,amount in items.items():
-                            if material not in MATERIAL_NAMES: self._send(400,{"error":"CategorÃ­a de material invÃ¡lida."});return
-                            qty=int(amount)
-                            if qty<0 or qty>300:self._send(400,{"error":"Cada pedido admite de 0 a 300 unidades por material."});return
-                            if qty:clean[material]=qty
-                    except (TypeError,ValueError):self._send(400,{"error":"Las cantidades deben ser nÃºmeros enteros."});return
-                    if not clean:self._send(400,{"error":"IndicÃ¡ al menos un material."});return
-                    destination_id=str(data.get("destinationId","yard"));location=storage_location(destination_id)
-                    priority=str(data.get("priority","normal"))
-                    if priority not in ("normal","alta"):self._send(400,{"error":"Prioridad de descarga invÃ¡lida."});return
-                    if not location:self._send(400,{"error":"DepÃ³sito de destino invÃ¡lido."});return
-                    route=route_between((4,10),(location["x"],location["y"]))
-                    if route is None:self._send(409,{"error":"El depÃ³sito elegido no tiene acceso de camiones por la red vial."});return
-                    free=max(0,location["capacity"]-storage_used(destination_id)-storage_reserved(destination_id))
-                    if sum(clean.values())>free:
-                        self._send(409,{"error":f"{location['label'] if 'label' in location else 'El depÃ³sito'} tiene espacio para {free} unidades mÃ¡s. ElegÃ­ otro destino o reducÃ­ el pedido."});return
-                    distance=max(0,len(route)-1);provider=SUPPLIERS[supplier];inventory=state["supply"]["suppliers"][supplier]
-                    missing=[MATERIAL_NAMES[k] for k,q in clean.items() if inventory[k]<q]
-                    if missing:self._send(409,{"error":"El proveedor no tiene stock de "+", ".join(missing)+"."});return
-                    freight=max(0,distance-4)*5
-                    cost=round(sum(q*MATERIAL_PRICE[k]*provider["price"] for k,q in clean.items())+freight)
-                    cash=state["supply"]["contractorCash"][project["contractor"]]
-                    if cash<cost:self._send(409,{"error":f"{project['contractor']} tiene $ {cash:,} de caja de obra; el pedido cuesta $ {cost:,}.".replace(",",".")});return
-                    eta=provider["days"]+math.ceil(distance/6)
-                    for material,qty in clean.items():inventory[material]-=qty
-                    state["supply"]["contractorCash"][project["contractor"]]-=cost
-                    order={"id":uuid.uuid4().hex,"projectId":project["id"],"label":project["label"],"contractor":project["contractor"],"supplier":supplier,"items":clean,"cost":cost,"destinationId":destination_id,"destinationLabel":location.get("label",f"DepÃ³sito municipal {location['x']+1},{location['y']+1}"),"priority":priority,"orderedDay":state["day"],"supplierReadyDay":state["day"]+provider["days"],"travelDistance":distance,"travelledDistance":0,"routeProgress":0,"arrivalDay":state["day"]+eta,"progress":0,"status":"en trÃ¡nsito","statusCause":"PreparaciÃ³n en proveedor","route":route}
-                    state["supply"]["orders"].append(order)
-                    order["trafficFactor"]=round(traffic_factor(route,order),2)
-                    order["arrivalDay"]=order_route_eta(order)[2]
-                    detail=" Â· ".join(f"{MATERIAL_NAMES[k]} {v}" for k,v in clean.items())
-                    eta=max(0,order["arrivalDay"]-state["day"])
-                    ev("Pedido de materiales",f"{project['contractor']} comprÃ³ {detail} a {supplier} por $ {cost:,}; entrega estimada en {eta} dÃ­as por {distance} tramos (con congestiÃ³n estimada). Prioridad de descarga: {priority}.".replace(",","."))
-                elif action in ("installPowerBackup","refuelPowerBackup"):
-                    x=int(data.get("x",-1));y=int(data.get("y",-1));building=next((b for b in state["buildings"] if b.get("x")==x and b.get("y")==y and b.get("kind") in ("civic","waterPlant","wastewaterPlant")),None)
-                    if not building:self._send(409,{"error":"El respaldo solo se instala en hospitales, bombeo de agua y plantas cloacales."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if action=="installPowerBackup":
-                        if building.get("backupCapacityKw",0):self._send(409,{"error":"Este servicio ya tiene un grupo electrÃ³geno."});return
-                        cost=2800
-                        if available<cost:self._send(409,{"error":f"Quedan $ {available}; instalar y cargar el grupo cuesta $ {cost}."});return
-                        kw=min(75,max(1,building.get("utilityDemand",{}).get("powerKw",32)));building.update({"backupCapacityKw":kw,"backupCapacityKwh":kw*24*3,"backupFuelKwh":kw*24*3,"backupInstalledDay":state["day"]});state["money"]-=cost
-                        ev("Grupo electrÃ³geno instalado",f"{building.get('name','Servicio crÃ­tico')}: {kw:g} kW y tres dÃ­as de reserva inicial Â· inversiÃ³n $2.800 Â· mantenimiento $70/mes.")
-                    else:
-                        if not building.get("backupCapacityKw",0):self._send(409,{"error":"Primero instalÃ¡ un grupo electrÃ³geno."});return
-                        missing=max(0,building["backupCapacityKwh"]-building.get("backupFuelKwh",0));cost=math.ceil(missing*.12)
-                        if missing<=0:self._send(409,{"error":"La reserva de combustible ya estÃ¡ completa."});return
-                        if available<cost:self._send(409,{"error":f"Quedan $ {available}; el combustible cuesta $ {cost}."});return
-                        building["backupFuelKwh"]=building["backupCapacityKwh"];state["money"]-=cost
-                        ev("Combustible de emergencia repuesto",f"{building.get('name','Servicio crÃ­tico')}: reserva restaurada a tres dÃ­as Â· costo $ {cost}.")
-                elif action=="inspectRecovery":
-                    need=next((n for n in state.setdefault("recoveryNeeds",[]) if n.get("id")==str(data.get("id")) and n.get("status")=="abierta"),None)
-                    if not need or need.get("inspectionStatus")!="pendiente":self._send(409,{"error":"La inspecciÃ³n ya comenzÃ³ o el activo no requiere una inspecciÃ³n nueva."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<150:self._send(409,{"error":f"Quedan $ {available}; la inspecciÃ³n municipal cuesta $ 150."});return
-                    state["money"]-=150;need.update({"inspectionStatus":"en curso","inspectionRemainingDays":1,"inspectionCost":150})
-                    ev("InspecciÃ³n preventiva iniciada" if need.get("scheduledInspection") else "InspecciÃ³n de emergencia iniciada",f"Una cuadrilla revisarÃ¡ {need['name']} durante un dÃ­a; costo municipal $ 150. El informe determinarÃ¡ si requiere una rehabilitaciÃ³n.")
-                elif action=="awardRecovery":
-                    need=next((n for n in state.setdefault("recoveryNeeds",[]) if n.get("id")==str(data.get("id")) and n.get("status")=="abierta" and n.get("inspectionStatus")=="inspeccionada"),None)
-                    contractor=data.get("contractor")
-                    if not need or contractor not in CONTRACTORS:self._send(409,{"error":"La inspecciÃ³n debe estar completa y el contrato seguir disponible."});return
-                    if not contractor_has_capacity(contractor):self._send(409,{"error":f"{contractor} no tiene una cuadrilla disponible."});return
-                    if contractor_free_workers(contractor)<4:self._send(409,{"error":f"{contractor} no tiene los cuatro trabajadores libres para esta reparaciÃ³n."});return
-                    cost=round(need["estimate"]*CONTRACTORS[contractor]["price"]);reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el contrato cuesta $ {cost} ademÃ¡s de las obras comprometidas."});return
-                    duration=max(2,round(4*CONTRACTORS[contractor]["days"]/30));contract={"id":uuid.uuid4().hex,"needId":need["id"],"targetType":need["targetType"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"cost":cost,"paid":cost,"duration":duration,"remainingDays":duration,"workers":4,"startDay":state["day"],"status":"en obra","stage":"Refuerzo estructural y renovaciÃ³n de instalaciones" if need.get("cause")=="desgaste por uso y antigÃ¼edad" else "Desagote y retiro de materiales daÃ±ados"}
-                    state["money"]-=cost;state.setdefault("recoveryContracts",[]).append(contract);need["status"]="en reparaciÃ³n";need["contractId"]=contract["id"]
-                    ev("Contrato municipal adjudicado",f"{contractor} rehabilitarÃ¡ {need['name']} por $ {cost:,} en {duration} dÃ­as; cuatro trabajadores quedan asignados. El pago sale de la tesorerÃ­a al iniciar.".replace(",","."))
-                elif action=="prepareHeatwave":
-                    climate=ensure_climate_state();forecast=climate.get("heatForecast") or {};target=int(data.get("targetDay",-1))
-                    if forecast.get("targetDay")!=target or forecast.get("status")!="pronosticada" or target<=state["day"]:self._send(409,{"error":"No hay una ola de calor futura disponible para preparar."});return
-                    if climate.get("coolingPreparedForDay")==target:self._send(409,{"error":"Ya hay centros de enfriamiento preparados para este episodio."});return
-                    try:workplaces=commute_model().get("workplaces",[])
-                    except Exception:workplaces=[]
-                    centers=[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status") not in ("cerrado","abandonado") and next((w for w in workplaces if w.get("x")==b.get("x") and w.get("y")==b.get("y") and w.get("staffedJobs",0)>=2),None) and b.get("utilityAccess",{}).get("powerServedPct",0)>=75 and route_between((4,10),(b["x"],b["y"]))]
-                    if not centers:self._send(409,{"error":"No hay centros municipales con personal, electricidad y acceso vial para abrir refugios."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<650:self._send(409,{"error":f"Quedan $ {available}; habilitar refugios y turnos de emergencia cuesta $ 650."});return
-                    state["money"]-=650;climate["coolingPreparedForDay"]=target
-                    ev("Refugios de calor preparados",f"Se habilitarÃ¡n hasta {len(centers)} centros municipales para el dÃ­a {target}; capacidad conjunta de {sum(min(100,max(40,next(w['staffedJobs'] for w in workplaces if w.get('x')==b['x'] and w.get('y')==b['y'])*2)) for b in centers)} residentes. Personal, agua y electricidad son requisitos operativos. Costo $ 650.")
-                elif action=="toggleWaterRestrictions":
-                    climate=ensure_climate_state();forecast=climate.get("droughtForecast") or {};target=int(forecast.get("targetDay",-1))
-                    if target<state["day"] or target>state["day"]+30:self._send(409,{"error":"Las restricciones solo pueden activarse ante una sequÃ­a prevista o en curso."});return
-                    climate["waterRestrictionsTarget"]=target;climate["waterRestrictions"]=not climate.get("waterRestrictions",False)
-                    if climate["waterRestrictions"]:ev("RestricciÃ³n de agua no esencial",f"Comercios, hoteles, puerto y aeropuerto reducen 35% su demanda hÃ­drica durante la sequÃ­a. Sus operaciones pueden producir menos; los hogares y servicios esenciales conservan prioridad.")
-                    else:ev("RestricciÃ³n de agua levantada","Se restablece el consumo comercial normal; la sequÃ­a puede volver a causar faltantes en la red.")
-                elif action=="deployWaterTankers":
-                    climate=ensure_climate_state();forecast=climate.get("droughtForecast") or {};target=int(forecast.get("targetDay",-1))
-                    if target<state["day"] or target>state["day"]+30:self._send(409,{"error":"Los camiones cisterna solo se despliegan ante una sequÃ­a prevista o en curso."});return
-                    if climate.get("waterTankerForDay")==target:self._send(409,{"error":"Ya se contratÃ³ el refuerzo de cisternas para esta sequÃ­a."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved);cost=1200
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el despliegue de cisternas cuesta $ {cost}."});return
-                    state["money"]-=cost;climate.update({"waterTankerForDay":target,"waterTankerStart":max(state["day"],target),"waterTankerUntil":target+10})
-                    ev("Cisternas contratadas",f"El refuerzo entregarÃ¡ hasta 30 mÂ³/dÃ­a durante diez dÃ­as desde el dÃ­a {target}. Costo total $ 1.200.")
-                elif action=="prepareStorm":
-                    climate=ensure_climate_state();forecast=climate.get("forecast");target=int(data.get("targetDay",-1))
-                    if not forecast or forecast.get("targetDay")!=target or forecast.get("warningLevel")=="bajo" or target<=state["day"]:self._send(409,{"error":"No hay una alerta futura de riesgo que necesite despliegue."});return
-                    if climate.get("preparedForDay")==target:self._send(409,{"error":"Ya hay bombas mÃ³viles y cuadrillas asignadas para esa tormenta."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved);cost=850
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el despliegue de bombas y limpieza cuesta $ {cost}."});return
-                    state["money"]-=cost;climate["preparedForDay"]=target;forecast["prepared"]=True
-                    ev("Respuesta preventiva desplegada",f"Se limpiaron sumideros y se preposicionaron bombas para el dÃ­a {target}. $850; la capacidad pluvial aumentarÃ¡ 25% durante la tormenta.")
-                elif action=="repairUtility":
-                    failure=next((f for f in ensure_utility_state()["failures"] if f.get("id")==str(data.get("id")) and f.get("status")=="averÃ­a"),None)
-                    if not failure:self._send(409,{"error":"La averÃ­a ya fue reparada o tiene una cuadrilla asignada."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<failure["repairCost"]:self._send(409,{"error":f"Quedan $ {available}; la reparaciÃ³n cuesta $ {failure['repairCost']} ademÃ¡s de los contratos."});return
-                    state["money"]-=failure["repairCost"];failure["status"]="en reparaciÃ³n";failure["remainingDays"]=3;failure["startedDay"]=state["day"]
-                    ev("Cuadrilla de servicios contratada",f"ReparaciÃ³n de {failure['network']} en calle {failure['x']+1},{failure['y']+1}: $ {failure['repairCost']} Â· 3 dÃ­as de trabajo.")
-                elif action=="utilityLine":
-                    network=data.get("network");x=int(data.get("x",-1));y=int(data.get("y",-1))
-                    if network not in ("power","water","sewer","drainage","gas","telecom") or [x,y] not in state["roads"]:self._send(409,{"error":"El tendido necesita un tramo de calle terminado y una red vÃ¡lida."});return
-                    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}[network];cost={"power":165,"water":130,"sewer":145,"drainage":155,"gas":120,"telecom":105}[network]
-                    if [x,y] in utilities[key]:self._send(409,{"error":"Este tramo ya estÃ¡ conectado a esa red."});return
-                    connected=energized_utility_tiles(network)
-                    if not any((x+dx,y+dy) in connected for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):self._send(409,{"error":"El nuevo tramo debe prolongar una red conectada al sistema."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el tendido cuesta $ {cost} ademÃ¡s de los contratos."});return
-                    state["money"]-=cost;utilities[key].append([x,y]);network_name={"power":"elÃ©ctrica","water":"de agua","sewer":"cloacal","drainage":"pluvial","gas":"de gas","telecom":"de fibra Ã³ptica"}[network]
-                    maintenance={"power":1.2,"water":.8,"sewer":.9,"drainage":.7,"gas":1.1,"telecom":.6}[network]
-                    ev("Red de servicios ampliada",f"Se conectÃ³ un tramo {network_name} sobre la calle {x+1},{y+1}; mantenimiento aproximado $ {maintenance:.1f}/mes.")
-                elif action=="wasteContainer":
-                    x=int(data.get("x",-1));y=int(data.get("y",-1));waste=ensure_waste_state()
-                    if [x,y] not in state["roads"]:self._send(409,{"error":"El contenedor debe colocarse sobre una calle terminada."});return
-                    if any(c.get("x")==x and c.get("y")==y for c in waste["containers"]):self._send(409,{"error":"Ya hay un contenedor en ese tramo."});return
-                    cost=350;reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el contenedor cuesta $ {cost} ademÃ¡s de los contratos."});return
-                    waste["containers"].append({"id":f"bin-{x}-{y}","x":x,"y":y,"capacityTons":2,"storedTons":0,"installedDay":state["day"]});state["money"]-=cost
-                    ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversiÃ³n $350 Â· capacidad de recolecciÃ³n +0,15 t/dÃ­a. Cada depÃ³sito conectado suma ademÃ¡s una estaciÃ³n de transferencia con 12 t de almacenamiento y despacho de 1,5 t/dÃ­a.")
-                elif action=="zone":
-                    x=int(data.get("x",-1)); y=int(data.get("y",-1)); kind=data.get("kind")
-                    if kind not in ("home","shop") or x<0 or y<0 or x>=28 or y>=20: self._send(400,{"error":"Uso de suelo o parcela invÃ¡lidos"}); return
-                    if is_water(x,y): self._send(409,{"error":"No se puede zonificar el agua costera."}); return
-                    if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])) or any(z["x"]==x and z["y"]==y for z in state.get("zones",[])) or [x,y] in state["roads"]:
-                        self._send(409,{"error":"Esta parcela ya tiene un uso asignado u ocupado"}); return
-                    if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"Zonificar requiere acceso a una calle terminada"}); return
-                    state.setdefault("zones",[]).append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible"})
-                    ev("Uso de suelo asignado",f"Parcela {x+1},{y+1}: zona {'residencial' if kind=='home' else 'comercial'}. La zonificaciÃ³n permite inversiÃ³n; no construye por sÃ­ sola.")
-                elif action in ("pauseProject","resumeProject","cancelProject"):
-                    project=next((p for p in state["projects"] if p["id"]==str(data.get("id"))),None)
-                    if not project: self._send(404,{"error":"La obra ya no estÃ¡ activa."}); return
-                    if action=="pauseProject":
-                        if project["status"]=="pausada": self._send(409,{"error":"La obra ya estÃ¡ pausada."}); return
-                        project["status"]="pausada"; project["workersAssigned"]=0; project["cause"]="Pausa decidida por el equipo de gobierno"; ev("Obra pausada",f"{project['label']}: se conserva el avance ({round(project['progress']*100)}%) y se liberan cuadrillas.")
-                    elif action=="resumeProject":
-                        if project["status"] not in ("pausada","suspendida"): self._send(409,{"error":"La obra no estÃ¡ pausada ni suspendida."}); return
-                        nextPayment=0 if project.get("privatePaid") else project["cost"]*.8/project["duration"]
-                        if state["money"]<nextPayment: self._send(409,{"error":f"Falta caja para el prÃ³ximo certificado de $ {nextPayment:.0f}."}); return
-                        if project["status"]=="pausada":
-                            if not contractor_has_capacity(project["contractor"]): self._send(409,{"error":"La constructora tiene todos sus cupos ocupados. EsperÃ¡ otra entrega antes de reanudar."}); return
-                            if contractor_free_workers(project["contractor"])<LABOR_NEEDS[project["kind"]]: self._send(409,{"error":"La constructora no tiene trabajadores libres para reanudar esta obra."}); return
-                            project["workersAssigned"]=LABOR_NEEDS[project["kind"]]
-                        project["status"]="contratada"; project["cause"]=CONTRACTORS[project["contractor"]]["profile"]; ev("Obra reanudada",f"{project['label']} continÃºa desde {round(project['progress']*100)}% con el saldo pendiente comprometido.")
-                    else:
-                        spent=round(project.get("priorSpent",0)+(project["cost"]+project.get("municipalPermitPaid",0) if project.get("privatePaid") else project.get("paid",0))); progress=project.get("progress",0)
-                        if progress>0:
-                            state.setdefault("abandoned",[]).append({"id":project["id"],"x":project["x"],"y":project["y"],"kind":project["kind"],"label":project["label"],"progress":progress,"spent":spent,"contractor":project["contractor"],"stage":project["stages"][project["stageIndex"]],"status":"obra inconclusa","privatePaid":project.get("privatePaid",False),"busLineId":project.get("busLineId")})
-                        state["projects"].remove(project)
-                        ev("Contrato cancelado",f"{project['label']}: gasto hundido $ {spent:,}; se libera el saldo contractual no pagado. {('La estructura inconclusa permanece en la parcela.' if progress>0 else 'La obra no habÃ­a iniciado trabajos fÃ­sicos.') }".replace(",","."))
-                elif action=="rescue":
-                    abandoned=next((a for a in state.get("abandoned",[]) if a["id"]==str(data.get("id"))),None)
-                    contractor=data.get("contractor");
-                    if not abandoned: self._send(404,{"error":"La obra inconclusa ya no estÃ¡ disponible."}); return
-                    if contractor not in CONTRACTORS: self._send(400,{"error":"Constructora invÃ¡lida."}); return
-                    if not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles para rescatar la obra."}); return
-                    kind=abandoned["kind"]; initial=abandoned["progress"]; spec=PROJECTS[kind]; c=CONTRACTORS[contractor]
-                    if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} no tiene {LABOR_NEEDS[kind]} trabajadores libres para el rescate."}); return
-                    total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
-                    if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
-                    private=kind in ("home","shop","hotel")
-                    if private:
-                        fee=max(50,round(spec["cost"]*(1-initial)*.12));privateCost=total-fee
-                        if state["money"]<fee or state["privateCapital"]<privateCost: self._send(409,{"error":"No alcanza el capital promotor o municipal para financiar el rescate."}); return
-                        state["money"]-=fee;state["privateCapital"]-=privateCost;p["cost"]=privateCost;p["municipalPermitPaid"]=fee;p["privatePaid"]=True
-                        p["paid"]=round(privateCost*.2);state["supply"]["contractorCash"][contractor]+=p["paid"]
-                    else:
-                        reserved=sum(max(0,q["cost"]-q.get("paid",0)) for q in state["projects"] if not q.get("privatePaid"));available=max(0,state["money"]-reserved)
-                        if available<total: self._send(409,{"error":"La tesorerÃ­a disponible no cubre el contrato de rescate."}); return
-                        p["paid"]=round(total*.2);state["money"]-=p["paid"];state["supply"]["contractorCash"][contractor]+=p["paid"]
-                    state["abandoned"].remove(abandoned);state["projects"].append(p)
-                    ev("Rescate de obra adjudicado",f"{abandoned['label']} continÃºa desde {round(initial*100)}% con {contractor}; contrato nuevo $ {total:,} y plazo estimado {duration} dÃ­as.".replace(",","."))
-                elif action=="new": state=initial_state(); state["host"]=pid; state["players"][pid]=time.time(); ev("Nueva partida","Puerto Claro comenzÃ³ una nueva gestiÃ³n municipal.")
-                else: self._send(400,{"error":"AcciÃ³n desconocida"}); return
-                self._send(200,public_state(pid)); return
-            if path=="/api/save":
-                if pid!=state.get("host"): self._send(403,{"error":"Solo el anfitriÃ³n puede guardar la ciudad."}); return
-                SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","host")},ensure_ascii=False,indent=2),encoding="utf-8"); self._send(200,{"ok":True,"file":SAVE.name}); return
-            if path=="/api/load":
-                if pid!=state.get("host"): self._send(403,{"error":"Solo el anfitriÃ³n puede cargar la ciudad."}); return
-                if not SAVE.exists(): self._send(404,{"error":"No hay ciudad guardada todavÃ­a"}); return
-                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("players",{}); loaded["host"]=pid; state=loaded; ev("Ciudad cargada","Se restaurÃ³ el Ãºltimo estado guardado."); self._send(200,public_state(pid)); return
-        self._send(404,{"error":"No encontrado"})
-
-def simulation_loop():
-    last=time.monotonic()
-    while True:
-        time.sleep(.25)
-        now=time.monotonic()
-        with LOCK:
-            if state["paused"]: last=now; continue
-            elapsed=now-last
-            if elapsed>=1/max(1,state["speed"]):
-                days=int(elapsed*max(1,state["speed"]))
-                last=now
-                for _ in range(min(days,60)): tick_one_day()
-
-def main():
-    global state
-    if SAVE.exists():
-        try:
-            loaded=json.loads(SAVE.read_text(encoding="utf-8")); state={**initial_state(),**loaded,"players":{}}
-        except Exception: pass
-    srv=ThreadingHTTPServer(("0.0.0.0",PORT),Handler)
-    threading.Thread(target=simulation_loop,daemon=True).start()
-    threading.Thread(target=discovery_loop,daemon=True).start()
-    url=f"http://127.0.0.1:{PORT}/"
-    if "--no-browser" not in sys.argv: threading.Timer(.8,lambda:webbrowser.open(url)).start()
-    print("Ciudad Viva estÃ¡ lista:",url)
-    print("Direcciones LAN:")
-    for ip in local_ips(): print(f"  http://{ip}:{PORT}/")
-    print("DejÃ¡ esta ventana abierta mientras se juega. Ctrl+C para cerrar.")
-    try: srv.serve_forever()
-    except KeyboardInterrupt: pass
-    finally: srv.server_close()
-
-if __name__=="__main__": main()
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×^÷ïdèµ©hºÚn¶X§zÍHÈKÝ\Ü‹Øš[‹Ù[ˆ]ÛŒÂˆˆˆ”Ù\šYÜˆSˆØØ[HÚ]YYš]˜KˆÛÛÈšX›[ÝXØH\Ý0è[™\ˆH]Û‹ˆˆˆ‚š[\ÜœÛÛ‹X]ÜËÛØÚÙ]Þ\Ë™XY[™Ë[YK]ZYÙX˜œ›ÝÜÙ\‚™œ›ÛHœÙ\™\ˆ[\Ü˜\ÙR™\]Y\Ý[™\‹™XY[™ÒÙ\™\‚™œ›ÛH]Xˆ[\Ü]‚”“ÓÕH]
+×Ùš[W×ÊKœ™\ÛÛ™J
+Kœ\™[”ÐU‘HH“ÓÕÈ˜Ú]YYÙÝX\™YKšœÛÛˆ‚“ÐÒÈH™XY[™Ë”“ØÚÊ
+B”“ÓÓWÓÔSˆH˜[ÙB”“ÓÓWÐÓÑHH]ZY]ZY
+
+Kš^Î—K\\Š
+B‘TÐÓÕ‘T‘QÔ“ÓÓTÈHßB‘TÐÓÕ‘T–WÔÔ•HÍ‚”Ô•H[
+ÜË™[š\›Û‹™Ù]
+ÒUQQÕ’UWÔÔ•‹ŽÍHŠJB“PUT’PSÓSQTÈHÈ˜YÙÜ™YØ]HŽˆ°è\šYÜÈ‹œÝY[Žˆ˜XÙ\›È‹[X™\ˆŽˆ›XY\˜H‹˜ÛÛ\Û™[ÈŽˆ˜ÛÛ\Û™[\ÈŸB’S’UPSÐÓÓ•PÕÔ—ÔÕÐÒÈHÈ˜YÙÜ™YØ]HŽŒŒœÝY[Ž‹[X™\ˆŽ‹˜ÛÛ\Û™[ÈŽŒßB’S’UPSÔ‘QÒSÓSÔÕÐÒÈHÈ˜YÙÜ™YØ]HŽŒœÝY[ŽŒ[X™\ˆŽŒŒ˜ÛÛ\Û™[ÈŽŒNB”‘QÒSÓSÔ“ÑPÕSÓˆHÈ˜YÙÜ™YØ]HŽÌœÝY[ŽŒÍK[X™\ˆŽŒŽ˜ÛÛ\Û™[ÈŽŒB“PUT’PSÔ’PÑHHÈ˜YÙÜ™YØ]HŽŒÎœÝY[ŽŒŒL[X™\ˆŽÍK˜ÛÛ\Û™[ÈŽŒB”‘QÒSÓSÓPT’ÑUÏJˆÈšYŽˆ˜[H‹›˜[YHŽˆ•š[H[˜[H‹›[ÛU[š]ÈŽŒLK›[ÛPYÙ]ŽŒL˜ÛÛ\]]Ü”Ý™[™ÝŽŒ‹ŸKˆÈšYŽˆ˜ÛÜÝH‹›˜[YHŽˆÛÜÝHÙ\™[˜H‹›[ÛU[š]ÈŽŽL›[ÛPYÙ]ŽŒŒML˜ÛÛ\]]Ü”Ý™[™ÝŽŒ‹KˆÈšYŽˆœ\ÛÈ‹›˜[YHŽˆ”\ÛÈ[›ÜH‹›[ÛU[š]ÈŽÌ›[ÛPYÙ]ŽŒN˜ÛÛ\]]Ü”Ý™[™ÝŽŒ‹ŒŸJB”ÕTQT”ÈHÂˆÛÜœ˜[0ìÛˆ[Y\ÈŽžÈœšXÙHŽŒKŒ™^\ÈŽŒ‹œ›Ùš[HŽˆ”ÝØÚÈØØ[0­È\šY˜HYYXH0­È[™YØHÜˆØ[HŸKˆ‘\ÝšXZYÜ˜H™YÚ[Û˜[ŽžÈœšXÙHŽ‹Ž‹™^\ÈŽŽKœ›Ùš[HŽˆÛÛ\˜HX^[Üš\ÝH0­ÈY[›Üˆ™XÚ[È0­ÈšXZ™H\™ÛÈŸKˆ‘›]H\™Ù[HŽžÈœšXÙHŽŒKÍK™^\ÈŽŒKœ›Ùš[HŽˆ”š[ÜšYYHØ\™ØH0­È\šY˜H[H0­È\ÜXÚÈ[›YYX]ÈŸ_B”ÕTQT—ÔÕÐÒÈHÂˆÛÜœ˜[0ìÛˆ[Y\ÈŽžÈ˜YÙÜ™YØ]HŽŒŒœÝY[ŽŽL[X™\ˆŽŒLL˜ÛÛ\Û™[ÈŽ_Kˆ‘\ÝšXZYÜ˜H™YÚ[Û˜[ŽžÈ˜YÙÜ™YØ]HŽŒLŒœÝY[ŽLŒ[X™\ˆŽŒ˜ÛÛ\Û™[ÈŽŒÌKˆ‘›]H\™Ù[HŽžÈ˜YÙÜ™YØ]HŽÌœÝY[ŽŒÍK[X™\ˆŽŒÍK˜ÛÛ\Û™[ÈŽŒÌŸ_BÓÓ•PÕÔ—ÐÐTÒHÈ”Ý\ˆØœ˜\ÈŽLÛÛœÝXÝÜ˜H[HŽŽL‘\ÝY[ÈHØœ˜H›ÜHŽŒMB“PUT’PSÓ‘QQÈHÂˆœ›ØYŽžÈ˜YÙÜ™YØ]HŽŒŒ‹œÝY[ŽŒ[X™\ˆŽŒ˜ÛÛ\Û™[ÈŽŒŸKˆšÛYHŽžÈ˜YÙÜ™YØ]HŽŒËœÝY[ŽŽK[X™\ˆŽŒMK˜ÛÛ\Û™[ÈŽŒLKˆœÚÜŽžÈ˜YÙÜ™YØ]HŽŒœÝY[ŽŒM[X™\ˆŽŽ˜ÛÛ\Û™[ÈŽŒLŸKˆ˜Ú]šXÈŽžÈ˜YÙÜ™YØ]HŽL‹œÝY[ŽŒŒ‹[X™\ˆŽŒL‹˜ÛÛ\Û™[ÈŽŒKˆœØÚÛÛŽžÈ˜YÙÜ™YØ]HŽNœÝY[ŽŒK[X™\ˆŽŒÌ˜ÛÛ\Û™[ÈŽŒŽKˆ™š\™TÝ][ÛˆŽžÈ˜YÙÜ™YØ]HŽŒ‹œÝY[ŽŒÍ[X™\ˆŽŒ˜ÛÛ\Û™[ÈŽŒÍŸKˆ™\ÝŽžÈ˜YÙÜ™YØ]HŽŒÎœÝY[ŽŒN[X™\ˆŽŒM˜ÛÛ\Û™[ÈŽŒLŸKˆ˜\ÑØ\˜YÙHŽžÈ˜YÙÜ™YØ]HŽŒÌœÝY[ŽŒM‹[X™\ˆŽŽ˜ÛÛ\Û™[ÈŽŒLKˆ˜\ÔÝÜŽžÈ˜YÙÜ™YØ]HŽŒLœÝY[ŽŒ[X™\ˆŽK˜ÛÛ\Û™[ÈŽŒŸKˆœÜŽžÈ˜YÙÜ™YØ]HŽNœÝY[ŽŒÍ[X™\ˆŽŒN˜ÛÛ\Û™[ÈŽŒÌKˆ˜Z\œÜŽžÈ˜YÙÜ™YØ]HŽŽLœÝY[ŽK[X™\ˆŽŒŒ‹˜ÛÛ\Û™[ÈŽM_KˆšÝ[ŽžÈ˜YÙÜ™YØ]HŽMKœÝY[ŽŒK[X™\ˆŽŒ˜ÛÛ\Û™[ÈŽŒÌŸKˆœÝÙ\”[ŽžÈ˜YÙÜ™YØ]HŽÌ‹œÝY[Ž[X™\ˆŽŒL‹˜ÛÛ\Û™[ÈŽŒÍ_KˆØ]\”[ŽžÈ˜YÙÜ™YØ]HŽŽœÝY[ŽŒÍ‹[X™\ˆŽŒŒ˜ÛÛ\Û™[ÈŽŒÌŸKˆØ\Ý]Ø]\”[ŽžÈ˜YÙÜ™YØ]HŽœÝY[ŽŒÎ[X™\ˆŽŒN˜ÛÛ\Û™[ÈŽŒÍŸKˆ›[™š[ŽžÈ˜YÙÜ™YØ]HŽÎœÝY[ŽŒ[X™\ˆŽŽ˜ÛÛ\Û™[ÈŽŒNKˆœ™XÞXÛ[™Ô[ŽžÈ˜YÙÜ™YØ]HŽŒ‹œÝY[ŽŒÍ[X™\ˆŽŒM‹˜ÛÛ\Û™[ÈŽŸ_BÓÓ•PÕÔ—ÓSQTÈH
+”Ý\ˆØœ˜\È‹ÛÛœÝXÝÜ˜H[H‹‘\ÝY[ÈHØœ˜H›ÜHŠB“PT’ÑUÔÕTQT”ÈHÂˆÛÛÜ\˜]]˜H™YÚ[Û˜[ŽžÈ[š]ÛÜÝŽŒËËœÝØÚÈŽŒLŒ›X^ÝØÚÈŽŒŒ›[ÛSÝ]]ŽK›XY^\ÈŽœ›Ùš[HŽˆ”™XÚ[È˜Z›È0­ÈÝ\È[Z]YÜÈ0­È[™YØH[HŸKˆ“X^[Üš\ÝH[Y\ÈŽžÈ[š]ÛÜÝŽ‹œÝØÚÈŽŒŒ›X^ÝØÚÈŽŒ›[ÛSÝ]]ŽŒL›XY^\ÈŽŒ‹œ›Ùš[HŽˆ”ÝØÚÈ[\[È0­È™XÚ[ÈYY[È0­È[™YØH\ÝX›HŸKˆX˜\ÝÈ^™\ÛÈŽžÈ[š]ÛÜÝŽKKœÝØÚÈŽŒML›X^ÝØÚÈŽŒ›[ÛSÝ]]ŽŒLMK›XY^\ÈŽŒKœ›Ùš[HŽˆ”™\ÜÚXÚpìÛˆ°è\YH0­È™XÚ[È[ÈŸ_B‚™Yˆ™]×ÛX\šÙ]ÜÝ\J
+N‚ˆ™]\›ˆÛ˜[YNžÊŠ˜[Y\Ë˜Ø\ÚŽŒN›\ÝØ[\ÈŽŒH›Üˆ˜[YK˜[Y\È[ˆPT’ÑUÔÕTQT”Ëš][\Ê
+_B‚™Yˆ™]×Ø\Ú[™\ÜÊZ[[™Ë›Ø—ÜÛÝËÝ\[™×ØØ\ÚML
+N‚ˆÛÝÏ[X^
+K[
+›Ø—ÜÛÝÊJBˆ™]\›ˆÈšYŽ™ˆ™š\›K^ØZ[[™ÖÉÞ	×_K^ØZ[[™ÖÉÞI×_H‹›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹ÛÛY\˜Ú[ÈØØ[ŠKˆœÝ]\ÈŽˆ˜XšY\È‹˜Ø\ÚŽœÝ\[™×ØØ\Úš›Ø”ÛÝÈŽœÛÝËš[™[ÜžHŽŒˆœšXÙHŽŒNš[œ]ÛÜÝŽKš[œ][™[ÜžHŽŒØYÙHŽŒLœ›ÙXÝ]š]HŽ‹Œ‹™š^YÛÜÝŽˆ˜Ü™Y]XŽŒ˜Ü™Y][Z]ŽœÛÝÊŒŒ˜Ü™Y]˜]HŽ‹Œ‹˜Ü™Y][[œ]Y[˜ÞS[ÛÈŽŒ›\ÝÜ™Y]˜]ÈŽŒ›\Ý[\™\ÝŽŒ›\Ý™\^[Y[ŽŒˆ›\ÝØ[\ÈŽŒ›\ÝØØ[Ø[\ÈŽŒ›\Ý™YÚ[Û˜[Ø[\ÈŽŒ›\ÝØØ[[X[™ŽŒ›\Ý™]™[YHŽŒ›\Ý[œ]ÈŽŒ›\Ý[œ][š]ÈŽŒ›\Ý[œ]Ý\Y\ˆŽˆ”Ú[ˆÛÛ\˜\È‹›\Ý[œ]ÚÜYÙHŽŒ›\Ý›ÙXÝ[ÛˆŽŒ›\Ý^\›ÛŽŒ›\Ý›Ùš]ŽŒ›\ÝÛÜšÙ\œÈŽŒ›\Ý[X[™ŽŒB‚’“Ð—Ô“Ñ’STÈHÂˆœÚÜŽˆ
+˜ÛÛY\˜Ú[È‹ÛÛY\˜Ú[È‹ÍJKˆ˜Ú]šXÈŽˆ
+œØ[Y‹][˜ÚpìÛˆØ[š]\šXH‹
+KˆœØÚÛÛŽˆ
+™YXØXÚ[Ûˆ‹‘ØÙ[˜ÚXH‹
+Kˆ™š\™TÝ][ÛˆŽˆ
+˜›ÛX™\›ÜÈ‹›ÛX™\›ÜÈ‹
+Kˆ™\ÝŽˆ
+›ÙÚ\ÝXØH‹“Ùðë\ÝXØH‹ŠKˆœÜŽˆ
+›ÙÚ\ÝXØH‹“Ùðë\ÝXØH‹ŠKˆ˜Z\œÜŽˆ
+›ÙÚ\ÝXØH‹“Ùðë\ÝXØH‹ŠKˆšÝ[Žˆ
+˜ÛÛY\˜Ú[È‹’Ý[\°ëXH‹ÍJKˆœÝÙ\”[Žˆ
+›ÙÚ\ÝXØH‹“Ü\˜XÚpìÛˆ[0êXÝšXØH‹ŠKˆØ]\”[Žˆ
+›ÙÚ\ÝXØH‹“Ü\˜XÚpìÛˆHYÝXH‹ŠKˆØ\Ý]Ø]\”[Žˆ
+›ÙÚ\ÝXØH‹“Ü\˜XÚpìÛˆØ[š]\šXH‹ŠKˆ›[™š[Žˆ
+›ÙÚ\ÝXØH‹‘Ù\ÝpìÛˆH™\ÚY[ÜÈ‹ŠKˆœ™XÞXÛ[™Ô[Žˆ
+›ÙÚ\ÝXØH‹”™XÝ\\˜XÚpìÛˆHX]\šX[\È‹ŠKŸB•RS’S‘×ÐÐUQÓÔ’QTÈHÈ˜ÛÛY\˜Ú[ÈŽŠÛÛY\˜Ú[È‹ÍJK˜YZ[š\Ý˜XÚ[ÛˆŽŠYZ[š\Ý˜XÚpìÛˆ‹
+K›ÙÚ\ÝXØHŽŠ“Ùðë\ÝXØH‹ŠKœØ[YŽŠ”Ø[Y‹
+K™YXØXÚ[ÛˆŽŠ‘YXØXÚpìÛˆ‹
+K˜›ÛX™\›ÜÈŽŠ›ÛX™\›ÜÈ‹
+_B•RS’S‘×ÔÑPUÏM‚•RS’S‘×ÓSÓ•ÏL‚•RS’S‘×ÐTÑWÓSÓ•WÐÓÔÕLN•RS’S‘×ÐÓÔÕÔT—ÔÕQS•M•RS’S‘×ÔÒÒSÑÐRSLN•T×ÔTÒTÑWÐÓÔÕMÌ•T×ÓSÓ•WÓÔTUS‘×ÐÓÔÕLM•T×ÑT‘OLŒB•T×ÕS”Ñ‘T—ÑTÐÓÕS•L•T×ÔÑPUÏLÌ•T×ÕÒS‘Õ×ÑTT•T‘TÏJˆ
+™X\›H‹ŒNŒ8 $ÌÎŒ‹KJK
+›[Ü›š[™ÔXZÈ‹ŒÎŒ8 $ÌNŒ‹KŒ
+K
+™^S[Ü›š[™È‹ŒNŒ8 $ÌLNŒ‹KÍJK
+™^S›ÛÛˆ‹ŒLNŒ8 $ÌLÎŒ‹KÍJKˆ
+›ZY^H‹ŒLÎŒ8 $ÌMNŒ‹KJK
+˜Y\››ÛÛˆ‹ŒMNŒ8 $ÌMÎŒ‹KJKˆ
+™]™[š[™ÔXZÈ‹ŒMÎŒ8 $ÌNNŒ‹KŒ
+K
+™]™[š[™È‹ŒNNŒ8 $ÌŒNŒ‹KÍJK
+›]H‹ŒŒNŒ8 $ÌŒÎŒ‹‹Œ
+JB•T×ÕÓÔ’×ÔÒQ•ÏJ
+™X\›H‹˜Y\››ÛÛˆŠK
+›[Ü›š[™ÔXZÈ‹™]™[š[™ÔXZÈŠK
+›ZY^H‹›]HŠJB‚™YˆÝX›WÜÚÚ[
+\œÛÛ—ÚYØ]YÛÜžJN‚ˆˆˆ•˜[Üˆ™\›ÙXÚX›HÛÛ\\YÈÛÛˆÙ™›[™K[™\[™Y[H[Ü™[ˆHØ\™ØKˆˆˆ‚ˆ˜[YOLŒMŒLÍŒŒBˆ›ÜˆÚ\ˆ[ˆˆžÜ\œÛÛ—ÚYNžØØ]YÛÜž_HŽ‚ˆ˜[YOJ
+˜[YHˆÜ™
+Ú\ŠJJŒMÍÍÍŒNJIŒ™™™™™™™‚ˆ™]\›ˆ˜[YB‚™Yˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠN‚ˆ\œÛÛ‹œÙ]Y˜][
+œÚÚ[È‹ßJBˆ›ÜˆØ]YÛÜžH[ˆ
+˜ÛÛY\˜Ú[È‹˜YZ[š\Ý˜XÚ[Ûˆ‹›ÙÚ\ÝXØH‹œØ[Y‹™YXØXÚ[Ûˆ‹˜›ÛX™\›ÜÈŠN‚ˆ\œÛÛ–ÈœÚÚ[È—KœÙ]Y˜][
+Ø]YÛÜžKJÜÝX›WÜÚÚ[
+\œÛÛ‹™Ù]
+šY‹ˆŠKØ]YÛÜžJIMÍŠBˆ\œÛÛ‹œÙ]Y˜][
+™^XÝY[ÛUØYÙH‹ÊÜÝX›WÜÚÚ[
+\œÛÛ‹™Ù]
+šY‹ˆŠKœØ[\š[ÈŠILÊBˆ\œÛÛ‹œÙ]Y˜][
+˜Ø\XØÙ\ÜÈ‹ÝX›WÜÚÚ[
+\œÛÛ‹™Ù]
+šY‹ˆŠK˜]]ÈŠILLJB‚™YˆÛÜšÜXÙWÜ›Ùš[JÚ]JN‚ˆØ]YÛÜžKX™[Z[š[][OR“Ð—Ô“Ñ’STË™Ù]
+Ú]K™Ù]
+šÚ[™ŠK
+˜ÛÛY\˜Ú[È‹ÛÛY\˜Ú[È‹ÍJJBˆš\›O\Ú]K™Ù]
+˜\Ú[™\ÜÈ‹ßJHYˆÚ]K™Ù]
+šÚ[™ŠH[ˆ
+œÚÜ‹šÝ[ŠH[ÙHßBˆØYÙO[X^
+K[
+š\›K™Ù]
+ØYÙH‹L
+HYˆÚ]K™Ù]
+šÚ[™ŠH[ˆ
+œÚÜ‹šÝ[ŠH[ÙHMYˆÚ]K™Ù]
+šÚ[™ŠH[ˆ
+œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[‹›[™š[‹œ™XÞXÛ[™Ô[ŠH[ÙHLˆYˆÚ]K™Ù]
+šÚ[™ŠH[ˆ
+˜Z\œÜ‹˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][ÛˆŠH[ÙH
+JBˆ™]\›ˆØ]YÛÜžKX™[Z[š[][KØYÙB‚™Yˆ˜Z[š[™×ØØ[™Y]\ÊØ]YÛÜžKÙ[\‹^ÛYYS›Û™JN‚ˆYˆØ]YÛÜžH›Ý[ˆRS’S‘×ÐÐUQÓÔ’QTÎœ™]\›ˆ×Bˆ^ÛYYY^ÛYYÜˆÙ]
+
+N×ËZ[š[][OURS’S‘×ÐÐUQÓÔ’QTÖØØ]YÛÜžWNØØ[™Y]\ÏV×Bˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒ
+N‚ˆ]\›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+Ù[\–Èž—KÙ[\–ÈžH—JJBˆYˆ›Ý]˜ÛÛ[YBˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JN‚ˆYˆ›Ý\œÛÛ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠHÜˆ\œÛÛ‹™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+˜\ØØ[™È‹™[\XYÈŠHÜˆ\œÛÛ‹™Ù]
+šYŠH[ˆ^ÛYY˜ÛÛ[YBˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠNÜÚÚ[\\œÛÛ–ÈœÚÚ[È—K™Ù]
+Ø]YÛÜžK
+BˆYˆÚÚ[[Z[š[][N˜ÛÛ[YBˆØ[™Y]\Ë˜\[™
+Èœ\œÛÛˆŽœ\œÛÛ‹šÛYHŽšÛYKœÚÚ[ŽœÚÚ[œÙX\˜Ú^\ÈŽ›X^
+Ý]K™Ù]
+™^H‹JKZ[
+\œÛÛ‹™Ù]
+[™[\ÞYYÚ[˜ÙQ^HŠHÜˆÝ]K™Ù]
+™^H‹JJJK™\Ý[˜ÙHŽ›[Š]
+KL_JBˆØ[™Y]\ËœÛÜ
+Ù^O[[X™H›ÝÎŠYˆ›ÝÖÈœ\œÛÛˆ—K™Ù]
+œÝ]\ÈŠOOH˜\ØØ[™Èˆ[ÙHK\›ÝÖÈœÙX\˜Ú^\È—K›ÝÖÈœÚÚ[—K›ÝÖÈ™\Ý[˜ÙH—K›ÝÖÈœ\œÛÛˆ—K™Ù]
+šY‹ˆŠJJBˆ™]\›ˆØ[™Y]\Â‚™Yˆ˜Z[š[™×ØØ][ÙÊ
+N‚ˆÙ[\œÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH˜Ú]šXÈˆ[™‹™Ù]
+œÝ]\È‹›Ü\˜]]›ÈŠH[ˆ
+›Ü\˜]]›È‹šXš[]YÈŠWBˆ›ÙÜ˜[\Ï\Ý]KœÙ]Y˜][
+˜Z[š[™Ô›ÙÜ˜[\È‹×JNÛØØÝ\YY^Ü™Ù]
+˜Ù[\’YŠH›Üˆ[ˆ›ÙÜ˜[\ÈYˆ™Ù]
+œÝ]\ÈŠH[ˆ
+˜XÝ]™H‹œ]\ÙYŠ_BˆXÝ]™WÝ˜Z[™Y\Ï^Ü\œÛÛ—ÚY›Üˆ[ˆ›ÙÜ˜[\ÈYˆ™Ù]
+œÝ]\ÈŠH[ˆ
+˜XÝ]™H‹œ]\ÙYŠH›Üˆ\œÛÛ—ÚY[ˆ™Ù]
+˜Z[™YRYÈ‹×J_Bˆ™\Ù\™Y\Ý[JX^
+™Ù]
+˜ÛÜÝ‹
+K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]K™Ù]
+›[Û™^H‹
+K\™\Ù\™Y
+Bˆ™\Ý[V×Bˆ›ÜˆØ]YÛÜžK
+X™[Z[š[][JH[ˆRS’S‘×ÐÐUQÓÔ’QTËš][\Ê
+N‚ˆÙ[\[™^
+
+ˆ›Üˆˆ[ˆÙ[\œÈYˆ‹™Ù]
+šY‹ˆ˜Ú]šXË^Ø–ÉÞ	×_K^Ø–ÉÞI×_HŠH›Ý[ˆØØÝ\YY
+KÙ[\œÖÌHYˆÙ[\œÈ[ÙH›Û™JBˆÙ[\—ÚYXÙ[\‹™Ù]
+šY‹ˆ˜Ú]šXË^ØÙ[\–ÉÞ	×_K^ØÙ[\–ÉÞI×_HŠHYˆÙ[\ˆ[ÙH›Û™BˆØ[™Y]\Ï]˜Z[š[™×ØØ[™Y]\ÊØ]YÛÜžKÙ[\‹XÝ]™WÝ˜Z[™Y\ÊHYˆÙ[\ˆ[ÙH×BˆÙX]Ï[Z[ŠRS’S‘×ÔÑPUË[ŠØ[™Y]\ÊJNÛ[ÛOURS’S‘×ÐTÑWÓSÓ•WÐÓÔÕ
+ÕRS’S‘×ÐÓÔÕÔT—ÔÕQS•
+œÙX]ÎÝÝ[[[ÛJ•RS’S‘×ÓSÓ•Âˆ™X\ÛÛHˆˆYˆÙ[\ˆ[™Ù[\—ÚY›Ý[ˆØØÝ\YY[™ÙX]È[™]˜Z[X›O]Ý[[ÙH”Ú[ˆ][H][šXÚ\[ˆYˆ›ÝÙ[\ˆ[ÙH][HØÝ\YHˆYˆÙ[\—ÚY[ˆØØÝ\YY[ÙH”Ú[ˆ™\ÚY[\ÈXØÙ\ÚX›\È]YH™XÙ\Ú][ˆ\ÝH›Ü›XXÚpìÛˆˆYˆ›ÝÙX]È[ÙH‘›Û™ÜÈ][šXÚ\[\ÈÛÛ\›ÛY]YÜÈ‚ˆ™\Ý[˜\[™
+È˜Ø]YÛÜžHŽ˜Ø]YÛÜžK›X™[Ž›X™[›Z[š[][TÚÚ[Ž›Z[š[][K˜Ù[\’YŽ˜Ù[\—ÚY˜Ù[\“˜[YHŽ˜Ù[\‹™Ù]
+›˜[YH‹][H][šXÚ\[ŠHYˆÙ[\ˆ[ÙH”Ú[ˆ][H‹˜]˜Z[X›PØ[™Y]\ÈŽ›[ŠØ[™Y]\ÊKœÙX]ÈŽœÙX]Ë™\˜][Û“[ÛÈŽ•RS’S‘×ÓSÓ•Ë›[ÛPÛÜÝŽ›[ÛKÝ[ÛÜÝŽÝ[œÚÚ[ØZ[”\“[ÛŽ•RS’S‘×ÔÒÒSÑÐRS‹˜Ø[”Ý\Ž››Ý™X\ÛÛ‹œ™X\ÛÛˆŽœ™X\ÛÛŸJBˆ™]\›ˆ™\Ý[‚™Yˆ›ØÙ\Ü×Ý˜Z[š[™×Ü›ÙÜ˜[\Ê
+N‚ˆˆˆ‘]™[™ØH[˜HÝ[ÝH™Yš[˜[˜ÚXYHHØ\XÚ]H[˜HÛÚÜH[ˆØYHØ[Xš[ÈHY\Ëˆˆˆ‚ˆ›Üˆ›ÙÜ˜[H[ˆÝ]KœÙ]Y˜][
+˜Z[š[™Ô›ÙÜ˜[\È‹×JN‚ˆYˆ›ÙÜ˜[K™Ù]
+œÝ]\ÈŠHOH˜XÝ]™HŽ˜ÛÛ[YBˆÙ[\[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH˜Ú]šXÈˆ[™‹™Ù]
+šY‹ˆ˜Ú]šXË^Ø–ÉÞ	×_K^Ø–ÉÞI×_HŠOO\›ÙÜ˜[K™Ù]
+˜Ù[\’YŠH[™‹™Ù]
+œÝ]\È‹›Ü\˜]]›ÈŠH[ˆ
+›Ü\˜]]›È‹šXš[]YÈŠJK›Û™JBˆYˆ›ÝÙ[\Ž‚ˆ›ÙÜ˜[K\]JÈœÝ]\ÈŽˆœ]\ÙY‹œ]\ÙT™X\ÛÛˆŽˆ‘[][H][šXÚ\[›È\Ý0èHÜ\˜]]˜HŸJNÙ]ŠÝ\œÛÈ]\ØYÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_Nˆ[][H][šXÚ\[Z°ìÈH\Ý\ˆÜ\˜]]˜NÈ[Ø[È™\Ù\˜YÈÙHÛÛœÙ\˜KˆŠNØÛÛ[YBˆÛY\Ï^Ü\œÛÛ‹™Ù]
+šYŠNšÛYH›ÜˆÛYH[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆÛYK™Ù]
+šÚ[™ŠOOHšÛYHˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×J_NØXØÙ\ÜÚX›OV×Bˆ›Üˆ\œÛÛ—ÚY[ˆ›ÙÜ˜[K™Ù]
+˜Z[™YRYÈ‹×JN‚ˆÛYOZÛY\Ë™Ù]
+\œÛÛ—ÚY
+BˆYˆÛYH[™›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+Ù[\–Èž—KÙ[\–ÈžH—JJN‚ˆ\œÛÛ[™^
+
+›Üˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JHYˆ™Ù]
+šYŠOO\\œÛÛ—ÚY
+K›Û™JBˆYˆ\œÛÛŽ˜XØÙ\ÜÚX›K˜\[™
+\œÛÛŠBˆYˆ›ÝXØÙ\ÜÚX›N‚ˆ›ÙÜ˜[K\]JÈœÝ]\ÈŽˆœ]\ÙY‹œ]\ÙT™X\ÛÛˆŽˆ“HÛÚÜH\™pìÈXØÙ\ÛÈšX[[][HŸJNÙ]ŠÝ\œÛÈ]\ØYÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_NˆHÛÚÜH›ÈYYHYØ\ˆ[][NÈ[Ø[È™\Ù\˜YÈÙHÛÛœÙ\˜KˆŠNØÛÛ[YBˆ[œÝ[Y[[Z[Š›ÙÜ˜[K™Ù]
+›[ÛPÛÜÝ‹
+K›ÙÜ˜[K™Ù]
+œ™[XZ[š[™ÐYÙ]‹
+JBˆ›Üˆ\œÛÛˆ[ˆXØÙ\ÜÚX›N‚ˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠNÜ\œÛÛ–ÈœÚÚ[È—VÜ›ÙÜ˜[VÈ˜Ø]YÛÜžH—WO[Z[ŠL\œÛÛ–ÈœÚÚ[È—K™Ù]
+›ÙÜ˜[VÈ˜Ø]YÛÜžH—K
+JÜ›ÙÜ˜[K™Ù]
+œÚÚ[ØZ[”\“[Û‹RS’S‘×ÔÒÒSÑÐRSŠJBˆ›ÙÜ˜[VÈœ™[XZ[š[™ÐYÙ]—O[X^
+›ÙÜ˜[K™Ù]
+œ™[XZ[š[™ÐYÙ]‹
+KZ[œÝ[Y[
+NÜ›ÙÜ˜[VÈœÜ[—O\›ÙÜ˜[K™Ù]
+œÜ[‹
+JÚ[œÝ[Y[Ü›ÙÜ˜[VÈ›[ÛÐÛÛ\]Y—O\›ÙÜ˜[K™Ù]
+›[ÛÐÛÛ\]Y‹
+JÌNÜ›ÙÜ˜[VÈ›\Ý˜Z[š[™Ñ^H—O\Ý]VÈ™^H—Bˆ›ÙÜ˜[VÈ˜Z[™YT›ÙÜ™\ÜÈ—O^Ü\œÛÛ‹™Ù]
+šYŠNœ\œÛÛ–ÈœÚÚ[È—VÜ›ÙÜ˜[VÈ˜Ø]YÛÜžH—WH›Üˆ\œÛÛˆ[ˆXØÙ\ÜÚX›_BˆYˆ›ÙÜ˜[VÈ›[ÛÐÛÛ\]Y—O\›ÙÜ˜[K™Ù]
+™\˜][Û“[ÛÈ‹RS’S‘×ÓSÓ•ÊN‚ˆ›ÙÜ˜[VÈœÝ]\È—OH˜ÛÛ\]YŽÜ›ÙÜ˜[VÈ˜ÛÛ\]Y^H—O\Ý]VÈ™^H—NÙ]ŠÝ\œÛÈ][šXÚ\[ÛÛ\]YÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_NˆÛ[ŠXØÙ\ÜÚX›J_H™\ÚY[\È\›Z[˜\›Ûˆ˜\ÈÜ›ÙÜ˜[VÉÙ\˜][Û“[ÛÉ×_HÚXÛÜÎÈ][Y[\›ÛˆÝHXš[YYÜ›ÙÜ˜[VÉØØ]YÛÜžI×_KˆŠBˆ[ÙN™]ŠÚXÛÈH›Ü›XXÚpìÛˆ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_NˆÚXÛÈÜ›ÙÜ˜[VÉÛ[ÛÐÛÛ\]Y	×_KÞÜ›ÙÜ˜[VÉÙ\˜][Û“[ÛÉ×_KÛ[ŠXØÙ\ÜÚX›J_H\XÚ\[\ÈYZ›Ü˜\›ÛˆÕRS’S‘×ÔÒÒSÑÐRSŸH[ÜËˆØ[È	Ü›ÙÜ˜[VÉÜ™[XZ[š[™ÐYÙ]	×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJB‚™Yˆ™]×Ùš[˜[˜ÙJ
+N‚ˆ™]\›ˆÈ˜\Ú[™\ÜÐ˜[šÈŽžÈ›˜[YHŽˆ˜[˜ÛÈÛÛÜ\˜]]›È‹›\]ZY]HŽŒ›X^\]ZY]HŽŒ˜[›X[˜]HŽ‹ŒK›][šXÚ\[Ø[œÈŽ–×K™X™\Ù\™HŽŒ™X™\Ù\™R\ÝÜžHŽ–×Kœ›ÙÜ˜[PYÙ]ÈŽžÈœÙ\šXÙ\ÔÝŽŒL›[Øš[]TÝŽŒL›™]ÛÜšÜÔÝŽŒL˜\œ™X\œÈŽžÈœÙ\šXÙ\ÈŽŒ›[Øš[]HŽŒ›™]ÛÜšÜÈŽŒK[™\™[™Y[ÛÈŽžÈœÙ\šXÙ\ÈŽŒ›[Øš[]HŽŒ›™]ÛÜšÜÈŽŒK›\Ý™\ÜŽžßKš\ÝÜžHŽ–×__B‚™Yˆ™]×Ý^ÜÝ]J
+N‚ˆ™]\›ˆÈœ›Ü\T˜]PœŽŒ˜\Ú[™\ÜÔ˜]PœŽŒŒ˜\œ™X\œÐžP\ÜÙ]ŽžßK›\Ý™\ÜŽžßK›\Ý›ØÙ\ÜÙY[ÛŽŒš\ÝÜžHŽ–×_B‚’T’UQÑWÑ“ÕS‘S‘×ÖQPT”Ï^È“][šXÚ\[YYŽŒNM‹“Y\˜ØYÈÙ[˜[ŽŒNM˜\œš[È\ÝXÚpìÛˆŽŒNMLKØ\Ø\È[Ù\ÝHŽŒNMMË”\ØZ™H[[Û[›ÈŽŒNMNKØY°êH\ÝXÚpìÛˆŽŒNMŒË[XXðê[ˆ[Ù\ÝHŽŒNMK‘Ø[\°ëXHÙ[˜[ŽŒNMŽB’T’UQÑWÓPUT’PSÏ^È˜YÙÜ™YØ]HŽ‹œÝY[ŽŒË[X™\ˆŽ˜ÛÛ\Û™[ÈŽŒßB‚™Yˆ[œÝ\™WÚ\š]YÙWÜÝ]J
+N‚ˆÝ\œ™[ÞYX\LŒŠÊX^
+[
+Ý]K™Ù]
+™^H‹JJKLJKËÌÍŒ
+BˆÝ]KœÙ]Y˜][
+š\š]YÙUÛÜšÜÈ‹×JNÜÝ]KœÙ]Y˜][
+š\š]YÙR\ÝÜžH‹×JBˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆ˜[YOXZ[[™Ë™Ù]
+›˜[YH‹ˆŠBˆY˜][ÞYX\RT’UQÑWÑ“ÕS‘S‘×ÖQPT”Ë™Ù]
+˜[YKÝ\œ™[ÞYX\ŠBˆZ[[™ËœÙ]Y˜][
+žYX\Z[‹Y˜][ÞYX\ŠBˆZ[[™ËœÙ]Y˜][
+˜\˜Ú]XÝ\˜[\˜H‹‘[™XÚpìÛˆ\˜˜[˜HˆYˆZ[[™ÖÈžYX\Z[—ONML[ÙH‘^[œÚpìÛˆðë]šXØHˆYˆZ[[™ÖÈžYX\Z[—ONMÌ[ÙH“[Ù\›š^˜XÚpìÛˆŠBˆZ[[™ËœÙ]Y˜][
+˜\˜Ú]XÝ\˜[Ý[H‹\˜Ú]XÝ\˜[ÜÝ[WÙ›ÜŠZ[[™ÖÈžYX\Z[—JJBˆZ[[™ËœÙ]Y˜][
+›ÜšYÚ[˜[\ÙH‹ÈšÛYHŽˆ•š]šY[™H‹œÚÜŽˆÛÛY\˜Ú[È‹˜Ú]šXÈŽˆ”Ù\šXÚ[È0î˜›XÛÈŸK™Ù]
+Z[[™Ë™Ù]
+šÚ[™ŠKZ[[™Ë™Ù]
+šÚ[™‹’[›]YX›HŠJJBˆZ[[™ËœÙ]Y˜][
+œ™[›Ý˜][ÛœÈ‹×JNØZ[[™ËœÙ]Y˜][
+˜ÛÛœÙ\˜][Ûˆ‹LˆYˆZ[[™ÖÈžYX\Z[—ONMÌ[ÙHL
+BˆYˆ˜[YH[ˆT’UQÑWÑ“ÕS‘S‘×ÖQPT”Î‚ˆZ[[™ËœÙ]Y˜][
+š\š]YÙQ[YÚX›H‹YJNØZ[[™ËœÙ]Y˜][
+š\š]YÙTÚYÛšYšXØ[˜ÙH‹ÈYˆ˜[YH[ˆ
+“][šXÚ\[YY‹“Y\˜ØYÈÙ[˜[‹˜\œš[È\ÝXÚpìÛˆŠH[ÙHŠBˆZ[[™ËœÙ]Y˜][
+š\š]YÙS]™[‹š[™[\šXYÈŠBˆ[ÙN‚ˆZ[[™ËœÙ]Y˜][
+š\š]YÙQ[YÚX›H‹˜[ÙJNØZ[[™ËœÙ]Y˜][
+š\š]YÙTÚYÛšYšXØ[˜ÙH‹
+NØZ[[™ËœÙ]Y˜][
+š\š]YÙS]™[‹œÚ[ˆØ][ÙØ\ˆŠBˆZ[[™ÖÈ˜ÛÛœÙ\˜][Ûˆ—O[X^
+Z[ŠL[
+Z[[™ÖÈ˜ÛÛœÙ\˜][Ûˆ—JJJBˆÝ]KœÙ]Y˜][
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JNÜÝ]KœÙ]Y˜][
+˜Y\]™T™]\ÙR\ÝÜžH‹×JBˆÝ]VÈ™\œÚ[Ûˆ—O[X^
+LË[
+Ý]K™Ù]
+™\œÚ[Ûˆ‹JJJB‚™Yˆ\˜Ú]XÝ\˜[ÜÝ[WÙ›ÜŠYX\ŠN‚ˆYˆYX\NMLœ™]\›ˆ•˜YXÚ[Û˜[‚ˆYˆYX\NMÌœ™]\›ˆ‘^[œÚpìÛˆðë]šXØH‚ˆYˆYX\NNLœ™]\›ˆ“[Ù\››È‚ˆYˆYX\ŒLœ™]\›ˆÛÛ[\Ü°è[™[È‚ˆ™]\›ˆXÝX[‚‚™Yˆ[œÝ\™WÝ\˜˜[—Ù]›Û][Û—ÜÝ]J
+N‚ˆYX\LŒŠÊX^
+[
+Ý]K™Ù]
+™^H‹JJKLJKËÌÍŒ
+Bˆ]›Û][Û\Ý]KœÙ]Y˜][
+\˜˜[‘]›Û][Ûˆ‹È›\Ý›ØÙ\ÜÙYYX\ˆŽžYX\‹š\ÝÜžHŽ–×K›\Ýš\YX\ˆŽŒŒŸJBˆ]›Û][Û‹œÙ]Y˜][
+›\Ý›ØÙ\ÜÙYYX\ˆ‹YX\ŠNÙ]›Û][Û‹œÙ]Y˜][
+š\ÝÜžH‹×JNÙ]›Û][Û‹œÙ]Y˜][
+›\Ýš\YX\ˆ‹ŒŠBˆÝ]KœÙ]Y˜][
+\˜˜[”™[™]Ø[™YYÈ‹×JNÜÝ]KœÙ]Y˜][
+\˜˜[”™[™]Ø[ÛÜšÜÈ‹×JNÜÝ]KœÙ]Y˜][
+\˜˜[”™[™]Ø[\ÝÜžH‹×JBˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆZ[[™Ë™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠN‚ˆZ[[™ËœÙ]Y˜][
+\˜˜[ÛÛ™][Ûˆ‹›Ø]
+Z[[™Ë™Ù]
+œ]X[]H‹YˆZ[[™Ë™Ù]
+šÚ[™ŠOOHšÛYHˆ[ÙHL
+JJBˆZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—O[X^
+Z[ŠL›Ø]
+Z[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—JJJBˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠN‚ˆ›Üˆ[™^\œÛÛˆ[ˆ[[Y\˜]JÛYKœÙ]Y˜][
+œ™\ÚY[È‹×JJN‚ˆYˆ\œÛÛ‹™Ù]
+˜YÙHŠH\È›Û™N‚ˆ˜[˜XÚ×ÚYYˆžÚÛYK™Ù]
+	Þ	Ë
+_K^ÚÛYK™Ù]
+	ÞIË
+_K^Ú[™^H‚ˆÙYY\ÝŠ\œÛÛ‹™Ù]
+	ÚY	ÊHÜˆ˜[˜XÚ×ÚY
+BˆÛÚÜ\ÝX›WÜÚÚ[
+ÙYY™YYŠILLˆ\œÛÛ–È˜YÙH—OJN
+ÜÝX›WÜÚÚ[
+ÙYY™YY[X›Ü˜[ŠIMÊHYˆ\œÛÛ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠH[ÙH
+JØÛÚÜ	LLÈYˆÛÚÜÍˆ[ÙHÊØÛÚÜ	LŒ
+Bˆ\œÛÛ–È˜YÙH—O[X^
+[
+\œÛÛ–È˜YÙH—JJBˆ\œÛÛ‹œÙ]Y˜][
+›Y™TÝYÙH‹š[™˜[˜ÚXHˆYˆ\œÛÛ–È˜YÙH—ON[ÙHšXš[XÚpìÛˆˆYˆ\œÛÛ–È˜YÙH—OMÈ[ÙHšYHX›Ü˜[ŠB‚™Yˆ\˜˜[—Ù]›Û][Û—Ü™\Ü
+
+N‚ˆYX\LŒŠÊX^
+[
+Ý]K™Ù]
+™^H‹JJKLJKËÌÍŒ
+NÙ\ÝšXÝÏV×Bˆ›Üˆ\ÝšXÝÚY˜[YKZ[‹X^[ˆ
+
+›Ù\ÝH‹“Ù\ÝH‹L
+K
+˜Ù[›È‹Ù[›È‹LN
+K
+œY\È‹”Y\È‹NL
+JN‚ˆÛY\ÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™Z[X‹™Ù]
+ž‹
+OX^Bˆ[ÜOVÜ›Üˆ[ˆÛY\È›Üˆ[ˆ™Ù]
+œ™\ÚY[È‹×JWBˆZ[[™ÜÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆZ[X‹™Ù]
+ž‹
+OX^BˆYÙ\ÏVÜ™Ù]
+˜YÙH‹
+H›Üˆ[ˆ[ÜWBˆ\ÝšXÝË˜\[™
+ÈšYŽ™\ÝšXÝÚY›˜[YHŽ›˜[YKœÜ[][ÛˆŽœÝ[J[
+™Ù]
+›ØØÝ\[È‹
+JH›Üˆ[ˆÛY\ÊK˜Ú[™[ˆŽœÝ[JON›ÜˆH[ˆYÙ\ÊKÛÜšÚ[™ÐYÙHŽœÝ[JNXOÈ›ÜˆH[ˆYÙ\ÊKœ™]\™YŽœÝ[JOMÈ›ÜˆH[ˆYÙ\ÊK˜]™\˜YÙPYÙHŽœ›Ý[™
+Ý[JYÙ\ÊKÛX^
+K[ŠYÙ\ÊJKJK˜Z[[™ÜÈŽ›[ŠZ[[™ÜÊK›Û\Z[[™ÜÈŽœÝ[JYX\‹Z[
+‹™Ù]
+žYX\Z[‹YX\ŠJOLÌ›Üˆˆ[ˆZ[[™ÜÊKœ™[™]Ø[™YYÈŽœÝ[J‹™Ù]
+™\ÝšXÝYŠOOY\ÝšXÝÚY[™‹™Ù]
+œÝ]\ÈŠOOH™\ÜÛšX›Hˆ›Üˆˆ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[™YYÈ‹×JJ_JBˆZ[[™ÜÏ\Ý]K™Ù]
+˜Z[[™ÜÈ‹×JNØÛÛ™][ÛœÏVØ‹™Ù]
+\˜˜[ÛÛ™][Ûˆ‹L
+H›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠWBˆ™]\›ˆÈžYX\ˆŽžYX\‹™XØYHŽžYX\‹ËÌL
+ŒL™\ÝšXÝÈŽ™\ÝšXÝËœÜ[][ÛˆŽœÝ[JÈœÜ[][Ûˆ—H›Üˆ[ˆ\ÝšXÝÊK˜Ú[™[ˆŽœÝ[JÈ˜Ú[™[ˆ—H›Üˆ[ˆ\ÝšXÝÊKÛÜšÚ[™ÐYÙHŽœÝ[JÈÛÜšÚ[™ÐYÙH—H›Üˆ[ˆ\ÝšXÝÊKœ™]\™YŽœÝ[JÈœ™]\™Y—H›Üˆ[ˆ\ÝšXÝÊK˜]™\˜YÙPYÙHŽœ›Ý[™
+Ý[J™Ù]
+˜YÙH‹
+H›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ›Üˆ[ˆ‹™Ù]
+œ™\ÚY[È‹×JJKÛX^
+KÝ[J[Š‹™Ù]
+œ™\ÚY[È‹×JJH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠJKJK˜YÚ[™ÐZ[[™ÜÈŽœÝ[JYX\‹Z[
+‹™Ù]
+žYX\Z[‹YX\ŠJOLÌ›Üˆˆ[ˆZ[[™ÜÊK˜]™\˜YÙPÛÛ™][ÛˆŽœ›Ý[™
+Ý[JÛÛ™][ÛœÊKÛX^
+K[ŠÛÛ™][ÛœÊJKJKœ™[™]Ø[™YYÈŽ–ÙXÝ
+ŠH›Üˆˆ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[™YYÈ‹×JHYˆ‹™Ù]
+œÝ]\ÈŠOOH™\ÜÛšX›H—KÛÜšÜÈŽ–ÙXÝ
+ÊH›ÜˆÈ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[ÛÜšÜÈ‹×JWKœ™[™]Ø[\ÝÜžHŽ–ÙXÝ
+ÊH›ÜˆÈ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[\ÝÜžH‹×JVËN—WKš\ÝÜžHŽœÝ]K™Ù]
+\˜˜[‘]›Û][Ûˆ‹ßJK™Ù]
+š\ÝÜžH‹×JVËMN—_B‚™YˆY˜[˜ÙWÝ\˜˜[—Ù]›Û][ÛŠ
+N‚ˆYX\LŒŠÊX^
+[
+Ý]K™Ù]
+™^H‹JJKLJKËÌÍŒ
+NÙ]›Û][Û\Ý]KœÙ]Y˜][
+\˜˜[‘]›Û][Ûˆ‹È›\Ý›ØÙ\ÜÙYYX\ˆŽžYX\‹LKš\ÝÜžHŽ–×K›\Ýš\YX\ˆŽŒŒŸJBˆ™]š[Ý\ÏZ[
+]›Û][Û‹™Ù]
+›\Ý›ØÙ\ÜÙYYX\ˆ‹YX\‹LJJBˆYˆYX\\™]š[Ý\Îœ™]\›‚ˆYX\œÏ[Z[ŠLYX\‹\™]š[Ý\ÊNØY[Ï\™]\™YXš\ÏLˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠN‚ˆ›Üˆ\œÛÛˆ[ˆÛYKœÙ]Y˜][
+œ™\ÚY[È‹×JN‚ˆÛZ[
+\œÛÛ‹™Ù]
+˜YÙH‹
+JNÛ™]Ï[Z[ŠLŒÛ
+ÞYX\œÊNÜ\œÛÛ–È˜YÙH—O[™]ÂˆYˆÛN[™]Î‚ˆ\œÛÛ‹\]JÈÛÜšÙ\‘[YÚX›HŽ•YKœÝ]\ÈŽˆ˜\ØØ[™È‹™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒ[™[\ÞYYÚ[˜ÙQ^HŽœÝ]K™Ù]
+™^H‹JK[™[\Þ[Y[™X\ÛÛˆŽˆ˜[Ø[ž°ìÈYYX›Ü˜[ŸJNÜ\œÛÛ–È›Y™TÝYÙH—OHšYHX›Ü˜[ŽØY[ÊÏLBˆ]Š”™\ÚY[HÙH[˜ÛÜœÜ˜H[Y\˜ØYÈX›Ü˜[‹ˆ•[ˆ™\ÚY[HHÚÛYK™Ù]
+	Û˜[YIË	Ý[ˆÙØ\‰Ê_H[Ø[ž°ìÈÜÈNpì[ÜÈH\ØØH[ˆY\ÝÈÛÛ\]X›HÛÛˆÝ\ÈXš[YY\ËˆŠBˆ[YˆÛÏ[™]Î‚ˆYˆ\œÛÛ‹™Ù]
+œÝ]\ÈŠOOH™[\XYÈŽœ\œÛÛ‹\]JÈœ™]š[Ý\Ñ[\ÞY\ˆŽœ\œÛÛ‹™Ù]
+™[\ÞY\“˜[YHŠKœ™]š[Ý\Ñ[\ÞY\’YŽœ\œÛÛ‹™Ù]
+™[\ÞY\’YŠK™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒJBˆ\œÛÛ‹\]JÈÛÜšÙ\‘[YÚX›HŽ‘˜[ÙKœÝ]\ÈŽˆšXš[YÈ‹[™[\ÞYYÚ[˜ÙQ^HŽ“›Û™K[™[\Þ[Y[™X\ÛÛˆŽ“›Û™K›Y™TÝYÙHŽˆšXš[XÚpìÛˆŸJNÜ™]\™Y
+ÏLBˆ]Š”™\ÚY[H[šXÚXHÝHXš[XÚpìÛˆ‹ˆ•[˜H\œÛÛ˜HHÚÛYK™Ù]
+	Û˜[YIË	Ý[ˆÙØ\‰Ê_HZ°ìÈHšYHX›Ü˜[ÈH˜XØ[H]YYH\ÜÛšX›H\˜H[Y\˜ØYÈH[\[ËˆŠBˆ[ÙNœ\œÛÛ–È›Y™TÝYÙH—OHš[™˜[˜ÚXHˆYˆ™]ÏN[ÙHšXš[XÚpìÛˆˆYˆ™]ÏMÈ[ÙHšYHX›Ü˜[‚ˆ›ÜˆZ[[™È[ˆ
+ˆ›Üˆˆ[ˆ
+Ý]K™Ù]
+˜Z[[™ÜÈ‹×JJHYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠJN‚ˆYÙO[X^
+YX\‹Z[
+Z[[™Ë™Ù]
+žYX\Z[‹YX\ŠJJBˆYˆYÙOLŒ˜ÛÛ[YBˆ™[™]Ø[[™^
+
+È›ÜˆÈ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[ÛÜšÜÈ‹×JHYˆË™Ù]
+žŠOOXZ[[™Ë™Ù]
+žŠH[™Ë™Ù]
+žHŠOOXZ[[™Ë™Ù]
+žHŠJK›Û™JBˆYˆ™[™]Ø[˜ÛÛ[YBˆÙX\KŒÈYˆYÙOM[ÙHMHYˆYÙOMŒ[ÙHŽˆZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—O\›Ý[™
+X^
+K›Ø]
+Z[[™Ë™Ù]
+\˜˜[ÛÛ™][Ûˆ‹
+JK]ÙX\ŠKJBˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHšÛYHŽ˜Z[[™ÖÈœ]X[]H—O\›Ý[™
+Z[Š›Ø]
+Z[[™Ë™Ù]
+œ]X[]H‹
+JKZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—JKJBˆYˆZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—OÌ[™›Ý[žJ‹™Ù]
+žŠOOXZ[[™Ë™Ù]
+žŠH[™‹™Ù]
+žHŠOOXZ[[™Ë™Ù]
+žHŠH[™‹™Ù]
+œÝ]\ÈŠOOH™\ÜÛšX›Hˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+\˜˜[”™[™]Ø[™YYÈ‹×JJN‚ˆ\ÝšXÝH›Ù\ÝHˆYˆZ[[™Ë™Ù]
+ž‹
+OL[ÙH˜Ù[›ÈˆYˆZ[[™Ë™Ù]
+ž‹
+ON[ÙHœY\ÈŽÛ˜[YOXZ[[™Ë™Ù]
+›˜[YH‹Z[[™Ë™Ù]
+šÚ[™‹’[›]YX›HŠJNÙ\Ý[X]OL
+Ü›Ý[™
+
+ÌXZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—JJŽMJJÊLYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHœÚÜˆ[ÙH
+Bˆ™YY^ÈšYŽ™ˆœ™[™]Ø[^ØZ[[™ÖÉÞ	×_K^ØZ[[™ÖÉÞI×_K^ÞYX\ŸH‹žŽ˜Z[[™ÖÈž—KžHŽ˜Z[[™ÖÈžH—K™\ÝšXÝYŽ™\ÝšXÝ›˜[YHŽ›˜[YKšÚ[™Ž˜Z[[™ÖÈšÚ[™—KžYX\Z[Ž˜Z[[™Ë™Ù]
+žYX\Z[‹YX\ŠK˜YÙHŽ˜YÙK˜ÛÛ™][ÛˆŽ˜Z[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—K™\Ý[X]HŽ™\Ý[X]KœÝ]\ÈŽˆ™\ÜÛšX›H‹›Ü[™YYX\ˆŽžYX\ŸBˆÝ]VÈ\˜˜[”™[™]Ø[™YYÈ—K˜\[™
+™YY
+NÙ]Š’[›]YX›H[™Z™XÚYÈ™XÙ\Ú]H™[›Ý˜XÚpìÛˆ‹ˆžÛ˜[Y_HY[™HØYÙ_Hpì[ÜÈHÛÛ™XÚpìÛˆØZ[[™ÖÉÝ\˜˜[ÛÛ™][Û‰×_IKˆ[›ÜY]\š[ÈYYHš[˜[˜ÚX\ˆ[˜H™ZXš[]XÚpìÛˆÛÛˆX]\šX[\ËÝXYš[HH\›Z\ÛÎÈÚH›ÈÙH[šY\K[\ÙØ\ÝHÛÛ[X\°èKˆŠBˆYˆYX\ŒŒˆ[™
+YX\‹LŒŠIMOL[™[
+]›Û][Û‹™Ù]
+›\Ýš\YX\ˆ‹ŒŠJOYX\Ž‚ˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+O‹™Ù]
+˜Ø\XÚ]H‹
+H[™‹™Ù]
+šÝ\ÙZÛØ\Ú‹
+OLN[™‹™Ù]
+˜š\ÔÚ[˜ÙLŒˆ‹
+OÊN‚ˆ™\[OX[žJZ[
+™Ù]
+˜YÙH‹
+JOM›Üˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JJBˆYˆ›Ý™\[N˜ÛÛ[YBˆÛYVÈšÝ\ÙZÛØ\Ú—KOLNÚÛYVÈ›ØØÝ\[È—JÏLNÚÛYVÈ˜š\ÔÚ[˜ÙLŒˆ—OZÛYK™Ù]
+˜š\ÔÚ[˜ÙLŒˆ‹
+JÌNØš\ÊÏLBˆ\œÛÛ^ÈšYŽ™ˆ˜š\^ÞYX\ŸK^ÚÛYVÉÞ	×_K^ÚÛYVÉÞI×_H‹˜YÙHŽŒ›Y™TÝYÙHŽˆš[™˜[˜ÚXH‹ÛÜšÙ\‘[YÚX›HŽ‘˜[ÙKœÝ]\ÈŽˆš[˜XÝ]›È‹™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒ˜š\YX\ˆŽžYX\ŸBˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠNÚÛYKœÙ]Y˜][
+œ™\ÚY[È‹×JK˜\[™
+\œÛÛŠBˆYˆš\Î‚ˆÝ]VÈœÜ[][Ûˆ—O\Ý]K™Ù]
+œÜ[][Ûˆ‹
+JØš\Âˆ]Š“˜XÚ[ZY[ÜÈ[ˆÙØ\™\ÈHHÚ]YY‹ˆ“˜XÚY\›ÛˆØš\ßH™\ÚY[\È[ˆÙØ\™\ÈÛÛˆY[ÜÈH8 $Ípì[ÜË˜XØ[\ÈH›Û™ÜÈ˜[Z[X\™\È\˜HÝZYYÜÈ[šXÚX[\È
+	NÜˆÙØ\ŠKˆH[X[™HHØ[YHYXØXÚpìÛˆÜ™XÙ\°èHÛÛˆ[ÜËˆŠBˆ]›Û][Û–È›\Ýš\YX\ˆ—O^YX\‚ˆ]›Û][Û–È›\Ý›ØÙ\ÜÙYYX\ˆ—O^YX\‚ˆYˆYX\‰LLOL‚ˆ™\Ü]\˜˜[—Ù]›Û][Û—Ü™\Ü
+
+NÜ™XÛÜ™^ÚÎœ™\ÜÚ×H›ÜˆÈ[ˆ
+žYX\ˆ‹œÜ[][Ûˆ‹˜Ú[™[ˆ‹ÛÜšÚ[™ÐYÙH‹œ™]\™Y‹˜]™\˜YÙPYÙH‹˜YÚ[™ÐZ[[™ÜÈ‹˜]™\˜YÙPÛÛ™][ÛˆŠ_NÙ]›Û][Û‹œÙ]Y˜][
+š\ÝÜžH‹×JK˜\[™
+™XÛÜ™
+NÙ]›Û][Û–Èš\ÝÜžH—OY]›Û][Û–Èš\ÝÜžH—VËLŒ—Bˆ]Š˜[[˜ÙHH0êXØYH\˜˜[˜H‹ˆpì[ÈÞYX\ŸNˆØ›XÚpìÛˆÜ™XÛÜ™ÉÜÜ[][Û‰×_H0­ÈYYYYXHÜ™XÛÜ™ÉØ]™\˜YÙPYÙI×_H0­ÈÜ™XÛÜ™ÉØÚ[™[‰×_HY[›Ü™\ËÜ™XÛÜ™ÉÝÛÜšÚ[™ÐYÙI×_H[ˆYYX›Ü˜[HÜ™XÛÜ™ÉÜ™]\™Y	×_HXš[YÜÈ0­ÈÜ™XÛÜ™ÉØYÚ[™ÐZ[[™ÜÉ×_H[›]YX›\ÈÛÛˆÌpì[ÜÈÈpè\Ëˆ\ÈØœ˜\ÈH]Y[ž˜\ÈÚYÝY[ˆXÝ]˜\È[Ø[XšX\ˆH0êXØYKˆŠB‚™YˆY˜[˜ÙWÝ\˜˜[—Ü™[™]Ø[Ê
+N‚ˆ›ÜˆÛÜšÈ[ˆ\Ý
+Ý]KœÙ]Y˜][
+\˜˜[”™[™]Ø[ÛÜšÜÈ‹×JJN‚ˆÛÜšÖÈ™[\ÙY^\È—O]ÛÜšË™Ù]
+™[\ÙY^\È‹
+JÌNÝÛÜšÖÈœ›ÙÜ™\ÜÈ—O[Z[ŠKÛÜšÖÈ™[\ÙY^\È—KÛX^
+KÛÜšÖÈ™\˜][Û‘^\È—JJNÝÛÜšÖÈœÝYÙH—OH”™YY\ž›È\ÝXÝ\˜[ˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OŒÍH[ÙH’[œÝ[XÚ[Û™\ÈH™[›Ý˜XÚpìÛˆH˜XÚYHˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OŽH[ÙH’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ‚ˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—ON˜ÛÛ[YBˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO]ÛÜšÖÈž—H[™‹™Ù]
+žHŠOO]ÛÜšÖÈžH—JK›Û™JBˆYˆZ[[™Î‚ˆZ[[™ÖÈ\˜˜[ÛÛ™][Ûˆ—ONNØZ[[™ÖÈœ]X[]H—O[X^
+Z[[™Ë™Ù]
+œ]X[]H‹
+KJHYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHšÛYHˆ[ÙHZ[[™Ë™Ù]
+œ]X[]H‹JNØZ[[™ÖÈ›\Ý\˜˜[”™[™]Ø[YX\ˆ—OLŒŠÊÝ]K™Ù]
+™^H‹JKLJKËÌÍŒØZ[[™ÖÈ˜\˜Ú]XÝ\˜[Ý[H—OHÛÛ[\Ü°è[™[È™ZXš[]YÈŽØZ[[™ËœÙ]Y˜][
+œ™[›Ý˜][ÛœÈ‹×JK˜\[™
+ÈžYX\ˆŽŒŒŠÊÝ]K™Ù]
+™^H‹JKLJKËÌÍŒ™^HŽœÝ]K™Ù]
+™^H‹JK˜ÛÛ˜XÝÜˆŽÛÜšÖÈ˜ÛÛ˜XÝÜˆ—K˜ÛÜÝŽÛÜšÖÈ˜ÛÜÝ—KœØÛÜHŽˆ”™ZXš[]XÚpìÛˆš]˜YHHÚXÛÈ\™ÛÈŸJBˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHšÛYHŽ˜Z[[™ÖÈ˜Ø\XÚ]H—OXZ[[™Ë™Ù]
+˜Ø\XÚ]H‹
+JÌ‚ˆ™YY[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[™YYÈ‹×JHYˆ‹™Ù]
+šYŠOO]ÛÜšË™Ù]
+›™YYYŠJK›Û™JBˆYˆ™YY›™YY\]JÈœÝ]\ÈŽˆœ™ZXš[]YH‹˜ÛÛ\]Y^HŽœÝ]K™Ù]
+™^H‹J_JBˆÝ]KœÙ]Y˜][
+\˜˜[”™[™]Ø[\ÝÜžH‹×JK˜\[™
+ÊŠÛÜšËœÝ]\ÈŽˆ˜ÛÛ\]YH‹˜ÛÛ\]Y^HŽœÝ]K™Ù]
+™^H‹J_JNÜÝ]VÈ\˜˜[”™[™]Ø[\ÝÜžH—O\Ý]VÈ\˜˜[”™[™]Ø[\ÝÜžH—VËM—NÜÝ]VÈ\˜˜[”™[™]Ø[ÛÜšÜÈ—Kœ™[[Ý™JÛÜšÊBˆ]Š”™[›Ý˜XÚpìÛˆ\˜˜[˜HÛÛ\]YH‹ˆžÝÛÜšÖÉÛ˜[YI×_HYH™ZXš[]YÈÜˆÝÛÜšÖÉØÛÛ˜XÝÜ‰×_H[ˆÝÛÜšÖÉÙ\˜][Û‘^\É×_H0ëX\Ëˆ™XÝ\\°ìÈÛÛ™XÚpìÛˆIKØ[XšpìÈH\œ]Z]XÝ\˜HÛÛ[\Ü°è[™XHH[\pìÈÜÈ^˜\ÈXš]XÚ[Û˜[\ÈÝX[™ÈÛÜœ™\ÜÛ™0ëXKˆŠB‚™YˆÝ\Ý\˜˜[—Ü™[™]Ø[
+™YYÚYÛÛ˜XÝÜŠN‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+Bˆ™YY[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[™YYÈ‹×JHYˆ‹™Ù]
+šYŠOO[™YYÚY[™‹™Ù]
+œÝ]\ÈŠOOH™\ÜÛšX›HŠK›Û™JBˆYˆ›Ý™YYœ˜Z\ÙH˜[YQ\œ›ÜŠ“H™XÙ\ÚYYH™ZXš[]XÚpìÛˆXH›È\Ý0èH\ÜÛšX›KˆŠBˆYˆÛÛ˜XÝÜˆ›Ý[ˆÓÓ•PÕÔ”Îœ˜Z\ÙH˜[YQ\œ›ÜŠ”Ù[XØÚ[Û°èH[˜HÛÛœÝXÝÜ˜HXš[]YKˆŠBˆYˆ[žJË™Ù]
+žŠOO[™YYÈž—H[™Ë™Ù]
+žHŠOO[™YYÈžH—H›ÜˆÈ[ˆÝ]K™Ù]
+\˜˜[”™[™]Ø[ÛÜšÜÈ‹×JJNœ˜Z\ÙH˜[YQ\œ›ÜŠ‘[[›]YX›HXHY[™H[˜HØœ˜H[ˆX\˜ÚKˆŠBˆÜXÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—NØXÝ]™OVÜ›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜˆ[™™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+œ]\ØYH‹˜Ø[˜Ù[YHŠWBˆÝ\VÝÈ›ÜˆÙ^H[ˆ
+š\š]YÙUÛÜšÜÈ‹˜Y\]™T™]\ÙUÛÜšÜÈ‹\˜˜[”™[™]Ø[ÛÜšÜÈŠH›ÜˆÈ[ˆÝ]K™Ù]
+Ù^K×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜ—Bˆ\ÙY\Ý[J™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹P“Ô—Ó‘QQË™Ù]
+™Ù]
+šÚ[™ŠK
+JH›Üˆ[ˆXÝ]™JJÜÝ[JË™Ù]
+ÛÜšÙ\œÈ‹
+H›ÜˆÈ[ˆÝ\ŠBˆYˆ[ŠXÝ]™JJÛ[ŠÝ\ŠO\ÜXÖÈ˜Ø\XÚ]H—HÜˆ\ÙY
+ÍœÜXÖÈÛÜšÙ\œÈ—Nœ˜Z\ÙH˜[YQ\œ›ÜŠˆžØÛÛ˜XÝÜŸH›ÈY[™H[˜HÝXYš[HXœ™HHÝX]›È˜X˜Z˜YÜ™\ËˆŠBˆX]\šX[Ï^È˜YÙÜ™YØ]HŽœÝY[ŽŒ‹[X™\ˆŽŒ‹˜ÛÛ\Û™[ÈŽŒ_NÜÝØÚÏ\Ý]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜœÈ—VØÛÛ˜XÝÜ—BˆYˆ[žJÝØÚË™Ù]
+Ë
+Oˆ›ÜˆËˆ[ˆX]\šX[Ëš][\Ê
+JNœ˜Z\ÙH˜[YQ\œ›ÜŠˆžØÛÛ˜XÝÜŸH›ÈY[™H[ÝHH™ZXš[]XÚpìÛˆ
+0è\šYÜËˆXÙ\›ËˆXY\˜HHHÛÛ\Û™[JKˆŠBˆX]\šX[ØÛÜÝ\Ý[JŠ“PUT’PSÔ’PÑVÚ×H›ÜˆËˆ[ˆX]\šX[Ëš][\Ê
+JNÛX›Ü—ØÛÜÝ\›Ý[™
+
+MÌ
+ÛX^
+Ì[™YYÈ˜ÛÛ™][Ûˆ—JJÌ
+JœÜXÖÈœšXÙH—JNØÛÜÝ[X]\šX[ØÛÜÝ
+ÛX›Ü—ØÛÜÝˆYˆÝ]K™Ù]
+œš]˜]PØ\][‹
+OÛÜÝœ˜Z\ÙH˜[YQ\œ›ÜŠˆ‘[Ø\][š]˜YÈ\ÜÛšX›H›ÈÝXœ™HH™ZXš[]XÚpìÛˆH	ØÛÜÝ‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ›ÜˆËˆ[ˆX]\šX[Ëš][\Ê
+NœÝØÚÖÚ×KO]‚ˆÝ]VÈœš]˜]PØ\][—KOXÛÜÝÜÝ]VÈ›[Û™^H—JÏLLÜÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—O\Ý]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—K™Ù]
+ÛÛ˜XÝÜ‹
+JÛX›Ü—ØÛÜÝˆ\˜][Û[X^
+›Ý[™
+Ì
+œÜXÖÈ™^\È—KÌÌ
+JNÝÛÜšÏ^ÈšYŽ™ˆ\˜˜[‹^Û™YYÉÞ	×_K^Û™YYÉÞI×_K^ÜÝ]VÉÙ^I×_H‹›™YYYŽ›™YYÈšY—KžŽ›™YYÈž—KžHŽ›™YYÈžH—K›˜[YHŽ›™YYÈ›˜[YH—K˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹›X]\šX[ÈŽ›X]\šX[Ë›X]\šX[ÛÜÝŽ›X]\šX[ØÛÜÝ›X›ÜÛÜÝŽ›X›Ü—ØÛÜÝ˜ÛÜÝŽ˜ÛÜÝœ\›Z]™YHŽŒLÛÜšÙ\œÈŽ™\˜][Û‘^\ÈŽ™\˜][Û‹™[\ÙY^\ÈŽŒœ›ÙÜ™\ÜÈŽŒœÝYÙHŽˆ‘XYÛ°ìÜÝXÛÈH™YY\ž›È\ÝXÝ\˜[‹œÝ\^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆ™[ˆØœ˜HŸBˆÝ]VÈ\˜˜[”™[™]Ø[ÛÜšÜÈ—K˜\[™
+ÛÜšÊNÛ™YY\]JÈœÝ]\ÈŽˆ™[ˆØœ˜H‹˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹ÛÜšÒYŽÛÜšÖÈšY—_JBˆ]Š”™ZXš[]XÚpìÛˆ\˜˜[˜HÛÛ˜]YH‹ˆžÛ™YYÉÛ˜[YI×_Nˆ[™\œÚpìÛˆš]˜YH	ØÛÜÝ‹K\›Z\ÛÈ][šXÚ\[	LÝX]›È˜X˜Z˜YÜ™\ËX]\šX[\ÈHØÛÛ˜XÝÜŸHHÙ\˜][ÛŸH0ëX\ÈHØœ˜Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ™]\›ˆÛÜšÂ‚™Yˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+N‚ˆ^O[X^
+K[
+Ý]K™Ù]
+™^H‹JJJBˆÛÝ™\››Y[\Ý]KœÙ]Y˜][
+™ÛÝ™\››Y[‹ßJBˆÛÝ™\››Y[œÙ]Y˜][
+›X[™]H‹JBˆÛÝ™\››Y[œÙ]Y˜][
+œÝ\^H‹^JBˆÛÝ™\››Y[œÙ]Y˜][
+›™^[XÝ[Û‘^H‹^JÌM
+BˆÛÝ™\››Y[œÙ]Y˜][
+œÝ]\È‹™[—ÛX[™]ÈŠBˆÛÝ™\››Y[œÙ]Y˜][
+™[XÝ[ÛœÈ‹×JBˆÛÝ™\››Y[œÙ]Y˜][
+˜Üš\Ú\Ó[ÛÈ‹
+BˆÛÝ™\››Y[œÙ]Y˜][
+˜Üš\Ú\ÔÝ]\È‹™\ÝX›HŠBˆÛÝ™\››Y[œÙ]Y˜][
+˜ÛÛ\Z[È‹×JBˆÛÝ™\››Y[œÙ]Y˜][
+˜ÛÛ\Z[Ù\]Y[˜ÙH‹
+BˆÛÝ™\››Y[œÙ]Y˜][
+˜YÜ™Y[Y[È‹×JBˆYˆœ[ˆˆ›Ý[ˆÛÝ™\››Y[™ÛÝ™\››Y[Èœ[ˆ—O[™]×ÛX[™]WÜ[Š
+B‚™YˆÛÝ™\››Y[Ù\ÝšXÝÊ
+N‚ˆ\ÝšXÝÏVÞÈšYŽˆ›Ù\ÝH‹›˜[YHŽˆ“Ù\ÝH‹šÛY\ÈŽ–×_KÈšYŽˆ˜Ù[›È‹›˜[YHŽˆÙ[›È‹šÛY\ÈŽ–×_KÈšYŽˆœY\È‹›˜[YHŽˆ”Y\È‹šÛY\ÈŽ–×_WBˆ›ÜˆÛYH[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆÛYK™Ù]
+šÚ[™ŠHOHšÛYHŽ˜ÛÛ[YBˆYLYˆÛYK™Ù]
+ž‹
+OL[ÙHHYˆÛYK™Ù]
+ž‹
+ON[ÙH‚ˆ\ÝšXÝÖÚYVÈšÛY\È—K˜\[™
+ÛYJBˆ›ÝÜÏV×Bˆ›Üˆ[ˆ\ÝšXÝÎ‚ˆ™\ÚY[ÏVÜˆ›Üˆ[ˆÈšÛY\È—H›Üˆˆ[ˆ™Ù]
+œ™\ÚY[È‹×JWBˆÜ[][Û\Ý[J[
+™Ù]
+›ØØÝ\[È‹[Š™Ù]
+œ™\ÚY[È‹×JJJJH›Üˆ[ˆÈšÛY\È—JBˆ[YÚX›OVÜˆ›Üˆˆ[ˆ™\ÚY[ÈYˆ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠWBˆ[\ÞYY\Ý[JH›Üˆˆ[ˆ[YÚX›HYˆ‹™Ù]
+œÝ]\ÈŠOOH™[\XYÈŠBˆÜ›ÝÙ[™Ï\Ý[J[
+™Ù]
+›ØØÝ\[È‹
+JH›Üˆ[ˆÈšÛY\È—JKÛX^
+KÝ[J[
+™Ù]
+˜Ø\XÚ]H‹™Ù]
+›ØØÝ\[È‹
+JJH›Üˆ[ˆÈšÛY\È—JJBˆ]X[]O\Ý[J›Ø]
+™Ù]
+œ]X[]H‹
+JH›Üˆ[ˆÈšÛY\È—JKÛX^
+K[ŠÈšÛY\È—JJBˆÙ\šXÙ\Ï[X^
+Z[ŠL›Ø]
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+JJJBˆ[\Þ[Y[LL
+™[\ÞYYÛX^
+K[Š[YÚX›JJHYˆ[YÚX›H[ÙH›Ø]
+Ý]K™Ù]
+™[\Þ[Y[‹
+JBˆÝ\Ú[™Ï[X^
+Z[ŠLLHX^
+Ü›ÝÙ[™ËKŽŠJŽMH
+Ê]X[]KN
+J‹ŒJJBˆ˜\ÙWÜØÛÜ™O[X^
+Z[ŠLL
+Ê›Ø]
+Ý]K™Ù]
+˜\›Ý˜[‹L
+JKML
+J‹ŒŽ
+Ê[\Þ[Y[MJJ‹Œ
+ÊÙ\šXÙ\ËMJJ‹ŒH
+ÊÝ\Ú[™ËMÌ
+J‹ŒŒÊJBˆXÝ]™WØÛÛ\Z[ÏVØÈ›ÜˆÈ[ˆÝ]K™Ù]
+™ÛÝ™\››Y[‹ßJK™Ù]
+˜ÛÛ\Z[È‹×JHYˆË™Ù]
+™\ÝšXÝYŠOOYÈšY—H[™Ë™Ù]
+œÝ]\ÈŠOOH˜XšY\È—BˆÝ™\™YWØYÜ™Y[Y[ÏVØH›ÜˆH[ˆÝ]K™Ù]
+™ÛÝ™\››Y[‹ßJK™Ù]
+˜YÜ™Y[Y[È‹×JHYˆK™Ù]
+™\ÝšXÝYŠOOYÈšY—H[™K™Ù]
+›X[™]HŠOO\Ý]K™Ù]
+™ÛÝ™\››Y[‹ßJK™Ù]
+›X[™]HŠH[™K™Ù]
+œÝ]\ÈŠOOH™[˜ÚYÈ—BˆÛÛ\Z[Ü™\ÜÝ\™O[Z[ŠL‹Ý[JŠÛZ[ŠËX^
+[
+Ë™Ù]
+›[ÛÓÜ[ˆ‹JJKLJJ‹JH›ÜˆÈ[ˆXÝ]™WØÛÛ\Z[ÊJÛ[ŠÝ™\™YWØYÜ™Y[Y[ÊJŒŠBˆØÛÜ™O[X^
+˜\ÙWÜØÛÜ™KXÛÛ\Z[Ü™\ÜÝ\™JBˆ\ÜÝY\ÏV×BˆYˆ[\Þ[Y[MNš\ÜÝY\Ë˜\[™
+™[\[ÈŠBˆYˆÝ\Ú[™ÏNš\ÜÝY\Ë˜\[™
+š]šY[™HŠBˆYˆÙ\šXÙ\ÏMNš\ÜÝY\Ë˜\[™
+œÙ\šXÚ[ÜÈŠBˆYˆ˜\ÙWÜØÛÜ™ONš\ÜÝY\Ë˜\[™
+˜ÛÛ™šX[ž˜HŠBˆ›ÝÜË˜\[™
+ÈšYŽ™ÈšY—K›˜[YHŽ™È›˜[YH—KœÜ[][ÛˆŽœÜ[][Û‹™[YÚX›UÛÜšÙ\œÈŽ›[Š[YÚX›JK™[\ÞYYŽ™[\ÞYY™[\Þ[Y[Žœ›Ý[™
+[\Þ[Y[
+KšÝ\Ú[™ÈŽœ›Ý[™
+Ý\Ú[™ÊKœÙ\šXÙ\ÈŽœ›Ý[™
+Ù\šXÙ\ÊK˜˜\ÙTÝ\ÜŽœ›Ý[™
+˜\ÙWÜØÛÜ™JKœÝ\ÜŽœ›Ý[™
+ØÛÜ™JK›Ü[ÛÛ\Z[ÈŽ›[ŠXÝ]™WØÛÛ\Z[ÊKšÛY\ÈŽ›[ŠÈšÛY\È—JKš\ÜÝY\ÈŽš\ÜÝY\Ëš\ÜÝYHŽˆ‘[\[ÈˆYˆ[\Þ[Y[MH[ÙH•š]šY[™HˆYˆÝ\Ú[™ÏH[ÙH”Ù\šXÚ[ÜÈˆYˆÙ\šXÙ\ÏMH[ÙH‘Ù\ÝpìÛˆ\ÝX›HŸJBˆ™]\›ˆ›ÝÜÂ‚™YˆÛÝ™\››Y[Ü[—ÛY]šXÜÊ
+N‚ˆ\ÝšXÝÏYÛÝ™\››Y[Ù\ÝšXÝÊ
+NÜÜ[][Û\Ý[JÈœÜ[][Ûˆ—H›Üˆ[ˆ\ÝšXÝÊBˆÛÜšÙ\œÏ\Ý[JÈ™[YÚX›UÛÜšÙ\œÈ—H›Üˆ[ˆ\ÝšXÝÊNÙ[\ÞYY\Ý[JÈ™[\ÞYY—H›Üˆ[ˆ\ÝšXÝÊBˆÛY\ÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYH—BˆØØÝ\YY\Ý[J[
+™Ù]
+›ØØÝ\[È‹
+JH›Üˆ[ˆÛY\ÊNØØ\XÚ]O\Ý[J[
+™Ù]
+˜Ø\XÚ]H‹™Ù]
+›ØØÝ\[È‹
+JJH›Üˆ[ˆÛY\ÊBˆ™]\›ˆÈ™[\Þ[Y[Žœ›Ý[™
+L
+™[\ÞYYÛX^
+KÛÜšÙ\œÊJHYˆÛÜšÙ\œÈ[ÙH[
+Ý]K™Ù]
+™[\Þ[Y[‹
+JKšÝ\Ú[™Ô™\Ù\™HŽœ›Ý[™
+L
+›X^
+Ø\XÚ]K[ØØÝ\YY
+KÛX^
+KØ\XÚ]JJKœÙ\šXÙ\ÈŽš[
+›Ý[™
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+JJKœÜ[][ÛˆŽœÜ[][ÛŸB‚™Yˆ™]×ÛX[™]WÜ[Š
+N‚ˆY]šXÜÏYÛÝ™\››Y[Ü[—ÛY]šXÜÊ
+HYˆœÝ]Hˆ[ˆÛØ˜[Ê
+H[ÙHÈ™[\Þ[Y[ŽÎšÝ\Ú[™Ô™\Ù\™HŽŒLœÙ\šXÙ\ÈŽÍŸBˆ™]\›ˆÈ˜Ü™X]Y^HŽš[
+Ý]K™Ù]
+™^H‹JJHYˆœÝ]Hˆ[ˆÛØ˜[Ê
+H[ÙHK™ÛØ[ÈŽ–ÞÈšYŽˆ™[\Þ[Y[‹]HŽˆ‘[\[È›Ü›X[‹[š]Žˆ‰HH˜X˜Z˜YÜ™\È[YÚX›\È‹\™Ù]Ž›X^
+ŒZ[ŠKY]šXÜÖÈ™[\Þ[Y[—JÍJJ_KÈšYŽˆšÝ\Ú[™Ô™\Ù\™H‹]HŽˆ”™\Ù\˜HHš]šY[™H‹[š]Žˆ‰HH^˜\ÈXœ™\È‹\™Ù]Ž›Z[ŠŒX^
+KY]šXÜÖÈšÝ\Ú[™Ô™\Ù\™H—JÌÊJ_KÈšYŽˆœÙ\šXÙ\È‹]HŽˆÛØ™\\˜HHÙ\šXÚ[ÜÈ‹[š]Žˆ‰HHÛØ™\\˜H][šXÚ\[‹\™Ù]Ž›X^
+ŒZ[ŠKY]šXÜÖÈœÙ\šXÙ\È—JÍJJ_W_B‚™YˆÛÝ™\››Y[Ü[—Ü™\Ü
+
+N‚ˆÏ\Ý]K™Ù]
+™ÛÝ™\››Y[‹ßJNÜ[YË™Ù]
+œ[ˆŠHÜˆ™]×ÛX[™]WÜ[Š
+NÛY]šXÜÏYÛÝ™\››Y[Ü[—ÛY]šXÜÊ
+NÜ›ÝÜÏV×Bˆ›ÜˆÛØ[[ˆ[‹™Ù]
+™ÛØ[È‹×JN‚ˆÝ\œ™[[Y]šXÜË™Ù]
+ÛØ[ÈšY—K
+NÝ\™Ù]YÛØ[È\™Ù]—Bˆ›ÝÜË˜\[™
+ÊŠ™ÛØ[˜Ý\œ™[Ž˜Ý\œ™[™[š[YŽ˜Ý\œ™[]\™Ù]œ›ÙÜ™\ÜÈŽœ›Ý[™
+Z[ŠLL
+˜Ý\œ™[ÛX^
+K\™Ù]
+JJ_JBˆ™]\›ˆÈ˜Ü™X]Y^HŽœ[‹™Ù]
+˜Ü™X]Y^H‹Ý]K™Ù]
+™^H‹JJK™ÛØ[ÈŽœ›ÝÜË™[š[YŽœÝ[JÈ™[š[Y—H›Üˆ[ˆ›ÝÜÊKÝ[Ž›[Š›ÝÜÊK›Y]šXÜÈŽ›Y]šXÜßB‚™YˆÛÝ™\››Y[Ú\ÜÝYWÜÛÝ\˜Ù\Ê\ÝšXÝÚY\ÜÝYJN‚ˆYˆ[—Ø\™XJ
+Nœ™]\›ˆ
+›Ù\ÝHˆYˆL[ÙH˜Ù[›ÈˆYˆN[ÙHœY\ÈŠOOY\ÝšXÝÚYˆÛY\ÏVÚ›Üˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ™Ù]
+šÚ[™ŠOOHšÛYHˆ[™[—Ø\™XJ™Ù]
+ž‹
+JWBˆ[šÜÏV×BˆYˆ\ÜÝYOOH™[\[ÈŽ‚ˆ›ÜˆÛYH[ˆÛY\Î‚ˆÙX\˜Ú[™Ï\Ý[JH›Üˆˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JHYˆ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠH[™‹™Ù]
+œÝ]\ÈŠHOH™[\XYÈŠBˆYˆÙX\˜Ú[™Î›[šÜË˜\[™
+ÈšYŽ™ˆšÛYK^ÚÛYVÉÞ	×_K^ÚÛYVÉÞI×_KZ›ØœÙYZÙ\œÈ‹šÚ[™Žˆœ\œÛÛ˜\È‹›X™[ŽšÛYK™Ù]
+›˜[YH‹’ÙØ\™\È[˜\œš[ÈŠK™]Z[Ž™ˆžÜÙX\˜Ú[™ßH™\ÚY[\È\ØØ[ˆ[\[È‹œÝ]\ÈŽˆ˜°îœÜ]YYHXÝ]˜HŸJBˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™[—Ø\™XJ‹™Ù]
+ž‹
+JH[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜Ù\œ˜YÈŽ›[šÜË˜\[™
+ÈšYŽ™ˆ™š\›K^Ø–ÉÞ	×_K^Ø–ÉÞI×_H‹šÚ[™Žˆ™[\™\ØH‹›X™[Ž˜‹™Ù]
+›˜[YH‹ÛÛY\˜Ú[ÈÙ\œ˜YÈŠK™]Z[Žˆ”Y\ÝÜÈH˜X˜Z›ÈY\˜HHÙ\šXÚ[È‹œÝ]\ÈŽˆ˜Ù\œ˜YÈŸJBˆ[Yˆ\ÜÝYOOHš]šY[™HŽ‚ˆ›ÜˆÛYH[ˆÛY\Î‚ˆØ\XÚ]O[X^
+K[
+ÛYK™Ù]
+˜Ø\XÚ]H‹ÛYK™Ù]
+›ØØÝ\[È‹
+JJJNÛØØÝ\YYZ[
+ÛYK™Ù]
+›ØØÝ\[È‹
+JNÜ]X[]OY›Ø]
+ÛYK™Ù]
+œ]X[]H‹
+JBˆYˆØØÝ\YYØØ\XÚ]OKŽLÈÜˆ]X[]ON›[šÜË˜\[™
+ÈšYŽ™ˆšÛYK^ÚÛYVÉÞ	×_K^ÚÛYVÉÞI×_H‹šÚ[™Žˆš]šY[™H‹›X™[ŽšÛYK™Ù]
+›˜[YH‹•š]šY[™H[˜\œš[ÈŠK™]Z[Ž™ˆžÛØØÝ\YYKÞØØ\XÚ]_H^˜\È0­ÈØ[YYÜ›Ý[™
+]X[]J_IH‹œÝ]\ÈŽˆœ™\ÚpìÛˆXš]XÚ[Û˜[ˆYˆØØÝ\YYØØ\XÚ]OKŽLÈ[ÙH˜Ø[YY˜Z˜HŸJBˆ[Yˆ\ÜÝYOOHœÙ\šXÚ[ÜÈŽ‚ˆ›Üˆˆ[ˆÝ]K™Ù]
+][]Y\È‹ßJK™Ù]
+™˜Z[\™\È‹×JN‚ˆYˆ‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ[™[—Ø\™XJ‹™Ù]
+ž‹
+JN›[šÜË˜\[™
+ÈšYŽœÝŠ‹™Ù]
+šYŠJKšÚ[™Žˆœ™Y‹›X™[Ž™ˆ”™YÙ‹™Ù]
+	Û™]ÛÜšÉË	ÙHÙ\šXÚ[ÜÉÊ_H‹™]Z[Ž™ˆ]™\°ëXH[ˆØ[HÙ‹™Ù]
+	Þ	Ë
+JÌ_KÙ‹™Ù]
+	ÞIË
+JÌ_H‹œÝ]\ÈŽ™‹™Ù]
+œÝ]\È‹˜]™\°ëXHŠ_JBˆ›Üˆˆ[ˆÝ]K™Ù]
+œ™XÛÝ™\žS™YYÈ‹×JN‚ˆYˆ‹™Ù]
+œÝ]\ÈŠOOH˜XšY\Hˆ[™[—Ø\™XJ‹™Ù]
+ž‹
+JN›[šÜË˜\[™
+ÈšYŽœÝŠ‹™Ù]
+šYŠJKšÚ[™Žˆ›Øœ˜H‹›X™[Ž›‹™Ù]
+›˜[YH‹XÝ]›È][šXÚ\[ŠK™]Z[Ž›‹™Ù]
+˜Ø]\ÙH‹”™ZXš[]XÚpìÛˆ[™Y[HŠKœÝ]\ÈŽˆ›™XÙ\Ú]H][˜ÚpìÛˆŸJBˆ›Üˆˆ[ˆÝ]K™Ù]
+œ›ØY\ÜÙ]È‹×JN‚ˆYˆ[—Ø\™XJ‹™Ù]
+ž‹
+JH[™‹™Ù]
+œ]X[]H‹L
+OŒ›[šÜË˜\[™
+ÈšYŽ™ˆœ›ØY^Ü–ÉÞ	×_K^Ü–ÉÞI×_H‹šÚ[™Žˆ˜Ø[H‹›X™[Ž™ˆØ[HÜ–ÉÞ	×JÌ_KÜ–ÉÞI×JÌ_H‹™]Z[Ž™ˆÛÛ™XÚpìÛˆÜ›Ý[™
+‹™Ù]
+	Ü]X[]IË
+J_IH‹œÝ]\ÈŽˆ™]\š[Ü˜YHŸJBˆ[Yˆ\ÜÝYOOH˜ÛÛ™šX[ž˜HŽ‚ˆ\œ™X\œÏ\Ý]K™Ù]
+^\È‹ßJK™Ù]
+˜\œ™X\œÐžP\ÜÙ]‹ßJBˆ›Üˆ[ˆÛY\Î‚ˆYOX\œ™X\œË™Ù]
+ˆšÛYK^Ú™Ù]
+	Þ	Ê_K^Ú™Ù]
+	ÞIÊ_H‹
+BˆYˆYN›[šÜË˜\[™
+ÈšYŽ™ˆ^ZÛYK^ÚÉÞ	×_K^ÚÉÞI×_H‹šÚ[™Žˆš[\Y\ÝÈ‹›X™[Žš™Ù]
+›˜[YH‹’ÙØ\™\È[˜\œš[ÈŠK™]Z[Ž™ˆ“[Ü˜H][šXÚ\[XÝ[][YH	Ú[
+YJ_H‹œÝ]\ÈŽˆš[\YÛÈŸJBˆYˆ›Ý[šÜÎ›[šÜÏVÞÈšYŽ™ˆš[™XØ]Ü‹^Ù\ÝšXÝÚYK^Ú\ÜÝY_H‹šÚ[™Žˆš[™XØYÜˆ‹›X™[Žˆ’[™XØYÜˆ\œš]ÜšX[YÜ™YØYÈ‹™]Z[ŽžÈ™[\[ÈŽˆ”™\ÚY[\È[YÚX›\ÈÚ[ˆ[\[È\ÝX›H‹š]šY[™HŽˆ“ØÝ\XÚpìÛˆHØ[YY[\œ]YH™\ÚY[˜ÚX[‹œÙ\šXÚ[ÜÈŽˆÛØ™\\˜H][šXÚ\[H™Y\ÈØØ[\È‹˜ÛÛ™šX[ž˜HŽˆ\›Ø˜XÚpìÛˆÚ]YY[˜HH™\Ý[YÜÈ[˜\œš[ÈŸK™Ù]
+\ÜÝYK’[™XØYÜˆ][šXÚ\[ŠKœÝ]\ÈŽˆœ™\]ZY\™H™]š\ÚpìÛˆŸWBˆ™]\›ˆ[šÜÖÎWB‚™YˆÛÝ™\››Y[ØYÜ™Y[Y[Ü™\Ü
+
+N‚ˆÏ\Ý]K™Ù]
+™ÛÝ™\››Y[‹ßJNÚ][\ÏVØH›ÜˆH[ˆË™Ù]
+˜YÜ™Y[Y[È‹×JHYˆK™Ù]
+›X[™]HŠOOYË™Ù]
+›X[™]HŠWBˆ™]\›ˆÈš][\ÈŽš][\ÖËL—K˜XÝ]™HŽœÝ[JK™Ù]
+œÝ]\ÈŠOOHœÙYÝZ[ZY[Èˆ›ÜˆH[ˆ][\ÊK˜ÛÛ\]YŽœÝ[JK™Ù]
+œÝ]\ÈŠOOH˜Ý[\YÈˆ›ÜˆH[ˆ][\ÊK›Ý™\™YHŽœÝ[JK™Ù]
+œÝ]\ÈŠOOH™[˜ÚYÈˆ›ÜˆH[ˆ][\Ê_B‚™Yˆ™XÛÜ™ÙÛÝ™\››Y[ØYÜ™Y[Y[
+ÛÛ\Z[ÚY]]ÜŠN‚ˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+NÙÏ\Ý]VÈ™ÛÝ™\››Y[—BˆÛÛ\Z[[™^
+
+È›ÜˆÈ[ˆË™Ù]
+˜ÛÛ\Z[È‹×JHYˆË™Ù]
+šYŠOO\ÝŠÛÛ\Z[ÚY
+H[™Ë™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠK›Û™JBˆYˆ›ÝÛÛ\Z[œ˜Z\ÙH˜[YQ\œ›ÜŠ‘[™XÛ[[ÈXHÙH™\ÛÛšpìÈÈ›È\Ý0èH\ÜÛšX›KˆŠBˆYˆ[žJK™Ù]
+˜ÛÛ\Z[YŠOOXÛÛ\Z[ÈšY—H[™K™Ù]
+›X[™]HŠOOYÖÈ›X[™]H—H[™K™Ù]
+œÝ]\ÈŠOOHœÙYÝZ[ZY[Èˆ›ÜˆH[ˆË™Ù]
+˜YÜ™Y[Y[È‹×JJNœ˜Z\ÙH˜[YQ\œ›ÜŠ‘\ÝH™XÛ[[ÈXHY[™H[ˆÙYÝZ[ZY[È][šXÚ\[šYÙ[KˆŠBˆYÜ™Y[Y[^ÈšYŽ]ZY]ZY
+
+Kš^˜ÛÛ\Z[YŽ˜ÛÛ\Z[ÈšY—K™\ÝšXÝYŽ˜ÛÛ\Z[È™\ÝšXÝY—K™\ÝšXÝŽ˜ÛÛ\Z[È™\ÝšXÝ—Kš\ÜÝYHŽ˜ÛÛ\Z[Èš\ÜÝYH—Kš\ÜÝYU]HŽ˜ÛÛ\Z[È]H—K›X[™]HŽ™ÖÈ›X[™]H—K˜Ü™X]Y^HŽœÝ]VÈ™^H—K™XY[™Q^HŽœÝ]VÈ™^H—JÌNœÝ]\ÈŽˆœÙYÝZ[ZY[È‹˜Ü™X]YžHŽœÝŠ]]ÜˆÜˆ‘\]Z\È][šXÚ\[ŠVÎŒK™]šY[˜ÙRYÈŽ–Þ™Ù]
+šYŠH›Üˆ[ˆÛÛ\Z[™Ù]
+™]šY[˜ÙS[šÜÈ‹×JW_BˆËœÙ]Y˜][
+˜YÜ™Y[Y[È‹×JK˜\[™
+YÜ™Y[Y[
+NÙÖÈ˜YÜ™Y[Y[È—OYÖÈ˜YÜ™Y[Y[È—VËMŒ—Bˆ]ŠXÝY\™ÈHÙYÝZ[ZY[È™YÚ\Ý˜YÈ‹ˆ‘[\]Z\ÈXÝY\™H™XÝ\\˜\ˆØÛÛ\Z[ÉÝ]I×K›ÝÙ\Š
+_H[ˆØÛÛ\Z[ÉÙ\ÝšXÝ	×_H[\È[0ëXHØYÜ™Y[Y[ÉÙXY[™Q^I×_Kˆ[^›ÈH[™\Ý[YÈ]YY[ˆ[ˆ[™YÚ\Ý›ÈÛÛ\\YËˆŠBˆ™]\›ˆYÜ™Y[Y[‚™Yˆ\]WÙÛÝ™\››Y[ØÞXÛJ
+N‚ˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+NÙÏ\Ý]VÈ™ÛÝ™\››Y[—BˆYˆË™Ù]
+œÝ]\ÈŠHOH™[—ÛX[™]ÈŽœ™]\›‚ˆ\ÝšXÝÏYÛÝ™\››Y[Ù\ÝšXÝÊ
+NÙ^\Ý[™Ï^ÊË™Ù]
+™\ÝšXÝYŠKË™Ù]
+š\ÜÝYHŠJN˜È›ÜˆÈ[ˆËœÙ]Y˜][
+˜ÛÛ\Z[È‹×JHYˆË™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŸBˆXÝ]™O\Ù]
+
+BˆX™[Ï^È™[\[ÈŽˆ‘[\[È[œÝYšXÚY[H‹š]šY[™HŽˆ”™\ÚpìÛˆÛØœ™HHš]šY[™H‹œÙ\šXÚ[ÜÈŽˆ‘0êYšXÚ]HÙ\šXÚ[ÜÈ][šXÚ\[\È‹˜ÛÛ™šX[ž˜HŽˆÛÛ™šX[ž˜HÚ]YY[˜H˜Z˜HŸBˆ›Üˆ[ˆ\ÝšXÝÎ‚ˆ›Üˆ\ÜÝYH[ˆÈš\ÜÝY\È—N‚ˆÙ^OJÈšY—K\ÜÝYJNØXÝ]™K˜Y
+Ù^JNÜ™XÛÜ™Y^\Ý[™Ë™Ù]
+Ù^JBˆYˆ™XÛÜ™œ™XÛÜ™È›[ÛÓÜ[ˆ—OZ[
+™XÛÜ™™Ù]
+›[ÛÓÜ[ˆ‹
+JJÌNÜ™XÛÜ™È›\Ý]šY[˜ÙH—O^È™[\Þ[Y[Ž™È™[\Þ[Y[—KšÝ\Ú[™ÈŽ™ÈšÝ\Ú[™È—KœÙ\šXÙ\ÈŽ™ÈœÙ\šXÙ\È—KœÝ\ÜŽ™ÈœÝ\Ü—_NÜ™XÛÜ™È™]šY[˜ÙS[šÜÈ—OYÛÝ™\››Y[Ú\ÜÝYWÜÛÝ\˜Ù\ÊÈšY—K\ÜÝYJNÜ™XÛÜ™È›\Ý™]šY]ÙY^H—O\Ý]VÈ™^H—Bˆ[ÙN‚ˆÖÈ˜ÛÛ\Z[Ù\]Y[˜ÙH—OZ[
+Ë™Ù]
+˜ÛÛ\Z[Ù\]Y[˜ÙH‹
+JJÌBˆ™XÛÜ™^ÈšYŽ™ˆ˜ÛZ[K^ÙÖÉØÛÛ\Z[Ù\]Y[˜ÙI×_H‹™\ÝšXÝYŽ™ÈšY—K™\ÝšXÝŽ™È›˜[YH—Kš\ÜÝYHŽš\ÜÝYK]HŽ›X™[ÖÚ\ÜÝYWKœÝ]\ÈŽˆ˜XšY\È‹›Ü[™Y^HŽœÝ]VÈ™^H—K›\Ý™]šY]ÙY^HŽœÝ]VÈ™^H—K›[ÛÓÜ[ˆŽŒK›\Ý]šY[˜ÙHŽžÈ™[\Þ[Y[Ž™È™[\Þ[Y[—KšÝ\Ú[™ÈŽ™ÈšÝ\Ú[™È—KœÙ\šXÙ\ÈŽ™ÈœÙ\šXÙ\È—KœÝ\ÜŽ™ÈœÝ\Ü—_K™]šY[˜ÙS[šÜÈŽ™ÛÝ™\››Y[Ú\ÜÝYWÜÛÝ\˜Ù\ÊÈšY—K\ÜÝYJ_BˆÖÈ˜ÛÛ\Z[È—K˜\[™
+™XÛÜ™
+NÙ]Š”™XÛ[[È™XÚ[˜[™YÚ\Ý˜YÈ‹ˆžÙÉÛ˜[YI×_NˆÛX™[ÖÚ\ÜÝYWK›ÝÙ\Š
+_H]XÝYÈ[ˆÜÈ[™XØYÜ™\È[˜\œš[ËˆÙH™]š\Ø\°èH[°ìÞ[[ÈÚY\œ™HY[œÝX[ˆŠBˆ›Üˆ™XÛÜ™[ˆÖÈ˜ÛÛ\Z[È—N‚ˆÙ^OJ™XÛÜ™™Ù]
+™\ÝšXÝYŠK™XÛÜ™™Ù]
+š\ÜÝYHŠJBˆYˆ™XÛÜ™™Ù]
+œÝ]\ÈŠOOH˜XšY\Èˆ[™Ù^H›Ý[ˆXÝ]™N‚ˆ™XÛÜ™\]JÈœÝ]\ÈŽˆœ™\ÝY[È‹œ™\ÛÛ™Y^HŽœÝ]VÈ™^H—_JNÙ]Š”™XÛ[[È™XÚ[˜[™\ÝY[È‹ˆžÜ™XÛÜ™™Ù]
+	Ù\ÝšXÝ	Ê_NˆYZ›Ü°ìÈ[[™XØYÜˆHÜ™XÛÜ™™Ù]
+	Ú\ÜÝYIÊ_NÈÙHÙ\œ°ìÈ[ÙYÝZ[ZY[ËˆŠBˆ›ÜˆYÜ™Y[Y[[ˆËœÙ]Y˜][
+˜YÜ™Y[Y[È‹×JN‚ˆYˆYÜ™Y[Y[™Ù]
+œÝ]\ÈŠHOHœÙYÝZ[ZY[ÈŽ˜ÛÛ[YBˆÛÛ\Z[[™^
+
+È›ÜˆÈ[ˆÖÈ˜ÛÛ\Z[È—HYˆË™Ù]
+šYŠOOXYÜ™Y[Y[™Ù]
+˜ÛÛ\Z[YŠJK›Û™JBˆYˆÛÛ\Z[[™ÛÛ\Z[™Ù]
+œÝ]\ÈŠOOHœ™\ÝY[ÈŽ˜YÜ™Y[Y[\]JÈœÝ]\ÈŽˆ˜Ý[\YÈ‹˜ÛÛ\]Y^HŽœÝ]VÈ™^H—_JNÙ]ŠXÝY\™È][šXÚ\[Ý[\YÈ‹ˆžØYÜ™Y[Y[ÉÙ\ÝšXÝ	×_NˆÙH™\ÛÛšpìÈØYÜ™Y[Y[ÉÚ\ÜÝYU]I×K›ÝÙ\Š
+_H[\È[™[˜Ú[ZY[ËˆŠBˆ[YˆÝ]VÈ™^H—OXYÜ™Y[Y[™Ù]
+™XY[™Q^H‹
+N˜YÜ™Y[Y[\]JÈœÝ]\ÈŽˆ™[˜ÚYÈ‹›Ý™\™YQ^HŽœÝ]VÈ™^H—_JNÙ]ŠXÝY\™È][šXÚ\[™[˜ÚYÈ‹ˆžØYÜ™Y[Y[ÉÙ\ÝšXÝ	×_Nˆ™[˜ÚpìÈ[^›È\˜HØYÜ™Y[Y[ÉÚ\ÜÝYU]I×K›ÝÙ\Š
+_NÈ]YYH[™Y[H[ˆ[™YÚ\Ý›È0î˜›XÛËˆŠBˆÖÈ˜ÛÛ\Z[È—OYÖÈ˜ÛÛ\Z[È—VËLÍŽ—Bˆ™\ÜÏYÛÝ™\››Y[Ü[—Ü™\Ü
+
+Bˆ›ÜˆÛØ[[ˆ™\ÜÖÈ™ÛØ[È—N‚ˆÝÜ™Y[™^
+
+›Üˆ[ˆÖÈœ[ˆ—VÈ™ÛØ[È—HYˆÈšY—OOYÛØ[ÈšY—JK›Û™JBˆYˆÝÜ™YœÝÜ™YÈ˜Ý\œ™[—OYÛØ[È˜Ý\œ™[—NÜÝÜ™YÈ™[š[Y—OYÛØ[È™[š[Y—NÜÝÜ™YÈ›\Ý™]šY]ÙY^H—O\Ý]VÈ™^H—Bˆ]™\˜YÙO\Ý[JÈœÝ\Ü—J™ÈœÜ[][Ûˆ—H›Üˆ[ˆ\ÝšXÝÊKÛX^
+KÝ[JÈœÜ[][Ûˆ—H›Üˆ[ˆ\ÝšXÝÊJBˆÙ]™\™O\Ý]K™Ù]
+›[Û™^H‹
+OL[™Ý]K™Ù]
+œÙ\šXÙ\È‹
+OLÌ[™]™\˜YÙOÍBˆYˆÙ]™\™N‚ˆÖÈ˜Üš\Ú\Ó[ÛÈ—OZ[
+Ë™Ù]
+˜Üš\Ú\Ó[ÛÈ‹
+JJÌBˆYˆÖÈ˜Üš\Ú\Ó[ÛÈ—OOLŽ‚ˆÖÈ˜Üš\Ú\ÔÝ]\È—OH˜[\HŽÙ]Š[\HHÜš\Ú\È[œÝ]XÚ[Û˜[‹“HÚ]YY]˜HÜÈÚY\œ™\ÈÛÛˆ\ÛÜ™\°ëXHYÛÝYKÙ\šXÚ[ÜÈÜ°ë]XÛÜÈH\Þ[È]^H˜Z›Ëˆ™XÝ\\˜\ˆØZ˜HÈÙ\šXÚ[ÜÈ\˜[H[°ìÞ[[ÈY\È]š]HH\Ý]XÚpìÛˆ^˜[Ü™[˜\šXKˆŠBˆ[YˆÖÈ˜Üš\Ú\Ó[ÛÈ—OLÎ‚ˆÖÈ˜Üš\Ú\ÔÝ]\È—OH™\Ý]ZYÈŽÙÖÈœÝ]\È—OH™\Ý]ZYÈŽÙÖÈ™Y™X]™X\ÛÛˆ—OH‘\Ý]XÚpìÛˆ^˜[Ü™[˜\šXH˜\È™\ÈÚY\œ™\ÈY[œÝX[\ÈHÜš\Ú\ÈÚ[ˆ™XÝ\\˜XÚpìÛˆŽÜÝ]VÈœ]\ÙY—OUYNÙ]Š‘ÛØšY\››È\Ý]ZYÈÜˆÜš\Ú\È›ÛÛ™ØYH‹“H\ÛÜ™\°ëXKÜÈÙ\šXÚ[ÜÈH[\Þ[ÈÚ]YY[›È\›X[™XÚY\›Ûˆ[ˆš]™[\ÈÜ°ë]XÛÜÈ\˜[H™\ÈÚY\œ™\ÈY[œÝX[\ËˆHÚ]YY]YYH[ˆØœÙ\˜XÚpìÛ‹ˆŠBˆ[ÙN‚ˆYˆË™Ù]
+˜Üš\Ú\ÔÝ]\ÈŠOOH˜[\HŽ™]ŠÜš\Ú\È[œÝ]XÚ[Û˜[Ý\\˜YH‹“H\ÛÜ™\°ëXKÜÈÙ\šXÚ[ÜÈÈ[\Þ[ÈÙH™XÝ\\˜\›Ûˆ[\ÈHH\Ý]XÚpìÛ‹ˆŠBˆÖÈ˜Üš\Ú\Ó[ÛÈ—OLÙÖÈ˜Üš\Ú\ÔÝ]\È—OH™\ÝX›H‚‚™YˆÛÝ™\››Y[Ü™\Ü
+
+N‚ˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+BˆÏ\Ý]VÈ™ÛÝ™\››Y[—NÙ^OZ[
+Ý]K™Ù]
+™^H‹JJNÜ™[XZ[š[™Ï[X^
+[
+ÖÈ›™^[XÝ[Û‘^H—JKY^JBˆ\ÝšXÝÏYÛÝ™\››Y[Ù\ÝšXÝÊ
+NÙ[YÚX›O\Ý[JÈœÜ[][Ûˆ—H›Üˆ[ˆ\ÝšXÝÊBˆ\››Ý]\Ý[J›Ý[™
+ÈœÜ[][Ûˆ—J‹ÌŠH›Üˆ[ˆ\ÝšXÝÊBˆ[˜Ý[X™[\Ý[J›Ý[™
+›Ý[™
+ÈœÜ[][Ûˆ—J‹ÌŠJ™ÈœÝ\Ü—KÌL
+H›Üˆ[ˆ\ÝšXÝÊBˆ›ÜˆÛÛ\Z[[ˆË™Ù]
+˜ÛÛ\Z[È‹×JN‚ˆYˆÛÛ\Z[™Ù]
+œÝ]\ÈŠOOH˜XšY\Èˆ[™›ÝÛÛ\Z[™Ù]
+™]šY[˜ÙS[šÜÈŠN˜ÛÛ\Z[È™]šY[˜ÙS[šÜÈ—OYÛÝ™\››Y[Ú\ÜÝYWÜÛÝ\˜Ù\ÊÛÛ\Z[™Ù]
+™\ÝšXÝYŠKÛÛ\Z[™Ù]
+š\ÜÝYHŠJBˆ[YÛÝ™\››Y[Ü[—Ü™\Ü
+
+NØYÜ™Y[Y[ÏYÛÝ™\››Y[ØYÜ™Y[Y[Ü™\Ü
+
+NØYÜ™Y[Y[ØY\ÝY[[X^
+M‹Z[ŠYÜ™Y[Y[ÖÈ˜ÛÛ\]Y—JŒ‹XYÜ™Y[Y[ÖÈ›Ý™\™YH—JŒŠJNØY\ÝY[LŠœ[–È™[š[Y—KJ[–ÈÝ[—K\[–È™[š[Y—JJØYÜ™Y[Y[ØY\ÝY[ˆ›ÝO\›Ý[™
+L
+š[˜Ý[X™[ÛX^
+K\››Ý]
+JJØY\ÝY[ˆ™]\›ˆÈ›X[™]HŽ™ÖÈ›X[™]H—KœÝ]\ÈŽ™ÖÈœÝ]\È—KœÝ\^HŽ™ÖÈœÝ\^H—K›™^[XÝ[Û‘^HŽ™ÖÈ›™^[XÝ[Û‘^H—K™^\Ô™[XZ[š[™ÈŽœ™[XZ[š[™ËžYX\œÔ™[XZ[š[™ÈŽœ›Ý[™
+™[XZ[š[™ËÌÍŒJK˜\›Ý˜[Žœ›Ý[™
+›Ø]
+Ý]K™Ù]
+˜\›Ý˜[‹
+JJK™\ÝšXÝÈŽ™\ÝšXÝË™[YÚX›U›Ý\œÈŽ™[YÚX›K\››Ý]Ž\››Ý]œ›Ú™XÝY›ÝHŽ›X^
+Z[ŠL›ÝJJKœ[ˆŽœ[‹˜ÛÛ\Z[ÈŽ–ØÈ›ÜˆÈ[ˆË™Ù]
+˜ÛÛ\Z[È‹×JHYˆË™Ù]
+œÝ]\ÈŠOOH˜XšY\È—Kœ™\ÛÛ™YÛÛ\Z[ÈŽœÝ[JË™Ù]
+œÝ]\ÈŠOOHœ™\ÝY[Èˆ›ÜˆÈ[ˆË™Ù]
+˜ÛÛ\Z[È‹×JJK˜YÜ™Y[Y[ÈŽ˜YÜ™Y[Y[Ë˜Üš\Ú\Ó[ÛÈŽ™Ë™Ù]
+˜Üš\Ú\Ó[ÛÈ‹
+K˜Üš\Ú\ÔÝ]\ÈŽ™Ë™Ù]
+˜Üš\Ú\ÔÝ]\È‹™\ÝX›HŠK›\Ý[XÝ[ÛˆŽ™ÖÈ™[XÝ[ÛœÈ—VËLWHYˆÖÈ™[XÝ[ÛœÈ—H[ÙH›Û™K™Y™X]™X\ÛÛˆŽ™Ë™Ù]
+™Y™X]™X\ÛÛˆŠ_B‚™Yˆ›ØÙ\Ü×ÙÛÝ™\››Y[Ù[XÝ[ÛŠ
+N‚ˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+NÙÏ\Ý]VÈ™ÛÝ™\››Y[—BˆYˆÖÈœÝ]\È—HOH™[—ÛX[™]ÈˆÜˆ[
+Ý]K™Ù]
+™^H‹JJO[
+ÖÈ›™^[XÝ[Û‘^H—JNœ™]\›‚ˆ™\ÜYÛÝ™\››Y[Ü™\Ü
+
+NÙ\ÝšXÝÏV×Bˆ›Üˆ[ˆ™\ÜÈ™\ÝšXÝÈ—N‚ˆ›Ý\œÏ\›Ý[™
+ÈœÜ[][Ûˆ—J‹ÌŠNÝ›Ý\Ï\›Ý[™
+›Ý\œÊ™ÈœÝ\Ü—KÌL
+Bˆ\ÝšXÝË˜\[™
+È›˜[YHŽ™È›˜[YH—K™[YÚX›HŽ™ÈœÜ[][Ûˆ—K\››Ý]Ž›Ý\œË™ÛÝ™\››Y[›Ý\ÈŽ›Ý\Ë™ÛÝ™\››Y[ÝŽœ›Ý[™
+L
+›Ý\ËÛX^
+K›Ý\œÊJKš\ÜÝYHŽ™Èš\ÜÝYH—_JBˆÝ[Ý›Ý\Ï\Ý[JÈ\››Ý]—H›Üˆ[ˆ\ÝšXÝÊNÝ›Ý\Ï\Ý[JÈ™ÛÝ™\››Y[›Ý\È—H›Üˆ[ˆ\ÝšXÝÊNÜ[YÛÝ™\››Y[Ü[—Ü™\Ü
+
+NØYÜ™Y[Y[ÏYÛÝ™\››Y[ØYÜ™Y[Y[Ü™\Ü
+
+NØYÜ™Y[Y[ØY\ÝY[[X^
+M‹Z[ŠYÜ™Y[Y[ÖÈ˜ÛÛ\]Y—JŒ‹XYÜ™Y[Y[ÖÈ›Ý™\™YH—JŒŠJNØY\ÝY[LŠœ[–È™[š[Y—KJ[–ÈÝ[—K\[–È™[š[Y—JJØYÜ™Y[Y[ØY\ÝY[ÜÝ[X^
+Z[ŠL›Ý[™
+L
+›Ý\ËÛX^
+KÝ[Ý›Ý\ÊJJØY\ÝY[
+JNÝÛÛ\ÝMLˆ™\Ý[^È™^HŽœÝ]VÈ™^H—K›X[™]HŽ™ÖÈ›X[™]H—K™ÛÝ™\››Y[›Ý\ÈŽ›Ý\ËÝ[›Ý\ÈŽÝ[Ý›Ý\Ë™ÛÝ™\››Y[ÝŽœÝÛÛˆŽÛÛ‹™\ÝšXÝÈŽ™\ÝšXÝËœ[ˆŽœ[‹˜YÜ™Y[Y[ÈŽ˜YÜ™Y[Y[Ë›Ü[ÛÛ\Z[ÈŽ›[Š™\ÜÈ˜ÛÛ\Z[È—JKœ™X\ÛÛœÈŽ–Ùˆ‘[\[ÎˆÜ›Ý[™
+Ý[JÉÙ[\Þ[Y[	×J™ÉÜÜ[][Û‰×H›Üˆ[ˆ™\ÜÉÙ\ÝšXÝÉ×JKÛX^
+K™\ÜÉÙ[YÚX›U›Ý\œÉ×JJ_IH‹”Ù\šXÚ[ÜÈ][šXÚ\[\ÎˆŠÜÝŠ›Ý[™
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+JJJÈ‰H‹ˆ“Y]\ÈÝ[\Y\ÎˆÜ[–ÉÙ[š[Y	×_KÞÜ[–ÉÝÝ[	×_H‹ˆXÝY\™ÜÈÝ[\YÜÎˆØYÜ™Y[Y[ÖÉØÛÛ\]Y	×_H0­È™[˜ÚYÜÎˆØYÜ™Y[Y[ÖÉÛÝ™\™YI×_H—_BˆÖÈ™[XÝ[ÛœÈ—K˜\[™
+™\Ý[
+NÙÖÈ™[XÝ[ÛœÈ—OYÖÈ™[XÝ[ÛœÈ—VËN—NÙÖÈ›\Ý[XÝ[Û‘^H—O\Ý]VÈ™^H—BˆYˆÛÛŽ™ÖÈ›X[™]H—JÏLNÙÖÈœÝ\^H—O\Ý]VÈ™^H—NÙÖÈ›™^[XÝ[Û‘^H—O\Ý]VÈ™^H—JÌMÙ]Š‘[ÛØšY\››È™[Y]˜HÝHX[™]È‹ˆ‘[\]Z\ÈØ]›ÈÜÝIHHÜÈ›ÝÜÈXš[]YÜËˆH[XØÚpìÛˆÛÛœÚY\°ìÈ[\[Ëš]šY[™KÙ\šXÚ[ÜÈHÛÛ™šX[ž˜HHÜÈ\Ýš]ÜËˆŠBˆ[ÙN™ÖÈœÝ]\È—OH™\œ›ÝYÈŽÜÝ]VÈœ]\ÙY—OUYNÙ]Š‘\œ›ÝHÛÛ\\YH[ˆ\È[XØÚ[Û™\È‹ˆ‘[ÛØšY\››ÈØ]›ÈÜÝIHH\™pìÈHX^[Ü°ëXKˆÙÈ[\]Z\ÈZ˜H[X[™]ÎÈHÚ]YY]YYH]\ØYH[ˆ[ÙÈØœÙ\˜XÚpìÛ‹ˆŠBˆYˆÛÛŽ™ÖÈœ[ˆ—O[™]×ÛX[™]WÜ[Š
+NÙÖÈ˜ÛÛ\Z[È—OVØÈ›ÜˆÈ[ˆË™Ù]
+˜ÛÛ\Z[È‹×JHYˆË™Ù]
+œÝ]\ÈŠOOH˜XšY\È—B‚™Yˆ[œÝ\™WØÜš]XØ[Ú[œÜXÝ[Û—ÜØÚY[JZ[[™ÊN‚ˆYˆZ[[™Ë™Ù]
+šÚ[™ŠH›Ý[ˆ
+œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠNœ™]\›‚ˆZ[[™ËœÙ]Y˜][
+š[œÜXÝ[Û’[\˜[^\È‹N
+BˆZ[[™ËœÙ]Y˜][
+›™^[œÜXÝ[Û‘^H‹[
+Ý]K™Ù]
+™^H‹JJJØZ[[™ÖÈš[œÜXÝ[Û’[\˜[^\È—JB‚™Yˆ›ØYÛXZ[[˜[˜ÙWÜ™\Ü
+[™[™×Ù˜XÝÜS›Û™KY˜[˜ÙOQ˜[ÙJN‚ˆ›ØYÏ\Ý]KœÙ]Y˜][
+œ›ØYÈ‹×JNØ\ÜÙ]Ï\Ý]KœÙ]Y˜][
+œ›ØY\ÜÙ]È‹×JBˆ›ÜˆH[ˆ›ØYÎ‚ˆYˆ›Ý[žJK™Ù]
+žŠOO^[™K™Ù]
+žHŠOO^H›ÜˆH[ˆ\ÜÙ]ÊN˜\ÜÙ]Ë˜\[™
+ÈžŽžžHŽžKœ]X[]HŽŽ‹›[ÛPÛÜÝŽŒM_JBˆÛXÞO[X^
+Z[ŠŒ[
+Ý]K™Ù]
+œ›ØYXZ[[˜[˜ÙTÝ‹L
+JJJBˆ›ØYÜÙ]^Ý\JŠH›Üˆˆ[ˆ›ØYßNÜ›ØYÜ›ÝÜÏV×NÜ™\]Z\™YLˆ›Üˆ\ÜÙ][ˆ\ÜÙ]Î‚ˆOX\ÜÙ]Èž—K\ÜÙ]ÈžH—NØY˜XÙ[\Ý[JH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆXœÊ‹™Ù]
+ž‹NNJK^
+JØXœÊ‹™Ù]
+žH‹NNJK^JOLJBˆYÜ™YO\Ý[J
+
+ÙJÙJH[ˆ›ØYÜÙ]›ÜˆH[ˆ
+
+K
+K
+LK
+K
+JK
+LJJJBˆØYLJÛZ[Š‹Y˜XÙ[
+‹ŒJÙYÜ™YJ‹Œ
+NÜ]X[]O[X^
+Z[ŠL›Ø]
+\ÜÙ]™Ù]
+œ]X[]H‹ŠJJJBˆ˜\ÙO\›Ý[™
+
+ÛØY
+
+NÜ™\]Z\™Y
+Ï\›Ý[™
+˜\ÙJœÛXÞKÌL
+BˆYˆY˜[˜ÙN‚ˆ]X[]O[X^
+]X[]KJŒŒŠÛØY
+‹ŒLŠJBˆYˆ[™[™×Ù˜XÝÜˆ\È›Ý›Û™Nœ]X[]O[Z[ŠL]X[]JÊÌŠœÛXÞKÌL
+›X^
+Z[ŠK›Ø]
+[™[™×Ù˜XÝÜŠJJJJBˆ\ÜÙ]Èœ]X[]H—O\›Ý[™
+]X[]KJNØ\ÜÙ]È\ÙSØY—O\›Ý[™
+ØYŠBˆYˆ]X[]OH[™›Ý\ÜÙ]™Ù]
+œØY™]PÛÜÝ\™HŠN‚ˆ\ÜÙ]ÈœØY™]PÛÜÝ\™H—OUYBˆ]ŠÚY\œ™H™]™[]›ÈHØ[H‹ˆ“HØ[HÞ
+Ì_KÞJÌ_HÙHÙ\œ°ìÈ[°è[œÚ]ÈÜˆÛÛ™XÚpìÛˆ\ÝXÝ\˜[Ü°ë]XØH
+Ü›Ý[™
+]X[]J_IJKˆÜÈšXZ™\ÈHÙ\šXÚ[ÜÈ\ØØ\°è[ˆ]\È[\›˜]]˜\È\ÝH™ZXš[]\ˆ[˜[[ËˆŠBˆ[Yˆ]X[]OLN˜\ÜÙ]ÈœØY™]PÛÜÝ\™H—OQ˜[ÙBˆYˆ]X[]OH[™›Ý[žJ‹™Ù]
+\™Ù]\HŠOOHœ›ØYˆ[™‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JJN‚ˆ\Ý[X]O[X^
+L›Ý[™
+L
+ÊK\]X[]JJŒŽ
+JBˆÝ]VÈœ™XÛÝ™\žS™YYÈ—K˜\[™
+ÈšYŽ™ˆ›XZ[[˜[˜ÙK\›ØY^ÞK^Þ_K^ÜÝ]K™Ù]
+	Ù^IËJ_H‹\™Ù]\HŽˆœ›ØY‹žŽžžHŽžK›˜[YHŽ™ˆØ[HÞ
+Ì_KÞJÌ_H‹™^HŽœÝ]K™Ù]
+™^H‹JK˜ÛÛ™][ÛˆŽœ›Ý[™
+]X[]JK™\Ý[X]HŽ™\Ý[X]K˜Ø]\ÙHŽˆ™\ÙØ\ÝHÜˆ\ÛÈH[YðïYY‹š[œÜXÝ[Û”Ý]\ÈŽˆœ[™Y[H‹œÝ]\ÈŽˆ˜XšY\HŸJBˆ]Š’[œÜXØÚpìÛˆšX[™\]Y\šYH‹ˆ“HØ[HÞ
+Ì_KÞJÌ_H˜Z°ìÈHIHHÛÛ™XÚpìÛ‹ˆÛÛXÚ]0èHXYÛ°ìÜÝXÛÈH™\\˜XÚpìÛˆ[\ÈH]YH[˜[[ÈY\™HÙYÝ\šYYˆŠBˆ›ØYÜ›ÝÜË˜\[™
+ÈžŽžžHŽžKœ]X[]HŽœ›Ý[™
+]X[]KJK\ÙSØYŽœ›Ý[™
+ØYŠK›XZ[[˜[˜ÙPÛÜÝŽœ›Ý[™
+˜\ÙJœÛXÞKÌL
+KœÝ]\ÈŽˆ˜Ù\œ˜YHˆYˆ]X[]OH[ÙH˜XšY\HŸJBˆX›X×ÚÚ[™Ï^È˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[‹œÜ‹˜Z\œÜŸBˆ˜XÚ[]Y\ÏV×Bˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆ‹™Ù]
+šÚ[™ŠH›Ý[ˆX›X×ÚÚ[™ÈÜˆ‹™Ù]
+œÝ]\ÈŠH[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠN˜ÛÛ[YBˆ[œÝ\™WØÜš]XØ[Ú[œÜXÝ[Û—ÜØÚY[JŠBˆ]X[]O[X^
+Z[ŠL›Ø]
+‹™Ù]
+œ]X[]H‹ŠJJJNÛØYLJÛZ[Š‹
+‹™Ù]
+š›Ø”ÛÝÈ‹
+J‹ŒLŠØ‹™Ù]
+›ØØÝ\[È‹
+J‹ŒŠJBˆ˜\ÙO\›Ý[™
+N
+ÛØY
+JNØÛÜÝ\›Ý[™
+˜\ÙJœÛXÞKÌL
+NÜ™\]Z\™Y
+ÏXÛÜÝˆYˆY˜[˜ÙN‚ˆ™YYÏ\Ý]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JBˆ]X[]O[X^
+]X[]KJŒN
+ÛØY
+‹ŒJJBˆYˆ[™[™×Ù˜XÝÜˆ\È›Ý›Û™Nœ]X[]O[Z[ŠL]X[]JÊLŠœÛXÞKÌL
+›X^
+Z[ŠK›Ø]
+[™[™×Ù˜XÝÜŠJJJJBˆ–Èœ]X[]H—O\›Ý[™
+]X[]KJNØ–È›XZ[[˜[˜ÙSØY—O\›Ý[™
+ØYŠBˆYˆ]X[]OŒ[™›Ý[žJ‹™Ù]
+\™Ù]\HŠOOH˜Z[[™Èˆ[™‹™Ù]
+žŠOOX–Èž—H[™‹™Ù]
+žHŠOOX–ÈžH—H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JJN‚ˆ\Ý[X]O[X^
+L›Ý[™
+L
+ÊŒ\]X[]JJŒÎ
+JBˆÝ]VÈœ™XÛÝ™\žS™YYÈ—K˜\[™
+ÈšYŽ™ˆ›XZ[[˜[˜ÙKXZ[[™Ë^Ø–ÉÞ	×_K^Ø–ÉÞI×_K^ÜÝ]K™Ù]
+	Ù^IËJ_H‹\™Ù]\HŽˆ˜Z[[™È‹žŽ˜–Èž—KžHŽ˜–ÈžH—K›˜[YHŽ˜‹™Ù]
+›˜[YH‹–ÈšÚ[™—JK™^HŽœÝ]K™Ù]
+™^H‹JK˜ÛÛ™][ÛˆŽœ›Ý[™
+]X[]JK™\Ý[X]HŽ™\Ý[X]K˜Ø]\ÙHŽˆ™\ÙØ\ÝHÜˆ\ÛÈH[YðïYY‹š[œÜXÝ[Û”Ý]\ÈŽˆœ[™Y[H‹œÝ]\ÈŽˆ˜XšY\HŸJBˆ]Š’[œÜXØÚpìÛˆHX[[š[ZY[È™\]Y\šYH‹ˆžØ‹™Ù]
+	Û˜[YIË–ÉÚÚ[™	×J_H˜Z°ìÈHŒ	HHÛÛ™XÚpìÛ‹ˆÛÛXÚ]0èH[˜H[œÜXØÚpìÛˆHÛÛ\\°èHÙ™\\ÈH™ZXš[]XÚpìÛˆ[\ÈH]YHY\™HØ\XÚYYˆŠBˆYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠH[™Ý]K™Ù]
+™^H‹JOX–È›™^[œÜXÝ[Û‘^H—H[™›Ý[žJ‹™Ù]
+\™Ù]\HŠOOH˜Z[[™Èˆ[™‹™Ù]
+žŠOOX–Èž—H[™‹™Ù]
+žHŠOOX–ÈžH—H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ›Üˆˆ[ˆ™YYÊN‚ˆ™YYË˜\[™
+ÈšYŽ™ˆš[œÜXÝ[Û‹\[^Ø–ÉÞ	×_K^Ø–ÉÞI×_K^ÜÝ]K™Ù]
+	Ù^IËJ_H‹\™Ù]\HŽˆ˜Z[[™È‹žŽ˜–Èž—KžHŽ˜–ÈžH—K›˜[YHŽ˜‹™Ù]
+›˜[YH‹–ÈšÚ[™—JK™^HŽœÝ]K™Ù]
+™^H‹JK˜ÛÛ™][ÛˆŽœ›Ý[™
+]X[]JK™\Ý[X]HŽ›X^
+L›Ý[™
+L
+Ê‹\]X[]JJŒÎ
+JK˜Ø]\ÙHŽˆš[œÜXØÚpìÛˆ™]™[]˜H›ÙÜ˜[XYH‹š[œÜXÝ[Û”Ý]\ÈŽˆœ[™Y[H‹œØÚY[Y[œÜXÝ[ÛˆŽ•YKœÝ]\ÈŽˆ˜XšY\HŸJBˆ]Š’[œÜXØÚpìÛˆ™]™[]˜H™[˜ÚYH‹ˆžØ‹™Ù]
+	Û˜[YIË–ÉÚÚ[™	×J_HYðìÈHÝH™]š\ÚpìÛˆHÙYÝ\šYYHÜÈØ–ÉÚ[œÜXÝ[Û’[\˜[^\É×_H0ëX\ËˆH[œÜXØÚpìÛˆÝY\ÝH	MLHÛÛ\YX˜H\ÝXÝ\˜KÛÛ™^[Û™\ÈHØ\XÚYY[\ÈHÛÛ˜]\ˆ[˜H™ZXš[]XÚpìÛ‹ˆŠBˆ˜XÝÜ[X^
+Z[ŠK]X[]KÎŠJNØ˜\ÙWÛÝ]]X‹™Ù]
+™Ù[™\˜][Û’ÝÈ‹L
+HYˆ–ÈšÚ[™—OOHœÝÙ\”[ˆ[ÙH‹™Ù]
+™X]Y[LÑ^H‹ŒŒYˆ–ÈšÚ[™—OOHØ]\”[ˆ[ÙHŒ
+HYˆ–ÈšÚ[™—H[ˆ
+Ø]\”[‹Ø\Ý]Ø]\”[ŠH[ÙH›Û™BˆÝ]]Ý[š]HšÕÈˆYˆ–ÈšÚ[™—OOHœÝÙ\”[ˆ[ÙH›p¬ËÙ0ëXH‚ˆXÝ]™WÚ[œÜXÝ[Û[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+œ™XÛÝ™\žS™YYÈ‹×JHYˆ‹™Ù]
+\™Ù]\HŠOOH˜Z[[™Èˆ[™‹™Ù]
+žŠOOX–Èž—H[™‹™Ù]
+žHŠOOX–ÈžH—H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHŠK›Û™JBˆ˜XÚ[]Y\Ë˜\[™
+ÈžŽ˜–Èž—KžHŽ˜–ÈžH—K›˜[YHŽ˜‹™Ù]
+›˜[YH‹–ÈšÚ[™—JKšÚ[™Ž˜–ÈšÚ[™—Kœ]X[]HŽœ›Ý[™
+]X[]KJK™[˜Ý[Û˜[Ø\XÚ]TÝŽœ›Ý[™
+˜XÝÜŠŒL
+K™Y™™XÝ]™SÝ]]Žœ›Ý[™
+˜\ÙWÛÝ]]
+™˜XÝÜŠHYˆ˜\ÙWÛÝ]]\È›Ý›Û™H[ÙH›Û™K›Ý]][š]Ž›Ý]]Ý[š]š[œÜXÝ[Û’[\˜[^\ÈŽ˜‹™Ù]
+š[œÜXÝ[Û’[\˜[^\ÈŠKš[œÜXÝ[Û‘YQ^HŽ˜‹™Ù]
+›™^[œÜXÝ[Û‘^HŠKš[œÜXÝ[Û‘^\Ô™[XZ[š[™ÈŽ›X^
+‹™Ù]
+›™^[œÜXÝ[Û‘^H‹Ý]K™Ù]
+™^H‹JJK\Ý]K™Ù]
+™^H‹JJKš[œÜXÝ[Û“Ý™\™YHŽœÝ]K™Ù]
+™^H‹JOX‹™Ù]
+›™^[œÜXÝ[Û‘^H‹Ý]K™Ù]
+™^H‹JJKš[œÜXÝ[Û”Ý]\ÈŽ˜XÝ]™WÚ[œÜXÝ[Û‹™Ù]
+š[œÜXÝ[Û”Ý]\ÈŠHYˆXÝ]™WÚ[œÜXÝ[Ûˆ[ÙH›Û™K\ÙSØYŽœ›Ý[™
+ØYŠK›XZ[[˜[˜ÙPÛÜÝŽ˜ÛÜÝJBˆ›ØYÜ›ÝÜËœÛÜ
+Ù^O[[X™HŽŠ–Èœ]X[]H—K–ÈžH—K–Èž—JJBˆ˜[Y\ÏVÜ–Èœ]X[]H—H›Üˆˆ[ˆ›ØYÜ›ÝÜ×NØZ[[™×Ý˜[Y\ÏVØ–Èœ]X[]H—H›Üˆˆ[ˆ˜XÚ[]Y\×Bˆ[™Y[X^
+Z[ŠK›Ø]
+[™[™×Ù˜XÝÜˆYˆ[™[™×Ù˜XÝÜˆ\È›Ý›Û™H[ÙHÝ]K™Ù]
+][]Y\È‹ßJK™Ù]
+›XZ[[˜[˜ÙQ[™[™Ñ˜XÝÜˆ‹JJJJBˆ™\Ü^ÈœÛXÞTÝŽœÛXÞKœÙYÛY[ÈŽ›[Š›ØYÜ›ÝÜÊK˜]™\˜YÙPÛÛ™][ÛˆŽœ›Ý[™
+Ý[J˜[Y\ÊKÛX^
+K[Š˜[Y\ÊJJŒL
+KÌLœÛÜ”ÙYÛY[ÈŽœÝ[JH›Üˆˆ[ˆ˜[Y\ÊK˜Üš]XØ[ÙYÛY[ÈŽœÝ[JH›Üˆˆ[ˆ˜[Y\ÊK˜ÛÜÙYÙYÛY[ÈŽœÝ[JH›Üˆˆ[ˆ˜[Y\ÊK™˜XÚ[]PÛÝ[Ž›[Š˜XÚ[]Y\ÊK˜]™\˜YÙQ˜XÚ[]PÛÛ™][ÛˆŽœ›Ý[™
+Ý[JZ[[™×Ý˜[Y\ÊKÛX^
+K[ŠZ[[™×Ý˜[Y\ÊJJŒL
+KÌLÛÜ›‘˜XÚ[]Y\ÈŽœÝ[JŒ›Üˆˆ[ˆZ[[™×Ý˜[Y\ÊK›[ÛT™\]Z\™YŽœ™\]Z\™Yœ›ØY[ÛT™\]Z\™YŽœÝ[J–È›XZ[[˜[˜ÙPÛÜÝ—H›Üˆˆ[ˆ›ØYÜ›ÝÜÊK™˜XÚ[]S[ÛT™\]Z\™YŽœÝ[J–È›XZ[[˜[˜ÙPÛÜÝ—H›Üˆˆ[ˆ˜XÚ[]Y\ÊK›[ÛQ[™YŽœ›Ý[™
+™\]Z\™Y
+™[™Y
+K˜\ÜÙ]ÈŽœ›ØYÜ›ÝÜÖÎŽK™˜XÚ[]Y\ÈŽ™˜XÚ[]Y\ÖÎ_BˆÝ]VÈœ›ØYXZ[[˜[˜ÙT™\Ü—O\™\Üˆ™]\›ˆ™\Ü‚™Yˆ\š]YÙWÜ™\Ü
+
+N‚ˆ\ÝYVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+š\š]YÙQ[YÚX›HŠWBˆ›ÝXÝYVØˆ›Üˆˆ[ˆ\ÝYYˆ‹™Ù]
+š\š]YÙS]™[ŠH[ˆ
+œ›ÝXØÚpìÛˆ\˜ÚX[‹œ›ÝXØÚpìÛˆ[YÜ˜[ŠWBˆØÛÜ™O\Ý[J‹™Ù]
+š\š]YÙTÚYÛšYšXØ[˜ÙH‹JJ˜‹™Ù]
+˜ÛÛœÙ\˜][Ûˆ‹
+KÌL›Üˆˆ[ˆ›ÝXÝY
+BˆØ[™Y]\ÏV×BˆXÝ]™O^ÊË™Ù]
+žŠKË™Ù]
+žHŠJH›ÜˆÈ[ˆÝ]K™Ù]
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×J_Bˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆ‹™Ù]
+šÚ[™ŠHOHœÚÜˆÜˆ‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠHOH˜Ù\œ˜YÈŽ˜ÛÛ[YBˆš\›OX‹™Ù]
+˜\Ú[™\ÜÈ‹ßJNØ\œ™X\œÏ\Ý]K™Ù]
+^\È‹ßJK™Ù]
+˜\œ™X\œÐžP\ÜÙ]‹ßJK™Ù]
+š\›K™Ù]
+šY‹ˆœÚÜ^Ø–ÉÞ	×_K^Ø–ÉÞI×_HŠK
+Bˆ\š]YÙWÛØÚÙYX‹™Ù]
+š\š]YÙS]™[ŠH[ˆ
+œ›ÝXØÚpìÛˆ\˜ÚX[‹œ›ÝXØÚpìÛˆ[YÜ˜[ŠBˆ™X\ÛÛH‘[ˆ™XÛÛ™\œÚpìÛˆˆYˆ
+‹™Ù]
+žŠK‹™Ù]
+žHŠJH[ˆXÝ]™H[ÙH”›ÝXØÚpìÛˆ]š[[ÛšX[ˆYˆ\š]YÙWÛØÚÙY[ÙH‘]YH[\™\Ø\šX[[™Y[HˆYˆš\›K™Ù]
+˜Ü™Y]X‹
+OŒÜˆ\œ™X\œÏŒ[ÙH‘\ÜÛšX›H\˜Hš]šY[™H‚ˆØ[™Y]\Ë˜\[™
+ÈžŽ˜–Èž—KžHŽ˜–ÈžH—K›˜[YHŽ˜‹™Ù]
+›˜[YH‹“ØØ[Ù\œ˜YÈŠKœ™X\ÛÛˆŽœ™X\ÛÛ‹™[YÚX›HŽœ™X\ÛÛOH‘\ÜÛšX›H\˜Hš]šY[™HŸJBˆ™]\›ˆÈžYX\ˆŽŒŒŠÊX^
+[
+Ý]K™Ù]
+™^H‹JJKLJKËÌÍŒ
+K›\ÝYŽ›[Š\ÝY
+Kœ›ÝXÝYŽ›[Š›ÝXÝY
+Kœ™\ÝÜ™YŽœÝ[J›ÛÛ
+‹™Ù]
+œ™[›Ý˜][ÛœÈŠJH›Üˆˆ[ˆ\ÝY
+KšY[]HŽœ›Ý[™
+Z[ŠLØÛÜ™JŽJJKÛÜšÜÈŽ–ÙXÝ
+ÊH›ÜˆÈ[ˆÝ]K™Ù]
+š\š]YÙUÛÜšÜÈ‹×JWKœÚ]\ÈŽ–ÞÚÎ˜‹™Ù]
+ÊH›ÜˆÈ[ˆ
+ž‹žH‹›˜[YH‹šÚ[™‹žYX\Z[‹˜\˜Ú]XÝ\˜[\˜H‹˜\˜Ú]XÝ\˜[Ý[H‹›ÜšYÚ[˜[\ÙH‹œ™[›Ý˜][ÛœÈ‹˜ÛÛœÙ\˜][Ûˆ‹š\š]YÙTÚYÛšYšXØ[˜ÙH‹š\š]YÙS]™[‹›ØØÝ\[ÈŠ_H›Üˆˆ[ˆ\ÝYKœ™]\ÙUÛÜšÜÈŽ–ÙXÝ
+ÊH›ÜˆÈ[ˆÝ]K™Ù]
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JWKœ™]\ÙR\ÝÜžHŽœÝ]K™Ù]
+˜Y\]™T™]\ÙR\ÝÜžH‹×JVËN—Kœ™]\ÙPØ[™Y]\ÈŽ˜Ø[™Y]\Ëœ™]\ÙRÛY\ÈŽœÝ[JH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+˜Y\]™T™]\ÙQ^HŠJ_B‚™YˆY˜[˜ÙWØY\]™WÜ™]\ÙJ
+N‚ˆ›ÜˆÛÜšÈ[ˆ\Ý
+Ý]K™Ù]
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JJN‚ˆÛÜšÖÈ™[\ÙY^\È—O]ÛÜšË™Ù]
+™[\ÙY^\È‹
+JÌBˆÛÜšÖÈœ›ÙÜ™\ÜÈ—O[Z[ŠKÛÜšÖÈ™[\ÙY^\È—KÛX^
+KÛÜšÖÈ™\˜][Û‘^\È—JJBˆÛÜšÖÈœÝYÙH—OJ‘\Û[ÛZ™HHXYÛ°ìÜÝXÛÈˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OŒˆ[ÙH”™YY\ž›ÈHY]˜\È]š\Ú[Û™\ÈˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OMH[ÙHYÝXKØ[™X[ZY[ÈH[XÝšXÚYYˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OŽH[ÙH’[œÜXØÚpìÛˆHXš]Xš[YYŠBˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—ON˜ÛÛ[YBˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO]ÛÜšÖÈž—H[™‹™Ù]
+žHŠOO]ÛÜšÖÈžH—JK›Û™JBˆYˆZ[[™Î‚ˆÛÛ˜[YOXZ[[™Ë™Ù]
+›˜[YH‹“ØØ[™XÝ\\˜YÈŠBˆZ[[™ËœÜ
+˜\Ú[™\ÜÈ‹›Û™JNØZ[[™ÖÈšÚ[™—OHšÛYHŽØZ[[™ÖÈ›˜[YH—OYˆ•š]šY[™\È0­ÈÛÛÛ˜[Y_HŽØZ[[™ÖÈœÝ]\È—OHšXš[]YÈŽØZ[[™ÖÈ˜Ø\XÚ]H—OLØZ[[™ÖÈ›ØØÝ\[È—OLØZ[[™ÖÈœ]X[]H—O]ÛÜšÖÈœ]X[]H—NØZ[[™ÖÈšÝ\ÙZÛØ\Ú—OLØZ[[™ÖÈ›[ÛUØYÙR[˜ÛÛYH—OLØZ[[™ÖÈœ™\ÚY[È—OV×NØZ[[™ÖÈ˜Y\]™T™]\ÙQ^H—O\Ý]VÈ™^H—NØZ[[™ÖÈœ™[[X\ÙQ^\È—OV×NØZ[[™ÖÈœ™[[šXÙT\”™\ÚY[—O]ÛÜšÖÈœ™[—BˆZ[[™ËœÙ]Y˜][
+œ™[›Ý˜][ÛœÈ‹×JK˜\[™
+ÈžYX\ˆŽŒŒŠÊX^
+Ý]VÈ™^H—KLJKËÌÍŒ
+K™^HŽœÝ]VÈ™^H—K˜ÛÛ˜XÝÜˆŽÛÜšÖÈ˜ÛÛ˜XÝÜˆ—K˜ÛÜÝŽÛÜšÖÈš[™\ÝY[—KœØÛÜHŽˆ”™XÛÛ™\œÚpìÛˆHØØ[Hš]šY[™HÛÛˆ™Y\ÈHXš]Xš[YYŸJBˆÝ]KœÙ]Y˜][
+˜Y\]™T™]\ÙR\ÝÜžH‹×JK˜\[™
+ÊŠÛÜšËœÝ]\ÈŽˆ˜ÛÛ\]YH‹˜ÛÛ\]Y^HŽœÝ]VÈ™^H—_JNÙ[Ý]VÈ˜Y\]™T™]\ÙR\ÝÜžH—VÎ‹MNÜÝ]VÈ˜Y\]™T™]\ÙUÛÜšÜÈ—Kœ™[[Ý™JÛÜšÊBˆ]Š•š]šY[™\È™XÛÛ™\Y\È‹ˆžÝÛÜšÖÉÛ˜[YI×_H\›Ø°ìÈYÝXKØ[™X[ZY[ÈHÙYÝ\šYYˆ^˜\ÈY]˜\Ëˆ[]Z[\ˆ[šXÚX[	ÝÛÜšÖÉÜ™[	×_HÜˆ™\ÚY[KÛY\ÎÈÚYÝZY[H]Y[ž˜HÝZ™]HH[\[ÈH\›Ø˜XÚpìÛˆÚ]YY[˜KˆŠB‚™YˆÛÛXÝØY\]™WÜ™[Ê
+N‚ˆZYÝÝ[X\œ™X\œÏLˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+˜Y\]™T™]\ÙQ^HŠH[™‹™Ù]
+›ØØÝ\[È‹
+OŒ[™Ý]K™Ù]
+™^H‹JKX‹™Ù]
+›X\ÙTÝ\^H‹‹™Ù]
+˜Y\]™T™]\ÙQ^H‹JJOLÌ
+N‚ˆX\ÙWÙ^\ÏZÛYKœÙ]Y˜][
+œ™[[X\ÙQ^\È‹ÚÛYK™Ù]
+˜Y\]™T™]\ÙQ^H‹JWJšÛYK™Ù]
+›ØØÝ\[È‹
+JNÙYO[X^
+[
+ÛYK™Ù]
+œ™[[šXÙT\”™\ÚY[‹
+JœÝ[JH›ÜˆÝ\Y[ˆX\ÙWÙ^\ÈYˆÝ]K™Ù]
+™^H‹JK\Ý\YLÌ
+JJNÜZY[Z[ŠYKX^
+[
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JJJBˆÛYVÈšÝ\ÙZÛØ\Ú—KO\ZYÚÛYVÈœ™[[ÝÛ™\Ø\Ú—OZÛYK™Ù]
+œ™[[ÝÛ™\Ø\Ú‹
+JÜZYÚÛYVÈœ™[\œ™X\œÈ—OZÛYK™Ù]
+œ™[\œ™X\œÈ‹
+JÙYK\ZYÜZYÝÝ[
+Ï\ZYØ\œ™X\œÊÏYYK\ZYˆYˆZYÝÝ[™]Š[]Z[\™\ÈHš]šY[™\È™XÛÛ™\Y\È‹ˆ”›ÜY]\š[ÜÈÛØœ˜\›Ûˆ	ÜZYÝÝ[HÜˆÜÝ[JH›Üˆˆ[ˆÝ]VÉØZ[[™ÜÉ×HYˆ‹™Ù]
+	ØY\]™T™]\ÙQ^IÊH[™‹™Ù]
+	ÛØØÝ\[ÉË
+OŒ
+_H[›]YX›\ÎÈ]YHH[]Z[\ˆ[™Y[H	Ø\œ™X\œßKˆŠBˆYˆ\œ™X\œÏMŒœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJNÙ]Š”™\ÚpìÛˆÜˆ[]Z[\™\È‹ˆ”]YY\›Ûˆ	Ø\œ™X\œßHH[]Z[\ˆÚ[ˆYØ\ˆ[ˆ[›]YX›\È™XÛÛ™\YÜÎÈÜÈÙØ\™\ÈY\™[ˆX\™Ù[ˆH˜Z˜HH\›Ø˜XÚpìÛ‹ˆŠB‚™YˆY˜[˜ÙWÚ\š]YÙWÝÛÜšÜÊ
+N‚ˆ^OZ[
+Ý]K™Ù]
+™^H‹JJBˆYˆ^OŒH[™
+^KLJILÍŒOL‚ˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆZ[[™Ë™Ù]
+š\š]YÙQ[YÚX›HŠN‚ˆÜÜÏLˆYˆZ[[™Ë™Ù]
+š\š]YÙS]™[ŠH[ˆ
+œ›ÝXØÚpìÛˆ\˜ÚX[‹œ›ÝXØÚpìÛˆ[YÜ˜[ŠH[ÙHÂˆZ[[™ÖÈ˜ÛÛœÙ\˜][Ûˆ—O[X^
+Z[[™Ë™Ù]
+˜ÛÛœÙ\˜][Ûˆ‹L
+K[ÜÜÊBˆYˆZ[[™ÖÈ˜ÛÛœÙ\˜][Ûˆ—OÍN™]Š”šY\ÙÛÈH]\š[Ü›È]š[[ÛšX[‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIÊ_HÛÛœÙ\˜HØZ[[™ÖÉØÛÛœÙ\˜][Û‰×_IHHÝH\ÝYÎÈš[˜[˜ÚX\ˆ™YY\ž›ÜÈ[\ÈH]YH[[›]YX›HÚY\œ™HÜˆÙYÝ\šYYˆŠBˆ›ÜˆÛÜšÈ[ˆ\Ý
+Ý]K™Ù]
+š\š]YÙUÛÜšÜÈ‹×JJN‚ˆYˆÝ]VÈ™^H—OÛÜšË™Ù]
+™[]™\žQ^H‹Ý]VÈ™^H—JN˜ÛÛ[YBˆÛÜšÖÈ™[\ÙY^\È—O]ÛÜšË™Ù]
+™[\ÙY^\È‹
+JÌBˆÛÜšÖÈœ›ÙÜ™\ÜÈ—O[Z[ŠKÛÜšÖÈ™[\ÙY^\È—KÛX^
+KÛÜšÖÈ™\˜][Û‘^\È—JJBˆÛÜšÖÈœÝYÙH—OJÛÛœÛÛYXÚpìÛˆ\ÝXÝ\˜[ˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—O[ÙH’[œÝ[XÚ[Û™\ÈHXØÙ\ÚXš[YYˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—OÌˆ[ÙH”™\Ý]\˜XÚpìÛˆH˜XÚYHH[œÜXØÚpìÛˆŠBˆYˆÛÜšÖÈœ›ÙÜ™\ÜÈ—ON˜ÛÛ[YBˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO]ÛÜšÖÈž—H[™‹™Ù]
+žHŠOO]ÛÜšÖÈžH—JK›Û™JBˆYˆZ[[™Î‚ˆ]X[]OPÓÓ•PÕÔ”Ë™Ù]
+ÛÜšÖÈ˜ÛÛ˜XÝÜˆ—KßJK™Ù]
+œ]X[]H‹ÍJBˆZ[[™ÖÈ˜ÛÛœÙ\˜][Ûˆ—O\›Ý[™
+M
+Ü]X[]JŠNØZ[[™ËœÙ]Y˜][
+œ™[›Ý˜][ÛœÈ‹×JK˜\[™
+ÈžYX\ˆŽŒŒŠÊX^
+Ý]VÈ™^H—KLJKËÌÍŒ
+K™^HŽœÝ]VÈ™^H—K˜ÛÛ˜XÝÜˆŽÛÜšÖÈ˜ÛÛ˜XÝÜˆ—K˜ÛÜÝŽÛÜšÖÈ˜ÛÜÝ—KœØÛÜHŽˆ”™YY\ž›ËXØÙ\ÚXš[YYH[œÝ[XÚ[Û™\ÈŸJBˆZ[[™ÖÈ›\Ý™\ÝÜ™Y^H—O\Ý]VÈ™^H—BˆÝ]KœÙ]Y˜][
+š\š]YÙR\ÝÜžH‹×JK˜\[™
+ÊŠÛÜšËœÝ]\ÈŽˆ˜ÛÛ\]YH‹˜ÛÛ\]Y^HŽœÝ]VÈ™^H—_JNÙ[Ý]VÈš\š]YÙR\ÝÜžH—VÎ‹MBˆÝ]VÈš\š]YÙUÛÜšÜÈ—Kœ™[[Ý™JÛÜšÊNÙ]Š”™ZXš[]XÚpìÛˆ]š[[ÛšX[\›Z[˜YH‹ˆžÝÛÜšÖÉÛ˜[YI×_HYH[œÜXØÚ[Û˜YÈH™XÝ\\°ìÈÝHÛÛœÙ\˜XÚpìÛˆÛÛˆÝÛÜšÖÉØÛÛ˜XÝÜ‰×_NÈ[™\œÚpìÛˆ	ÝÛÜšÖÉØÛÜÝ	×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJB‚™Yˆ[œÝ\™WÝ^ÜÝ]J
+N‚ˆ^\Ï\Ý]KœÙ]Y˜][
+^\È‹™]×Ý^ÜÝ]J
+JBˆ›ÜˆÙ^K˜[YH[ˆ™]×Ý^ÜÝ]J
+Kš][\Ê
+N^\ËœÙ]Y˜][
+Ù^K˜[YJBˆ™]\›ˆ^\Â‚™YˆÛÛXÝÛ][šXÚ\[Ý^\Ê
+N‚ˆˆˆÛØœ˜HÜ˜]°è[Y[™\ÈÛØœ™HØZ˜H^\Ý[NÈH[Ü˜H]YYHÛÛ[ÈÝY[HÜˆÛØœ˜\‹ˆˆˆ‚ˆ^\ÏY[œÝ\™WÝ^ÜÝ]J
+NÛ[ÛJÝ]K™Ù]
+™^H‹JKLJKËÌÌˆYˆ^\Ë™Ù]
+›\Ý›ØÙ\ÜÙY[ÛŠOO[[Ûœ™]\›ˆ^\Ë™Ù]
+›\Ý™\Ü‹ßJBˆ˜]\Ï^Èœ›Ü\HŽ›X^
+[
+^\Ë™Ù]
+œ›Ü\T˜]Pœ‹Œ
+JJK˜\Ú[™\ÜÈŽ›X^
+[
+^\Ë™Ù]
+˜\Ú[™\ÜÔ˜]Pœ‹Œ
+JJ_BˆXØÛÝ[Ï]^\ËœÙ]Y˜][
+˜\œ™X\œÐžP\ÜÙ]‹ßJNÜ›Ü\WÙYO\›Ü\WÜZYX\Ú[™\Ü×ÙYOX\Ú[™\Ü×ÜZY[]WÚÛY\Ï[]WÙš\›\ÏLˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒ
+N‚ˆÙ^OYˆšÛYK^ÚÛYVÉÞ	×_K^ÚÛYVÉÞI×_HŽÙYO\›Ý[™
+ÛYK™Ù]
+›ØØÝ\[È‹
+JŒ
+œ˜]\ÖÈœ›Ü\H—KÌLŒ
+JØXØÛÝ[Ë™Ù]
+Ù^K
+NØØ\Ú[X^
+›Ý[™
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JJNÜZY[Z[ŠØ\ÚYJBˆÛYVÈšÝ\ÙZÛØ\Ú—OXØ\Ú\ZYØXØÛÝ[ÖÚÙ^WOYYK\ZYÚÛYVÈœ›Ü\U^YH—OYYNÚÛYVÈœ›Ü\U^ZY—O\ZYÚÛYVÈœ›Ü\U^\œ™X\œÈ—OYYK\ZYˆ›Ü\WÙYJÏYYNÜ›Ü\WÜZY
+Ï\ZYÛ]WÚÛY\ÊÏZ[
+YOœZY
+Bˆ›ÜˆÚÜ[ˆ
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠN‚ˆš\›O\ÚÜÈ˜\Ú[™\ÜÈ—NÚÙ^OYš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠNÙYO\›Ý[™
+X^
+š\›K™Ù]
+›\Ý™]™[YH‹
+JJœ˜]\ÖÈ˜\Ú[™\ÜÈ—KÌL
+JØXØÛÝ[Ë™Ù]
+Ù^K
+NØØ\Ú[X^
+›Ý[™
+š\›K™Ù]
+˜Ø\Ú‹
+JJNÜZY[Z[ŠØ\ÚYJBˆš\›VÈ˜Ø\Ú—OXØ\Ú\ZYØXØÛÝ[ÖÚÙ^WOYYK\ZYÙš\›VÈ›][šXÚ\[^YH—OYYNÙš\›VÈ›][šXÚ\[^ZY—O\ZYÙš\›VÈ›][šXÚ\[^\œ™X\œÈ—OYYK\ZYˆš\›VÈ^[[œ]Y[˜ÞS[ÛÈ—OYš\›K™Ù]
+^[[œ]Y[˜ÞS[ÛÈ‹
+JÌHYˆYOœZY[ÙHˆ\Ú[™\Ü×ÙYJÏYYNØ\Ú[™\Ü×ÜZY
+Ï\ZYÛ]WÙš\›\ÊÏZ[
+YOœZY
+Bˆ^\ÖÈ›\Ý›ØÙ\ÜÙY[Û—O[[Ûˆ™\Ü^Èœ›Ü\T˜]PœŽœ˜]\ÖÈœ›Ü\H—K˜\Ú[™\ÜÔ˜]PœŽœ˜]\ÖÈ˜\Ú[™\ÜÈ—K˜\ÜÙ\ÜÙYÛY\ÈŽœÝ[J‹™Ù]
+›ØØÝ\[È‹
+JŒ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠK^X›P\Ú[™\ÜÔØ[\ÈŽœÝ[JX^
+‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\Ý™]™[YH‹
+JH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠKœ›Ü\Pš[YŽœ›Ü\WÙYKœ›Ü\PÛÛXÝYŽœ›Ü\WÜZY˜\Ú[™\ÜÐš[YŽ˜\Ú[™\Ü×ÙYK˜\Ú[™\ÜÐÛÛXÝYŽ˜\Ú[™\Ü×ÜZY˜ÛÛXÝYŽœ›Ü\WÜZY
+Ø\Ú[™\Ü×ÜZY˜\œ™X\œÈŽœÝ[JXØÛÝ[Ë˜[Y\Ê
+JK™[[œ]Y[ÛY\ÈŽ›]WÚÛY\Ë™[[œ]Y[\Ú[™\ÜÙ\ÈŽ›]WÙš\›\Ë›[ÛŽ›[ÛBˆ^\ÖÈ›\Ý™\Ü—O\™\ÜÝ^\ËœÙ]Y˜][
+š\ÝÜžH‹×JK˜\[™
+™\Ü˜ÛÜJ
+JNÙ[^\ÖÈš\ÝÜžH—VÎ‹LL—BˆYˆ™\ÜÈ˜ÛÛXÝY—N™]Š”™XØ]YXÚpìÛˆ][šXÚ\[‹ˆ”ÙHÛØœ˜\›Ûˆ	Ü™\ÜÉØÛÛXÝY	×N‹HH[\Y\ÝÜÈÛØœ™Hš]šY[™\ÈH™[\ÎÈ	Ü™\ÜÉØ\œ™X\œÉ×N‹H]YY[ˆ[ˆ[Ü˜Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆYˆ]WÚÛY\È[™]WÚÛY\Ï[X^
+Ë›Ý[™
+Ý[JH›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒ
+J‹ŒÍJJN‚ˆÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJNÙ]Š“[Ü˜HšX]\šXH^[™YH‹ˆžÛ]WÚÛY\ßHÙØ\™\È›ÈYY\›ÛˆYØ\ˆ[[\Y\ÝÈÛÛ\]ÎÈHÛÛ™šX[ž˜H][šXÚ\[ØYH[ˆ[ËˆŠBˆ™]\›ˆ™\Ü‚™Yˆ][šXÚ\[Ùš[˜[˜ÙWÜ™\Ü
+[ÛWÚ[˜ÛÛYOS›Û™K[ÛWÙ^[œÙ\ÏS›Û™JN‚ˆš[˜[˜ÙO\Ý]KœÙ]Y˜][
+™š[˜[˜ÙH‹™]×Ùš[˜[˜ÙJ
+JNÛØ[œÏYš[˜[˜ÙKœÙ]Y˜][
+›][šXÚ\[Ø[œÈ‹×JBˆÝ]Ý[™[™Ï\›Ý[™
+Ý[JX^
+™Ù]
+˜˜[[˜ÙH‹
+JH›Üˆ[ˆØ[œÈYˆ™Ù]
+œÝ]\ÈŠOOH˜XÝ]™HŠJBˆÙ\šXÙO\›Ý[™
+Ý[JX^
+™Ù]
+œ^[Y[‹
+JH›Üˆ[ˆØ[œÈYˆ™Ù]
+œÝ]\ÈŠOOH˜XÝ]™HŠJBˆ[˜ÛÛYO[X^
+›Ý[™
+[ÛWÚ[˜ÛÛYHYˆ[ÛWÚ[˜ÛÛYH\È›Ý›Û™H[ÙHÝ]K™Ù]
+›[ÛR[˜ÛÛYH‹
+JJBˆ^[œÙ\Ï[X^
+›Ý[™
+[ÛWÙ^[œÙ\ÈYˆ[ÛWÙ^[œÙ\È\È›Ý›Û™H[ÙHÝ]K™Ù]
+›[ÛQ^[œÙ\È‹
+JJBˆ™]Z[˜ÛÛYKY^[œÙ\Ë\Ù\šXÙBˆÈ›ÞYXØÚpìÛˆH™Y™\™[˜ÚXNÈX[Y[™H\È˜\Ù\ÈXÝX[\ÈHÜÈYÛÜÈÛÛ˜]YÜÈÛÛœÝ[\Ë‚ˆXÜ™\Ù\™O[X^
+›Ý[™
+š[˜[˜ÙK™Ù]
+™X™\Ù\™H‹
+JJBˆYÙ]ÏYš[˜[˜ÙKœÙ]Y˜][
+œ›ÙÜ˜[PYÙ]È‹™]×Ùš[˜[˜ÙJ
+VÈœ›ÙÜ˜[PYÙ]È—JBˆ›ÜˆÙ^K˜[YH[ˆ™]×Ùš[˜[˜ÙJ
+VÈœ›ÙÜ˜[PYÙ]È—Kš][\Ê
+N˜YÙ]ËœÙ]Y˜][
+Ù^K˜[YK˜ÛÜJ
+HYˆ\Ú[œÝ[˜ÙJ˜[YKXÝ
+H[ÙH˜[YJBˆ›Üˆ˜[YH[ˆ
+œÙ\šXÙ\È‹›[Øš[]H‹›™]ÛÜšÜÈŠN‚ˆYÙ]ÖÈ˜\œ™X\œÈ—KœÙ]Y˜][
+˜[YK
+NØYÙ]ÖÈ[™\™[™Y[ÛÈ—KœÙ]Y˜][
+˜[YK
+Bˆ™]\›ˆÈ˜Ø\ÚŽœ›Ý[™
+Ý]K™Ù]
+›[Û™^H‹
+JK™X™\Ù\™HŽ™XÜ™\Ù\™KÝ[™X\Ý\žHŽœ›Ý[™
+Ý]K™Ù]
+›[Û™^H‹
+JJÙXÜ™\Ù\™Kœ›ÙÜ˜[PYÙ]ÈŽ˜YÙ]Ë›[ÛR[˜ÛÛYHŽš[˜ÛÛYK›[ÛQ^[œÙ\ÈŽ™^[œÙ\Ë›[ÛQXÙ\šXÙHŽœÙ\šXÙK›™]Y\‘XŽ›™]›Ý]Ý[™[™ÑXŽ›Ý]Ý[™[™Ë˜XÝ]™SØ[œÈŽœÝ[J™Ù]
+œÝ]\ÈŠOOH˜XÝ]™Hˆ›Üˆ[ˆØ[œÊK˜Ü™Y][Z]Ž›X^
+Z[Š›Ý[™
+[˜ÛÛYJŽ
+K[Ý]Ý[™[™ÊJK™›Ü™XØ\ÝLˆŽœ›Ý[™
+Ý]K™Ù]
+›[Û™^H‹
+JÙXÜ™\Ù\™JÛ™]
+ŒLŠK™›Ü™XØ\ÝŽœ›Ý[™
+Ý]K™Ù]
+›[Û™^H‹
+JÙXÜ™\Ù\™JÛ™]
+
+K›Ø[œÈŽ›Ø[œßB‚™Yˆ][šXÚ\[ÙXÜ^[Y[
+
+N‚ˆš[˜[˜ÙO\Ý]KœÙ]Y˜][
+™š[˜[˜ÙH‹™]×Ùš[˜[˜ÙJ
+JNÝÝ[Lˆ›ÜˆØ[ˆ[ˆš[˜[˜ÙKœÙ]Y˜][
+›][šXÚ\[Ø[œÈ‹×JN‚ˆYˆØ[‹™Ù]
+œÝ]\ÈŠHOH˜XÝ]™HŽ˜ÛÛ[YBˆ˜[[˜ÙO[X^
+Ø[‹™Ù]
+˜˜[[˜ÙH‹
+JNÜ^[Y[[Z[Š˜[[˜ÙJØ˜[[˜ÙJ›Ø[‹™Ù]
+›[ÛT˜]H‹ŒJKX^
+Ø[‹™Ù]
+œ^[Y[‹
+JJBˆ[\™\Ý\›Ý[™
+˜[[˜ÙJ›Ø[‹™Ù]
+›[ÛT˜]H‹ŒJJNÜš[˜Ú\[[X^
+›Ý[™
+^[Y[Z[\™\Ý
+JBˆØ[–È›\Ý[\™\Ý—OZ[\™\ÝÛØ[–È›\Ýš[˜Ú\[—O[Z[Š˜[[˜ÙKš[˜Ú\[
+NÛØ[–È›\Ý^[Y[—O\›Ý[™
+^[Y[
+BˆØ[–È˜˜[[˜ÙH—O[X^
+›Ý[™
+˜[[˜ÙK[Ø[–È›\Ýš[˜Ú\[—JJNÛØ[–È›[ÛÔ™[XZ[š[™È—O[X^
+Ø[‹™Ù]
+›[ÛÔ™[XZ[š[™È‹
+KLJNÛØ[–È™[[œ]Y[[ÛÈ—OLÝÝ[
+Ï\›Ý[™
+^[Y[
+BˆYˆØ[–È˜˜[[˜ÙH—OLÜˆØ[–È›[ÛÔ™[XZ[š[™È—OL›Ø[‹\]JÈ˜˜[[˜ÙHŽŒœÝ]\ÈŽˆœZY‹œZY^HŽœÝ]K™Ù]
+™^H‹J_JNÙ]ŠÜ°êY]È][šXÚ\[Ø[˜Ù[YÈ‹ˆ‘[][šXÚ\[È\›Z[°ìÈHYØ\ˆÛØ[‹™Ù]
+	ÛX™[	Ë	Ù[°ê\Ý[[ÉÊ_KˆŠBˆ™]\›ˆÝ[‚™YˆÙ]WÛ][šXÚ\[Ü›ÙÜ˜[WØYÙ]ÊÛÜÝË]˜Z[X›JN‚ˆˆˆ”YØHš[Y\›ÈÙ\šXÚ[ÜË™Y\ÈH[Ýš[YYÙYðî›ˆ\›ÜXXÚ[Û™\ÎÈÈ[™Y[H]YYH[ˆ[Ü˜Hš\ØØ[ˆˆˆ‚ˆš[˜[˜ÙO\Ý]KœÙ]Y˜][
+™š[˜[˜ÙH‹™]×Ùš[˜[˜ÙJ
+JNÙ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NØYÙ]ÏYš[˜[˜ÙVÈœ›ÙÜ˜[PYÙ]È—Bˆ˜[Y\Ï^ÈœÙ\šXÙ\ÈŽˆ”Ù\šXÚ[ÜÈ0î˜›XÛÜÈ‹›™]ÛÜšÜÈŽˆ”™Y\ÈH™\ÚY[ÜÈ‹›[Øš[]HŽˆ•˜[œÜÜHŸNÜ™[XZ[š[™Ï[X^
+›Ý[™
+]˜Z[X›JJNÜ›ÝÜÏ^ßBˆ›ÜˆÙ^H[ˆ
+œÙ\šXÙ\È‹›™]ÛÜšÜÈ‹›[Øš[]HŠN‚ˆÝ\œ™[[X^
+›Ý[™
+ÛÜÝË™Ù]
+Ù^K
+JJNÛÛ[X^
+›Ý[™
+YÙ]ÖÈ˜\œ™X\œÈ—K™Ù]
+Ù^K
+JJBˆ˜]O[X^
+Z[ŠŒ[
+YÙ]Ë™Ù]
+ˆžÚÙ^_TÝ‹L
+JJJNØÙZ[[™Ï\›Ý[™
+Ý\œ™[
+œ˜]KÌL
+BˆYO[Û
+ØÝ\œ™[ÜØÚY[Y[Z[ŠYKÙZ[[™ÊNÜZY[Z[ŠØÚY[Y™[XZ[š[™ÊNÜ™[XZ[š[™ËO\ZYˆ™]×Ø\œ™X\œÏ[X^
+YK\ZY
+NÝ[œZYØÝ\œ™[[Z[ŠÝ\œ™[X^
+™]×Ø\œ™X\œË[Û
+JNÙ˜XÝÜLK][œZYØÝ\œ™[ÛX^
+KÝ\œ™[
+HYˆÝ\œ™[[ÙHBˆYÙ]ÖÈ˜\œ™X\œÈ—VÚÙ^WO[™]×Ø\œ™X\œÂˆYÙ]ÖÈ[™\™[™Y[ÛÈ—VÚÙ^WOXYÙ]ÖÈ[™\™[™Y[ÛÈ—K™Ù]
+Ù^K
+JÌHYˆ[œZYØÝ\œ™[[ÙHˆ›ÝÏ^Èœ›ÙÜ˜[HŽšÙ^K›X™[Ž›˜[Y\ÖÚÙ^WK›[ÛPÛÜÝŽ˜Ý\œ™[˜YÙ]ÝŽœ˜]KœØÚY[YŽœØÚY[YœZYŽœZY˜\œ™X\œÈŽ›™]×Ø\œ™X\œË™[™[™ÔÝŽœ›Ý[™
+˜XÝÜŠŒL
+_Bˆ›ÝÜÖÚÙ^WO\›ÝÂˆYˆÙ^OOHœÙ\šXÙ\ÈŽ‚ˆYÙ]ÖÈœÙ\šXÙ\Ñ[™[™Ñ˜XÝÜˆ—OY˜XÝÜ‚ˆYˆ[œZYØÝ\œ™[‚ˆÜÜÏ[X^
+KX]˜ÙZ[
+
+KY˜XÝÜŠJ
+JNÜÝ]VÈœÙ\šXÙ\È—O[X^
+KÝ]K™Ù]
+œÙ\šXÙ\È‹
+K[ÜÜÊBˆYˆYÙ]ÖÈ[™\™[™Y[ÛÈ—VÚÙ^WOLŽœÝ]VÈ˜\›Ý˜[—O[X^
+KÝ]K™Ù]
+˜\›Ý˜[‹
+KLJBˆ[YˆÙ^OOH›[Øš[]HŽ˜YÙ]ÖÈ›[Øš[]Q[™[™Ñ˜XÝÜˆ—OY˜XÝÜ‚ˆ[YˆÙ^OOH›™]ÛÜšÜÈŽ‚ˆÝ]KœÙ]Y˜][
+][]Y\È‹ßJVÈ›XZ[[˜[˜ÙQ[™[™Ñ˜XÝÜˆ—OY˜XÝÜ‚ˆÝ]KœÙ]Y˜][
+Ø\ÝH‹ßJVÈ™[™[™Ñ˜XÝÜˆ—OY˜XÝÜ‚ˆ™\Ü^È›[ÛŽŠÝ]K™Ù]
+™^H‹JKLJKËÌÌœ›ÙÜ˜[\ÈŽœ›ÝÜËœØÚY[YŽœÝ[JÈœØÚY[Y—H›Üˆ[ˆ›ÝÜË˜[Y\Ê
+JKœZYŽœÝ[JÈœZY—H›Üˆ[ˆ›ÝÜË˜[Y\Ê
+JK˜\œ™X\œÈŽœÝ[JÈ˜\œ™X\œÈ—H›Üˆ[ˆ›ÝÜË˜[Y\Ê
+JK˜Ø\Ú™[XZ[š[™ÈŽœ™[XZ[š[™ßBˆYÙ]ÖÈ›\Ý™\Ü—O\™\ÜØYÙ]ËœÙ]Y˜][
+š\ÝÜžH‹×JK˜\[™
+™\Ü˜ÛÜJ
+JNÙ[YÙ]ÖÈš\ÝÜžH—VÎ‹LBˆYˆ™\ÜÈ˜\œ™X\œÈ—N‚ˆ]Š”™\Ý\Y\ÝÈ][šXÚ\[[œÝYšXÚY[H‹ˆ”›ÙÜ˜[X\È[™Y[\Îˆˆ
+Èˆ0­È‹š›Ú[ŠˆžÜ–ÉÛX™[	×_H	Ü–ÉØ\œ™X\œÉ×N‹H‹œ™\XÙJ‹‹‹ˆŠH›Üˆˆ[ˆ›ÝÜË˜[Y\Ê
+HYˆ–È˜\œ™X\œÈ—JJBˆ™]\›ˆ™\Ü‚™Yˆ™]×ÜÝ\J
+N‚ˆ™]\›ˆÈœ™YÚ[Û˜[Ž’S’UPSÔ‘QÒSÓSÔÕÐÒË˜ÛÜJ
+Kˆ˜ÛÛ˜XÝÜœÈŽžÛ˜[YN’S’UPSÐÓÓ•PÕÔ—ÔÕÐÒË˜ÛÜJ
+H›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTßKˆ˜ÛÛ˜XÝÜØ\ÚŽÓÓ•PÕÔ—ÐÐTÒ˜ÛÜJ
+KˆœÝ\Y\œÈŽžÛ˜[YNœÝØÚË˜ÛÜJ
+H›Üˆ˜[YKÝØÚÈ[ˆÕTQT—ÔÕÐÒËš][\Ê
+_Kˆ›Ü™\œÈŽ–×K›X\šÙ]Ž›™]×ÛX\šÙ]ÜÝ\J
+K›X\šÙ]Ü™\œÈŽ–×KœÜÜ™\œÈŽ–×KœÜ›ÞXYÙ\ÈŽ–×KœÝÜ˜YÙPØ\XÚ]HŽŒžX\™Ø\XÚ]HŽŒ™\ÝÈŽ–×_B‚™Yˆ[š]X[ÜÝ]J
+N‚ˆ›ØYÈHÖÞLH›Üˆ[ˆ˜[™ÙJŒŠWH
+ÈÖÌL‹WH›ÜˆH[ˆ˜[™ÙJKMŠWH
+ÈÖÌNWH›ÜˆH[ˆ˜[™ÙJLMŠWBˆZ[[™ÜÈHÂˆÈžŽŽžHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ•š]šY[™\È[\œ]YH‹›]™[ŽŒ‹›ØØÝ\[ÈŽŒL‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLžHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ˜\œš[È\ÝXÚpìÛˆ‹›]™[ŽŒ‹›ØØÝ\[ÈŽÎœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒMKžHŽŽKšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ“Y\˜ØYÈÙ[˜[‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒŒžHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ“\È[Ü™\˜\È‹›]™[ŽŒ‹›ØØÝ\[ÈŽŽL‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŽKžHŽŒLKšÚ[™Žˆ˜Ú]šXÈ‹›˜[YHŽˆ“][šXÚ\[YY‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒMKžHŽŒLKšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ•[\™\È[Y\È‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽKžHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆØ\Ø\È[Ù\ÝH‹›]™[ŽŒK›ØØÝ\[ÈŽŒŒ‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽ‹žHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ”\ØZ™H[[Û[›È‹›]™[ŽŒK›ØØÝ\[ÈŽŒŽœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽËžHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ’˜\™[™\ÈHXœš[‹›]™[ŽŒK›ØØÝ\[ÈŽŒ‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŽžHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ”™\ÚY[˜ÚX\È[Ù[›È‹›]™[ŽŒK›ØØÝ\[ÈŽŒÌœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLKžHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆØ\Ø\ÈHH^˜H‹›]™[ŽŒK›ØØÝ\[ÈŽŒÌËœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLËžHŽŽšÚ[™ŽˆšÛYH‹›˜[YHŽˆÛÛš[È\ÝXÚpìÛˆ‹›]™[ŽŒK›ØØÝ\[ÈŽŒËœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLËžHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ“ÜÈ[ÜÈ‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒM‹žHŽŽKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ•š]šY[™\È[Y\˜ØYÈ‹›]™[ŽŒK›ØØÝ\[ÈŽŒÌ‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒMËžHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆØ\Ø\È[Ø[˜[‹›]™[ŽŒK›ØØÝ\[ÈŽŒ‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒNKžHŽŒLKšÚ[™ŽˆšÛYH‹›˜[YHŽˆ“ÛX\È[Y\È‹›]™[ŽŒK›ØØÝ\[ÈŽŒ‹œÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLKžHŽŒMšÚ[™ŽˆšÛYH‹›˜[YHŽˆ˜\œš[È[Ý\ˆ‹›]™[ŽŒK›ØØÝ\[ÈŽŒKœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLËžHŽŒMšÚ[™ŽˆšÛYH‹›˜[YHŽˆ“ÜÈ\›Û[ÜÈ‹›]™[ŽŒK›ØØÝ\[ÈŽŒKœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽKžHŽŒLKšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ[XXðê[ˆ[Ù\ÝH‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒMžHŽŽKšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ‘Ø[\°ëXHÙ[˜[‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒNKžHŽŒLËšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ‘\0ìÜÚ]ÈÛÜÝ\›È‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸKˆÈžŽŒLKžHŽËšÚ[™ŽˆœÚÜ‹›˜[YHŽˆØY°êH\ÝXÚpìÛˆ‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆ›Ü\˜]]›ÈŸBˆBˆ›ÜˆZ[[™È[ˆZ[[™ÜÎ‚ˆYˆZ[[™ÖÈšÚ[™—OOHšÛYHŽ‚ˆZ[[™ÖÈ˜Ø\XÚ]H—O[X^
+Z[[™ÖÈ›ØØÝ\[È—K›Ý[™
+Z[[™ÖÈ›ØØÝ\[È—JŒKŒMJJBˆ[YˆZ[[™ÖÈšÚ[™—OOHœÚÜŽ‚ˆZ[[™ÖÈ˜\Ú[™\ÜÈ—O[™]×Ø\Ú[™\ÜÊZ[[™Ë‹L
+Bˆ™]\›ˆÈ™\œÚ[ÛˆŽNœ™YÚ[Û˜[X\šÙ]ŽžÈš\ÝÜžHŽ–×K›\Ý™\ÜŽžß_Kœ™YÚ[Û˜[X\šÙ]™\ÜŽžßK\˜˜[‘]›Û][ÛˆŽžÈ›\Ý›ØÙ\ÜÙYYX\ˆŽŒŒ‹š\ÝÜžHŽ–×K›\Ýš\YX\ˆŽŒŒŸK\˜˜[”™[™]Ø[™YYÈŽ–×K\˜˜[”™[™]Ø[ÛÜšÜÈŽ–×K\˜˜[”™[™]Ø[\ÝÜžHŽ–×K™ÛÝ™\››Y[ŽžÈ›X[™]HŽŒKœÝ\^HŽŒK›™^[XÝ[Û‘^HŽŒMKœÝ]\ÈŽˆ™[—ÛX[™]È‹™[XÝ[ÛœÈŽ–×K˜Üš\Ú\Ó[ÛÈŽŒ˜Üš\Ú\ÔÝ]\ÈŽˆ™\ÝX›H‹˜ÛÛ\Z[ÈŽ–×K˜ÛÛ\Z[Ù\]Y[˜ÙHŽŒ˜YÜ™Y[Y[ÈŽ–×_Kœ›ØYXZ[[˜[˜ÙTÝŽŒL›˜[YHŽˆ”Y\ÈÛ\›È‹™^HŽŒKœÜYYŽŒKœ]\ÙYŽ‘˜[ÙK›[Û™^HŽ›[ÛR[˜ÛÛYHŽŒŒ›[ÛQ^[œÙ\ÈŽÌœÜ[][ÛˆŽŒŒš›ØœÈŽŒŽ‹™[\Þ[Y[ŽÎœÙ\šXÙ\ÈŽÍ‹˜\›Ý˜[Žœš]˜]PØ\][ŽŒŒ™š[˜[˜ÙHŽ›™]×Ùš[˜[˜ÙJ
+K^\ÈŽ›™]×Ý^ÜÝ]J
+Kœ›ØYÈŽœ›ØYËœ›ØY\ÜÙ]ÈŽ–×K˜Z[[™ÜÈŽ˜Z[[™ÜËœ›Ú™XÝÈŽ–×Kš\š]YÙUÛÜšÜÈŽ–×Kš\š]YÙR\ÝÜžHŽ–×K˜Y\]™T™]\ÙUÛÜšÜÈŽ–×K˜Y\]™T™]\ÙR\ÝÜžHŽ–×Kœ™XÛÝ™\žS™YYÈŽ–×Kœ™XÛÝ™\žPÛÛ˜XÝÈŽ–×K™YXØ][ÛˆŽžÈ›\Ý›ØÙ\ÜÙY[ÛŽŒKšX[ŽžÈ›\ÝY˜[˜ÙY^HŽ“›Û™K›\Ý]Y]YQ^HŽ“›Û™K›\Ý[\XÝ[ÛŽ‹LKœš[X\žP˜XÚÛÙÈŽŒØ]\”ØY™]R\ÝÜžHŽžß_K™š\™TÙ\šXÙHŽžÈš[˜ÚY[ÈŽ–×K›\ÝÙ[™\˜]Y[ÛŽ‹LK™\Ü]Ú\ÈŽŒœ™\ÛÛ™YŽŒ[˜[œÝÙ\™YŽŒK˜Z[š[™Ô›ÙÜ˜[\ÈŽ–×K˜\Ô›Ý]\ÈŽ–×K˜X˜[™Û™YŽ–×Kž›Û™\ÈŽ–×KØ\ÝHŽžÈ˜˜\ÙPÛÛXÝ[Û•ÛœÑ^HŽŒKŒMK˜˜\ÙS[™š[Ø\XÚ]UÛœÈŽŽL›[™š[ÝÜ™YÛœÈŽŒ[˜ÛÛXÝYÛœÈŽŒ˜[œÙ™\”ÝÜ™YÛœÈŽŒ˜ÛÛZ[™\œÈŽ–×K›\ÝÛÛXÝ[Û•ÛœÈŽŒ›\ÝØ\ÝR[\XÝ^HŽŒ›\Ý™XÞXÛYÛœÑ^HŽŒK][]Y\ÈŽžÈ™˜Z[\™\ÈŽ–×KœÝÙ\“[™\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×KØ]\”\\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×KœÙ]Ù\“[™\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×K™˜Z[“[™\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×K™Ø\Ó[™\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×K[XÛÛS[™\ÈŽ–Ü‹˜ÛÜJ
+H›Üˆˆ[ˆ›ØY×K˜˜\ÙQØ\ÐØ\XÚ]SLÑ^HŽŒLŒ˜˜\ÙUØ]\Ø\XÚ]SLÑ^HŽŒNœÝÙ\“ÜÜÔ˜]HŽ‹Œ‹Ø]\“XZÔ˜]HŽ‹ŒKœÝ\HŽ›™]×ÜÝ\J
+K™]™[ÈŽ–ÞÈ™^HŽŒK]HŽˆ”Y\ÈÛ\›È[šXÚXH[˜HY]˜HÙ\ÝpìÛˆ‹™]Z[Žˆ•\ÛÜ™\°ëXH\ÜÛšX›Nˆ	ŒˆHÛÛ™^pìÛˆ™YÚ[Û˜[X[Y[™HXÝ]›È[ÛÛY\˜Ú[ËˆŸKÈ™^HŽŒK]HŽˆ‘[X[™H™\ÚY[˜ÚX[[Ù\˜YH‹™]Z[Žˆ’^HÙØ\™\È\ØØ[™Èš]šY[™HÙ\˜ØHHÜÈ[\[ÜÈ[Ù[›ËˆŸWK›\Ý[ÛŽŒœ^Y\œÈŽžßKšÜÝŽ“›Û™_B‚œÝ]HH[š]X[ÜÝ]J
+B‚™YˆØØ[Ú\Ê
+N‚ˆ\Ï\Ù]
+
+BˆžN‚ˆ›Üˆ[™›È[ˆÛØÚÙ]™Ù]Yš[™›ÊÛØÚÙ]™Ù]ÜÝ˜[YJ
+K›Û™KÛØÚÙ]Q—ÒS‘U
+Nˆ\Ë˜Y
+[™›ÖÍVÌJBˆÏ\ÛØÚÙ]œÛØÚÙ]
+ÛØÚÙ]Q—ÒS‘UÛØÚÙ]”ÓÐÒ×ÑÔSJBˆžNˆË˜ÛÛ›™XÝ
+
+ŒNL‹ŒŒ‹ŒH‹
+JNÈ\Ë˜Y
+Ë™Ù]ÛØÚÛ˜[YJ
+VÌJBˆš[˜[NˆË˜ÛÜÙJ
+Bˆ^Ù\ÔÑ\œ›ÜŽˆ\ÜÂˆ™]\›ˆÛÜY
+\›Üˆ\[ˆ\ÈYˆ›Ý\œÝ\ÝÚ]
+ŒLËˆŠJB‚™Yˆ]Š]K]Z[
+N‚ˆÝ]VÈ™]™[È—Kš[œÙ\
+È™^HŽœÝ]VÈ™^H—K]HŽ]K™]Z[Ž™]Z[JBˆ[Ý]VÈ™]™[È—VÌÌ—B‚ÓÓ•PÕÔ”ÈHÂˆ”Ý\ˆØœ˜\ÈŽˆÈœšXÙHŽŒKŒ™^\ÈŽŒÎœ]X[]HŽ‹Žœ™[XXš[]HŽ‹Ì˜Ø\XÚ]HŽŒ‹ÛÜšÙ\œÈŽŒM™›ÜšÛYÈŽŒK[›ØYÛÜšÙ\œÈŽŒ‹[›ØY˜]HŽ‹œ›Ùš[HŽˆ“Ù™\HXÛÛ°ìÛZXØH0­ÈX^[ÜˆšY\ÙÛÈH[[Ü˜HŸKˆÛÛœÝXÝÜ˜H[HŽˆÈœšXÙHŽŒKŒN™^\ÈŽŒÌœ]X[]HŽ‹Ž‹œ™[XXš[]HŽ‹ŽË˜Ø\XÚ]HŽŒËÛÜšÙ\œÈŽŒ™›ÜšÛYÈŽŒ‹[›ØYÛÜšÙ\œÈŽŒ‹[›ØY˜]HŽŽœ›Ùš[HŽˆ‘\]Z[Xœ˜YH0­ÈÝ[\[ZY[È\ÝX›HŸKˆ‘\ÝY[ÈHØœ˜H›ÜHŽˆÈœšXÙHŽŒK‹™^\ÈŽŒKœ]X[]HŽ‹ŽMKœ™[XXš[]HŽ‹ŽM˜Ø\XÚ]HŽŒ‹ÛÜšÙ\œÈŽŒŒ™›ÜšÛYÈŽŒ‹[›ØYÛÜšÙ\œÈŽŒË[›ØY˜]HŽŒL‹œ›Ùš[HŽˆ‘\ÜXÚX[^˜YH0­ÈØ[YY[K™XÚ[ÈX^[ÜˆŸ_B”“Ò‘PÕÈHÈœ›ØYŽžÈ›X™[ŽˆØ[HØØ[‹˜ÛÜÝŽŒLŒ™^\ÈŽŒœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹”™\\˜XÚpìÛˆ[\œ™[›È‹˜\ÙHH™[˜Z™H‹”]š[Y[XÚpìÛˆ‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_KšÛYHŽžÈ›X™[Žˆ•š]šY[™Hš]˜YH‹˜ÛÜÝŽŒ™^\ÈŽŒÎKœÝYÙS˜[Y\ÈŽ–È”\›Z\ÛÈHš[˜[˜ÚXXÚpìÛˆ‹”™\\˜XÚpìÛˆH\˜Ù[H‹‘\ÝXÝ\˜H‹’[œÝ[XÚ[Û™\ÈH\›Z[˜XÚ[Û™\È‹’[œÜXØÚpìÛˆHØÝ\XÚpìÛˆ—_KœÚÜŽžÈ›X™[Žˆ“ØØ[ÛÛY\˜ÚX[‹˜ÛÜÝŽŒÍŒ™^\ÈŽŒÍœÝYÙS˜[Y\ÈŽ–È”\›Z\ÛÈHš[˜[˜ÚXXÚpìÛˆ‹”™\\˜XÚpìÛˆH\˜Ù[H‹‘\ÝXÝ\˜H‹’[œÝ[XÚ[Û™\ÈH\›Z[˜XÚ[Û™\È‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_K˜Ú]šXÈŽžÈ›X™[ŽˆÙ[›ÈHØ[Y‹˜ÛÜÝŽŽ™^\ÈŽŒ‹œÝYÙS˜[Y\ÈŽ–È[\›ÞYXÝÈH\›Z\ÛÜÈ‹“XÚ]XÚpìÛˆH[Ýš[^˜XÚpìÛˆ‹Ú[ZY[ÜÈH\ÝXÝ\˜H‹’[œÝ[XÚ[Û™\ÈH\]Z\[ZY[È‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_K™\ÝŽžÈ›X™[Žˆ‘\0ìÜÚ]È][šXÚ\[‹˜ÛÜÝŽMŒ™^\ÈŽLœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹”™\\˜XÚpìÛˆ[\œ™[›È‹‘\ÝXÝ\˜HH^XHHØ\™ØH‹‘\Ý[\°ëX\ÈHÙYÝ\šYY‹’[œÜXØÚpìÛˆH\\\˜H—_K˜\ÑØ\˜YÙHŽžÈ›X™[ŽˆÛØÚ\˜H][šXÚ\[‹˜ÛÜÝŽŒ™^\ÈŽœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹”™\\˜XÚpìÛˆ[\œ™[›È‹‘\ÝXÝ\˜HHÝXšY\H‹•[\ˆHÜÛ™\È‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_K˜\ÔÝÜŽžÈ›X™[Žˆ”\˜YHHÛÛXÝ]›È‹˜ÛÜÝŽŽML™^\ÈŽŒNœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹˜\ÙHXØÙ\ÚX›H‹”™YYÚ[ÈHÙpìX[^˜XÚpìÛˆ‹’[[Z[˜XÚpìÛˆ‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_KœÜŽžÈ›X™[Žˆ•\›Z[˜[ÜX\šXH‹˜ÛÜÝŽŒML™^\ÈŽŽ‹œÝYÙS˜[Y\ÈŽ–È”\›Z\ÛÜÈÛÜÝ\›ÜÈHXÚ]XÚpìÛˆ‹”[ÝZ™HH]Y[H‹”][ÈHØ\™ØHHÜ°î˜H‹”YX˜\ÈH]˜\]YH‹’[œÜXØÚpìÛˆH\\\˜H—_K˜Z\œÜŽžÈ›X™[ŽˆY\›ÜY\È™YÚ[Û˜[‹˜ÛÜÝŽŒNML™^\ÈŽŒLL‹œÝYÙS˜[Y\ÈŽ–È‘]˜[XXÚpìÛˆHY]Z\ÚXÚpìÛˆ[ÝY[È‹•\œ˜\[˜YÈH™[˜Z™H‹”\ÝHHÙpìX[^˜XÚpìÛˆ‹•\›Z[˜[H\]Z\ÜÈHÙYÝ\šYY‹”YX˜\ÈHÜ\˜XÚpìÛˆH[œÜXØÚpìÛˆ—_KšÝ[ŽžÈ›X™[Žˆ’Ý[š]˜YÈ‹˜ÛÜÝŽŒLÌŒ™^\ÈŽÍ‹œÝYÙS˜[Y\ÈŽ–È“XÙ[˜ÚXHHØ\][š]˜YÈ‹Ú[ZY[ÜÈH\ÝXÝ\˜H‹YÝXHH[™\™ðëXH‹’Xš]XÚ[Û™\ÈHÛØÚ[˜H‹’[œÜXØÚpìÛˆH\\\˜H—__B”“Ò‘PÕÖÈœÝÙ\”[—O^È›X™[ŽˆÙ[˜[[0êXÝšXØH‹˜ÛÜÝŽŒN™^\ÈŽŽM‹œÝYÙS˜[Y\ÈŽ–È‘\ÝY[ÈH\›Z\ÛÜÈ‹Ú[ZY[ÜÈH\˜š[˜H‹ÛÛ™^pìÛˆ[0êXÝšXØH‹”YX˜\ÈHÙ[™\˜XÚpìÛˆ‹’[œÜXØÚpìÛˆHY\ÝH[ˆX\˜ÚH—_B”“Ò‘PÕÖÈœØÚÛÛ—O^È›X™[Žˆ‘\ØÝY[Hš[X\šXH‹˜ÛÜÝŽŽMŒ™^\ÈŽŽœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹Ú[ZY[ÜÈH][\È‹’[œÝ[XÚ[Û™\ÈH][È‹‘\]Z\[ZY[ÈHÛÛ˜]XÚpìÛˆ[šXÚX[‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_B”“Ò‘PÕÖÈ™š\™TÝ][Ûˆ—O^È›X™[ŽˆÝX\[H›ÛX™\›ÜÈ‹˜ÛÜÝŽŒLLŒ™^\ÈŽÍœÝYÙS˜[Y\ÈŽ–È”›ÞYXÝÈH\›Z\ÛÜÈ‹Ú[ZY[ÜÈH\ÝXÝ\˜H‹•[\ˆHÜ›Z]Üš[ÜÈ‹‘\]Z\ÜÈH™Z0ëXÝ[ÜÈ‹”YX˜\ÈH\ÜXÚÈH[œÜXØÚpìÛˆ—_B”“Ò‘PÕÖÈØ]\”[—O^È›X™[Žˆ”[HÝXš[^˜YÜ˜H‹˜ÛÜÝŽŒMŒ™^\ÈŽŽœÝYÙS˜[Y\ÈŽ–È‘\ÝY[ÈHY[HH\›Z\ÛÜÈ‹Ø\XÚpìÛˆHš[›ÜÈ‹ÛÛ™^pìÛˆH›ÛX™[È‹”YX˜\ÈØ[š]\šX\È‹’[œÜXØÚpìÛˆHY\ÝH[ˆX\˜ÚH—_B”“Ò‘PÕÖÈØ\Ý]Ø]\”[—O^È›X™[Žˆ”[H\\˜YÜ˜H‹˜ÛÜÝŽŒMŒ™^\ÈŽŽLœÝYÙS˜[Y\ÈŽ–È‘\ÝY[È[XšY[[H\›Z\ÛÜÈ‹ÛÛXÝÜ™\ÈH[œ]Y\È‹‘YÙ\ÝÜ™\ÈHš[›ÜÈ‹”YX˜\ÈHØ[YY‹’[œÜXØÚpìÛˆHY\ÝH[ˆX\˜ÚH—_B”“Ò‘PÕÖÈ›[™š[—O^È›X™[Žˆ”™[[›ÈØ[š]\š[È][šXÚ\[‹˜ÛÜÝŽŽN™^\ÈŽÌ‹œÝYÙS˜[Y\ÈŽ–È‘]˜[XXÚpìÛˆ[XšY[[HXÚ]XÚpìÛˆ‹’[\\›YXXš[^˜XÚpìÛˆ[\œ™[›È‹Ù[\ÈH\ÜÜÚXÚpìÛˆ‹°è\ØÝ[HHÛÛ›ÛHXØÙ\ÛÈ‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_B”“Ò‘PÕÖÈœ™XÞXÛ[™Ô[—O^È›X™[Žˆ”[HH™XÚXÛZ™H‹˜ÛÜÝŽŒM™^\ÈŽŽœÝYÙS˜[Y\ÈŽ–È‘\ÝY[È[XšY[[HXÚ]XÚpìÛˆ‹”Ù\\˜XÚpìÛˆHÛ\ÚYšXØXÚpìÛˆ‹“0ë[™XHH]˜YÈ‹”YX˜\ÈH™XÝ\\˜XÚpìÛˆ‹’[œÜXØÚpìÛˆHXš[]XÚpìÛˆ—_B“P“Ô—Ó‘QQÈHÈœ›ØYŽšÛYHŽ‹œÚÜŽË˜Ú]šXÈŽŒLKœØÚÛÛŽŒL‹™š\™TÝ][ÛˆŽŒL‹™\ÝŽŽ˜\ÑØ\˜YÙHŽ‹˜\ÔÝÜŽœÜŽŒM˜Z\œÜŽŒM‹šÝ[ŽŒLœÝÙ\”[ŽŒNØ]\”[ŽŒL‹Ø\Ý]Ø]\”[ŽŒM›[™š[ŽŒL‹œ™XÞXÛ[™Ô[ŽŒMŸB‚™YˆX]\šX[Ùœ˜XÝ[ÛŠX]\šX[›ÙÜ™\ÜÊN‚ˆÈH™\\˜XÚpìÛˆÛÛœÝ[YH0è\šYÜÎÈ\ÝXÝ\˜HÛÛœÝ[YHXÙ\›ËÛXY\˜NÈ[œÝ[XÚ[Û™\ÈÛÛœÝ[Y[ˆÛÛ\Û™[\Ë‚ˆÝ\Ü[ˆHÈ˜YÙÜ™YØ]HŽŠJKœÝY[ŽŠŒMKJK[X™\ˆŽŠŒKMJK˜ÛÛ\Û™[ÈŽŠMK
+_VÛX]\šX[Bˆ™]\›ˆX^
+Z[ŠK
+›ÙÜ™\ÜË\Ý\
+KÜÜ[ŠJB‚™YˆX]\šX[Ü[ŠÚ[™[š]X[Ü›ÙÜ™\ÜÏL
+N‚ˆ™]\›ˆÚÙ^N›X^
+K›Ý[™
+[[Ý[
+ŠKZ[š]X[Ü›ÙÜ™\ÜÊJJHYˆ[[Ý[[ÙHˆ›ÜˆÙ^K[[Ý[[ˆPUT’PSÓ‘QQÖÚÚ[™Kš][\Ê
+_B‚™Yˆ[œÝ\™WØ\Ú[™\Ü×ÜÝ]J
+N‚ˆÚÜÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜ—BˆX›XÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+˜Ú]šXÈ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[ŠWBˆÙZYÚÏ^ÈœÚÜŽŒKŒ˜Ú]šXÈŽ‹ŽœØÚÛÛŽ‹Ž™\ÝŽ‹K›[™š[Ž‹Kœ™XÞXÛ[™Ô[Ž‹ŽœÜŽ‹ŽK˜Z\œÜŽ‹Ž_BˆÝ[ÝÙZYÚ[X^
+ŒKÝ[JÙZYÚÖØ–ÈšÚ[™—WH›Üˆˆ[ˆÚÜÊÜX›XÊJBˆ\Ý[X]YÜÛÝÏ[X^
+K›Ý[™
+Ý]K™Ù]
+š›ØœÈ‹
+KÝÝ[ÝÙZYÚ
+JBˆ›ÜˆZ[[™È[ˆÚÜÎ‚ˆYˆ˜\Ú[™\ÜÈˆ›Ý[ˆZ[[™Î‚ˆZ[[™ÖÈ˜\Ú[™\ÜÈ—O[™]×Ø\Ú[™\ÜÊZ[[™Ë\Ý[X]YÜÛÝËL
+Bˆš\›OXZ[[™ÖÈ˜\Ú[™\ÜÈ—Bˆ›ÜˆÙ^K˜[YH[ˆ™]×Ø\Ú[™\ÜÊZ[[™Ëš\›K™Ù]
+š›Ø”ÛÝÈ‹\Ý[X]YÜÛÝÊKš\›K™Ù]
+˜Ø\Ú‹L
+JKš][\Ê
+N‚ˆš\›KœÙ]Y˜][
+Ù^K˜[YJBˆš\›KœÙ]Y˜][
+š[œ][™[ÜžH‹Œ
+Bˆš\›KœÙ]Y˜][
+˜Ü™Y]X‹
+Bˆš\›KœÙ]Y˜][
+˜Ü™Y][Z]‹X^
+L[
+š\›K™Ù]
+š›Ø”ÛÝÈ‹\Ý[X]YÜÛÝÊJJŒŒ
+JBˆš\›KœÙ]Y˜][
+˜Ü™Y]˜]H‹ŒŠBˆš\›KœÙ]Y˜][
+˜Ü™Y][[œ]Y[˜ÞS[ÛÈ‹
+Bˆš\›KœÙ]Y˜][
+›\ÝÜ™Y]˜]È‹
+NÙš\›KœÙ]Y˜][
+›\Ý[\™\Ý‹
+NÙš\›KœÙ]Y˜][
+›\Ý™\^[Y[‹
+BˆYˆš\›K™Ù]
+œÝ]\ÈŠOOH˜Ù\œ˜YÈŽ˜Z[[™ÖÈœÝ]\È—OH˜Ù\œ˜YÈ‚‚™Yˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+N‚ˆÝ]KœÙ]Y˜][
+™š[˜[˜ÙH‹™]×Ùš[˜[˜ÙJ
+JBˆÝ]VÈ™š[˜[˜ÙH—KœÙ]Y˜][
+›][šXÚ\[Ø[œÈ‹×JBˆÝ]VÈ™š[˜[˜ÙH—KœÙ]Y˜][
+™X™\Ù\™H‹
+BˆÝ]VÈ™š[˜[˜ÙH—KœÙ]Y˜][
+™X™\Ù\™R\ÝÜžH‹×JBˆYÙ]Ï\Ý]VÈ™š[˜[˜ÙH—KœÙ]Y˜][
+œ›ÙÜ˜[PYÙ]È‹™]×Ùš[˜[˜ÙJ
+VÈœ›ÙÜ˜[PYÙ]È—JBˆ›ÜˆÙ^K˜[YH[ˆ™]×Ùš[˜[˜ÙJ
+VÈœ›ÙÜ˜[PYÙ]È—Kš][\Ê
+N˜YÙ]ËœÙ]Y˜][
+Ù^K˜[YK˜ÛÜJ
+HYˆ\Ú[œÝ[˜ÙJ˜[YKXÝ
+H[ÙH˜[YJBˆ›Üˆ˜[YH[ˆ
+œÙ\šXÙ\È‹›[Øš[]H‹›™]ÛÜšÜÈŠN‚ˆYÙ]ÖÈ˜\œ™X\œÈ—KœÙ]Y˜][
+˜[YK
+NØYÙ]ÖÈ[™\™[™Y[ÛÈ—KœÙ]Y˜][
+˜[YK
+Bˆ˜[šÏ\Ý]VÈ™š[˜[˜ÙH—KœÙ]Y˜][
+˜\Ú[™\ÜÐ˜[šÈ‹™]×Ùš[˜[˜ÙJ
+VÈ˜\Ú[™\ÜÐ˜[šÈ—JBˆ›ÜˆÙ^K˜[YH[ˆ™]×Ùš[˜[˜ÙJ
+VÈ˜\Ú[™\ÜÐ˜[šÈ—Kš][\Ê
+N˜˜[šËœÙ]Y˜][
+Ù^K˜[YJB‚™Yˆ[œÝ\™WÜ™\ÚY[Ü›ÜÝ\Š
+N‚ˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠN‚ˆY[X™\œÏZÛYKœÙ]Y˜][
+œ™\ÚY[È‹×JNÚÛYKœÙ]Y˜][
+šÝ\ÙZÛØ\Ú‹
+NÚÛYKœÙ]Y˜][
+›[ÛUØYÙR[˜ÛÛYH‹
+Bˆ[YÚX›WÝ\™Ù]\›Ý[™
+X^
+ÛYK™Ù]
+›ØØÝ\[È‹
+JJ‹ŠBˆ[YÚX›WÛ›ÝÏ\Ý[JH›Üˆ\œÛÛˆ[ˆY[X™\œÈYˆ\œÛÛ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠJBˆÚ[H[ŠY[X™\œÊOX^
+ÛYK™Ù]
+›ØØÝ\[È‹
+JN‚ˆ[YÚX›OY[YÚX›WÛ›ÝÏ[YÚX›WÝ\™Ù]ˆ\œÛÛ^ÈšYŽ]ZY]ZY
+
+Kš^ÛÜšÙ\‘[YÚX›HŽ™[YÚX›KœÝ]\ÈŽˆ˜\ØØ[™ÈˆYˆ[YÚX›H[ÙHš[˜XÝ]›È‹ˆ™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒˆ[™[\ÞYYÚ[˜ÙQ^HŽœÝ]K™Ù]
+™^H‹JHYˆ[YÚX›H[ÙH›Û™K[™[\Þ[Y[™X\ÛÛˆŽˆœš[Y\ˆ[\[ÈˆYˆ[YÚX›H[ÙH›Û™_BˆY[X™\œË˜\[™
+\œÛÛŠBˆYˆ[YÚX›N™[YÚX›WÛ›ÝÊÏLBˆYˆ[ŠY[X™\œÊOšÛYK™Ù]
+›ØØÝ\[È‹
+N™[Y[X™\œÖÚÛYVÈ›ØØÝ\[È—N—Bˆ›Üˆ\œÛÛˆ[ˆY[X™\œÎ‚ˆ\œÛÛ‹œÙ]Y˜][
+œ™]š[Ý\Ñ[\ÞY\ˆ‹›Û™JNÜ\œÛÛ‹œÙ]Y˜][
+œ™]š[Ý\Ñ[\ÞY\’Y‹›Û™JBˆ\œÛÛ‹œÙ]Y˜][
+›\Ý[™[\Þ[Y[\˜][Û‘^\È‹›Û™JNÜ\œÛÛ‹œÙ]Y˜][
+[™[\Þ[Y[\\ÛÙ\È‹
+BˆYˆ\œÛÛ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠN‚ˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠBˆ\œÛÛ‹œÙ]Y˜][
+[™[\ÞYYÚ[˜ÙQ^H‹Ý]K™Ù]
+™^H‹JHYˆ\œÛÛ‹™Ù]
+œÝ]\ÈŠHOH™[\XYÈˆ[ÙH›Û™JBˆ\œÛÛ‹œÙ]Y˜][
+[™[\Þ[Y[™X\ÛÛˆ‹˜°îœÜ]YYHÙ[™\˜[ˆYˆ\œÛÛ‹™Ù]
+œÝ]\ÈŠHOH™[\XYÈˆ[ÙH›Û™JB‚™Yˆ[œÝ\™WÜÝ\WÜÝ]J
+N‚ˆYØXÞWÝ™\œÚ[Û\Ý]K™Ù]
+™\œÚ[Ûˆ‹JBˆÝ]VÈ™\œÚ[Ûˆ—O[X^
+L‹Ý]K™Ù]
+™\œÚ[Ûˆ‹JJBˆ[œÝ\™WÝ^ÜÝ]J
+BˆÝ]KœÙ]Y˜][
+œ›ØY\ÜÙ]È‹×JBˆÝ]KœÙ]Y˜][
+œ›ØYXZ[[˜[˜ÙTÝ‹L
+BˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JBˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žPÛÛ˜XÝÈ‹×JBˆÝ]KœÙ]Y˜][
+™YXØ][Ûˆ‹È›\Ý›ØÙ\ÜÙY[ÛŽŠÝ]K™Ù]
+™^H‹JKLJKËÌÌJBˆÝ]KœÙ]Y˜][
+šX[‹È›\ÝY˜[˜ÙY^HŽ“›Û™K›\Ý[\XÝ[ÛŽ‹LKØ]\”ØY™]R\ÝÜžHŽžß_JBˆÝ]KœÙ]Y˜][
+˜Z[š[™Ô›ÙÜ˜[\È‹×JBˆÝ]KœÙ]Y˜][
+™š\™TÙ\šXÙH‹Èš[˜ÚY[ÈŽ–×K›\ÝÙ[™\˜]Y[ÛŽ‹LK™\Ü]Ú\ÈŽŒœ™\ÛÛ™YŽŒ[˜[œÝÙ\™YŽŒJBˆÝ]KœÙ]Y˜][
+˜\Ô›Ý]\È‹×JBˆ[œÝ\™WÚ\š]YÙWÜÝ]J
+Bˆ[œÝ\™WÝ\˜˜[—Ù]›Û][Û—ÜÝ]J
+BˆÝ]KœÙ]Y˜][
+œ™YÚ[Û˜[X\šÙ]‹Èš\ÝÜžHŽ–×K›\Ý™\ÜŽžß_JNÜÝ]VÈœ™YÚ[Û˜[X\šÙ]—KœÙ]Y˜][
+š\ÝÜžH‹×JNÜÝ]VÈœ™YÚ[Û˜[X\šÙ]—KœÙ]Y˜][
+›\Ý™\Ü‹ßJNÜÝ]KœÙ]Y˜][
+œ™YÚ[Û˜[X\šÙ]™\Ü‹Ý]VÈœ™YÚ[Û˜[X\šÙ]—VÈ›\Ý™\Ü—JBˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+BˆÝ]VÈ™\œÚ[Ûˆ—O[X^
+N[
+Ý]K™Ù]
+™\œÚ[Ûˆ‹JJJBˆ›ÜˆZ[[™È[ˆÝ]VÈ˜Z[[™ÜÈ—N‚ˆ[œÝ\™WØÜš]XØ[Ú[œÜXÝ[Û—ÜØÚY[JZ[[™ÊBˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOH˜Ú]šXÈŽ˜Z[[™ËœÙ]Y˜][
+š›Ø”ÛÝÈ‹LŠBˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHœØÚÛÛŽ˜Z[[™ËœÙ]Y˜][
+š›Ø”ÛÝÈ‹LŠNØZ[[™ËœÙ]Y˜][
+˜Û\ÜÜ›ÛÛ\È‹
+BˆYˆZ[[™ÖÈšÚ[™—OOHšÛYHŽ‚ˆZ[[™ËœÙ]Y˜][
+˜Ø\XÚ]H‹X^
+Z[[™Ë™Ù]
+›ØØÝ\[È‹
+K›Ý[™
+Z[[™Ë™Ù]
+›ØØÝ\[È‹
+JŒKŒMJJJBˆÝ\O\Ý]KœÙ]Y˜][
+œÝ\H‹™]×ÜÝ\J
+JBˆÝ\KœÙ]Y˜][
+œ™YÚ[Û˜[‹S’UPSÔ‘QÒSÓSÔÕÐÒË˜ÛÜJ
+JBˆÝ\KœÙ]Y˜][
+˜ÛÛ˜XÝÜœÈ‹ßJBˆÝ\KœÙ]Y˜][
+˜ÛÛ˜XÝÜØ\Ú‹ÓÓ•PÕÔ—ÐÐTÒ˜ÛÜJ
+JBˆÝ\KœÙ]Y˜][
+œÝ\Y\œÈ‹Û˜[YNœÝØÚË˜ÛÜJ
+H›Üˆ˜[YKÝØÚÈ[ˆÕTQT—ÔÕÐÒËš][\Ê
+_JBˆÝ\KœÙ]Y˜][
+›Ü™\œÈ‹×JBˆÝ\KœÙ]Y˜][
+›X\šÙ]‹™]×ÛX\šÙ]ÜÝ\J
+JBˆÝ\KœÙ]Y˜][
+›X\šÙ]Ü™\œÈ‹×JBˆÝ\KœÙ]Y˜][
+œÜÜ™\œÈ‹×JBˆÝ\KœÙ]Y˜][
+œÜ›ÞXYÙ\È‹×JBˆ›Üˆ˜[YK˜[Y\È[ˆ™]×ÛX\šÙ]ÜÝ\J
+Kš][\Ê
+N‚ˆÝ\Y\\Ý\VÈ›X\šÙ]—KœÙ]Y˜][
+˜[YK˜[Y\ÊBˆ›ÜˆÙ^K˜[YH[ˆ˜[Y\Ëš][\Ê
+NœÝ\Y\‹œÙ]Y˜][
+Ù^K˜[YJBˆ›ÜˆÜ™\ˆ[ˆÝ\VÈ›Ü™\œÈ—N‚ˆÜ™\‹œÙ]Y˜][
+œš[Üš]H‹››Ü›X[ŠBˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠH[ˆ
+™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠN‚ˆÜ™\‹œÙ]Y˜][
+˜\œš]™Y^H‹Z[ŠÝ]VÈ™^H—KÜ™\‹™Ù]
+˜\œš]˜[^H‹Ý]VÈ™^H—JJJBˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠOOH™[ˆ°è[œÚ]ÈŽ‚ˆ›Ý]O[Ü™\‹™Ù]
+œ›Ý]H‹×JNÙ\Ý[˜ÙO[X^
+[Š›Ý]JKLJBˆYˆYØXÞWÝ™\œÚ[ÛL‚ˆÜ™\–È˜]™[\Ý[˜ÙH—OY\Ý[˜ÙBˆÜ™\–ÈœÝ\Y\”™XYQ^H—O[X^
+Ü™\‹™Ù]
+›Ü™\™Y^H‹Ý]VÈ™^H—JKÜ™\‹™Ù]
+˜\œš]˜[^H‹Ý]VÈ™^H—JK[X^
+KX]˜ÙZ[
+\Ý[˜ÙKÍŠJJBˆš]™WÙ^\Ï[X^
+KX]˜ÙZ[
+\Ý[˜ÙKÍŠJBˆÜ™\–È˜]™[Y\Ý[˜ÙH—OY\Ý[˜ÙJ›X^
+Z[ŠK
+Ý]VÈ™^H—K[Ü™\–ÈœÝ\Y\”™XYQ^H—JKÙš]™WÙ^\ÊJBˆÜ™\–Èœ›Ý]T›ÙÜ™\ÜÈ—OLYˆ›Ý\Ý[˜ÙH[ÙHÜ™\–È˜]™[Y\Ý[˜ÙH—KÙ\Ý[˜ÙBˆ[ÙN‚ˆÜ™\‹œÙ]Y˜][
+˜]™[\Ý[˜ÙH‹\Ý[˜ÙJBˆÜ™\‹œÙ]Y˜][
+˜]™[Y\Ý[˜ÙH‹\Ý[˜ÙJ›X^
+Z[ŠKÜ™\‹™Ù]
+œ›ÙÜ™\ÜÈ‹
+JJJBˆÜ™\‹œÙ]Y˜][
+œÝ\Y\”™XYQ^H‹X^
+Ü™\‹™Ù]
+›Ü™\™Y^H‹Ý]VÈ™^H—JKÜ™\‹™Ù]
+˜\œš]˜[^H‹Ý]VÈ™^H—JK[X^
+KX]˜ÙZ[
+\Ý[˜ÙKÍŠJJJBˆÝ\KœÙ]Y˜][
+™\ÝÈ‹×JBˆYˆYØXÞWÝ™\œÚ[Û‚ˆ›ÜˆÜ™\ˆ[ˆÝ\K™Ù]
+›Ü™\œÈ‹×JN‚ˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠOOH™\ØØ\™Ø[™ÈŽ‚ˆÜ™\–ÈœÝ]\È—OH™\Ü\˜[™È\]Z\ÈŽÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OH”™X\ÚYÛ˜XÚpìÛˆHÝXYš[H˜\ÈXÝX[^˜\ˆHÚ[][XÚpìÛˆŽÛÜ™\–È[›ØYÛÜšÙ\œÈ—OLÛÜ™\‹œÜ
+™›ÜšÛYY‹›Û™JNÛÜ™\–È[›ØY›ÙÜ™\ÜÈ—OLÛÜ™\–È˜\œš]˜[^H—O\Ý]VÈ™^H—BˆÝ\KœÙ]Y˜][
+žX\™Ø\XÚ]H‹
+BˆÝ\KœÙ]Y˜][
+œÝÜ˜YÙPØ\XÚ]H‹
+ÍL
+œÝ[JH›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH™\ÝŠJBˆ›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTÎ‚ˆÝ\VÈ˜ÛÛ˜XÝÜœÈ—KœÙ]Y˜][
+˜[YKS’UPSÐÓÓ•PÕÔ—ÔÕÐÒË˜ÛÜJ
+JBˆÝ\VÈ˜ÛÛ˜XÝÜØ\Ú—KœÙ]Y˜][
+˜[YKÓÓ•PÕÔ—ÐÐTÒÛ˜[YWJBˆ›ÜˆÙ^K˜[YH[ˆS’UPSÐÓÓ•PÕÔ—ÔÕÐÒËš][\Ê
+N‚ˆÝ\VÈ˜ÛÛ˜XÝÜœÈ—VÛ˜[YWKœÙ]Y˜][
+Ù^K˜[YJBˆ›Üˆ˜[YKÝØÚÈ[ˆÕTQT—ÔÕÐÒËš][\Ê
+N‚ˆÝ\VÈœÝ\Y\œÈ—KœÙ]Y˜][
+˜[YKÝØÚË˜ÛÜJ
+JBˆ›ÜˆÙ^K˜[YH[ˆÝØÚËš][\Ê
+NˆÝ\VÈœÝ\Y\œÈ—VÛ˜[YWKœÙ]Y˜][
+Ù^K˜[YJBˆÛ›ÝÛ^Ù™Ù]
+šYŠH›Üˆ[ˆÝ\VÈ™\ÝÈ—_Bˆ›ÜˆZ[[™È[ˆÝ]VÈ˜Z[[™ÜÈ—N‚ˆYˆZ[[™Ë™Ù]
+šÚ[™ŠHOH™\ÝŽ˜ÛÛ[YBˆ\ÝÚYYˆ™\Ý^ØZ[[™ÖÉÞ	×_K^ØZ[[™ÖÉÞI×_H‚ˆYˆ\ÝÚY›Ý[ˆÛ›ÝÛŽ‚ˆÝ\VÈ™\ÝÈ—K˜\[™
+ÈšYŽ™\ÝÚYžŽ˜Z[[™ÖÈž—KžHŽ˜Z[[™ÖÈžH—K˜Ø\XÚ]HŽ˜Z[[™Ë™Ù]
+˜Ø\XÚ]PYY‹L
+K›X™[Ž˜Z[[™Ë™Ù]
+›˜[YH‹‘\0ìÜÚ]È][šXÚ\[ŠKœÝØÚÜÈŽžÛ˜[YNžÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTßH›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTß_JBˆ›Üˆ\Ý[ˆÝ\VÈ™\ÝÈ—N‚ˆ\ÝœÙ]Y˜][
+œÝØÚÜÈ‹ßJBˆ›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTÎ‚ˆ\ÝÈœÝØÚÜÈ—KœÙ]Y˜][
+˜[YKÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTßJBˆ›ÜˆÙ^H[ˆPUT’PSÓSQTÎ™\ÝÈœÝØÚÜÈ—VÛ˜[YWKœÙ]Y˜][
+Ù^K
+BˆYˆYØXÞWÝ™\œÚ[ÛÎ‚ˆ›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTÎ‚ˆX\™\Ý\VÈ˜ÛÛ˜XÝÜœÈ—VÛ˜[YWBˆÝ™\™›ÝÏ[X^
+Ý[JX\™˜[Y\Ê
+JK\Ý\VÈžX\™Ø\XÚ]H—JBˆ›Üˆ\Ý[ˆÝ\VÈ™\ÝÈ—N‚ˆœ™YO[X^
+\ÝÈ˜Ø\XÚ]H—K\Ý[JÝ[JÝØÚË˜[Y\Ê
+JH›ÜˆÝØÚÈ[ˆ\ÝÈœÝØÚÜÈ—K˜[Y\Ê
+JJBˆ[Ý™O[Z[ŠÝ™\™›ÝËœ™YJBˆ›ÜˆX]\šX[[ˆPUT’PSÓSQTÎ‚ˆ]X[]O[Z[ŠX\™ÛX]\šX[K[Ý™JBˆX\™ÛX]\šX[KO\]X[]NÙ\ÝÈœÝØÚÜÈ—VÛ˜[YWVÛX]\šX[JÏ\]X[]NÛ[Ý™KO\]X[]BˆYˆ›Ý[Ý™N˜œ™XZÂˆÝ™\™›ÝËO[Z[ŠÝ™\™›ÝËœ™YJBˆYˆÝ™\™›ÝÎ‚ˆÝ\VÈžX\™Ø\XÚ]H—JÏ[Ý™\™›ÝÂˆÝÜ™Y\Ý[JÝ[JÝØÚË˜[Y\Ê
+JH›ÜˆÝØÚÈ[ˆÝ\VÈ˜ÛÛ˜XÝÜœÈ—K˜[Y\Ê
+JJÜÝ[JÝ[JÝØÚË˜[Y\Ê
+JH›Üˆ[ˆÝ\VÈ™\ÝÈ—H›ÜˆÝØÚÈ[ˆÈœÝØÚÜÈ—K˜[Y\Ê
+JBˆ[˜›Ý[™\Ý[JÝ[JÜ™\‹™Ù]
+š][\È‹ßJK˜[Y\Ê
+JH›ÜˆÜ™\ˆ[ˆÝ\VÈ›Ü™\œÈ—HYˆÜ™\‹™Ù]
+œÝ]\ÈŠH[ˆ
+™[ˆ°è[œÚ]È‹™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠJBˆYˆYØXÞWÝ™\œÚ[ÛÎ‚ˆX\™Ú[˜›Ý[™\Ý[JÝ[JÜ™\‹™Ù]
+š][\È‹ßJK˜[Y\Ê
+JH›ÜˆÜ™\ˆ[ˆÝ\VÈ›Ü™\œÈ—BˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠH[ˆ
+™[ˆ°è[œÚ]È‹™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠH[™Ü™\‹™Ù]
+™\Ý[˜][Û’Y‹žX\™ŠOOHžX\™ŠBˆÝ\VÈžX\™Ø\XÚ]H—O[X^
+Ý\VÈžX\™Ø\XÚ]H—KÝ[JÝ[JÝØÚË˜[Y\Ê
+JH›ÜˆÝØÚÈ[ˆÝ\VÈ˜ÛÛ˜XÝÜœÈ—K˜[Y\Ê
+JJÞX\™Ú[˜›Ý[™
+BˆÈHØ]™YÚ]HØ[ˆ[™XYH]™H[Ü™HÝØÚÈ[ˆ›YÚ[ˆ]È™]ÈY˜][Ø\XÚ]K‚ˆÈ™\Ù\™HÜÙHZY[]™\šY\È\š[™ÈZYÜ˜][Ûˆ[œÝXYÙˆXZÚ[™ÈHÛØ]™H[\ÜÜÚX›HÈØY‚ˆØ\XÚ]WÙ›ÛÜ\Ý\VÈžX\™Ø\XÚ]H—JÜÝ[J\ÝÈ˜Ø\XÚ]H—H›Üˆ\Ý[ˆÝ\VÈ™\ÝÈ—JBˆÝ\VÈœÝÜ˜YÙPØ\XÚ]H—O[X^
+[
+Ý\VÈœÝÜ˜YÙPØ\XÚ]H—JKØ\XÚ]WÙ›ÛÜ‹ÝÜ™Y
+Ú[˜›Ý[™
+Bˆ›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—N‚ˆœÙ]Y˜][
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹Yˆ™Ù]
+œÝ]\ÈŠOOHœ]\ØYHˆ[ÙHP“Ô—Ó‘QQÖÜÈšÚ[™—WJBˆYˆ›X]\šX[Ô™\]Z\™Yˆ›Ý[ˆ‚ˆÈ›X]\šX[Ô™\]Z\™Y—O[X]\šX[Ü[ŠÈšÚ[™—K™Ù]
+š[š]X[›ÙÜ™\ÜÈ‹
+JBˆØØ[Ü›ÙÜ™\ÜÏ\™Ù]
+™[\ÙY‹
+KÛX^
+K™Ù]
+™\˜][Ûˆ‹JJBˆÈÛÛ\]Xš[YYˆØœ˜\ÈH™\œÚ[Û™\È[\š[Ü™\È›ÈY[™[ˆHØ\Ý\ˆX]\šX[\ÈXHZ™XÝ]YÜË‚ˆÈ›X]\šX[Õ\ÙY—O^ÚÙ^N›X]˜ÙZ[
+[[Ý[
+›X]\šX[Ùœ˜XÝ[ÛŠÙ^KØØ[Ü›ÙÜ™\ÜÊJBˆ›ÜˆÙ^K[[Ý[[ˆÈ›X]\šX[Ô™\]Z\™Y—Kš][\Ê
+_BˆœÙ]Y˜][
+›X]\šX[Õ\ÙY‹ÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTßJBˆ[œÝ\™WØ\Ú[™\Ü×ÜÝ]J
+Bˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+Bˆ[œÝ\™WÜ™\ÚY[Ü›ÜÝ\Š
+B‚™YˆX]\šX[Ù[J™^Ù[\ÙY
+N‚ˆØØ[Ü›ÙÜ™\ÜÏ[™^Ù[\ÙYÛX^
+KÈ™\˜][Ûˆ—JBˆ™]\›ˆÚÙ^N›X^
+X]˜ÙZ[
+[[Ý[
+›X]\šX[Ùœ˜XÝ[ÛŠÙ^KØØ[Ü›ÙÜ™\ÜÊJK\È›X]\šX[Õ\ÙY—K™Ù]
+Ù^K
+JBˆ›ÜˆÙ^K[[Ý[[ˆÈ›X]\šX[Ô™\]Z\™Y—Kš][\Ê
+_B‚™YˆX]\šX[ÜÛÝ\˜Ù\ÊÛÛ˜XÝÜ‹›Ú™XÝ
+N‚ˆÛÝ\˜Ù\ÏVÊœ][È‹Ý]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜœÈ—VØÛÛ˜XÝÜ—K›Ý]WØ™]ÙY[Š
+L
+K
+›Ú™XÝÈž—K›Ú™XÝÈžH—JJJWBˆ›Üˆ\Ý[ˆÝ]VÈœÝ\H—K™Ù]
+™\ÝÈ‹×JN‚ˆ›Ý]O\›Ý]WØ™]ÙY[Š
+\ÝÈž—K\ÝÈžH—JK
+›Ú™XÝÈž—K›Ú™XÝÈžH—JJBˆYˆ›Ý]NœÛÝ\˜Ù\Ë˜\[™
+
+\ÝÈšY—K\ÝÈœÝØÚÜÈ—VØÛÛ˜XÝÜ—K›Ý]JJBˆ™]\›ˆÛÜY
+
+ÛÝ\˜ÙH›ÜˆÛÝ\˜ÙH[ˆÛÝ\˜Ù\ÈYˆÛÝ\˜ÙVÌ—JKÙ^O[[X™HÛÝ\˜ÙN›[ŠÛÝ\˜ÙVÌ—JJB‚™YˆZ\ÜÚ[™×ÛX]\šX[Ê™^Ù[\ÙY
+N‚ˆÛÝ\˜Ù\Ï[X]\šX[ÜÛÝ\˜Ù\ÊÈ˜ÛÛ˜XÝÜˆ—K
+Bˆ]˜Z[X›O^ÚÙ^NœÝ[JÝØÚÖÚÙ^WH›ÜˆËÝØÚËÈ[ˆÛÝ\˜Ù\ÊH›ÜˆÙ^H[ˆPUT’PSÓSQTßBˆ™]\›ˆÚÙ^H›ÜˆÙ^K[[Ý[[ˆX]\šX[Ù[J™^Ù[\ÙY
+Kš][\Ê
+HYˆ]˜Z[X›VÚÙ^WO[[Ý[B‚™YˆÛÛœÝ[YWÛX]\šX[Ê›Ú™XÝ[[Ý[ÊN‚ˆÛÝ\˜Ù\Ï[X]\šX[ÜÛÝ\˜Ù\Ê›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—K›Ú™XÝ
+Bˆ›ÜˆX]\šX[[[Ý[[ˆ[[Ý[Ëš][\Ê
+N‚ˆ™[XZ[š[™ÏX[[Ý[ˆ›ÜˆËÝØÚËÈ[ˆÛÝ\˜Ù\Î‚ˆ\ÙY[Z[ŠÝØÚÖÛX]\šX[K™[XZ[š[™ÊNÜÝØÚÖÛX]\šX[KO]\ÙYÜ™[XZ[š[™ËO]\ÙYˆYˆ›Ý™[XZ[š[™Î˜œ™XZÂˆYˆ™[XZ[š[™Îœ˜Z\ÙH[[YQ\œ›ÜŠ’[™[\š[ÈÙðë\ÝXÛÈØ[XšpìÈ\˜[H[ÛÛœÝ[[ÈŠB‚™YˆÛÛ˜XÝÜ—Ú\×ØØ\XÚ]J˜[YJN‚ˆ\ÜÚYÛ™Y\Ý[JÈ˜ÛÛ˜XÝÜˆ—OO[˜[YH[™™Ù]
+œÝ]\ÈŠHOHœ]\ØYHˆ›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—JBˆ\ÜÚYÛ™Y
+Ï\Ý[J™Ù]
+˜ÛÛ˜XÝÜˆŠOO[˜[YH[™™Ù]
+œÝ]\ÈŠOOH™[ˆØœ˜Hˆ›Üˆ[ˆÝ]K™Ù]
+œ™XÛÝ™\žPÛÛ˜XÝÈ‹×JJBˆ™]\›ˆ\ÜÚYÛ™YÓÓ•PÕÔ”ÖÛ˜[YWVÈ˜Ø\XÚ]H—B‚™YˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊ˜[YJN‚ˆ\ÜÚYÛ™Y\Ý[J™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹Yˆ™Ù]
+œÝ]\ÈŠOOHœ]\ØYHˆ[ÙHP“Ô—Ó‘QQÖÜÈšÚ[™—WJBˆ›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆÈ˜ÛÛ˜XÝÜˆ—OO[˜[YJBˆ\ÜÚYÛ™Y
+Ï\Ý[J™Ù]
+ÛÜšÙ\œÈ‹
+H›Üˆ[ˆÝ]K™Ù]
+œ™XÛÝ™\žPÛÛ˜XÝÈ‹×JHYˆ™Ù]
+˜ÛÛ˜XÝÜˆŠOO[˜[YH[™™Ù]
+œÝ]\ÈŠOOH™[ˆØœ˜HŠBˆ\ÜÚYÛ™Y
+Ï\Ý[JË™Ù]
+[›ØYÛÜšÙ\œÈ‹
+H›ÜˆÈ[ˆÝ]VÈœÝ\H—K™Ù]
+›Ü™\œÈ‹×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOO[˜[YH[™Ë™Ù]
+œÝ]\ÈŠOOH™\ØØ\™Ø[™ÈŠBˆ™]\›ˆÓÓ•PÕÔ”ÖÛ˜[YWVÈÛÜšÙ\œÈ—KX\ÜÚYÛ™Y‚™Yˆœ™YWÙ›ÜšÛY
+˜[YJN‚ˆ[—Ý\ÙO^ÛË™Ù]
+™›ÜšÛYYŠH›ÜˆÈ[ˆÝ]VÈœÝ\H—K™Ù]
+›Ü™\œÈ‹×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOO[˜[YH[™Ë™Ù]
+œÝ]\ÈŠOOH™\ØØ\™Ø[™ÈŸBˆ™]\›ˆ™^
+
+H›ÜˆH[ˆ˜[™ÙJKÓÓ•PÕÔ”ÖÛ˜[YWVÈ™›ÜšÛYÈ—JÌJHYˆH›Ý[ˆ[—Ý\ÙJK›Û™JB‚™Yˆ™YÚ[—Ý[›ØY[™ÊÜ™\ŠN‚ˆÛÛ˜XÝÜ[Ü™\–È˜ÛÛ˜XÝÜˆ—NÜÜXÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—NÙ›ÜšÛYYœ™YWÙ›ÜšÛY
+ÛÛ˜XÝÜŠBˆÛÜšÙ\œÏ\ÜXÖÈ[›ØYÛÜšÙ\œÈ—BˆYˆ›ÜšÛY\È›Û™N‚ˆÜ™\–ÈœÝ]\ÐØ]\ÙH—OH‘\Ü\˜[™È]]Ù[]˜YÜˆ\ÜÛšX›HŽÜ™]\›ˆ˜[ÙBˆYˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊÛÛ˜XÝÜŠOÛÜšÙ\œÎ‚ˆÜ™\–ÈœÝ]\ÐØ]\ÙH—OH‘\Ü\˜[™ÈÝXYš[HH\ØØ\™ØHŽÜ™]\›ˆ˜[ÙBˆ[[Ý[\Ý[JÜ™\–Èš][\È—K˜[Y\Ê
+JNÙ^\Ï[X^
+KX]˜ÙZ[
+[[Ý[ÜÜXÖÈ[›ØY˜]H—JJBˆÜ™\–ÈœÝ]\È—OH™\ØØ\™Ø[™ÈŽÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OHˆŽÛÜ™\–È™›ÜšÛYY—OY›ÜšÛYÛÜ™\–È[›ØYÛÜšÙ\œÈ—O]ÛÜšÙ\œÂˆÜ™\–È[›ØY˜]H—O\ÜXÖÈ[›ØY˜]H—NÛÜ™\–È[›ØYÝ\^H—O\Ý]VÈ™^H—NÛÜ™\–È[›ØY[[^H—O\Ý]VÈ™^H—JÙ^\ÎÛÜ™\–È[›ØY›ÙÜ™\ÜÈ—OLˆ]Š‘\ØØ\™ØH[ˆÝ\œÛÈ‹ˆžØÛÛ˜XÝÜŸH\ÚYÛ°ìÈÝÛÜšÙ\œßHÜ\˜\š[ÜÈH[]]Ù[]˜YÜˆÙ›ÜšÛYNÈ\ØØ\™ØH\Ý[XYNˆÙ^\ßH0ëXJÊKˆŠBˆ™]\›ˆYB‚™Yˆ\×ÝØ]\ŠJN‚ˆ™]\›ˆLÜˆ
+OÈ[™ŒN
+B‚™Yˆ›Ý]WØ™]ÙY[ŠÝ\ØÛÛÜ™\Ý[˜][Û—ØÛÛÜ™
+N‚ˆÛÛ™][Û^ÊK™Ù]
+žŠKK™Ù]
+žHŠJN™›Ø]
+K™Ù]
+œ]X[]H‹ŠJH›ÜˆH[ˆÝ]K™Ù]
+œ›ØY\ÜÙ]È‹×J_Bˆ›ØYÏ^Ý\JŠH›Üˆˆ[ˆÝ]VÈœ›ØYÈ—HYˆÛÛ™][Û‹™Ù]
+\JŠKŠOL_BˆY˜XÙ[[[X™HÚ[žÊÚ[ÌJÙÚ[ÌWJÙJH›ÜˆH[ˆ
+
+K
+K
+LK
+K
+JK
+LJJ_BˆÝ\Ï^ÜÝ\ØÛÛÜ™HYˆÝ\ØÛÛÜ™[ˆ›ØYÈ[ÙHY˜XÙ[
+Ý\ØÛÛÜ™
+Iœ›ØYÂˆÛØ[Ï^Ù\Ý[˜][Û—ØÛÛÜ™HYˆ\Ý[˜][Û—ØÛÛÜ™[ˆ›ØYÈ[ÙHY˜XÙ[
+\Ý[˜][Û—ØÛÛÜ™
+Iœ›ØYÂˆYˆ›ÝÝ\ÈÜˆ›ÝÛØ[Îœ™]\›ˆ›Û™Bˆ]Y]YO[\Ý
+Ý\ÊNÜ™]š[Ý\Ï^ÜÚ[“›Û™H›ÜˆÚ[[ˆÝ\ßNÝ\™Ù]S›Û™Bˆ›ÜˆÝ\œ™[[ˆ]Y]YN‚ˆYˆÝ\œ™[[ˆÛØ[Îˆ\™Ù]XÝ\œ™[Øœ™XZÂˆ›ÜˆH[ˆ
+
+K
+K
+LK
+K
+JK
+LJJN‚ˆ™ZYÚ›ÜJÝ\œ™[ÌJÙÝ\œ™[ÌWJÙJBˆYˆ™ZYÚ›Üˆ[ˆ›ØYÈ[™™ZYÚ›Üˆ›Ý[ˆ™]š[Ý\Î‚ˆ™]š[Ý\ÖÛ™ZYÚ›Ü—OXÝ\œ™[Ü]Y]YK˜\[™
+™ZYÚ›ÜŠBˆYˆ\™Ù]\È›Û™Nœ™]\›ˆ›Û™Bˆ]V×NØÝ\œ™[]\™Ù]ˆÚ[HÝ\œ™[\È›Ý›Û™Nœ]˜\[™
+ØÝ\œ™[ÌKÝ\œ™[ÌWWJNØÝ\œ™[\™]š[Ý\ÖØÝ\œ™[Bˆ]œ™]™\œÙJ
+BˆYˆÝ\ØÛÛÜ™›Ý[ˆ›ØYÎœ]š[œÙ\
+\Ý
+Ý\ØÛÛÜ™
+JBˆYˆ\Ý[˜][Û—ØÛÛÜ™›Ý[ˆ›ØYÎœ]˜\[™
+\Ý
+\Ý[˜][Û—ØÛÛÜ™
+JBˆ™]\›ˆ]‚™YˆZ[ÝØ\ÝWØÛÛXÝ[Û—Ü›Ý]\ÊÛÛZ[™\œË\ÝË˜XÚ[]Y\ÊN‚ˆXÚÜÏVÞÈšYŽˆ›][šXÚ\[LH‹›˜[YHŽˆØ[ZpìÛˆ][šXÚ\[‹œÝ\ŽžÈžŽžHŽŒLK™\ÝŽ“›Û™K˜š[œÈŽ–×_WBˆ›ÜˆK\Ý[ˆ[[Y\˜]J\ÝÊN‚ˆXÚÜË˜\[™
+ÈšYŽ™ˆ™\Ý^Ù\ÝÉÞ	×_K^Ù\ÝÉÞI×_H‹›˜[YHŽ™ˆØ[ZpìÛˆHÙ\Ý™Ù]
+	Û˜[YIË	Ù\0ìÜÚ]È][šXÚ\[	Ê_H‹œÝ\ŽžÈžŽ™\ÝÈž—KžHŽ™\ÝÈžH—_K™\ÝŽ™\Ý˜š[œÈŽ–×_JBˆ›Üˆ[™^XÚÈ[ˆ[[Y\˜]JXÚÜÊNXÚÖÈœ^[ØYÛœÈ—OLKŒMHYˆ[™^OL[ÙHÍBˆ›ÜˆÛÛZ[™\ˆ[ˆÛÜY
+ÛÛZ[™\œËÙ^O[[X™HÎŠË™Ù]
+žH‹
+KË™Ù]
+ž‹
+JJN‚ˆÜ[ÛœÏV×Bˆ›Üˆ[™^XÚÈ[ˆ[[Y\˜]JXÚÜÊN‚ˆYˆ[ŠXÚÖÈ˜š[œÈ—JJ‹ŒMO]XÚÖÈœ^[ØYÛœÈ—KKŒN˜ÛÛ[YBˆÜšYÚ[]XÚÖÈ˜š[œÈ—VËLWHYˆXÚÖÈ˜š[œÈ—H[ÙHXÚÖÈœÝ\—Bˆ]\›Ý]WØ™]ÙY[Š
+ÜšYÚ[–Èž—KÜšYÚ[–ÈžH—JK
+ÛÛZ[™\–Èž—KÛÛZ[™\–ÈžH—JJBˆYˆ]›Ü[ÛœË˜\[™
+
+[Š]
+JÛ[ŠXÚÖÈ˜š[œÈ—JJK[™^
+JBˆYˆÜ[ÛœÎ‚ˆË[™^[Z[ŠÜ[ÛœÊNÝXÚÜÖÚ[™^VÈ˜š[œÈ—K˜\[™
+ÛÛZ[™\ŠBˆ›Ý]\ÏV×Bˆ›ÜˆXÚÈ[ˆXÚÜÎ‚ˆÝ\]XÚÖÈœÝ\—NÙ\Ý[˜][Û]XÚÖÈ™\Ý—BˆYˆ\Ý[˜][Ûˆ\È›Û™N‚ˆ\Ý[˜][Û[Z[Š\ÝËÙ^O[[X™HŽ›[Š›Ý]WØ™]ÙY[Š
+L
+K
+–Èž—K–ÈžH—JJHÜˆÌJJHYˆ\ÝÈ[ÙH›Û™BˆYˆ\Ý[˜][Ûˆ\È›Û™H[™˜XÚ[]Y\Î‚ˆ™XXÚX›OVÊ[Š›Ý]WØ™]ÙY[Š
+L
+K
+–Èž—K–ÈžH—JJHÜˆ×JKŠH›Üˆˆ[ˆ˜XÚ[]Y\×Bˆ™XXÚX›OVÜ›ÝÈ›Üˆ›ÝÈ[ˆ™XXÚX›HYˆ›ÝÖÌOŒBˆYˆ™XXÚX›N™\Ý[˜][Û[Z[Š™XXÚX›KÙ^O[[X™H›ÝÎœ›ÝÖÌJVÌWBˆ]V×NÜÝÜÏV×NØÝ\œ™[\Ý\ˆ›ÜˆÛÛZ[™\ˆ[ˆXÚÖÈ˜š[œÈ—N‚ˆÙYÛY[\›Ý]WØ™]ÙY[Š
+Ý\œ™[Èž—KÝ\œ™[ÈžH—JK
+ÛÛZ[™\–Èž—KÛÛZ[™\–ÈžH—JJBˆYˆ›ÝÙYÛY[˜ÛÛ[YBˆ]™^[™
+ÙYÛY[Yˆ›Ý][ÙHÙYÛY[ÌN—JNÜÝÜË˜\[™
+ÈšÚ[™Žˆ˜ÛÛZ[™\ˆ‹žŽ˜ÛÛZ[™\–Èž—KžHŽ˜ÛÛZ[™\–ÈžH—KšYŽ˜ÛÛZ[™\‹™Ù]
+šY‹ˆ˜š[‹^ØÛÛZ[™\–ÉÞ	×_K^ØÛÛZ[™\–ÉÞI×_HŠ_JNØÝ\œ™[XÛÛZ[™\‚ˆYˆ\Ý[˜][ÛŽ‚ˆÙYÛY[\›Ý]WØ™]ÙY[Š
+Ý\œ™[Èž—KÝ\œ™[ÈžH—JK
+\Ý[˜][Û–Èž—K\Ý[˜][Û–ÈžH—JJBˆYˆÙYÛY[œ]™^[™
+ÙYÛY[Yˆ›Ý][ÙHÙYÛY[ÌN—JNÜÝÜË˜\[™
+ÈšÚ[™Žˆ˜[œÙ™\ˆˆYˆ\Ý[˜][Û‹™Ù]
+šÚ[™ŠOOH™\Ýˆ[ÙH™\ÜÜØ[‹žŽ™\Ý[˜][Û–Èž—KžHŽ™\Ý[˜][Û–ÈžH—K›˜[YHŽ™\Ý[˜][Û‹™Ù]
+›˜[YH‹‘\Ý[›Èš[˜[Š_JNØÝ\œ™[Y\Ý[˜][Û‚ˆ˜XÚÏ\›Ý]WØ™]ÙY[Š
+Ý\œ™[Èž—KÝ\œ™[ÈžH—JK
+Ý\Èž—KÝ\ÈžH—JJBˆYˆ˜XÚÎœ]™^[™
+˜XÚÈYˆ›Ý][ÙH˜XÚÖÌN—JBˆYˆXÚÖÈ˜š[œÈ—H[™\Ý[˜][Ûˆ\È›Û™NœÝÜË˜\[™
+ÈšÚ[™Žˆ˜˜\ÙH‹žŽœÝ\Èž—KžHŽœÝ\ÈžH—K›˜[YHŽˆ˜\ÙH][šXÚ\[ŸJBˆš[—ÚYÏ^ÜÝÜÈšY—H›ÜˆÝÜ[ˆÝÜÈYˆÝÜÈšÚ[™—OOH˜ÛÛZ[™\ˆŸBˆ›Ý]\Ë˜\[™
+ÈšYŽXÚÖÈšY—K›˜[YHŽXÚÖÈ›˜[YH—Kœ^[ØYÛœÈŽXÚÖÈœ^[ØYÛœÈ—Kœ]Žœ]œÝÜÈŽœÝÜË˜ÛÛZ[™\’YÈŽœÛÜY
+š[—ÚYÊK™\Ý[˜ÙU[\ÈŽ›X^
+[Š]
+KLJKœ™XXÚX›HŽ›[Š]
+OŒH[™›ÛÛ
+ÝÜÊK™\Ý[˜][ÛˆŽœÝÜÖËLWVÈšÚ[™—HYˆÝÜÈ[ÙHœÚ[ˆ\Ý[›ÈŸJBˆ™]\›ˆ›Ý]\Â‚™Yˆ[œÝ\™WÝ][]WÜÝ]J
+N‚ˆ][]Y\Ï\Ý]KœÙ]Y˜][
+][]Y\È‹ßJBˆ›ØYÏVÛ\Ý
+Ú[
+H›ÜˆÚ[[ˆÝ]K™Ù]
+œ›ØYÈ‹×JWBˆ][]Y\ËœÙ]Y˜][
+œÝÙ\“[™\È‹›ØYË˜ÛÜJ
+JBˆ][]Y\ËœÙ]Y˜][
+™˜Z[\™\È‹×JBˆ][]Y\ËœÙ]Y˜][
+Ø]\”\\È‹›ØYË˜ÛÜJ
+JBˆ][]Y\ËœÙ]Y˜][
+œÙ]Ù\“[™\È‹Û\Ý
+Ú[
+H›ÜˆÚ[[ˆ][]Y\Ë™Ù]
+Ø]\”\\È‹›ØYÊWJBˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙUØ\Ý]Ø]\•™X]Y[LÑ^H‹N
+Bˆ][]Y\ËœÙ]Y˜][
+™˜Z[“[™\È‹Û\Ý
+Ú[
+H›ÜˆÚ[[ˆ][]Y\Ë™Ù]
+œÙ]Ù\“[™\È‹›ØYÊWJBˆ][]Y\ËœÙ]Y˜][
+™Ø\Ó[™\È‹›ØYË˜ÛÜJ
+JBˆ][]Y\ËœÙ]Y˜][
+[XÛÛS[™\È‹›ØYË˜ÛÜJ
+JBˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙQØ\ÐØ\XÚ]SLÑ^H‹
+Bˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙU[XÛÛPØ\XÚ]SXœÈ‹L
+Bˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙQ˜Z[˜YÙPØ\XÚ]SLÑ^H‹ÌÌ
+Bˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙTÝÙ\Ø\XÚ]RÝÈ‹LŒ
+Bˆ][]Y\ËœÙ]Y˜][
+˜˜\ÙUØ]\Ø\XÚ]SLÑ^H‹N
+Bˆ][]Y\ËœÙ]Y˜][
+œÝÙ\“ÜÜÔ˜]H‹ŒŠBˆ][]Y\ËœÙ]Y˜][
+Ø]\“XZÔ˜]H‹Œ
+Bˆ][]Y\ËœÙ]Y˜][
+›XZ[[˜[˜ÙQ[™[™Ñ˜XÝÜˆ‹JBˆ™]\›ˆ][]Y\Â‚™Yˆ[™\™Ú^™YÝ][]WÝ[\Ê™]ÛÜšÊN‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NÚÙ^O^ÈœÝÙ\ˆŽˆœÝÙ\“[™\È‹Ø]\ˆŽˆØ]\”\\È‹œÙ]Ù\ˆŽˆœÙ]Ù\“[™\È‹™˜Z[˜YÙHŽˆ™˜Z[“[™\È‹™Ø\ÈŽˆ™Ø\Ó[™\È‹[XÛÛHŽˆ[XÛÛS[™\ÈŸK™Ù]
+™]ÛÜšËØ]\”\\ÈŠBˆ˜Z[Y^Ê‹™Ù]
+žŠK‹™Ù]
+žHŠJH›Üˆˆ[ˆ][]Y\Ë™Ù]
+™˜Z[\™\È‹×JHYˆ‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ[™‹™Ù]
+›™]ÛÜšÈŠOO[™]ÛÜšßBˆ[™\Ï^Ý\JÚ[
+H›ÜˆÚ[[ˆ][]Y\Ë™Ù]
+Ù^K×JHYˆ\JÚ[
+H›Ý[ˆ˜Z[YNÜÛÝ\˜ÙOJL
+BˆYˆÛÝ\˜ÙH›Ý[ˆ[™\Îœ™]\›ˆÙ]
+
+BˆÛÛ›™XÝY^ÜÛÝ\˜Ù_NÜ]Y]YOVÜÛÝ\˜ÙWBˆ›ÜˆH[ˆ]Y]YN‚ˆ›Üˆ™ZYÚ›Üˆ[ˆ
+
+
+ÌKJK
+LKJK
+JÌJK
+KLJJN‚ˆYˆ™ZYÚ›Üˆ[ˆ[™\È[™™ZYÚ›Üˆ›Ý[ˆÛÛ›™XÝY˜ÛÛ›™XÝY˜Y
+™ZYÚ›ÜŠNÜ]Y]YK˜\[™
+™ZYÚ›ÜŠBˆ™]\›ˆÛÛ›™XÝY‚™Yˆ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™Ë™]ÛÜšÊN‚ˆ[\ÏY[™\™Ú^™YÝ][]WÝ[\Ê™]ÛÜšÊBˆ™]\›ˆ[žJ
+Z[[™Ë™Ù]
+ž‹NNJJÙZ[[™Ë™Ù]
+žH‹NNJJÙJH[ˆ[\È›ÜˆH[ˆ
+
+
+K
+K
+K
+LK
+K
+JK
+LJJJB‚™Yˆ˜XÚ[]WØØ\XÚ]WÙ˜XÝÜŠZ[[™ÊN‚ˆˆˆÛÛ™][Ûˆ‰H\ÈHÛÛ[Z\ÜÚ[Û™Y˜\Ù[[™NÈÝXÝ\˜[ÙX\ˆ™YXÙ\È[Ý]]ˆˆˆ‚ˆ˜XÝÜ[X^
+Z[ŠK›Ø]
+Z[[™Ë™Ù]
+œ]X[]H‹ŠJKÎŠJBˆZ[[™ÖÈ™[˜Ý[Û˜[Ø\XÚ]TÝ—O\›Ý[™
+˜XÝÜŠŒL
+Bˆ™]\›ˆ˜XÝÜ‚‚™Yˆ][]WØÛÛ™][Û—Ü™\Ü
+
+N‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NØÛÛ™][ÛœÏ]][]Y\ËœÙ]Y˜][
+›[™PÛÛ™][ÛœÈ‹ßJBˆ[™WÚÙ^\Ï^ÈœÝÙ\ˆŽˆœÝÙ\“[™\È‹Ø]\ˆŽˆØ]\”\\È‹œÙ]Ù\ˆŽˆœÙ]Ù\“[™\È‹™˜Z[˜YÙHŽˆ™˜Z[“[™\È‹™Ø\ÈŽˆ™Ø\Ó[™\È‹[XÛÛHŽˆ[XÛÛS[™\ÈŸBˆ™\Ü^ßBˆ›Üˆ™]ÛÜšËÙ^H[ˆ[™WÚÙ^\Ëš][\Ê
+N‚ˆ˜[Y\ÏVÛX^
+Z[ŠL›Ø]
+ÛÛ™][ÛœË™Ù]
+ˆžÛ™]ÛÜšßNžÞNžÞ_H‹ŠJJJH›ÜˆH[ˆ][]Y\Ë™Ù]
+Ù^K×JWBˆ™\ÜÛ™]ÛÜš×O^ÈœÙYÛY[ÈŽ›[Š˜[Y\ÊK˜]™\˜YÙPÛÛ™][ÛˆŽœ›Ý[™
+Ý[J˜[Y\ÊKÛX^
+K[Š˜[Y\ÊJKJK˜Üš]XØ[ÙYÛY[ÈŽœÝ[JO›ÜˆH[ˆ˜[Y\ÊK›Z[š[][PÛÛ™][ÛˆŽœ›Ý[™
+Z[Š˜[Y\ÊKJHYˆ˜[Y\È[ÙHLBˆ™]\›ˆ™\Ü‚™YˆY˜[˜ÙWÝ][]WÛ[™WØÛÛ™][ÛœÊ[™[™×Ù˜XÝÜŠN‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NØÛÛ™][ÛœÏ]][]Y\ËœÙ]Y˜][
+›[™PÛÛ™][ÛœÈ‹ßJBˆ[™WÚÙ^\Ï^ÈœÝÙ\ˆŽˆœÝÙ\“[™\È‹Ø]\ˆŽˆØ]\”\\È‹œÙ]Ù\ˆŽˆœÙ]Ù\“[™\È‹™˜Z[˜YÙHŽˆ™˜Z[“[™\È‹™Ø\ÈŽˆ™Ø\Ó[™\È‹[XÛÛHŽˆ[XÛÛS[™\ÈŸBˆ˜[Y\Ï^ÈœÝÙ\ˆŽˆ™[XÝšXÚYY‹Ø]\ˆŽˆ˜YÝXHÝX›H‹œÙ]Ù\ˆŽˆ˜ÛØXØ\È‹™˜Z[˜YÙHŽˆ™™[˜Z™H]šX[‹™Ø\ÈŽˆ™Ø\È‹[XÛÛHŽˆ™šXœ˜H0ìÜXØHŸBˆ˜\Ù\Ï^ÈœÝÙ\ˆŽÌŒØ]\ˆŽœÙ]Ù\ˆŽŽL™˜Z[˜YÙHŽŽL™Ø\ÈŽN[XÛÛHŽŒBˆ[™Y[X^
+Z[ŠK›Ø]
+[™[™×Ù˜XÝÜŠJJNØÜ™X]YV×Bˆ›Üˆ™]ÛÜšËÙ^H[ˆ[™WÚÙ^\Ëš][\Ê
+N‚ˆ[™\Ï]][]Y\Ë™Ù]
+Ù^K×JNÜš\ÚÜÏV×NØÛÛ›™XÝYY[™\™Ú^™YÝ][]WÝ[\Ê™]ÛÜšÊBˆÝ\œ™[ØZ[[™ÜÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ][]WØZ[[™×ØÛÛ›™XÝY
+‹™]ÛÜšÊWBˆ›ÜˆH[ˆ[™\Î‚ˆ™X\˜žO\Ý[JH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆXœÊ‹™Ù]
+ž‹NNJK^
+JØXœÊ‹™Ù]
+žH‹NNJK^JOLJBˆØYLJÛZ[Š™X\˜žJ‹JBˆ\ÜÙ]ÚÙ^OYˆžÛ™]ÛÜšßNžÞNžÞ_H‚ˆ]X[]O[X^
+Z[ŠL›Ø]
+ÛÛ™][ÛœË™Ù]
+\ÜÙ]ÚÙ^KŠJJJBˆ]X[]O[X^
+Z[ŠL]X[]KJŒ
+ÛØY
+‹ŒÊJËŒN
+™[™Y
+JBˆÛÛ™][ÛœÖØ\ÜÙ]ÚÙ^WO\›Ý[™
+]X[]KJBˆYˆ]X[]ON‚ˆ[\›˜]O\Ù]
+ÛÛ›™XÝY
+NØ[\›˜]K™\ØØ\™
+
+JJNÜÛÝ\˜ÙOJL
+Bˆ™XXÚY^ÜÛÝ\˜Ù_HYˆÛÝ\˜ÙH[ˆ[\›˜]H[ÙHÙ]
+
+NÜ]Y]YO[\Ý
+™XXÚY
+Bˆ›ÜˆKˆ[ˆ]Y]YN‚ˆ›Üˆ™ZYÚ›Üˆ[ˆ
+
+JÌKŠK
+KLKŠK
+KŠÌJK
+K‹LJJN‚ˆYˆ™ZYÚ›Üˆ[ˆ[\›˜]H[™™ZYÚ›Üˆ›Ý[ˆ™XXÚYœ™XXÚY˜Y
+™ZYÚ›ÜŠNÜ]Y]YK˜\[™
+™ZYÚ›ÜŠBˆÜÝ\Ý[JH›ÜˆZ[[™È[ˆÝ\œ™[ØZ[[™ÜÈYˆ›Ý[žJ
+Z[[™Ë™Ù]
+ž‹NNJJÙZ[[™Ë™Ù]
+žH‹NNJJÙJH[ˆ™XXÚY›ÜˆH[ˆ
+
+
+K
+K
+K
+LK
+K
+JK
+LJJJJBˆš\ÚÜË˜\[™
+
+ÜÝ]X[]KJJBˆXÝ]™O^Ê‹™Ù]
+›™]ÛÜšÈŠK‹™Ù]
+žŠK‹™Ù]
+žHŠJH›Üˆˆ[ˆ][]Y\Ë™Ù]
+™˜Z[\™\È‹×JHYˆ‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHŸBˆš\ÚÜÏVÜˆ›Üˆˆ[ˆš\ÚÜÈYˆ
+™]ÛÜšË–Ì—K–Ì×JH›Ý[ˆXÝ]™WBˆYˆš\ÚÜÎ‚ˆÜÝ]X[]KO\ÛÜY
+š\ÚÜËÙ^O[[X™HŽŠ\–ÌK–ÌWK–Ì×K–Ì—JJVÌBˆÛÜÝ\›Ý[™
+˜\Ù\ÖÛ™]ÛÜš×JŠJÊK\]X[]JKÍL
+JBˆ˜Z[\™O^ÈšYŽ]ZY]ZY
+
+Kš^›™]ÛÜšÈŽ›™]ÛÜšËžŽžžHŽžK™^HŽœÝ]K™Ù]
+™^H‹JKœ™X\ÛÛˆŽˆ‘\ÙØ\ÝHÜˆX[[š[ZY[È[œÝYšXÚY[H‹œ™\Z\ÛÜÝŽ˜ÛÜÝ˜Y™™XÝYZ[[™ÜÈŽ›ÜÝœÝ]\ÈŽˆ˜]™\°ëXH‹œ™[XZ[š[™Ñ^\ÈŽŒBˆ][]Y\ËœÙ]Y˜][
+™˜Z[\™\È‹×JK˜\[™
+˜Z[\™JNØÜ™X]Y˜\[™
+˜Z[\™JBˆ[\XÝYˆ”ÙH[\œ[\pìÈ[Ý[Z[š\Ý›ÈHÛÜÝHYYšXÚ[ÜËˆˆYˆÜÝ[ÙH“\È]\È[\›˜]]˜\ÈX[Y[™[ˆ[Ý[Z[š\Ý›Ë\›È[˜[[È]YY0ìÈY\˜HHÙ\šXÚ[Ëˆ‚ˆ]Š]™\°ëXHÜˆ\ÙØ\ÝHH™Y‹ˆ‘[˜[[ÈHÛ˜[Y\ÖÛ™]ÛÜš×_H[ˆØ[HÞ
+Ì_KÞJÌ_H˜[0ìÈ˜\ÈXÝ[][\ˆ\ÙØ\ÝKˆÚ[\XÝH™\\˜\›ÈÝY\ÝH	ØÛÜÝHH™\]ZY\™H[˜HÝXYš[KˆŠBˆ][]Y\ÖÈ›[™PÛÛ™][Û”™\Ü—O]][]WØÛÛ™][Û—Ü™\Ü
+
+Bˆ™]\›ˆ][]Y\ÖÈ›[™PÛÛ™][Û”™\Ü—KÜ™X]Y‚™Yˆ[œÝ\™WÝØ\ÝWÜÝ]J
+N‚ˆØ\ÝO\Ý]KœÙ]Y˜][
+Ø\ÝH‹ßJBˆØ\ÝKœÙ]Y˜][
+˜˜\ÙPÛÛXÝ[Û•ÛœÑ^H‹KŒMJBˆØ\ÝKœÙ]Y˜][
+˜˜\ÙS[™š[Ø\XÚ]UÛœÈ‹L
+BˆØ\ÝKœÙ]Y˜][
+›[™š[ÝÜ™YÛœÈ‹
+BˆØ\ÝKœÙ]Y˜][
+[˜ÛÛXÝYÛœÈ‹
+BˆØ\ÝKœÙ]Y˜][
+›\ÝÛÛXÝ[Û•ÛœÈ‹
+BˆØ\ÝKœÙ]Y˜][
+›\ÝØ\ÝR[\XÝ^H‹
+BˆØ\ÝKœÙ]Y˜][
+›\Ý™XÞXÛYÛœÑ^H‹
+BˆØ\ÝKœÙ]Y˜][
+˜[œÙ™\”ÝÜ™YÛœÈ‹
+BˆØ\ÝKœÙ]Y˜][
+˜ÛÛZ[™\œÈ‹×JBˆØ\ÝKœÙ]Y˜][
+œ›Ý]\È‹×JBˆØ\ÝKœÙ]Y˜][
+™[™[™Ñ˜XÝÜˆ‹JBˆ™]\›ˆØ\ÝB‚™YˆØ[Ý[]WÝØ\ÝWØ˜[[˜ÙJY˜[˜ÙOQ˜[ÙK\WÙY™™XÝÏQ˜[ÙJN‚ˆØ\ÝOY[œÝ\™WÝØ\ÝWÜÝ]J
+NØZ[[™ÜÏ\Ý]K™Ù]
+˜Z[[™ÜÈ‹×JBˆÜ[][Û[X^
+Ý]K™Ù]
+œÜ[][Ûˆ‹
+JBˆÝ\ÙZÛ\Ü[][ÛŠ‹ŒLMBˆ\Ú[™\ÜÙ\Ï\Ý[JX^
+K‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\ÝÛÜšÙ\œÈ‹›Ý[™
+‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+š›Ø”ÛÝÈ‹
+J‹MJJJJ‹ŒLMH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠHOH˜Ù\œ˜YÈŠBˆX›X×ÜÝY™\Ý[JX^
+Ë™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹
+JH›ÜˆÈ[ˆÝ]K™Ù]
+ÛÜšÜXÙ\È‹×JHYˆË™Ù]
+šÚ[™ŠH[ˆ
+˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÜ‹˜Z\œÜ‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠJBˆX›XÏ\X›X×ÜÝY™Š‹ŒÍBˆš\Ú]ÜœÏ\Ý[JX^
+‹™Ù]
+›[ÛQÝY\ÝÈ‹
+JH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHšÝ[ŠKÌÌ
+‹ŒMBˆÙ[™\˜]YZÝ\ÙZÛ
+Ø\Ú[™\ÜÙ\ÊÜX›XÊÝš\Ú]ÜœÂˆXÝ]™WÙ\ÝØZ[[™ÜÏVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOH™\Ýˆ[™‹™Ù]
+œÝ]\È‹šXš[]YÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠH[™›Ý]WØ™]ÙY[Š
+L
+K
+‹™Ù]
+ž‹
+K‹™Ù]
+žH‹
+JJWBˆXÝ]™WÙ\ÝÏ[[ŠXÝ]™WÙ\ÝØZ[[™ÜÊBˆXÚÜÏLJØXÝ]™WÙ\ÝÂˆÛÛZ[™\œÏ]Ø\ÝKœÙ]Y˜][
+˜ÛÛZ[™\œÈ‹×JBˆ˜XÚ[]Y\ÏVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+›[™š[‹œ™XÞXÛ[™Ô[ŠH[™‹™Ù]
+œÝ]\È‹šXš[]YÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠWBˆ›Ý]\ÏXZ[ÝØ\ÝWØÛÛXÝ[Û—Ü›Ý]\ÊÛÛZ[™\œËXÝ]™WÙ\ÝØZ[[™ÜË˜XÚ[]Y\ÊBˆÛÛXÝ[Û—Ù˜XÝÜ[X^
+Z[ŠK›Ø]
+Ø\ÝK™Ù]
+™[™[™Ñ˜XÝÜˆ‹JJJJBˆ›Üˆ›Ý]H[ˆ›Ý]\Îœ›Ý]VÈœ^[ØYÛœÈ—JXÛÛXÝ[Û—Ù˜XÝÜ‚ˆØ\ÝVÈœ›Ý]\È—O\›Ý]\Âˆ›Ý]YØžWÚY^ØÛÛZ[™\—ÚYœ›Ý]H›Üˆ›Ý]H[ˆ›Ý]\ÈYˆ›Ý]VÈœ™XXÚX›H—H›ÜˆÛÛZ[™\—ÚY[ˆ›Ý]VÈ˜ÛÛZ[™\’YÈ—_Bˆ›Ý]YØš[—ÚYÏ\Ù]
+›Ý]YØžWÚY
+Bˆ›ÜˆÛÛZ[™\ˆ[ˆÛÛZ[™\œÎ˜ÛÛZ[™\–Èœ›Ý]RY—O\›Ý]YØžWÚY™Ù]
+ÛÛZ[™\‹™Ù]
+šY‹ˆ˜š[‹^ØÛÛZ[™\–ÉÞ	×_K^ØÛÛZ[™\–ÉÞI×_HŠKßJK™Ù]
+šYŠBˆÛÛXÝ[Û—ØØ\XÚ]OJØ\ÝVÈ˜˜\ÙPÛÛXÝ[Û•ÛœÑ^H—JØXÝ]™WÙ\ÝÊ‹ÍJÛ[Š›Ý]YØš[—ÚYÊJ‹ŒMJJ˜ÛÛXÝ[Û—Ù˜XÝÜ‚ˆ˜[œÙ™\—ØØ\XÚ]OXXÝ]™WÙ\ÝÊŒL‚ˆ˜[œÙ™\—Ù\Ü]ÚXXÝ]™WÙ\ÝÊŒKBˆ[™š[ÏVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOH›[™š[ˆ[™‹™Ù]
+œÝ]\È‹šXš[]YÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠWBˆ™XÞXÛ\œÏVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHœ™XÞXÛ[™Ô[ˆ[™‹™Ù]
+œÝ]\È‹šXš[]YÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠH[™›Ý]WØ™]ÙY[Š
+L
+K
+‹™Ù]
+ž‹
+K‹™Ù]
+žH‹
+JJH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹œÝÙ\ˆŠH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹Ø]\ˆŠWBˆ™XÞXÛ[™×ØØ\XÚ]O\Ý[JX^
+‹™Ù]
+œ›ØÙ\ÜÚ[™ÕÛœÑ^H‹KŒJJH›Üˆˆ[ˆ™XÞXÛ\œÊBˆ[™š[ØØ\XÚ]O]Ø\ÝVÈ˜˜\ÙS[™š[Ø\XÚ]UÛœÈ—JÜÝ[JX^
+‹™Ù]
+˜Ø\XÚ]PYY‹N
+JH›Üˆˆ[ˆ[™š[ÊBˆYˆY˜[˜ÙN‚ˆ˜XÚÛÙÏ[X^
+Ø\ÝK™Ù]
+[˜ÛÛXÝYÛœÈ‹
+JNÜÝÜ™Y[X^
+Ø\ÝK™Ù]
+›[™š[ÝÜ™YÛœÈ‹
+JBˆ˜[œÙ™\—ÜÝÜ™Y[X^
+Ø\ÝK™Ù]
+˜[œÙ™\”ÝÜ™YÛœÈ‹
+JBˆ›Ý]YØžWÚY^ØÛÛZ[™\—ÚYœ›Ý]H›Üˆ›Ý]H[ˆ›Ý]\ÈYˆ›Ý]VÈœ™XXÚX›H—H›ÜˆÛÛZ[™\—ÚY[ˆ›Ý]VÈ˜ÛÛZ[™\’YÈ—_Bˆ\—Øš[[Z[ŠŒMKÙ[™\˜]YÛX^
+K[ŠÛÛZ[™\œÊJJHYˆÛÛZ[™\œÈ[ÙHˆš[—ÙÙ[™\˜][ÛLØš[—ÛÝ™\™›ÝÏLØš[—ÜXÚÙYLˆ›Ý]WÛØY^Ü›Ý]VÈšY—NŒŒ›Üˆ›Ý]H[ˆ›Ý]\ßBˆ›ÜˆÛÛZ[™\ˆ[ˆÛÛZ[™\œÎ‚ˆÛÛZ[™\—ÚYXÛÛZ[™\‹™Ù]
+šY‹ˆ˜š[‹^ØÛÛZ[™\–ÉÞ	×_K^ØÛÛZ[™\–ÉÞI×_HŠBˆÛÛZ[™\–ÈšY—OXÛÛZ[™\—ÚYˆÛÛZ[™\–ÈœÝÜ™YÛœÈ—O[X^
+›Ø]
+ÛÛZ[™\‹™Ù]
+œÝÜ™YÛœÈ‹
+JJBˆ[˜ÛÛZ[™Ï\\—Øš[ŽØš[—ÙÙ[™\˜][ÛŠÏZ[˜ÛÛZ[™ÂˆØ\XÚ]O[X^
+ŒMK›Ø]
+ÛÛZ[™\‹™Ù]
+˜Ø\XÚ]UÛœÈ‹ŠJJBˆÝ™\™›ÝÏ[X^
+ÛÛZ[™\–ÈœÝÜ™YÛœÈ—JÚ[˜ÛÛZ[™ËXØ\XÚ]JBˆÛÛZ[™\–ÈœÝÜ™YÛœÈ—O[Z[ŠØ\XÚ]KÛÛZ[™\–ÈœÝÜ™YÛœÈ—JÚ[˜ÛÛZ[™ÊBˆ›Ý]O\›Ý]YØžWÚY™Ù]
+ÛÛZ[™\—ÚY
+NÜXÚÙYLˆYˆ›Ý]N‚ˆ›ÛÛO[X^
+›Ý]K™Ù]
+œ^[ØYÛœÈ‹ÍJK\›Ý]WÛØYÜ›Ý]VÈšY—WJBˆXÚÙY[Z[ŠÛÛZ[™\–ÈœÝÜ™YÛœÈ—KŒMK›ÛÛJBˆ›Ý]WÛØYÜ›Ý]VÈšY—WJÏ\XÚÙYØÛÛZ[™\–ÈœÝÜ™YÛœÈ—O\›Ý[™
+ÛÛZ[™\–ÈœÝÜ™YÛœÈ—K\XÚÙYÊBˆÛÛZ[™\–È›\ÝXÚÙYÛœÈ—O\›Ý[™
+XÚÙYÊNØÛÛZ[™\–Èœ›Ý]RY—O\›Ý]VÈšY—HYˆ›Ý]H[ÙH›Û™Bˆš[—ÜXÚÙY
+Ï\XÚÙYØš[—ÛÝ™\™›ÝÊÏ[Ý™\™›ÝÂˆÝ\˜—ÙÙ[™\˜]Y[X^
+Ù[™\˜]YXš[—ÙÙ[™\˜][ÛŠBˆÝ\˜—ØØ\XÚ]OJØ\ÝVÈ˜˜\ÙPÛÛXÝ[Û•ÛœÑ^H—JØXÝ]™WÙ\ÝÊ‹ÍJJ˜ÛÛXÝ[Û—Ù˜XÝÜ‚ˆÝ\˜—ÜXÚÙY[Z[Š˜XÚÛÙÊØÝ\˜—ÙÙ[™\˜]YÝ\˜—ØØ\XÚ]JBˆXÚÙYXÝ\˜—ÜXÚÙY
+Øš[—ÜXÚÙYˆXØÙ\Y[Z[ŠXÚÙYX^
+˜[œÙ™\—ØØ\XÚ]K]˜[œÙ™\—ÜÝÜ™Y
+JHYˆXÝ]™WÙ\ÝÈ[ÙHXÚÙYˆYˆXÝ]™WÙ\ÝÎ‚ˆØ\ÝVÈ˜[œÙ™\”ÝÜ™YÛœÈ—O\›Ý[™
+˜[œÙ™\—ÜÝÜ™Y
+ØXØÙ\YÊBˆ\Ü]ÚY[Z[ŠØ\ÝVÈ˜[œÙ™\”ÝÜ™YÛœÈ—K˜[œÙ™\—Ù\Ü]Ú
+Bˆ]˜Z[X›WÙÝÛœÝ™X[OY\Ü]ÚYˆ[ÙN‚ˆØ\ÝVÈ˜[œÙ™\”ÝÜ™YÛœÈ—OLØ]˜Z[X›WÙÝÛœÝ™X[OXXØÙ\Yˆ™XÞXÛY[Z[Š]˜Z[X›WÙÝÛœÝ™X[J‹ŒÍK™XÞXÛ[™×ØØ\XÚ]JBˆ\ÜÜÙY[Z[ŠX^
+]˜Z[X›WÙÝÛœÝ™X[K\™XÞXÛY
+KX^
+[™š[ØØ\XÚ]K\ÝÜ™Y
+JBˆ›ØÙ\ÜÙY\™XÞXÛY
+Ù\ÜÜÙYˆYˆXÝ]™WÙ\ÝÎØ\ÝVÈ˜[œÙ™\”ÝÜ™YÛœÈ—O\›Ý[™
+X^
+Ø\ÝVÈ˜[œÙ™\”ÝÜ™YÛœÈ—K\›ØÙ\ÜÙY
+KÊBˆ™[XZ[š[™×ØÝ\˜[X^
+˜XÚÛÙÊØÝ\˜—ÙÙ[™\˜]YXÝ\˜—ÜXÚÙY
+BˆØ\ÝVÈ[˜ÛÛXÝYÛœÈ—O\›Ý[™
+™[XZ[š[™×ØÝ\˜ŠØš[—ÛÝ™\™›ÝÊÛX^
+XÚÙYXXØÙ\Y
+JÊYˆXÝ]™WÙ\ÝÈ[ÙHX^
+]˜Z[X›WÙÝÛœÝ™X[K\›ØÙ\ÜÙY
+JKÊBˆØ\ÝVÈ›[™š[ÝÜ™YÛœÈ—O\›Ý[™
+ÝÜ™Y
+Ù\ÜÜÙYÊBˆØ\ÝVÈ›\ÝÛÛXÝ[Û•ÛœÈ—O\›Ý[™
+›ØÙ\ÜÙYÊBˆØ\ÝVÈ›\Ý›Ý]PÛÛXÝYÛœÈ—O\›Ý[™
+š[—ÜXÚÙYÊBˆØ\ÝVÈ›\Ýš[“Ý™\™›ÝÕÛœÈ—O\›Ý[™
+š[—ÛÝ™\™›ÝËÊBˆØ\ÝVÈ›\Ý™XÞXÛYÛœÑ^H—O\›Ý[™
+™XÞXÛYÊBˆ˜XÚÛÙÏ[X^
+Ø\ÝK™Ù]
+[˜ÛÛXÝYÛœÈ‹
+JNÜÝÜ™Y[X^
+Ø\ÝK™Ù]
+›[™š[ÝÜ™YÛœÈ‹
+JBˆ˜XÚÛÙÏ[X^
+Ø\ÝK™Ù]
+[˜ÛÛXÝYÛœÈ‹
+JNÜÝÜ™Y[X^
+Ø\ÝK™Ù]
+›[™š[ÝÜ™YÛœÈ‹
+JBˆ›ØYÏ\ÛÜY
+Ý]K™Ù]
+œ›ØYÈ‹×JKÙ^O[[X™HŠÌWKÌJJNÜ[WØÛÝ[[Z[ŠNX]˜ÙZ[
+˜XÚÛÙËÌKJJBˆ]\—Ý[\ÏVÛ\Ý
+›ØYÖÊJ›X^
+K[Š›ØYÊKËÛX^
+K[WØÛÝ[
+JJI[[Š›ØYÊWJH›ÜˆH[ˆ˜[™ÙJ[WØÛÝ[
+WHYˆ›ØYÈ[™[WØÛÝ[[ÙH×BˆÛÛXÝY]Ø\ÝK™Ù]
+›\ÝÛÛXÝ[Û•ÛœÈ‹
+NÜ™XÞXÛY]Ø\ÝK™Ù]
+›\Ý™XÞXÛYÛœÑ^H‹
+BˆÜ\˜][™Ï\›Ý[™
+Ž
+ÛX^
+XÚÜËLJJŒMŒ
+Û[Š[™š[ÊJŒ
+Û[Š™XÞXÛ\œÊJL
+ØÛÛXÝY
+ŒÌ
+ËJBˆ™XÞXÛ[™×Ú[˜ÛÛYO\›Ý[™
+™XÞXÛY
+ŒÌ
+ŒN
+Bˆ™\Ü^È™Ù[™\˜]YÛœÑ^HŽœ›Ý[™
+Ù[™\˜]YÊKšÝ\ÙZÛÛœÑ^HŽœ›Ý[™
+Ý\ÙZÛÊK˜\Ú[™\ÜÕÛœÑ^HŽœ›Ý[™
+\Ú[™\ÜÙ\ËÊKœX›XÕÛœÑ^HŽœ›Ý[™
+X›XËÊKš\Ú]Ü•ÛœÑ^HŽœ›Ý[™
+š\Ú]ÜœËÊK˜ÛÛXÝYÛœÑ^HŽœ›Ý[™
+ÛÛXÝYÊK˜ÛÛXÝ[ÛØ\XÚ]UÛœÑ^HŽœ›Ý[™
+ÛÛXÝ[Û—ØØ\XÚ]KŠK˜XÝ]™UXÚÜÈŽXÚÜË›[™š[ÝÜ™YÛœÈŽœ›Ý[™
+ÝÜ™YJK›[™š[Ø\XÚ]UÛœÈŽœ›Ý[™
+[™š[ØØ\XÚ]KJK›[™š[™[XZ[š[™ÕÛœÈŽœ›Ý[™
+X^
+[™š[ØØ\XÚ]K\ÝÜ™Y
+KJK›[™š[š[ÝŽœ›Ý[™
+Z[ŠLÝÜ™YÛX^
+K[™š[ØØ\XÚ]JJŒL
+JK[˜ÛÛXÝYÛœÈŽœ›Ý[™
+˜XÚÛÙËJK›]\•[\ÈŽ›]\—Ý[\Ë›[™š[ÈŽ›[Š[™š[ÊK˜XÝ]™Q\ÝÈŽ˜XÝ]™WÙ\ÝË˜[œÙ™\”ÝÜ™YÛœÈŽœ›Ý[™
+Ø\ÝK™Ù]
+˜[œÙ™\”ÝÜ™YÛœÈ‹
+KJK˜[œÙ™\Ø\XÚ]UÛœÈŽœ›Ý[™
+˜[œÙ™\—ØØ\XÚ]KJK˜[œÙ™\‘\Ü]ÚÛœÑ^HŽœ›Ý[™
+˜[œÙ™\—Ù\Ü]ÚŠK˜ÛÛZ[™\œÈŽ›[ŠÛÛZ[™\œÊKœ™XÞXÛ[™Ô[ÈŽ›[Š™XÞXÛ\œÊKœ™XÞXÛ[™ÐØ\XÚ]UÛœÑ^HŽœ›Ý[™
+™XÞXÛ[™×ØØ\XÚ]KŠKœ™XÞXÛYÛœÑ^HŽœ›Ý[™
+™XÞXÛYÊKœ™XÞXÛ[™Ô™]™[YS[ÛŽœ™XÞXÛ[™×Ú[˜ÛÛYKœ›Ý]PÛÝ[ŽœÝ[J–Èœ™XXÚX›H—H›Üˆˆ[ˆ›Ý]\ÊKœ›Ý]PÛÛZ[™\œÔÙ\™YŽ›[Š›Ý]YØš[—ÚYÊKœ›Ý]PÛÛZ[™\œÕ[œÙ\™YŽ›X^
+[ŠÛÛZ[™\œÊK[[Š›Ý]YØš[—ÚYÊJKœ›Ý]Q\Ý[˜ÙU[\ÈŽœÝ[J–È™\Ý[˜ÙU[\È—H›Üˆˆ[ˆ›Ý]\ÈYˆ–Èœ™XXÚX›H—JKœ›Ý]PÛÛXÝYÛœÈŽœ›Ý[™
+Ø\ÝK™Ù]
+›\Ý›Ý]PÛÛXÝYÛœÈ‹
+KÊK˜ÛÛZ[™\”ÝÜ™YÛœÈŽœ›Ý[™
+Ý[JË™Ù]
+œÝÜ™YÛœÈ‹
+H›ÜˆÈ[ˆÛÛZ[™\œÊKŠK›[ÛSÜ\˜][™ÐÛÜÝŽ›Ü\˜][™Ëœ›Ý]\ÈŽ–ÞÈšYŽœ–ÈšY—K›˜[YHŽœ–È›˜[YH—Kœ™XXÚX›HŽœ–Èœ™XXÚX›H—KœÝÜÈŽ›[Š–È˜ÛÛZ[™\’YÈ—JK™\Ý[˜ÙU[\ÈŽœ–È™\Ý[˜ÙU[\È—K™\Ý[˜][ÛˆŽœ–È™\Ý[˜][Ûˆ—_H›Üˆˆ[ˆ›Ý]\×_BˆØ\ÝVÈœ™\Ü—O\™\ÜˆYˆ\WÙY™™XÝÈ[™Ý]K™Ù]
+™^H‹
+ILÌOL[™Ø\ÝK™Ù]
+›\ÝØ\ÝR[\XÝ^HŠHO\Ý]K™Ù]
+™^HŠN‚ˆ™\ÚÛ[X^
+Ü[][ÛŠ‹ŒÍJBˆYˆ˜XÚÛÙÏ]™\ÚÛ‚ˆÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆYˆ˜XÚÛÙÏ[X^
+ÌÜ[][ÛŠ‹ŒLŠNœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆYˆÝ]K™Ù]
+™^H‹
+K]Ø\ÝK™Ù]
+›\ÝØ\ÝS›ÝXÙQ^H‹NNNJOLÌ‚ˆ]Š”™XÛÛXØÚpìÛˆH™\ÚY[ÜÈ[œÝYšXÚY[H‹ˆ”]YY\›ÛˆØ˜XÚÛÙÎ‹ŒYŸHÛ™[Y\ÈÚ[ˆ™]\˜\‹ˆ›ÝNˆÝXÚÜßHØ[Z[Û™\È0­ÈØ\XÚYYH™XÛÛXØÚpìÛˆØÛÛXÝ[Û—ØØ\XÚ]N‹Œ™ŸHÙ0ëXKˆHÝXÚYYYXÝ[][YHY™XÝHÜÈÙ\šXÚ[ÜÈ][šXÚ\[\Ëˆ‹œ™\XÙJ‹ˆ‹‹ŠJBˆØ\ÝVÈ›\ÝØ\ÝS›ÝXÙQ^H—O\Ý]K™Ù]
+™^H‹
+Bˆ[YˆÝÜ™Y[[™š[ØØ\XÚ]N‚ˆYˆÝ]K™Ù]
+™^H‹
+K]Ø\ÝK™Ù]
+›\Ý[™š[›ÝXÙQ^H‹NNNJOLÌ‚ˆ]Š”™[[›ÈØ[š]\š[ÈYÛÝYÈ‹“H\ÜÜÚXÚpìÛˆš[˜[[Ø[ž°ìÈÝHØ\XÚYY°ë\ÚXØKˆHØ\™ØH›È™XÛÛXÝYH\›X[™XÙH[ˆHÚ]YY\ÝH[\X\ˆH[™œ˜Y\ÝXÝ\˜KˆŠBˆØ\ÝVÈ›\Ý[™š[›ÝXÙQ^H—O\Ý]K™Ù]
+™^H‹
+BˆØ\ÝVÈ›\ÝØ\ÝR[\XÝ^H—O\Ý]K™Ù]
+™^H‹
+Bˆ™]\›ˆ™\Ü‚™Yˆ[œÝ\™WØÛ[X]WÜÝ]J
+N‚ˆÛ[X]O\Ý]KœÙ]Y˜][
+˜Û[X]H‹ßJBˆÛ[X]KœÙ]Y˜][
+œ™YÚ[Ûˆ‹ÛÜÝH[\YHHY\ÈÛ\›ÈŠBˆÛ[X]KœÙ]Y˜][
+™›Ü™XØ\Ý‹›Û™JBˆÛ[X]KœÙ]Y˜][
+œ™\\™Y›Ü‘^H‹›Û™JBˆÛ[X]KœÙ]Y˜][
+šX]›Ü™XØ\Ý‹›Û™JBˆÛ[X]KœÙ]Y˜][
+™›ÝYÚ›Ü™XØ\Ý‹›Û™JBˆÛ[X]KœÙ]Y˜][
+˜ÛÛÛ[™Ô™\\™Y›Ü‘^H‹›Û™JBˆÛ[X]KœÙ]Y˜][
+Ø]\”™\ÝšXÝ[ÛœÕ\™Ù]‹›Û™JBˆÛ[X]KœÙ]Y˜][
+Ø]\”™\ÝšXÝ[ÛœÈ‹˜[ÙJBˆ™]\›ˆÛ[X]B‚™YˆÛ[X]WÞYX\—Ý\™Ù]Ê^JN‚ˆYX\—ÜÝ\J
+X^
+K[
+^JJKLJKËÌÍŒ
+JŒÍŒ
+ÌBˆX]Ù^O^YX\—ÜÝ\
+Ìˆ›ÝYÚÙ^O^YX\—ÜÝ\
+ÍBˆYˆ^OZX]Ù^JÍNšX]Ù^JÏLÍŒˆYˆ^OY›ÝYÚÙ^JÌÌ™›ÝYÚÙ^JÏLÍŒˆ™]\›ˆX]Ù^K›ÝYÚÙ^B‚™YˆX]Ù^ÜÝ\™JJN‚ˆ›ØYÏ^Ý\J
+H›Üˆ[ˆÝ]K™Ù]
+œ›ØYÈ‹×J_BˆØØÝ\YY\›ØYßÊ‹™Ù]
+žŠK‹™Ù]
+žHŠJH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×J__Ê™Ù]
+žŠK™Ù]
+žHŠJH›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×J_BˆÚYOLˆ›Üˆ[ˆ˜[™ÙJX^
+KLJKZ[ŠŒ‹
+ÌJJÌJN‚ˆ›ÜˆH[ˆ˜[™ÙJX^
+KKLJKZ[ŠNJÌJJÌJN‚ˆYˆ
+JH[ˆØØÝ\YYÜˆLÜˆ
+OÈ[™ŒN
+N˜ÛÛ[YBˆ˜[YO[X]œÚ[Š
+
+ŽMÊÝJLÊJŒLËŒJÍÎŒŒÌÊJÍÍNMLÂˆYˆ˜[YK[X]™›ÛÜŠ˜[YJOKŒÎœÚYJÏLBˆ\œ˜Z[JX]œÚ[Š
+‹ÊÞJ‹ŒNJJÛX]˜ÛÜÊJ‹‹^
+‹ŒMÊJÛX]œÚ[Š
+
+ÞJJ‹ŒÌJJKÌÂˆ^ÜÝ\™O[X^
+KZ[ŠKKKŒÍK[Z[ŠKÚYJJ‹ŒJÊŒLˆYˆ\œ˜Z[K[ÙH
+JJBˆ™]\›ˆ›Ý[™
+^ÜÝ\™KŠKÚYB‚™Yˆ\WØÛ[X]WÚ[\XÝÊ
+N‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ^O\Ý]K™Ù]
+™^H‹JNÚX]Ù^K›ÝYÚÙ^OXÛ[X]WÞYX\—Ý\™Ù]Ê^JBˆ›Ü™XØ\ÝXÛ[X]K™Ù]
+šX]›Ü™XØ\ÝŠBˆYˆ›Ü™XØ\Ý[™^OOY›Ü™XØ\Ý™Ù]
+\™Ù]^HŠH[™›Ü™XØ\Ý™Ù]
+œÝ]\ÈŠOOHœ›Û›ÜÝXØYHŽ‚ˆ^XÝY[X^
+[
+›Ü™XØ\Ý™Ù]
+™^XÝYX[Ø\Ù\È‹
+JJNØÙ[\œÏV×BˆžNÛÜšÜXÙ\ÏXÛÛ[]]WÛ[Ù[
+
+K™Ù]
+ÛÜšÜXÙ\È‹×JBˆ^Ù\^Ù\[ÛŽÛÜšÜXÙ\ÏV×Bˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆZ[[™Ë™Ù]
+šÚ[™ŠHOH˜Ú]šXÈˆÜˆZ[[™Ë™Ù]
+œÝ]\ÈŠH[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠN˜ÛÛ[YBˆÛÜšÜXÙO[™^
+
+È›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+žŠOOXZ[[™Ë™Ù]
+žŠH[™Ë™Ù]
+žHŠOOXZ[[™Ë™Ù]
+žHŠH[™Ë™Ù]
+œÝY™™Y›ØœÈ‹
+OLŠK›Û™JBˆYˆÛÜšÜXÙH[™Z[[™Ë™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+œÝÙ\”Ù\™YÝ‹
+OMÍH[™›Ý]WØ™]ÙY[Š
+L
+K
+Z[[™ÖÈž—KZ[[™ÖÈžH—JJN˜Ù[\œË˜\[™
+È›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹Ù[›È][šXÚ\[ŠKžŽ˜Z[[™ÖÈž—KžHŽ˜Z[[™ÖÈžH—K˜Ø\XÚ]HŽ›Z[ŠLX^
+ÛÜšÜXÙVÈœÝY™™Y›ØœÈ—JŒŠJ_JBˆÛÛÛ[™×ØXÝ]™OXÛ[X]K™Ù]
+˜ÛÛÛ[™Ô™\\™Y›Ü‘^HŠOOY^BˆÚ[\—ØØ\XÚ]O\Ý[JÖÈ˜Ø\XÚ]H—H›ÜˆÈ[ˆÙ[\œÊHYˆÛÛÛ[™×ØXÝ]™H[ÙHˆÚ[\™Y[Z[Š^XÝYÚ[\—ØØ\XÚ]JBˆXÝX[[X^
+^XÝY\›Ý[™
+Ú[\™Y
+‹ÌŠJBˆ›Ü™XØ\Ý\]JÈœÝ]\ÈŽˆ›ØÝ\œšYH‹˜XÝX[X[Ø\Ù\ÈŽ˜XÝX[œÚ[\™Y™\ÚY[ÈŽœÚ[\™YœÚ[\Ø\XÚ]HŽœÚ[\—ØØ\XÚ]K˜ÛÛÛ[™ÐÙ[\œÈŽ˜Ù[\œÈYˆÛÛÛ[™×ØXÝ]™H[ÙH×_JBˆYˆXÝX[‚ˆYˆXÝX[[X^
+›Ý[™
+Ý]K™Ù]
+œÜ[][Ûˆ‹
+J‹ŒLŠJNœÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆYˆXÝX[[X^
+K›Ý[™
+Ý]K™Ù]
+œÜ[][Ûˆ‹
+J‹ŒJJNœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆ]Š“ÛHHØ[Üˆ0­È˜[[˜ÙHØ[š]\š[È‹ˆ‘[\\ÛÙ[ÈZ°ìÈØXÝX[HÛÛœÝ[\È\Ý[XY\ÈÜˆ\Ý°ê\È0ê\›ZXÛÎÈÜÚ[\™YH™\ÚY[\È]šY\›Ûˆ™YYÚ[ÈÛÛˆ[XÝšXÚYYH\œÛÛ˜[ˆ^ÜÚXÚpìÛˆ™]š\ÝNˆÙ›Ü™XØ\Ý™Ù]
+	Ù^ÜÙYÜ[][Û‰Ë
+_H\œÛÛ˜\È[ˆÛ[Š›Ü™XØ\Ý™Ù]
+	Ù^ÜÙYÛY\ÉË×JJ_HÙXÝÜ™\ËˆŠBˆ›ÝYÚXÛ[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠBˆYˆ›ÝYÚ[™^OOY›ÝYÚ™Ù]
+\™Ù]^HŠH[™›ÝYÚ™Ù]
+œÝ]\ÈŠOOHœ›Û›ÜÝXØYHŽ‚ˆ›ÝYÚ\]JÈœÝ]\ÈŽˆ˜XÝ]˜H‹™[™^HŽ™^JÌÌJBˆ]Š”Ù\]pëXH™YÚ[Û˜[0­ÈY[H™YXÚYH‹ˆ“H\ÝXÚpìÛˆÙXØH™YXÙHIHHØ\XÚpìÛˆHYÝXH\˜[HÌ0ëX\ËˆØ\XÚYY0î[™]š\ÝNˆÙ›ÝYÚ™Ù]
+	ÙY™™XÝ]™PØ\XÚ]SLÑ^IË
+_Hp¬ËÙ0ëXHœ™[HH[X[™HHÙ›ÝYÚ™Ù]
+	Ù^XÝY[X[™LÑ^IË
+_Hp¬ËÙ0ëXKˆH™\ÝšXØÚpìÛˆÛÛY\˜ÚX[ÈÜÈØ[Z[Û™\ÈÚ\Ý\›˜HYY[ˆ[]šX\ˆH™YˆŠBˆYˆ›ÝYÚ[™›ÝYÚ™Ù]
+œÝ]\ÈŠOOH˜XÝ]˜Hˆ[™^OY›ÝYÚ™Ù]
+™[™^H‹^JN‚ˆ›ÝYÚÈœÝ]\È—OH™š[˜[^˜YHŽÙ]Š‘š[ˆHHÙ\]pëXH™YÚ[Û˜[‹“HØ\XÚpìÛˆHYÝXH™XÝ\\°ìÈÝHØ\XÚYY\ÝXÚ[Û˜[›Ü›X[ˆŠBˆYˆ›ÝYÚ[™›ÝYÚ™Ù]
+œÝ]\ÈŠOOH˜XÝ]˜Hˆ[™^KXÛ[X]K™Ù]
+›\Ý›ÝYÚ[\XÝ^H‹NNJOLL‚ˆ^ÜÙY\Ý[J‹™Ù]
+›ØØÝ\[È‹
+JŠKX‹™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹
+KÌL
+H›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠBˆ›ÝYÚÈœ™\ÚY[ÕÚ]Ý][Ø]\”Ù\šXÙH—O\›Ý[™
+^ÜÙY
+BˆYˆ^ÜÙY[X^
+ŒÝ]K™Ù]
+œÜ[][Ûˆ‹
+J‹Œ
+N‚ˆÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆYˆ^ÜÙY[X^
+LÝ]K™Ù]
+œÜ[][Ûˆ‹
+J‹ŒŠNœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆ]Š‘\Ý°ê\ÈHYÝXH[ˆÙØ\™\È‹ˆ“HÙ\]pëXHZ°ìÈHÜ›Ý[™
+^ÜÙY
+_H™\ÚY[\ÈÛÛˆÛØ™\\˜H[˜ÛÛ\]KˆHØ\XÚYYHØ\XÚpìÛˆH\È™\ÝšXØÚ[Û™\È]\›Z[˜[ˆÝpè[È\˜H[0êYšXÚ]ˆŠBˆÛ[X]VÈ›\Ý›ÝYÚ[\XÝ^H—OY^B‚™YˆØ[Ý[]WÝ][]WØ˜[[˜ÙJ\WÙY™™XÝÏQ˜[ÙJN‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NØÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+BˆZ[[™ÜÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹˜\ÑØ\˜YÙH‹œÜ‹˜Z\œÜ‹šÝ[‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠH[™‹™Ù]
+œÝ]\È‹šXš[]YÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠWBˆ[ÛJ
+Ý]K™Ù]
+™^H‹JKLJKËÌÌ
+ILL‚ˆÝ[[Y\[[Û[ˆ
+LKJBˆ^O\Ý]K™Ù]
+™^H‹JNÚX]Ù^K›ÝYÚÙ^OXÛ[X]WÞYX\—Ý\™Ù]Ê^JBˆX]ØXÝ]™OZX]Ù^OY^OX]Ù^JÍNÙ›ÝYÚØXÝ]™OY›ÝYÚÙ^OY^O›ÝYÚÙ^JÌÌˆ™\ÝšXÝ[Ûœ×ØXÝ]™OX›ÛÛ
+Û[X]K™Ù]
+Ø]\”™\ÝšXÝ[ÛœÈŠH[™Û[X]K™Ù]
+Ø]\”™\ÝšXÝ[ÛœÕ\™Ù]ŠOOY›ÝYÚÙ^JBˆÙX\ÛÛ˜[ÜÝÙ\JKŒHYˆÝ[[Y\ˆ[ÙHKŒ
+JŠKŒŒˆYˆX]ØXÝ]™H[ÙHKŒ
+BˆÙX\ÛÛ˜[ÝØ]\JKŒLˆYˆÝ[[Y\ˆ[ÙHKŒ
+JŠKŒNYˆX]ØXÝ]™H[ÙHKŒ
+BˆYˆ[X[™
+Z[[™ÊN‚ˆÚ[™XZ[[™Ë™Ù]
+šÚ[™ŠNÛØØÝ\[Ï[X^
+Z[[™Ë™Ù]
+›ØØÝ\[È‹
+JNÙš\›OXZ[[™Ë™Ù]
+˜\Ú[™\ÜÈ‹ßJBˆÛÜšÙ\œÏ[X^
+Kš\›K™Ù]
+›\ÝÛÜšÙ\œÈ‹›Ý[™
+š\›K™Ù]
+š›Ø”ÛÝÈ‹
+J‹MJJJBˆYˆÚ[™OHšÛYHŽœ™]\›ˆØØÝ\[Ê‹ÌŠœÙX\ÛÛ˜[ÜÝÙ\‹ØØÝ\[Ê‹ŒLŠœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHœÚÜŽœ™]\›ˆÛÜšÙ\œÊŒKŒÍJœÙX\ÛÛ˜[ÜÝÙ\‹ÛÜšÙ\œÊ‹ŒMJœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHšÝ[Žœ™]\›ˆZ[[™Ë™Ù]
+˜™YÈ‹
+JŒKŒJœÙX\ÛÛ˜[ÜÝÙ\‹Z[[™Ë™Ù]
+˜™YÈ‹
+J‹ŒJœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™[ˆ
+˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][ÛˆŠNœ™]\›ˆÌŠœÙX\ÛÛ˜[ÜÝÙ\‹M
+œÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OH™\ÝŽœ™]\›ˆLŠœÙX\ÛÛ˜[ÜÝÙ\‹
+œÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OH˜\ÑØ\˜YÙHŽœ™]\›ˆN
+œÙX\ÛÛ˜[ÜÝÙ\‹ŠœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHœÜŽœ™]\›ˆJœÙX\ÛÛ˜[ÜÝÙ\‹ÌŠœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OH˜Z\œÜŽœ™]\›ˆMJœÙX\ÛÛ˜[ÜÝÙ\‹Î
+œÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHœÝÙ\”[Žœ™]\›ˆÎ
+œÙX\ÛÛ˜[ÜÝÙ\‹JœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHØ\Ý]Ø]\”[Žœ™]\›ˆŽ
+œÙX\ÛÛ˜[ÜÝÙ\‹
+œÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OH›[™š[Žœ™]\›ˆN
+œÙX\ÛÛ˜[ÜÝÙ\‹ÊœÙX\ÛÛ˜[ÝØ]\‚ˆYˆÚ[™OHœ™XÞXÛ[™Ô[Žœ™]\›ˆÌŠœÙX\ÛÛ˜[ÜÝÙ\‹ŠœÙX\ÛÛ˜[ÝØ]\‚ˆ™]\›ˆŒŠœÙX\ÛÛ˜[ÜÝÙ\‹
+œÙX\ÛÛ˜[ÝØ]\‚ˆ›ÜˆZ[[™È[ˆZ[[™ÜÎ‚ˆÝËLÏY[X[™
+Z[[™ÊBˆÚ[™XZ[[™Ë™Ù]
+šÚ[™ŠBˆYˆ™\ÝšXÝ[Ûœ×ØXÝ]™H[™Ú[™[ˆ
+œÚÜ‹šÝ[‹œÜ‹˜Z\œÜŠN›LÊKBˆØØÝ\[Ï[X^
+Z[[™Ë™Ù]
+›ØØÝ\[È‹
+JNÙš\›OXZ[[™Ë™Ù]
+˜\Ú[™\ÜÈ‹ßJBˆÛÜšÙ\œÏ[X^
+Kš\›K™Ù]
+›\ÝÛÜšÙ\œÈ‹›Ý[™
+š\›K™Ù]
+š›Ø”ÛÝÈ‹
+J‹MJJJBˆØ\Ï[ØØÝ\[Ê‹ŒHYˆÚ[™OHšÛYHˆ[ÙHÛÜšÙ\œÊ‹ŒYˆÚ[™OHœÚÜˆ[ÙHYˆÚ[™[ˆ
+šÝ[‹˜Z\œÜ‹œÜŠH[ÙHBˆ[XÛÛO[ØØÝ\[Ê‹ŒNYˆÚ[™OHšÛYHˆ[ÙHÛÜšÙ\œÊ‹ŒÍHYˆÚ[™[ˆ
+œÚÜ‹˜Ú]šXÈ‹œØÚÛÛ‹šÝ[‹˜Z\œÜ‹œÜŠH[ÙHŒ‚ˆZ[[™ÖÈ][]Q[X[™—O^ÈœÝÙ\’ÝÈŽœ›Ý[™
+ÝËJKØ]\“LÑ^HŽœ›Ý[™
+LËJK™Ø\ÓLÑ^HŽœ›Ý[™
+Ø\ËŠK[XÛÛSXœÈŽœ›Ý[™
+[XÛÛKŠ_BˆZ[[™ÖÈ][]PXØÙ\ÜÈ—O^ÈœÝÙ\ÛÛ›™XÝYŽ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™ËœÝÙ\ˆŠKØ]\ÛÛ›™XÝYŽ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™ËØ]\ˆŠKœÙ]Ù\ÛÛ›™XÝYŽ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™ËœÙ]Ù\ˆŠK™Ø\ÐÛÛ›™XÝYŽ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™Ë™Ø\ÈŠK[XÛÛPÛÛ›™XÝYŽ][]WØZ[[™×ØÛÛ›™XÝY
+Z[[™Ë[XÛÛHŠK™Ø\ÔÙ\™YÝŽŒ[XÛÛTÙ\™YÝŽŒœÝÙ\”Ù\™YÝŽŒØ]\”Ù\™YÝŽŒØ\Ý]Ø]\•™X]YÝŽŒBˆÝÙ\—Ý[\ÏY[™\™Ú^™YÝ][]WÝ[\ÊœÝÙ\ˆŠNÝØ]\—Ý[\ÏY[™\™Ú^™YÝ][]WÝ[\ÊØ]\ˆŠNÜÙ]Ù\—Ý[\ÏY[™\™Ú^™YÝ][]WÝ[\ÊœÙ]Ù\ˆŠBˆÙ[™\˜][Û\Ý[J‹™Ù]
+™Ù[™\˜][Û’ÝÈ‹L
+J™˜XÚ[]WØØ\XÚ]WÙ˜XÝÜŠŠH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHœÝÙ\”[ˆ[™][]WØZ[[™×ØÛÛ›™XÝY
+‹œÝÙ\ˆŠH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹Ø]\ˆŠJBˆÝX›O\Ý[J‹™Ù]
+™X]Y[LÑ^H‹ŒŒ
+J™˜XÚ[]WØØ\XÚ]WÙ˜XÝÜŠŠH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHØ]\”[ˆ[™][]WØZ[[™×ØÛÛ›™XÝY
+‹œÝÙ\ˆŠH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹Ø]\ˆŠJBˆØ\Ý]Ø]\\Ý[J‹™Ù]
+™X]Y[LÑ^H‹Œ
+J™˜XÚ[]WØØ\XÚ]WÙ˜XÝÜŠŠH›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHØ\Ý]Ø]\”[ˆ[™[
+][]WØZ[[™×ØÛÛ›™XÝY
+‹ŠH›Üˆˆ[ˆ
+œÝÙ\ˆ‹Ø]\ˆ‹œÙ]Ù\ˆŠJJBˆXZ[[˜[˜ÙWÙ˜XÝÜ[X^
+Z[ŠK›Ø]
+][]Y\Ë™Ù]
+›XZ[[˜[˜ÙQ[™[™Ñ˜XÝÜˆ‹JJJJBˆÝÙ\—ØØ\XÚ]OJ][]Y\ÖÈ˜˜\ÙTÝÙ\Ø\XÚ]RÝÈ—JÙÙ[™\˜][ÛŠJ›XZ[[˜[˜ÙWÙ˜XÝÜ‚ˆÛÝ\˜ÙWÝØ]\—ØØ\XÚ]OJ][]Y\ÖÈ˜˜\ÙUØ]\Ø\XÚ]SLÑ^H—JÜÝX›JJ›XZ[[˜[˜ÙWÙ˜XÝÜ‚ˆ[šÙ\—ØØ\XÚ]OLÌYˆÛ[X]K™Ù]
+Ø]\•[šÙ\”Ý\‹^JÌJOY^OÛ[X]K™Ù]
+Ø]\•[šÙ\•[[‹
+H[ÙHˆØ]\—ØØ\XÚ]O\ÛÝ\˜ÙWÝØ]\—ØØ\XÚ]JŠMHYˆ›ÝYÚØXÝ]™H[ÙHKŒ
+JÝ[šÙ\—ØØ\XÚ]BˆÝÙ\—Ý\ØX›O\ÝÙ\—ØØ\XÚ]JŠK]][]Y\ÖÈœÝÙ\“ÜÜÔ˜]H—JBˆØ]\—Ý\ØX›O]Ø]\—ØØ\XÚ]JŠK]][]Y\ÖÈØ]\“XZÔ˜]H—JBˆYˆ[ØØ]J™]ÛÜšË\ØX›KÙ^KÝÚÙ^JN‚ˆÛÛ›™XÝYVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ–È][]PXØÙ\ÜÈ—VÙˆžÛ™]ÛÜšßPÛÛ›™XÝY—WBˆÝ[\Ý[J–È][]Q[X[™—VÚÙ^WH›Üˆˆ[ˆZ[[™ÜÊBˆÛÛ›™XÝYÙ[X[™\Ý[J–È][]Q[X[™—VÚÙ^WH›Üˆˆ[ˆÛÛ›™XÝY
+Bˆ™[XZ[š[™Ï]\ØX›NÙ[]™\™YLˆš[Üš]Y\ÏJ˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹šÛYH‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[‹œ™XÞXÛ[™Ô[‹œÚÜ‹šÝ[‹˜Z\œÜ‹œÜ‹™\Ý‹˜\ÑØ\˜YÙHŠBˆ›ÜˆÚ[™[ˆš[Üš]Y\Î‚ˆÜ›Ý\VØˆ›Üˆˆ[ˆÛÛ›™XÝYYˆ‹™Ù]
+šÚ[™ŠOOZÚ[™NÛ™YY\Ý[J–È][]Q[X[™—VÚÙ^WH›Üˆˆ[ˆÜ›Ý\
+Bˆœ˜XÝ[Û[Z[ŠKX^
+™[XZ[š[™ËÛ™YY
+JHYˆ™YY[ÙHBˆ›Üˆˆ[ˆÜ›Ý\˜–È][]PXØÙ\ÜÈ—VÜÝÚÙ^WO\›Ý[™
+œ˜XÝ[ÛŠŒL
+BˆÜ[[™YY
+™œ˜XÝ[ÛŽÜ™[XZ[š[™Ï[X^
+™[XZ[š[™Ë\Ü[
+NÙ[]™\™Y
+Ï\Ü[ˆ™]\›ˆÝ[ÛÛ›™XÝYÙ[X[™[]™\™YˆÝÙ\—ÝÝ[ÝÙ\—ØÛÛ›™XÝYÝÙ\—Ù[]™\™YX[ØØ]JœÝÙ\ˆ‹ÝÙ\—Ý\ØX›KœÝÙ\’ÝÈ‹œÝÙ\”Ù\™YÝŠBˆÜš]XØ[Ø˜XÚÝ\VØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+˜Ú]šXÈ‹Ø]\”[‹Ø\Ý]Ø]\”[ŠWBˆ˜XÚÝ\ÜÙ\™YLˆ›ÜˆZ[[™È[ˆÜš]XØ[Ø˜XÚÝ\‚ˆ[X[™ÚÝÏXZ[[™ÖÈ][]Q[X[™—VÈœÝÙ\’ÝÈ—Bˆ˜XÚÝ\ÚÝÏ[Z[Š›Ø]
+Z[[™Ë™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÈ‹
+JK[X[™ÚÝÊŠLXZ[[™ÖÈ][]PXØÙ\ÜÈ—VÈœÝÙ\”Ù\™YÝ—JKÌL›Ø]
+Z[[™Ë™Ù]
+˜˜XÚÝ\Y[ÝÚ‹
+JKÌ
+BˆZ[[™ÖÈ˜˜XÚÝ\ÝÕÙ^H—O\›Ý[™
+X^
+˜XÚÝ\ÚÝÊKŠBˆZ[[™ÖÈ][]PXØÙ\ÜÈ—VÈ˜˜XÚÝ\ÝÙ\’ÝÈ—OXZ[[™ÖÈ˜˜XÚÝ\ÝÕÙ^H—BˆZ[[™ÖÈ][]PXØÙ\ÜÈ—VÈœÝÙ\”Ù\™YÝ—O\›Ý[™
+Z[ŠLZ[[™ÖÈ][]PXØÙ\ÜÈ—VÈœÝÙ\”Ù\™YÝ—JØ˜XÚÝ\ÚÝËÛX^
+K[X[™ÚÝÊJŒL
+JBˆ˜XÚÝ\ÜÙ\™Y
+ÏX˜XÚÝ\ÚÝÂˆÝÙ\—ÝÝ[ÝÙ\—ØÛÛ›™XÝYÝÙ\—Ù[]™\™YÙÜšY\ÝÙ\—ÝÝ[ÝÙ\—ØÛÛ›™XÝYÝÙ\—Ù[]™\™YˆÝÙ\—Ù[]™\™Y
+ÏX˜XÚÝ\ÜÙ\™YˆØ]\—ÝÝ[Ø]\—ØÛÛ›™XÝYØ]\—Ù[]™\™YX[ØØ]JØ]\ˆ‹Ø]\—Ý\ØX›KØ]\“LÑ^H‹Ø]\”Ù\™YÝŠBˆÙ[™\˜]Y\Ý[J–È][]Q[X[™—VÈØ]\“LÑ^H—J‹Ž
+˜–È][]PXØÙ\ÜÈ—VÈØ]\”Ù\™YÝ—KÌL›Üˆˆ[ˆZ[[™ÜÊBˆÙ]Ù\—ØÛÛ›™XÝYVØˆ›Üˆˆ[ˆZ[[™ÜÈYˆ–È][]PXØÙ\ÜÈ—VÈœÙ]Ù\ÛÛ›™XÝY—WBˆÙ]Ù\—Ù›ÝÏ\Ý[J–È][]Q[X[™—VÈØ]\“LÑ^H—J‹Ž
+˜–È][]PXØÙ\ÜÈ—VÈØ]\”Ù\™YÝ—KÌL›Üˆˆ[ˆÙ]Ù\—ØÛÛ›™XÝY
+BˆØ\Ý]Ø]\—ØØ\XÚ]O]][]Y\ÖÈ˜˜\ÙUØ\Ý]Ø]\•™X]Y[LÑ^H—JÝØ\Ý]Ø]\‚ˆ™X]Y[Z[ŠÙ]Ù\—Ù›ÝËØ\Ý]Ø]\—ØØ\XÚ]JBˆÙ]Ù\—Ùœ˜XÝ[Û[Z[ŠK™X]YÜÙ]Ù\—Ù›ÝÊHYˆÙ]Ù\—Ù›ÝÈ[ÙHBˆ›ÜˆZ[[™È[ˆZ[[™ÜÎ‚ˆXØÙ\ÜÏXZ[[™ÖÈ][]PXØÙ\ÜÈ—Bˆ›ÝÏXZ[[™ÖÈ][]Q[X[™—VÈØ]\“LÑ^H—J‹Ž
+˜XØÙ\ÜÖÈØ]\”Ù\™YÝ—KÌLˆXØÙ\ÜÖÈØ\Ý]Ø]\‘Ù[™\˜]YLÑ^H—O\›Ý[™
+›ÝËJBˆXØÙ\ÜÖÈØ\Ý]Ø]\•™X]YÝ—O\›Ý[™
+Ù]Ù\—Ùœ˜XÝ[ÛŠŒL
+HYˆXØÙ\ÜÖÈœÙ]Ù\ÛÛ›™XÝY—H[ÙHˆ[™X]Y[X^
+Ù[™\˜]Y]™X]Y
+BˆÙ]Ù\—ØÛÝ™\˜YÙO\›Ý[™
+™X]YÛX^
+KÙ[™\˜]Y
+JŒL
+HYˆÙ[™\˜]Y[ÙHLˆÛÝ™\˜YÙO\›Ý[™
+
+ÝÙ\—Ù[]™\™YÛX^
+KÝÙ\—ÝÝ[
+JÝØ]\—Ù[]™\™YÛX^
+KØ]\—ÝÝ[
+JÜÙ]Ù\—ØÛÝ™\˜YÙKÌL
+KÌÊŒL
+BˆØ\×Ý[\ÏY[™\™Ú^™YÝ][]WÝ[\Ê™Ø\ÈŠNÝ[XÛÛWÝ[\ÏY[™\™Ú^™YÝ][]WÝ[\Ê[XÛÛHŠBˆØ\×ØØ\XÚ]O]][]Y\ÖÈ˜˜\ÙQØ\ÐØ\XÚ]SLÑ^H—JÛ[ŠØ\×Ý[\ÊJˆ[XÛÛWØØ\XÚ]O]][]Y\ÖÈ˜˜\ÙU[XÛÛPØ\XÚ]SXœÈ—JÛ[Š[XÛÛWÝ[\ÊJŽˆØ\×ÝÝ[Ø\×ØÛÛ›™XÝYØ\×Ù[]™\™YX[ØØ]J™Ø\È‹Ø\×ØØ\XÚ]K™Ø\ÓLÑ^H‹™Ø\ÔÙ\™YÝŠBˆ[XÛÛWÝÝ[[XÛÛWØÛÛ›™XÝY[XÛÛWÙ[]™\™YX[ØØ]J[XÛÛH‹[XÛÛWØØ\XÚ]K[XÛÛSXœÈ‹[XÛÛTÙ\™YÝŠBˆØ\×ØÛÝ™\˜YÙOYØ\×Ù[]™\™YÛX^
+KØ\×ÝÝ[
+NÝ[XÛÛWØÛÝ™\˜YÙO][XÛÛWÙ[]™\™YÛX^
+K[XÛÛWÝÝ[
+BˆÛÝ™\˜YÙO\›Ý[™
+
+ÝÙ\—Ù[]™\™YÛX^
+KÝÙ\—ÝÝ[
+JÝØ]\—Ù[]™\™YÛX^
+KØ]\—ÝÝ[
+JÜÙ]Ù\—ØÛÝ™\˜YÙKÌL
+ÙØ\×ØÛÝ™\˜YÙJÝ[XÛÛWØÛÝ™\˜YÙJJŒLÍJBˆ˜Z[—Ý[\ÏY[™\™Ú^™YÝ][]WÝ[\Ê™˜Z[˜YÙHŠBˆ^WØÞXÛOJÝ]K™Ù]
+™^H‹JKLJILˆ˜Z[™˜[LNYˆ^WØÞXÛOOLMÈ[ÙHHYˆ^WØÞXÛH[ˆ
+‹ÊH[ÙHˆYˆ\œ˜Z[—Ü[›Ù™ŠJN‚ˆ˜[YOJX]œÚ[Š
+‹ÊÞJ‹ŒNJJÛX]˜ÛÜÊJ‹‹^
+‹ŒMÊJÛX]œÚ[Š
+
+ÞJJ‹ŒÌJJKÌÂˆYˆ˜[YOKœ™]\›ˆŽM‹˜˜Z›È‚ˆYˆ˜[YO‹œ™]\›ˆŽL˜ÛÛ\XÝÈ‚ˆ™]\›ˆÎ™š\›YH‚ˆ[›Ù™—ÜÛÝ\˜Ù\ÏV×Bˆ›ÜˆH[ˆÝ]K™Ù]
+œ›ØYÈ‹×JN‚ˆ[›Ù™—ÜÛÝ\˜Ù\Ë˜\[™
+ÈžŽžžHŽžKšÚ[™Žˆœ›ØY‹˜\™XHŽŒKŒ˜ÛÙY™šXÚY[Ž‹ŽMËšZYÚŽ\œ˜Z[—Ü[›Ù™ŠJVÌW_JBˆ›ÜˆZ[[™È[ˆZ[[™ÜÎ‚ˆ\™XOL‹ŒˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOH˜Z\œÜˆ[ÙHKŽYˆZ[[™Ë™Ù]
+šÚ[™ŠH[ˆ
+œÜ‹šÝ[ŠH[ÙHKŒ‚ˆÛÙY™šXÚY[ZYÚ]\œ˜Z[—Ü[›Ù™ŠZ[[™ÖÈž—KZ[[™ÖÈžH—JBˆ[›Ù™—ÜÛÝ\˜Ù\Ë˜\[™
+ÈžŽ˜Z[[™ÖÈž—KžHŽ˜Z[[™ÖÈžH—KšÚ[™Žˆ˜Z[[™È‹˜Z[[™ÒÚ[™Ž˜Z[[™Ë™Ù]
+šÚ[™ŠK›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹Z[[™Ë™Ù]
+šÚ[™‹™YYšXÚ[ÈŠJK˜\™XHŽ˜\™XK˜ÛÙY™šXÚY[Ž˜ÛÙY™šXÚY[šZYÚŽšZYÚJBˆ›ÜˆÛÝ\˜ÙWÜ›ÝÈ[ˆ[›Ù™—ÜÛÝ\˜Ù\Î‚ˆO\ÛÝ\˜ÙWÜ›ÝÖÈž—KÛÝ\˜ÙWÜ›ÝÖÈžH—BˆÛÝ\˜ÙWÜ›ÝÖÈœ[›Ù™“LÈ—O\›Ý[™
+˜Z[™˜[
+JœÛÝ\˜ÙWÜ›ÝÖÈ˜\™XH—JœÛÝ\˜ÙWÜ›ÝÖÈ˜ÛÙY™šXÚY[—KJBˆÛÝ\˜ÙWÜ›ÝÖÈ˜ÛÛ›™XÝY—OJJH[ˆ˜Z[—Ý[\ÈÜˆ[žJ
+
+ÙJÙJH[ˆ˜Z[—Ý[\È›ÜˆH[ˆ
+
+K
+K
+LK
+K
+JK
+LJJJBˆÝ[Ü[›Ù™\Ý[J›ÝÖÈœ[›Ù™“LÈ—H›Üˆ›ÝÈ[ˆ[›Ù™—ÜÛÝ\˜Ù\ÊBˆÛÛ›™XÝYÜ[›Ù™\Ý[J›ÝÖÈœ[›Ù™“LÈ—H›Üˆ›ÝÈ[ˆ[›Ù™—ÜÛÝ\˜Ù\ÈYˆ›ÝÖÈ˜ÛÛ›™XÝY—JBˆ[˜ÛÛ›™XÝYÜ[›Ù™[X^
+Ý[Ü[›Ù™‹XÛÛ›™XÝYÜ[›Ù™ŠBˆ\›X[™[Ù˜Z[˜YÙWØØ\XÚ]O]][]Y\ÖÈ˜˜\ÙQ˜Z[˜YÙPØ\XÚ]SLÑ^H—JÛ[Š˜Z[—Ý[\ÊJŒNˆ[Y\™Ù[˜ÞWØØ\XÚ]O\›Ý[™
+\›X[™[Ù˜Z[˜YÙWØØ\XÚ]J‹ŒJHYˆÛ[X]K™Ù]
+œ™\\™Y›Ü‘^HŠOO\Ý]K™Ù]
+™^HŠH[ÙHˆ˜Z[˜YÙWØØ\XÚ]O\\›X[™[Ù˜Z[˜YÙWØØ\XÚ]JÙ[Y\™Ù[˜ÞWØØ\XÚ]BˆØ\\™Y[Z[ŠÛÛ›™XÝYÜ[›Ù™‹˜Z[˜YÙWØØ\XÚ]JBˆÝ™\™›ÝÏ[X^
+ÛÛ›™XÝYÜ[›Ù™‹XØ\\™Y
+BˆÝ[™[™×ÝØ]\][˜ÛÛ›™XÝYÜ[›Ù™ŠÛÝ™\™›ÝÂˆ›ÛÙÜ›ÝÜÏVÜ›ÝÈ›Üˆ›ÝÈ[ˆ[›Ù™—ÜÛÝ\˜Ù\ÈYˆ›ÝÖÈœ[›Ù™“LÈ—OŒ[™›Ý›ÝÖÈ˜ÛÛ›™XÝY—WBˆÝ™\™›Ý×ÛY[Ý™\™›ÝÂˆ›Üˆ›ÝÈ[ˆÛÜY
+
+ˆ›Üˆˆ[ˆ[›Ù™—ÜÛÝ\˜Ù\ÈYˆ–Èœ[›Ù™“LÈ—OŒ[™–È˜ÛÛ›™XÝY—JKÙ^O[[X™HŽŠYˆ–ÈšZYÚ—OOH˜˜Z›Èˆ[ÙHHYˆ–ÈšZYÚ—OOH™š\›YHˆ[ÙH‹–ÈžH—K–Èž—JJN‚ˆYˆÝ™\™›Ý×ÛYL˜œ™XZÂˆ›ÛÙÜ›ÝÜË˜\[™
+›ÝÊNÛÝ™\™›Ý×ÛY[X^
+Ý™\™›Ý×ÛY\›ÝÖÈœ[›Ù™“LÈ—JBˆ›ÛÙYÝ[\Ï\ÛÜY
+Ê›ÝÖÈž—K›ÝÖÈžH—JH›Üˆ›ÝÈ[ˆ›ÛÙÜ›ÝÜßKÙ^O[[X™HNŠVÌWKVÌJJBˆ›ÛÙYØZ[[™ÜÏVÞÈžŽœ›ÝÖÈž—KžHŽœ›ÝÖÈžH—KšÚ[™Žœ›ÝË™Ù]
+˜Z[[™ÒÚ[™ŠK›˜[YHŽœ›ÝË™Ù]
+›˜[YHŠK\œ˜Z[ˆŽœ›ÝÖÈšZYÚ—Kœ[›Ù™“LÈŽœ›Ý[™
+›ÝÖÈœ[›Ù™“LÈ—JKœ™\Z\ÛÜÝŽœ›Ý[™
+MJÜ›ÝÖÈœ[›Ù™“LÈ—J‹ŒÍJ_H›Üˆ›ÝÈ[ˆ›ÛÙÜ›ÝÜÈYˆ›ÝÖÈšÚ[™—OOH˜Z[[™È—Bˆ˜Z[˜YÙWØÛÝ™\˜YÙO\›Ý[™
+Ø\\™YÛX^
+KÝ[Ü[›Ù™ŠJŒL
+HYˆÝ[Ü[›Ù™ˆ[ÙHLˆ›Ü™XØ\ÝXÛ[X]K™Ù]
+™›Ü™XØ\ÝŠBˆYˆ^WØÞXÛOOLLˆ[™
+›Ý›Ü™XØ\ÝÜˆ›Ü™XØ\Ý™Ù]
+\™Ù]^HŠHO\Ý]K™Ù]
+™^H‹JJÍJN‚ˆ˜Z[—Ù›Ü™XØ\ÝLNˆ›Ú™XÝYVÞÊŠœ›ÝËœ[›Ù™“LÈŽœ›Ý[™
+˜Z[—Ù›Ü™XØ\Ý
+Jœ›ÝÖÈ˜\™XH—Jœ›ÝÖÈ˜ÛÙY™šXÚY[—KJ_H›Üˆ›ÝÈ[ˆ[›Ù™—ÜÛÝ\˜Ù\×Bˆ›Ú™XÝYÝÝ[\Ý[J›ÝÖÈœ[›Ù™“LÈ—H›Üˆ›ÝÈ[ˆ›Ú™XÝY
+Bˆ›Ú™XÝYØÛÛ›™XÝY\Ý[J›ÝÖÈœ[›Ù™“LÈ—H›Üˆ›ÝÈ[ˆ›Ú™XÝYYˆ›ÝÖÈ˜ÛÛ›™XÝY—JBˆ›Ú™XÝYÝ[˜ÛÛ›™XÝY[X^
+›Ú™XÝYÝÝ[\›Ú™XÝYØÛÛ›™XÝY
+Bˆ›Ú™XÝYÛÝ™\™›ÝÏ[X^
+›Ú™XÝYØÛÛ›™XÝY\\›X[™[Ù˜Z[˜YÙWØØ\XÚ]JBˆ›Ú™XÝYÙ›ÛÙÏVÜ›ÝÈ›Üˆ›ÝÈ[ˆ›Ú™XÝYYˆ›ÝÖÈœ[›Ù™“LÈ—OŒ[™›Ý›ÝÖÈ˜ÛÛ›™XÝY—WBˆY\›Ú™XÝYÛÝ™\™›ÝÂˆ›Üˆ›ÝÈ[ˆÛÜY
+
+ˆ›Üˆˆ[ˆ›Ú™XÝYYˆ–Èœ[›Ù™“LÈ—OŒ[™–È˜ÛÛ›™XÝY—JKÙ^O[[X™HŽŠYˆ–ÈšZYÚ—OOH˜˜Z›Èˆ[ÙHHYˆ–ÈšZYÚ—OOH™š\›YHˆ[ÙH‹–ÈžH—K–Èž—JJN‚ˆYˆYL˜œ™XZÂˆ›Ú™XÝYÙ›ÛÙË˜\[™
+›ÝÊNÛY[X^
+Y\›ÝÖÈœ[›Ù™“LÈ—JBˆ^XÝYÝ[\Ï\ÛÜY
+Ê–Èž—K–ÈžH—JH›Üˆˆ[ˆ›Ú™XÝYÙ›ÛÙßKÙ^O[[X™HŠÌWKÌJJBˆ^XÝYØZ[[™ÜÏVÞÈ›˜[YHŽœ‹™Ù]
+›˜[YHŠKžŽœ–Èž—KžHŽœ–ÈžH—K\œ˜Z[ˆŽœ–ÈšZYÚ—_H›Üˆˆ[ˆ›Ú™XÝYÙ›ÛÙÈYˆ–ÈšÚ[™—OOH˜Z[[™È—Bˆ^XÝYÜÝ[™[™Ï\›Ú™XÝYÝ[˜ÛÛ›™XÝY
+Ü›Ú™XÝYÛÝ™\™›ÝÂˆ]™[H˜[ÈˆYˆ[Š^XÝYØZ[[™ÜÊOLÈÜˆ^XÝYÜÝ[™[™Ïœ\›X[™[Ù˜Z[˜YÙWØØ\XÚ]J‹H[ÙH›[Ù\˜YÈˆYˆ^XÝYÜÝ[™[™ÏŒ[ÙH˜˜Z›È‚ˆ›Ü™XØ\Ý^Èš\ÜÝYY^HŽœÝ]K™Ù]
+™^H‹JK\™Ù]^HŽœÝ]K™Ù]
+™^H‹JJÍKœ˜Z[™˜[[HŽœ˜Z[—Ù›Ü™XØ\Ý™^XÝY[›Ù™“LÈŽœ›Ý[™
+›Ú™XÝYÝÝ[
+K™^XÝYÝ[™[™ÕØ]\“LÈŽœ›Ý[™
+^XÝYÜÝ[™[™ÊK™^XÝY›ÛÙY[\ÈŽ›[Š^XÝYÝ[\ÊK™^XÝY›ÛÙYZ[[™ÐÛÝ[Ž›[Š^XÝYØZ[[™ÜÊK™^XÝY›ÛÙYZ[[™ÜÈŽ™^XÝYØZ[[™ÜÖÎŽKØ\›š[™Ó]™[Ž›]™[œÝ]\ÈŽˆœ›Û›ÜÝXØYHŸBˆÛ[X]VÈ™›Ü™XØ\Ý—OY›Ü™XØ\ÝˆØ[\WÛ˜[Y\ÏH‹‹š›Ú[Š‹™Ù]
+›˜[YHŠHÜˆˆœ\˜Ù[HÜ–ÉÞ	×JÌ_KÜ–ÉÞI×JÌ_Hˆ›Üˆˆ[ˆ^XÝYØZ[[™ÜÖÎŒ×JHÜˆœÚ[ˆYYšXÚ[ÜÈ[ˆšY\ÙÛÈØ[Ý[YÈ‚ˆ]Š[\HY][Ü›Û0ìÙÚXØH0­ÈÜ›Y[H™]š\ÝH‹ˆ“H™YÚpìÛˆØÛ[X]VÉÜ™YÚ[Û‰×_H™]°êHN[HH]šXH\˜H[0ëXHÙ›Ü™XØ\ÝÉÝ\™Ù]^I×_H
+šY\ÙÛÈÛ]™[JKˆÙH\Ý[X[ˆÛ[Š^XÝYÝ[\Ê_H\˜Ù[\È[™YØX›\ÈHÛ[Š^XÝYØZ[[™ÜÊ_HYYšXÚ[ÜÈ^Y\ÝÜÎÈ™[˜Z™HXÝX[Ü›Ý[™
+\›X[™[Ù˜Z[˜YÙWØØ\XÚ]J_Hp¬ËÙ0ëXKˆ›Û˜\È^Y\Ý\ÎˆÜØ[\WÛ˜[Y\ßKˆŠBˆYˆ^OX]Ù^OY^JÍH[™
+Û[X]K™Ù]
+šX]›Ü™XØ\ÝŠHÜˆßJK™Ù]
+\™Ù]^HŠHOZX]Ù^N‚ˆÛY\Ï\ÛÜY
+
+ˆ›Üˆˆ[ˆZ[[™ÜÈYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠKÙ^O[[X™HŽšX]Ù^ÜÝ\™J–Èž—K–ÈžH—JVÌJ˜‹™Ù]
+›ØØÝ\[È‹
+K™]™\œÙOUYJBˆ^ÜÙYVÞÈ›˜[YHŽ˜‹™Ù]
+›˜[YH‹ˆ˜\œš[ÈØ–ÉÞ	×JÌ_KØ–ÉÞI×JÌ_HŠKžŽ˜–Èž—KžHŽ˜–ÈžH—KœÜ[][ÛˆŽ˜‹™Ù]
+›ØØÝ\[È‹
+K™^ÜÝ\™HŽšX]Ù^ÜÝ\™J–Èž—K–ÈžH—JVÌ_H›Üˆˆ[ˆÛY\ÈYˆX]Ù^ÜÝ\™J–Èž—K–ÈžH—JVÌOLKŒBˆš\Ú×ÜÜ[][Û\Ý[JÈœÜ[][Ûˆ—H›Üˆ[ˆ^ÜÙY
+NØØ\Ù\Ï\›Ý[™
+Ý[JÈœÜ[][Ûˆ—J‹ŒMJžÈ™^ÜÝ\™H—H›Üˆ[ˆ^ÜÙY
+JBˆÛ[X]VÈšX]›Ü™XØ\Ý—O^Èš\ÜÝYY^HŽ™^K\™Ù]^HŽšX]Ù^K™\˜][Û‘^\ÈŽKœÝ]\ÈŽˆœ›Û›ÜÝXØYH‹Ø\›š[™Ó]™[Žˆ˜[ÈˆYˆØ\Ù\Ï[X^
+KÝ]K™Ù]
+œÜ[][Ûˆ‹
+J‹Œ
+H[ÙH›[Ù\˜YÈ‹™^ÜÙYÜ[][ÛˆŽœš\Ú×ÜÜ[][Û‹™^XÝYX[Ø\Ù\ÈŽ˜Ø\Ù\Ë™^ÜÙYÛY\ÈŽ™^ÜÙYÎ—_Bˆ]Š[\HHØ[Üˆ0­È™YYÚ[ÜÈHÛÛœÝ[[È‹ˆ“ÛHHØ[Üˆ™]š\ÝH\˜H[0ëXHÚX]Ù^_K\˜[HÚ[˜ÛÈ0ëX\ËˆÙH\Ý[X[ˆØØ\Ù\ßHÛÛœÝ[\ÈÜˆ\Ý°ê\È0ê\›ZXÛÈ[ˆÛ[Š^ÜÙY
+_HÙXÝÜ™\ÎÈH[X[™H[0êXÝšXØHHHYÝXH][Y[\°èKˆŠBˆYˆ^O›ÝYÚÙ^OY^JÍH[™
+Û[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠHÜˆßJK™Ù]
+\™Ù]^HŠHOY›ÝYÚÙ^N‚ˆY™™XÝ]™O\›Ý[™
+ÛÝ\˜ÙWÝØ]\—ØØ\XÚ]J‹MJŠK]][]Y\ÖÈØ]\“XZÔ˜]H—JJBˆÛ[X]VÈ™›ÝYÚ›Ü™XØ\Ý—O^Èš\ÜÝYY^HŽ™^K\™Ù]^HŽ™›ÝYÚÙ^K™\˜][Û‘^\ÈŽŒÌœÝ]\ÈŽˆœ›Û›ÜÝXØYH‹Ø\›š[™Ó]™[Žˆ˜[ÈˆYˆY™™XÝ]™OØ]\—ÝÝ[
+‹ŽMH[ÙH›[Ù\˜YÈ‹˜Ø\XÚ]SÜÜÔÝŽK™Y™™XÝ]™PØ\XÚ]SLÑ^HŽ™Y™™XÝ]™K™^XÝY[X[™LÑ^HŽœ›Ý[™
+Ø]\—ÝÝ[
+KØ]\”™\ÝšXÝ[ÛœÈŽœ™\ÝšXÝ[Ûœ×ØXÝ]™_Bˆ]Š[\HHÙ\]pëXH0­ÈØ\XÚpìÛˆ[ˆšY\ÙÛÈ‹ˆ“H\ÝXÚpìÛˆÙXØHÛÛY[ž˜\°èH[0ëXHÙ›ÝYÚÙ^_HH\˜\°èHÌ0ëX\ËˆHY[H˜Z˜\°èHINˆØ\XÚYY0î[\Ý[XYHÙY™™XÝ]™_Hp¬ËÙ0ëXHœ™[HH[X[™HXÝX[HÜ›Ý[™
+Ø]\—ÝÝ[
+_Hp¬ËÙ0ëXKˆŠBˆYˆÛ[X]K™Ù]
+šX]›Ü™XØ\ÝŠH[™Û[X]VÈšX]›Ü™XØ\Ý—K™Ù]
+\™Ù]^HŠOOZX]Ù^N˜Û[X]VÈšX]›Ü™XØ\Ý—VÈ˜XÝ]™H—OZX]ØXÝ]™BˆYˆÛ[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠH[™Û[X]VÈ™›ÝYÚ›Ü™XØ\Ý—K™Ù]
+\™Ù]^HŠOOY›ÝYÚÙ^N‚ˆÛ[X]VÈ™›ÝYÚ›Ü™XØ\Ý—K\]JÈ˜XÝ]™HŽ™›ÝYÚØXÝ]™KØ]\”™\ÝšXÝ[ÛœÈŽœ™\ÝšXÝ[Ûœ×ØXÝ]™_JBˆYˆ›Ü™XØ\Ý[™Û[X]K™Ù]
+œ™\\™Y›Ü‘^HŠOOY›Ü™XØ\Ý™Ù]
+\™Ù]^HŠN™›Ü™XØ\ÝÈœ™\\™Y—OUYBˆ[Yˆ›Ü™XØ\Ý™›Ü™XØ\ÝÈœ™\\™Y—OQ˜[ÙBˆ›ÜˆZ[[™È[ˆZ[[™ÜÎ‚ˆXØÙ\ÜÏXZ[[™ÖÈ][]PXØÙ\ÜÈ—Bˆ˜XÝÜ[Z[ŠXØÙ\ÜÖÈœÝÙ\”Ù\™YÝ—KXØÙ\ÜÖÈØ]\”Ù\™YÝ—KXØÙ\ÜÖÈØ\Ý]Ø]\•™X]YÝ—KXØÙ\ÜÖÈ™Ø\ÔÙ\™YÝ—KXØÙ\ÜÖÈ[XÛÛTÙ\™YÝ—JKÌLˆYˆ™\ÝšXÝ[Ûœ×ØXÝ]™H[™Z[[™Ë™Ù]
+šÚ[™ŠH[ˆ
+œÚÜ‹šÝ[ŠN™˜XÝÜŠKŽˆYˆZ[[™Ë™Ù]
+šÚ[™ŠH[ˆ
+œÚÜ‹šÝ[ŠH[™Z[[™Ë™Ù]
+˜\Ú[™\ÜÈŠH\È›Ý›Û™N‚ˆZ[[™ÖÈ˜\Ú[™\ÜÈ—VÈ][]Q˜XÝÜˆ—O\›Ý[™
+˜XÝÜ‹ÊBˆYˆ™\ÝšXÝ[Ûœ×ØXÝ]™N˜Z[[™ÖÈ˜\Ú[™\ÜÈ—VÈØ]\”™\ÝšXÝ[Û‘˜XÝÜˆ—OKŽˆ[ÙN˜Z[[™ÖÈ˜\Ú[™\ÜÈ—KœÜ
+Ø]\”™\ÝšXÝ[Û‘˜XÝÜˆ‹›Û™JBˆYˆZ[[™Ë™Ù]
+šÚ[™ŠOOHšÝ[Ž‚ˆZ[[™ÖÈ][]TÚÜYÙH—OH™[™\™ðëXHˆYˆXØÙ\ÜÖÈœÝÙ\”Ù\™YÝ—OL[ÙH˜YÝXHˆYˆXØÙ\ÜÖÈØ]\”Ù\™YÝ—OL[ÙH˜ÛØXØ\ÈˆYˆXØÙ\ÜÖÈØ\Ý]Ø]\•™X]YÝ—OL[ÙH™Ø\ÈˆYˆXØÙ\ÜÖÈ™Ø\ÔÙ\™YÝ—OL[ÙH[XÛÛ][šXØXÚ[Û™\ÈˆYˆXØÙ\ÜÖÈ[XÛÛTÙ\™YÝ—OL[ÙH›Û™Bˆ™\Ü^È™^HŽœÝ]K™Ù]
+™^H‹JKœÙX\ÛÛˆŽˆ•™\˜[›ÈˆYˆÝ[[Y\ˆ[ÙH•[\YH‹œÙ\šXÙPÛÝ™\˜YÙTÝŽ˜ÛÝ™\˜YÙKˆœÝÙ\ˆŽžÈš[œÝ[YÝÈŽœ›Ý[™
+ÝÙ\—ØØ\XÚ]JK\ØX›RÝÈŽœ›Ý[™
+ÝÙ\—Ý\ØX›JK™[X[™ÝÈŽœ›Ý[™
+ÝÙ\—ÝÝ[
+K˜ÛÛ›™XÝY[X[™ÝÈŽœ›Ý[™
+ÝÙ\—ØÛÛ›™XÝY
+KœÙ\™YÝÈŽœ›Ý[™
+ÝÙ\—Ù[]™\™Y
+K™ÜšYÙ\™YÝÈŽœ›Ý[™
+ÝÙ\—Ù[]™\™YÙÜšY
+K˜˜XÚÝ\Ù\™YÝÈŽœ›Ý[™
+˜XÚÝ\ÜÙ\™Y
+K˜˜XÚÝ\Ù[™\˜]ÜœÈŽœÝ[J‹™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÈ‹
+OŒ›Üˆˆ[ˆÜš]XØ[Ø˜XÚÝ\
+K˜˜XÚÝ\ÝÜ™YÝÚŽœ›Ý[™
+Ý[J‹™Ù]
+˜˜XÚÝ\Y[ÝÚ‹
+H›Üˆˆ[ˆÜš]XØ[Ø˜XÚÝ\
+JK˜˜XÚÝ\Ø\XÚ]RÝÚŽœ›Ý[™
+Ý[J‹™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÚ‹
+H›Üˆˆ[ˆÜš]XØ[Ø˜XÚÝ\
+JKœÚÜYÙRÝÈŽœ›Ý[™
+X^
+ÝÙ\—ÝÝ[\ÝÙ\—Ù[]™\™Y
+JK›ÜÜÔÝŽœ›Ý[™
+][]Y\ÖÈœÝÙ\“ÜÜÔ˜]H—JŒL
+K˜ÛÛ›™XÝYÙYÛY[ÈŽ›[ŠÝÙ\—Ý[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J–È][]PXØÙ\ÜÈ—VÈœÝÙ\ÛÛ›™XÝY—H›Üˆˆ[ˆZ[[™ÜÊ_KˆØ]\ˆŽžÈš[œÝ[YLÑ^HŽœ›Ý[™
+Ø]\—ØØ\XÚ]JKœÛÝ\˜ÙPØ\XÚ]SLÑ^HŽœ›Ý[™
+ÛÝ\˜ÙWÝØ]\—ØØ\XÚ]JK™[Y\™Ù[˜ÞU[šÙ\“LÑ^HŽ[šÙ\—ØØ\XÚ]K™›ÝYÚ™YXÝ[Û”ÝŽHYˆ›ÝYÚØXÝ]™H[ÙH\ØX›SLÑ^HŽœ›Ý[™
+Ø]\—Ý\ØX›JK™[X[™LÑ^HŽœ›Ý[™
+Ø]\—ÝÝ[
+K˜ÛÛ›™XÝY[X[™LÑ^HŽœ›Ý[™
+Ø]\—ØÛÛ›™XÝY
+KœÙ\™YLÑ^HŽœ›Ý[™
+Ø]\—Ù[]™\™Y
+KœÚÜYÙSLÑ^HŽœ›Ý[™
+X^
+Ø]\—ÝÝ[]Ø]\—Ù[]™\™Y
+JK›XZÔÝŽœ›Ý[™
+][]Y\ÖÈØ]\“XZÔ˜]H—JŒL
+K˜ÛÛ›™XÝYÙYÛY[ÈŽ›[ŠØ]\—Ý[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J–È][]PXØÙ\ÜÈ—VÈØ]\ÛÛ›™XÝY—H›Üˆˆ[ˆZ[[™ÜÊ_KˆØ\Ý]Ø]\ˆŽžÈ™X]Y[Ø\XÚ]SLÑ^HŽœ›Ý[™
+Ø\Ý]Ø]\—ØØ\XÚ]JK™Ù[™\˜]YLÑ^HŽœ›Ý[™
+Ù[™\˜]Y
+K˜ÛÛ›™XÝYLÑ^HŽœ›Ý[™
+Ù]Ù\—Ù›ÝÊK™X]YLÑ^HŽœ›Ý[™
+™X]Y
+K[™X]YLÑ^HŽœ›Ý[™
+[™X]Y
+K˜ÛÝ™\˜YÙTÝŽœÙ]Ù\—ØÛÝ™\˜YÙK˜ÛÛ›™XÝYÙYÛY[ÈŽ›[ŠÙ]Ù\—Ý[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J–È][]PXØÙ\ÜÈ—VÈœÙ]Ù\ÛÛ›™XÝY—H›Üˆˆ[ˆZ[[™ÜÊKœ[ÈŽœÝ[J‹™Ù]
+šÚ[™ŠOOHØ\Ý]Ø]\”[ˆ[™[
+][]WØZ[[™×ØÛÛ›™XÝY
+‹ŠH›Üˆˆ[ˆ
+œÝÙ\ˆ‹Ø]\ˆ‹œÙ]Ù\ˆŠJH›Üˆˆ[ˆZ[[™ÜÊ_Kˆ™Ø\ÈŽžÈ˜Ø\XÚ]SLÑ^HŽœ›Ý[™
+Ø\×ØØ\XÚ]JK™[X[™LÑ^HŽœ›Ý[™
+Ø\×ÝÝ[ŠKœÙ\™YLÑ^HŽœ›Ý[™
+Ø\×Ù[]™\™YŠKœÚÜYÙSLÑ^HŽœ›Ý[™
+X^
+Ø\×ÝÝ[YØ\×Ù[]™\™Y
+KŠK˜ÛÛ›™XÝYÙYÛY[ÈŽ›[ŠØ\×Ý[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J–È][]PXØÙ\ÜÈ—VÈ™Ø\ÐÛÛ›™XÝY—H›Üˆˆ[ˆZ[[™ÜÊ_Kˆ[XÛÛ[][šXØ][ÛœÈŽžÈ˜Ø\XÚ]SXœÈŽœ›Ý[™
+[XÛÛWØØ\XÚ]JK™[X[™XœÈŽœ›Ý[™
+[XÛÛWÝÝ[ŠKœÙ\™YXœÈŽœ›Ý[™
+[XÛÛWÙ[]™\™YŠKœÚÜYÙSXœÈŽœ›Ý[™
+X^
+[XÛÛWÝÝ[][XÛÛWÙ[]™\™Y
+KŠK˜ÛÛ›™XÝYÙYÛY[ÈŽ›[Š[XÛÛWÝ[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J–È][]PXØÙ\ÜÈ—VÈ[XÛÛPÛÛ›™XÝY—H›Üˆˆ[ˆZ[[™ÜÊ_Kˆ™˜Z[˜YÙHŽžÈœ˜Z[™˜[[HŽœ˜Z[™˜[ÙX]\ˆŽˆ•Ü›Y[HˆYˆ˜Z[™˜[LLˆ[ÙH“]šXHˆYˆ˜Z[™˜[[ÙH”ÙXÛÈ‹œ[›Ù™“LÑ^HŽœ›Ý[™
+Ý[Ü[›Ù™ŠK˜Ø\\™YLÑ^HŽœ›Ý[™
+Ø\\™Y
+K˜Ø\XÚ]SLÑ^HŽœ›Ý[™
+˜Z[˜YÙWØØ\XÚ]JKœ\›X[™[Ø\XÚ]SLÑ^HŽœ›Ý[™
+\›X[™[Ù˜Z[˜YÙWØØ\XÚ]JK™[Y\™Ù[˜ÞPØ\XÚ]SLÑ^HŽ™[Y\™Ù[˜ÞWØØ\XÚ]KœÝ[™[™ÕØ]\“LÑ^HŽœ›Ý[™
+Ý[™[™×ÝØ]\ŠK˜ÛÝ™\˜YÙTÝŽ™˜Z[˜YÙWØÛÝ™\˜YÙK˜ÛÛ›™XÝYÙYÛY[ÈŽ›[Š˜Z[—Ý[\ÊK˜ÛÛ›™XÝYZ[[™ÜÈŽœÝ[J[žJ
+–Èž—JÙ–ÈžH—JÙJH[ˆ˜Z[—Ý[\È›ÜˆH[ˆ
+
+
+K
+K
+K
+LK
+K
+JK
+LJJJH›Üˆˆ[ˆZ[[™ÜÊK™›ÛÙY[\ÈŽ–Û\Ý
+JH›ÜˆH[ˆ›ÛÙYÝ[\×K™›ÛÙYZ[[™ÜÈŽ™›ÛÙYØZ[[™ÜËœ™\Z\ÛÜÝ\Ý[X]HŽœ›Ý[™
+Ý[J›ÝÖÈœ™\Z\ÛÜÝ—H›Üˆ›ÝÈ[ˆ›ÛÙYØZ[[™ÜÊJK™›Ü™XØ\ÝŽ™›Ü™XØ\ÝKˆœÛÝ\˜Ù\ÈŽžÈœÝÙ\”[ÈŽœÝ[J‹™Ù]
+šÚ[™ŠOOHœÝÙ\”[ˆ[™][]WØZ[[™×ØÛÛ›™XÝY
+‹œÝÙ\ˆŠH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹Ø]\ˆŠH›Üˆˆ[ˆZ[[™ÜÊKØ]\”[ÈŽœÝ[J‹™Ù]
+šÚ[™ŠOOHØ]\”[ˆ[™][]WØZ[[™×ØÛÛ›™XÝY
+‹œÝÙ\ˆŠH[™][]WØZ[[™×ØÛÛ›™XÝY
+‹Ø]\ˆŠH›Üˆˆ[ˆZ[[™ÜÊ_Kˆ˜Û[X]HŽžÈšX]Ø]™HŽžÈ˜XÝ]™HŽšX]ØXÝ]™K\™Ù]^HŽšX]Ù^K™\˜][Û‘^\ÈŽKœÝÙ\‘[X[™][\Y\ˆŽŒKŒŒˆYˆX]ØXÝ]™H[ÙHKŒØ]\‘[X[™][\Y\ˆŽŒKŒNYˆX]ØXÝ]™H[ÙHKŒ˜ÛÛÛ[™Ô™\\™YŽ˜Û[X]K™Ù]
+˜ÛÛÛ[™Ô™\\™Y›Ü‘^HŠOOZX]Ù^KšX[Ø\Ù\ÈŽŠÛ[X]K™Ù]
+šX]›Ü™XØ\ÝŠHÜˆßJK™Ù]
+˜XÝX[X[Ø\Ù\È‹
+_K™›ÝYÚŽžÈ˜XÝ]™HŽ™›ÝYÚØXÝ]™K\™Ù]^HŽ™›ÝYÚÙ^K™\˜][Û‘^\ÈŽŒÌœÛÝ\˜ÙT™YXÝ[Û”ÝŽHYˆ›ÝYÚØXÝ]™H[ÙHØ]\”™\ÝšXÝ[ÛœÈŽœ™\ÝšXÝ[Ûœ×ØXÝ]™KØ]\Ø\XÚ]SLÑ^HŽœ›Ý[™
+Ø]\—ØØ\XÚ]JK™[Y\™Ù[˜ÞU[šÙ\“LÑ^HŽ[šÙ\—ØØ\XÚ]K™[X[™LÑ^HŽœ›Ý[™
+Ø]\—ÝÝ[
+KœÚÜYÙSLÑ^HŽœ›Ý[™
+X^
+Ø]\—ÝÝ[]Ø]\—Ù[]™\™Y
+J__Kˆ›[ÛSXZ[[˜[˜ÙHŽœ›Ý[™
+[ŠÝÙ\—Ý[\ÊJŒKŒŠÛ[ŠØ]\—Ý[\ÊJ‹Ž
+Û[ŠÙ]Ù\—Ý[\ÊJ‹ŽJÛ[Š˜Z[—Ý[\ÊJ‹ÊÛ[ŠØ\×Ý[\ÊJŒKŒJÛ[Š[XÛÛWÝ[\ÊJ‹ŠÜÝ[JÌ›Üˆˆ[ˆÜš]XØ[Ø˜XÚÝ\Yˆ‹™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÈ‹
+JJKˆ›[™PÛÛ™][ÛˆŽ][]WØÛÛ™][Û—Ü™\Ü
+
+Kˆ™˜Z[\™\ÈŽ–ÞÚÎ™‹™Ù]
+ÊH›ÜˆÈ[ˆ
+šY‹›™]ÛÜšÈ‹ž‹žH‹™^H‹œ™X\ÛÛˆ‹œ™\Z\ÛÜÝ‹˜Y™™XÝYZ[[™ÜÈ‹œÝ]\È‹œ™[XZ[š[™Ñ^\ÈŠ_H›Üˆˆ[ˆ][]Y\Ë™Ù]
+™˜Z[\™\È‹×JHYˆ‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YH—_Bˆ][]Y\ÖÈœ™\Ü—O\™\ÜˆYˆ\WÙY™™XÝÎ‚ˆYˆÛÝ™\˜YÙON‚ˆÜÜÏLˆYˆÛÝ™\˜YÙOŒ[ÙHNÜÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+K[ÜÜÊBˆYˆÛÝ™\˜YÙONœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆYˆÙ]Ù\—ØÛÝ™\˜YÙOL‚ˆÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆYˆÙ]Ù\—ØÛÝ™\˜YÙONœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆYˆÝ]K™Ù]
+™^H‹
+K]][]Y\Ë™Ù]
+›\ÝØ\Ý]Ø]\“›ÝXÙQ^H‹NNNJOLÌ‚ˆ]ŠYÝX\È™\ÚYX[\ÈÚ[ˆ˜]\ˆ‹ˆ”ÙHÙ[™\˜\›ÛˆÜ›Ý[™
+Ù[™\˜]Y
+_Hp¬ËÙ0ëXHHÛÛÈÙH\\˜\›ÛˆÜ›Ý[™
+™X]Y
+_KˆH\ØØ\™ØHÚ[ˆ˜]\ˆ™\Ú[Û˜HHØ[Y0î˜›XØKˆŠBˆ][]Y\ÖÈ›\ÝØ\Ý]Ø]\“›ÝXÙQ^H—O\Ý]K™Ù]
+™^H‹
+BˆYˆÛÝ™\˜YÙOH[™Ý]K™Ù]
+™^H‹
+K]][]Y\Ë™Ù]
+›\ÝÚÜYÙS›ÝXÙQ^H‹NNNJOLÌ‚ˆ]Š‘0êYšXÚ][ˆ™Y\ÈHÙ\šXÚ[ÜÈ‹ˆ“HÛØ™\\˜HY™XÝ]˜H\ÈØÛÝ™\˜YÙ_IKˆ˜[[ˆÜ™\ÜÉÜÝÙ\‰×VÉÜÚÜYÙRÝÉ×_HÕÈHÜ™\ÜÉÝØ]\‰×VÉÜÚÜYÙSLÑ^I×_Hp¬ËÙ0ëXNÈ\È0ê\™Y\È[˜Û^Y[ˆØX›\ÈHYØ\ËˆŠBˆ][]Y\ÖÈ›\ÝÚÜYÙS›ÝXÙQ^H—O\Ý]K™Ù]
+™^H‹
+Bˆ™]\›ˆ™\Ü‚™Yˆ™YÚ\Ý\—Ü™XÛÝ™\žWÛ™YYÊ™\Ü^JN‚ˆ™YYÏ\Ý]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JBˆ›ÜˆH[ˆ™\Ü™Ù]
+™›ÛÙY[\È‹×JN‚ˆYˆÞWH›Ý[ˆÝ]K™Ù]
+œ›ØYÈ‹×JN˜ÛÛ[YBˆYˆ[žJ‹™Ù]
+\™Ù]\HŠOOHœ›ØYˆ[™‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ›Üˆˆ[ˆ™YYÊN˜ÛÛ[YBˆ\ÜÙ][™^
+
+H›ÜˆH[ˆÝ]KœÙ]Y˜][
+œ›ØY\ÜÙ]È‹×JHYˆK™Ù]
+žŠOO^[™K™Ù]
+žHŠOO^JK›Û™JBˆYˆ\ÜÙ]\È›Û™N‚ˆ\ÜÙ]^ÈžŽžžHŽžKœ]X[]HŽÌ‹›[ÛPÛÜÝŽŒM_NÜÝ]VÈœ›ØY\ÜÙ]È—K˜\[™
+\ÜÙ]
+BˆÛÜÝNL
+ÛX^
+‹Z[
+\ÜÙ]™Ù]
+œ]X[]H‹ÌŠJJJŒŒ‚ˆ™YYË˜\[™
+ÈšYŽ™ˆœ™XÛÝ™\žK\›ØY^ÞK^Þ_K^Ù^_H‹\™Ù]\HŽˆœ›ØY‹žŽžžHŽžK›˜[YHŽ™ˆØ[HÞ
+Ì_KÞJÌ_H‹™^HŽ™^K˜ÛÛ™][ÛˆŽš[
+\ÜÙ]™Ù]
+œ]X[]H‹ÌŠJK™\Ý[X]HŽ˜ÛÜÝ˜Ø]\ÙHŽˆ™pì[ÈÜˆÜ›Y[H‹š[œÜXÝ[Û”Ý]\ÈŽˆœ[™Y[H‹œÝ]\ÈŽˆ˜XšY\HŸJBˆX›X×ÚÚ[™Ï^È˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[‹œÜ‹˜Z\œÜŸBˆ›Üˆ›ÝÈ[ˆ™\Ü™Ù]
+™›ÛÙYZ[[™ÜÈ‹×JN‚ˆYˆ›ÝË™Ù]
+šÚ[™ŠH›Ý[ˆX›X×ÚÚ[™Î˜ÛÛ[YBˆO\›ÝÖÈž—K›ÝÖÈžH—BˆYˆ[žJ‹™Ù]
+\™Ù]\HŠOOH˜Z[[™Èˆ[™‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+œÝ]\ÈŠHOHœ™\\˜YHˆ›Üˆˆ[ˆ™YYÊN˜ÛÛ[YBˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^JK›Û™JBˆYˆ›ÝZ[[™Î˜ÛÛ[YBˆ™YYË˜\[™
+ÈšYŽ™ˆœ™XÛÝ™\žKXZ[[™Ë^ÞK^Þ_K^Ù^_H‹\™Ù]\HŽˆ˜Z[[™È‹žŽžžHŽžK›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹›ÝË™Ù]
+›˜[YH‹”Ù\šXÚ[È][šXÚ\[ŠJK™^HŽ™^K˜ÛÛ™][ÛˆŽš[
+Z[[™Ë™Ù]
+œ]X[]H‹ÌŠJK™\Ý[X]HŽ›X^
+LL›Ý[™
+›ÝË™Ù]
+œ™\Z\ÛÜÝ‹
+JŒÊJK˜Ø]\ÙHŽˆ™pì[ÈÜˆÜ›Y[H‹š[œÜXÝ[Û”Ý]\ÈŽˆœ[™Y[H‹œÝ]\ÈŽˆ˜XšY\HŸJB‚™YˆY˜[˜ÙWÜ™XÛÝ™\žWØÛÛ˜XÝÊ
+N‚ˆ›Üˆ™YY[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JN‚ˆYˆ™YY™Ù]
+š[œÜXÝ[Û”Ý]\ÈŠOOH™[ˆÝ\œÛÈŽ‚ˆ™YYÈš[œÜXÝ[Û”™[XZ[š[™Ñ^\È—O[X^
+[
+™YY™Ù]
+š[œÜXÝ[Û”™[XZ[š[™Ñ^\È‹JJKLJBˆYˆ™YYÈš[œÜXÝ[Û”™[XZ[š[™Ñ^\È—OOL‚ˆ™YYÈš[œÜXÝ[Û”Ý]\È—OHš[œÜXØÚ[Û˜YHŽÛ™YYÈš[œÜXÝY^H—O\Ý]K™Ù]
+™^H‹
+BˆYˆ™YY™Ù]
+œØÚY[Y[œÜXÝ[ÛˆŠN‚ˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO[™YYÈž—H[™‹™Ù]
+žHŠOO[™YYÈžH—JK›Û™JBˆYˆZ[[™È[™Z[[™Ë™Ù]
+œ]X[]H‹ŠONŽ‚ˆZ[[™ÖÈ›\Ý[œÜXÝ[Û‘^H—O\Ý]K™Ù]
+™^H‹JNØZ[[™ÖÈ›™^[œÜXÝ[Û‘^H—O\Ý]K™Ù]
+™^H‹JJØZ[[™Ë™Ù]
+š[œÜXÝ[Û’[\˜[^\È‹N
+NÛ™YY\]JÈœÝ]\ÈŽˆœ™\\˜YH‹˜ÛÛ\]Y^HŽœÝ]K™Ù]
+™^H‹J_JBˆ]Š’[œÜXØÚpìÛˆ™]™[]˜H\›Ø˜YH‹ˆžÛ™YYÉÛ˜[YI×_HÝ\\°ìÈH™]š\ÚpìÛˆÚ[ˆ™\]Y\š\ˆØœ˜Kˆ°ìÞ[XH[œÜXØÚpìÛˆ[ˆØZ[[™ÖÉÚ[œÜXÝ[Û’[\˜[^\É×_H0ëX\ËˆŠBˆ[ÙN™]Š’[œÜXØÚpìÛˆ™]™[]˜HÛÛ\]YH‹ˆžÛ™YYÉÛ˜[YI×_NˆXYÛ°ìÜÝXÛÈÛÛ™š\›pìÈÛÛ™XÚpìÛˆÛ™YYÉØÛÛ™][Û‰×_IHH™\Ý\Y\ÝÈH	Û™YYÉÙ\Ý[X]I×N‹KˆÙHYYHXÚ]\ˆ[˜H™ZXš[]XÚpìÛ‹ˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[ÙN™]Š’[œÜXØÚpìÛˆ][šXÚ\[ÛÛ\]YH‹ˆžÛ™YYÉÛ˜[YI×_NˆXYÛ°ìÜÝXÛÈH™\Ý\Y\ÝÈÛÛ™š\›XYÜÈ[ˆ	Û™YYÉÙ\Ý[X]I×N‹KˆHØœ˜HYYHXÚ]\œÙKˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ›ÜˆÛÛ˜XÝ[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žPÛÛ˜XÝÈ‹×JN‚ˆYˆÛÛ˜XÝ™Ù]
+œÝ]\ÈŠHOH™[ˆØœ˜HŽ˜ÛÛ[YBˆÛÛ˜XÝÈœ™[XZ[š[™Ñ^\È—O[X^
+[
+ÛÛ˜XÝ™Ù]
+œ™[XZ[š[™Ñ^\È‹JJKLJBˆYˆÛÛ˜XÝÈœ™[XZ[š[™Ñ^\È—N˜ÛÛ[YBˆ™YY[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈœ™XÛÝ™\žS™YYÈ—HYˆ‹™Ù]
+šYŠOOXÛÛ˜XÝ™Ù]
+›™YYYŠJK›Û™JBˆYˆ™YY‚ˆYˆ™YYÈ\™Ù]\H—OOHœ›ØYŽ‚ˆ\ÜÙ][™^
+
+H›ÜˆH[ˆÝ]VÈœ›ØY\ÜÙ]È—HYˆK™Ù]
+žŠOO[™YYÈž—H[™K™Ù]
+žHŠOO[™YYÈžH—JK›Û™JBˆYˆ\ÜÙ]˜\ÜÙ]Èœ]X[]H—ONŽØ\ÜÙ]ÈœØY™]PÛÜÝ\™H—OQ˜[ÙNÙ]ŠØ[H™XXšY\H‹ˆ“H™ZXš[]XÚpìÛˆHØ[HÛ–ÉÞ	×JÌ_KÛ–ÉÞI×JÌ_HÝ\\°ìÈH[œÜXØÚpìÛˆH™XÝ\\°ìÈÝHÛÛ™XÚpìÛˆ\ÝXÝ\˜[ˆŠBˆ[ÙN‚ˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+žŠOO[™YYÈž—H[™‹™Ù]
+žHŠOO[™YYÈžH—JK›Û™JBˆYˆZ[[™Î‚ˆZ[[™ÖÈœ]X[]H—ON‚ˆZ[[™ÖÈ™›ÛÙ™\Z\ÛÜÝ—OLˆYˆZ[[™Ë™Ù]
+šÚ[™ŠH[ˆ
+œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠN‚ˆZ[[™ÖÈ›\Ý[œÜXÝ[Û‘^H—O\Ý]K™Ù]
+™^H‹JNØZ[[™ÖÈ›™^[œÜXÝ[Û‘^H—O\Ý]K™Ù]
+™^H‹JJØZ[[™Ë™Ù]
+š[œÜXÝ[Û’[\˜[^\È‹N
+Bˆ™YY\]JÈœÝ]\ÈŽˆœ™\\˜YH‹˜ÛÛ\]Y^HŽœÝ]VÈ™^H—_JBˆÛÛ˜XÝ\]JÈœÝ]\ÈŽˆ˜ÛÛ\]YH‹˜ÛÛ\]Y^HŽœÝ]VÈ™^H—KœÝYÙHŽˆ’[œÜXØÚpìÛˆš[˜[\›Ø˜YHŸJBˆ]Š”™ZXš[]XÚpìÛˆ][šXÚ\[\›Z[˜YH‹ˆžØÛÛ˜XÝÉÛ˜[YI×_NˆØÛÛ˜XÝÉØÛÛ˜XÝÜ‰×_H™\Ý]\°ìÈ[XÝ]›È˜\ÈØÛÛ˜XÝÉÙ\˜][Û‰×_H0ëX\ËˆHÛÛ™XÚpìÛˆY[™HH‰HH[™YÚ\Ý›ÈH™XÙ\ÚYYÙHÚY\œ˜KˆŠB‚™Yˆ\WÙ˜Z[˜YÙWÚ[\XÝÊ
+N‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NÜ™\Ü]][]Y\Ë™Ù]
+œ™\Ü‹ßJK™Ù]
+™˜Z[˜YÙH‹ßJNÙ^O\Ý]K™Ù]
+™^H‹
+BˆYˆ™\Ü™Ù]
+œ˜Z[™˜[[H‹
+OLˆÜˆ][]Y\Ë™Ù]
+›\Ý˜Z[˜YÙR[\XÝ^HŠOOY^Nœ™]\›‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ›Ü™XØ\ÝXÛ[X]K™Ù]
+™›Ü™XØ\ÝŠBˆYˆ›Ü™XØ\Ý[™›Ü™XØ\Ý™Ù]
+\™Ù]^HŠOOY^N‚ˆ›Ü™XØ\ÝÈœÝ]\È—OH›ØÝ\œšYHŽÙ›Ü™XØ\ÝÈ˜XÝX[›ÛÙY[\È—O[[Š™\Ü™Ù]
+™›ÛÙY[\È‹×JJNÙ›Ü™XØ\ÝÈ˜XÝX[›ÛÙYZ[[™ÜÈ—O[[Š™\Üµï~ö¶‰žËkºwµç\ÙPÛÜÝŽ•T×ÔTÒTÑWÐÓÔÕ˜Ø[”Ý\Ž››Ý^\Ý[™È[™]˜Z[X›OP•T×ÔTÒTÑWÐÓÔÕœ™X\ÛÛˆŽˆ–XH^\ÝH[˜H0ë[™XH\˜H\ÝHÛÜœ™YÜˆˆYˆ^\Ý[™È[ÙH‘›Û™ÜÈ][šXÚ\[\ÈÛÛ\›ÛY]YÜÈˆYˆ]˜Z[X›O•T×ÔTÒTÑWÐÓÔÕ[ÙHˆŸJBˆ™]\›ˆ™\Ý[ÎŽB‚™Yˆ˜Y™šX×Ù˜XÝÜŠ›Ý]K^ÛYWÛÜ™\S›Û™JN‚ˆˆˆ•Y[\È™[]]›ÈÜˆ˜[[Îˆ[\[ÈØØ[pè\ÈØ[Z[Û™\È]YHØÝ\[ˆ\ÙH˜[[ÈÞKˆˆˆ‚ˆYˆ›Ý›Ý]HÜˆ[Š›Ý]JOŽœ™]\›ˆKŒˆ˜XÝÜœÏV×BˆÝ\O\Ý]K™Ù]
+œÝ\H‹ßJBˆXÝ]™OVÛÈ›ÜˆÈ[ˆÝ\K™Ù]
+›Ü™\œÈ‹×JJÜÝ\K™Ù]
+›X\šÙ]Ü™\œÈ‹×JBˆYˆÈ\È›Ý^ÛYWÛÜ™\ˆ[™Ë™Ù]
+œÝ]\ÈŠOOH™[ˆ°è[œÚ]Èˆ[™Ý]VÈ™^H—O›Ë™Ù]
+œÝ\Y\”™XYQ^H‹Ë™Ù]
+›Ü™\™Y^H‹
+JH[™[ŠË™Ù]
+œ›Ý]H‹×JJOŒWBˆ›ÜˆH[ˆ˜[™ÙJ[Š›Ý]JKLJN‚ˆO]\J›Ý]VÚWJNØ]\J›Ý]VÚJÌWJNÙYÙO]\JÛÜY
+
+KŠJJBˆ\\šX[XVÌWOOLLÜˆ–ÌWOOLLÜˆVÌOOLLˆÜˆ–ÌOOLL‚ˆ˜XÚÙÜ›Ý[™JØÛÛ[]]WØØXÚHÜˆÛÛ[]]WÛ[Ù[
+
+JVÈœÙYÛY[›ÝÈ—K™Ù]
+YÙK
+BˆØ\XÚ]OL‹Yˆ\\šX[[ÙHKŒ‚ˆXÚÜÏLˆ›ÜˆÜ™\ˆ[ˆXÝ]™N‚ˆ][Ü™\‹™Ù]
+œ›Ý]H‹×JNÚY[Z[Š[Š]
+KL‹X^
+[
+Ü™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+JJJBˆYˆ\JÛÜY
+
+\J]ÚYJK\J]ÚY
+ÌWJJJJOOYYÙNXÚÜÊÏLBˆ˜][ÏJ˜XÚÙÜ›Ý[™
+ÝXÚÜÊKØØ\XÚ]Bˆ˜XÝÜœË˜\[™
+JËŒÍJœ˜][Êœ˜][ÊÌ‹
+›X^
+˜][ËLJJŠŒŠBˆ™]\›ˆÝ[J˜XÝÜœÊKÛ[Š˜XÝÜœÊB‚™YˆÜ™\—Ü›Ý]WÙ]JÜ™\ŠN‚ˆ\Ý[˜ÙO[X^
+Ü™\‹™Ù]
+˜]™[\Ý[˜ÙH‹[ŠÜ™\‹™Ù]
+œ›Ý]H‹×JJKLJJBˆ˜XÝÜ]˜Y™šX×Ù˜XÝÜŠÜ™\‹™Ù]
+œ›Ý]H‹×JKÜ™\ŠBˆ™[XZ[š[™Ï[X^
+\Ý[˜ÙK[Ü™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+JBˆ˜]™[Ù^\Ï[X]˜ÙZ[
+™[XZ[š[™Ê™˜XÝÜ‹ÍŠBˆ™XYO[X^
+Ý]VÈ™^H—KÜ™\‹™Ù]
+œÝ\Y\”™XYQ^H‹Ý]VÈ™^H—JJBˆ\œš]˜[[X^
+Ý]VÈ™^H—JÌKX^
+Ý]VÈ™^H—K™XYJJÝ˜]™[Ù^\ÊBˆ[›™Y[Ü™\‹™Ù]
+œÝ\Y\”™XYQ^H‹Ý]VÈ™^H—JJÛX]˜ÙZ[
+\Ý[˜ÙKÍŠBˆ™]\›ˆ˜XÝÜ‹X^
+\œš]˜[\[›™Y
+K\œš]˜[‚™Yˆ^WÜX›X×ÝØYÙ\ÊÛÜšÙ›Ü˜ÙJN‚ˆ^\›ÛLˆ›Üˆ[\[ˆÛÜšÙ›Ü˜ÙK™Ù]
+™[\ÞYY\È‹×JN‚ˆYˆ[\ÈœÚ]H—K™Ù]
+šÚ[™ŠH›Ý[ˆ
+˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÜ‹˜Z\œÜ‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠN˜ÛÛ[YBˆØYÙOY[\™Ù]
+™X\›™YØYÙH‹[\ÈØYÙH—JNÚÛYOY[\ÈšÛYH—BˆÛYVÈšÝ\ÙZÛØ\Ú—O\›Ý[™
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JÝØYÙJBˆÛYVÈ›[ÛUØYÙR[˜ÛÛYH—OZÛYK™Ù]
+›[ÛUØYÙR[˜ÛÛYH‹
+JÝØYÙBˆ^\›Û
+Ï]ØYÙBˆÈ[Ø[\š[È[ÛÛ™XÝÜˆXH\Ý0èH[›È[ÛÜÝÈÜ\˜]]›ÈHH0ë[™XK‚ˆXÝ]™WÚYÏ^ÜY›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+›Ü\˜][Û˜[ŠH›ÜˆY[ˆ[™K™Ù]
+™š]™\’YÈ‹×J_Bˆ›ÜˆÛYH[ˆÝ]VÈ˜Z[[™ÜÈ—N‚ˆYˆÛYK™Ù]
+šÚ[™ŠHOHšÛYHŽ˜ÛÛ[YBˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JN‚ˆYˆ\œÛÛ‹™Ù]
+šYŠH[ˆXÝ]™WÚYÈ[™\œÛÛ‹™Ù]
+œÝ]\ÈŠOOH™[\XYÈŽ‚ˆØYÙO\\œÛÛ‹™Ù]
+›[ÛUØYÙH‹
+BˆÛYVÈšÝ\ÙZÛØ\Ú—O\›Ý[™
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JÝØYÙJBˆÛYVÈ›[ÛUØYÙR[˜ÛÛYH—OZÛYK™Ù]
+›[ÛUØYÙR[˜ÛÛYH‹
+JÝØYÙBˆ™]\›ˆ^\›Û‚™Yˆ˜]×Ø\Ú[™\Ü×ØÜ™Y]
+š\›K[[Ý[
+N‚ˆYˆ[[Ý[Lœ™]\›ˆˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NØ˜[šÏ\Ý]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—Bˆ›ÛÛO[X^
+[
+š\›K™Ù]
+˜Ü™Y][Z]‹
+KYš\›K™Ù]
+˜Ü™Y]X‹
+JJBˆ˜]Ï[Z[Š[
+X]˜ÙZ[
+[[Ý[
+JK›ÛÛKX^
+[
+˜[šË™Ù]
+›\]ZY]H‹
+JJJBˆYˆ˜]Î‚ˆš\›VÈ˜Ü™Y]X—OYš\›K™Ù]
+˜Ü™Y]X‹
+JÙ˜]Âˆš\›VÈ˜Ø\Ú—OYš\›K™Ù]
+˜Ø\Ú‹
+JÙ˜]Âˆš\›VÈ›\ÝÜ™Y]˜]È—OYš\›K™Ù]
+›\ÝÜ™Y]˜]È‹
+JÙ˜]Âˆ˜[šÖÈ›\]ZY]H—KOY˜]Âˆ™]\›ˆ˜]Â‚™YˆÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙK™X\ÛÛŠN‚ˆš\›O\ÚÜ™Ù]
+˜\Ú[™\ÜÈ‹ßJBˆYˆš\›K™Ù]
+œÝ]\ÈŠHOH˜XšY\ÈŽœ™]\›ˆˆš\›VÈœÝ]\È—OH˜Ù\œ˜YÈŽÙš\›VÈ˜ÛÜÙY^H—O\Ý]VÈ™^H—NÙš\›VÈ˜ÛÜÝ\™T™X\ÛÛˆ—O\™X\ÛÛŽÜÚÜÈœÝ]\È—OH˜Ù\œ˜YÈ‚ˆÝ]VÈš›ØœÈ—O[X^
+Ý]K™Ù]
+š›ØœÈ‹
+KYš\›K™Ù]
+š›Ø”ÛÝÈ‹
+JNÙ\ÛZ\ÜÙYLˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠN‚ˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JN‚ˆYˆ\œÛÛ‹™Ù]
+™[\ÞY\’YŠHOYš\›K™Ù]
+šYŠN˜ÛÛ[YBˆ\œÛÛ–Èœ™]š[Ý\Ñ[\ÞY\ˆ—OYš\›K™Ù]
+›˜[YH‹ÚÜ™Ù]
+›˜[YH‹ÛÛY\˜Ú[ÈŠJNÜ\œÛÛ–Èœ™]š[Ý\Ñ[\ÞY\’Y—OYš\›K™Ù]
+šYŠNÜ\œÛÛ–È[™[\ÞYYÚ[˜ÙQ^H—O\Ý]VÈ™^H—NÜ\œÛÛ–È[™[\Þ[Y[™X\ÛÛˆ—OH˜ÚY\œ™HÜˆ[œÛÛ™[˜ÚXH‚ˆ\œÛÛ‹\]JÈœÝ]\ÈŽˆ˜\ØØ[™È‹™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒJBˆ\ÛZ\ÜÙY
+ÏLBˆÝ]KœÙ]Y˜][
+[™[\Þ[Y[]™[È‹×JK˜\[™
+È™^HŽœÝ]VÈ™^H—K™[\ÞY\’YŽ™š\›K™Ù]
+šYŠK™[\ÞY\“˜[YHŽ™š\›K™Ù]
+›˜[YHŠKÛÜšÙ\œÈŽ™\ÛZ\ÜÙY˜Ø]\ÙHŽœ™X\ÛÛŸJBˆ]Š‘[\™\ØH[œÛÛ™[H‹ˆžÙš\›K™Ù]
+	Û˜[YIËÚÜ™Ù]
+	Û˜[YIË	ÐÛÛY\˜Ú[ÉÊJ_HÙ\œ°ìÎˆÜ™X\ÛÛŸKˆÙ\ÛZ\ÜÙYH˜X˜Z˜YÜ™\È\™Y\›Ûˆ[Y\ÝÈHY[™[ˆH\ØØ\ˆ[\[ÎÈÙH[[Z[˜[ˆÙš\›K™Ù]
+	Ú›Ø”ÛÝÉË
+_H˜XØ[\ËˆŠBˆ™]\›ˆ\ÛZ\ÜÙY‚™Yˆ™Yš[ÛX\šÙ]ÜÝ\Y\œÊ
+N‚ˆ›ÜˆÝ\Y\ˆ[ˆÝ]VÈœÝ\H—K™Ù]
+›X\šÙ]‹ßJK˜[Y\Ê
+N‚ˆÝ\Y\–ÈœÝØÚÈ—O[Z[ŠÝ\Y\‹™Ù]
+›X^ÝØÚÈ‹
+KÝ\Y\‹™Ù]
+œÝØÚÈ‹
+JÜÝ\Y\‹™Ù]
+›[ÛSÝ]]‹
+JB‚™Yˆ›ØÙ\Ü×ÛX\šÙ]ÛÜ™\œÊ
+N‚ˆ›ÜˆÜ™\ˆ[ˆÝ]VÈœÝ\H—K™Ù]
+›X\šÙ]Ü™\œÈ‹×JN‚ˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠHOH™[ˆ°è[œÚ]ÈŽ˜ÛÛ[YBˆ›Ý]O\›Ý]WØ™]ÙY[Š
+L
+K
+Ü™\–Èž—KÜ™\–ÈžH—JJBˆYˆ›Ý›Ý]N‚ˆYˆÜ™\‹™Ù]
+œÝ]\ÐØ]\ÙHŠHOH”Ú[ˆXØÙ\ÛÈšX[Ž™]Š‘[™YØHÛÛY\˜ÚX[[[Ü˜YH‹ˆžÛÜ™\–ÉÜÝ\Y\‰×_H›È[˜ÝY[˜H[˜H]HšX[\ÝHÛÜ™\–ÉØ\Ú[™\ÜÓ˜[YI×_NÈHY\˜ØY\°ëXH\Ü\˜H[˜HØ[HÛÛ™XÝYKˆŠBˆÜ™\–Èœ›Ý]H—OV×NÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OH”Ú[ˆXØÙ\ÛÈšX[ŽÛÜ™\–È˜\œš]˜[^H—O\Ý]VÈ™^H—JÌNØÛÛ[YBˆÜ™\–Èœ›Ý]H—O\›Ý]NÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OHˆ‚ˆ\Ý[˜ÙO[X^
+[Š›Ý]JKLJNÛÜ™\–È˜]™[\Ý[˜ÙH—OY\Ý[˜ÙBˆ˜XÝÜ]˜Y™šX×Ù˜XÝÜŠ›Ý]KÜ™\ŠNÛÜ™\–È˜Y™šXÑ˜XÝÜˆ—O\›Ý[™
+˜XÝÜ‹ŠBˆYˆÝ]VÈ™^H—O›Ü™\–ÈœÝ\Y\”™XYQ^H—H[™Ü™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+O\Ý[˜ÙN‚ˆÜ™\–È˜]™[Y\Ý[˜ÙH—O[Z[Š\Ý[˜ÙKÜ™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+JÍ‹ÛX^
+K˜XÝÜŠJBˆ™[XZ[š[™Ï[X^
+\Ý[˜ÙK[Ü™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+JBˆÜ™\–È˜\œš]˜[^H—O[X^
+Ý]VÈ™^H—JÌKX^
+Ý]VÈ™^H—KÜ™\–ÈœÝ\Y\”™XYQ^H—JJÛX]˜ÙZ[
+™[XZ[š[™Ê™˜XÝÜ‹ÍŠJBˆYˆÝ]VÈ™^H—O[Ü™\–ÈœÝ\Y\”™XYQ^H—HÜˆÜ™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+O\Ý[˜ÙN˜ÛÛ[YBˆš\›O[™^
+
+‹™Ù]
+˜\Ú[™\ÜÈŠH›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+šYŠOO[Ü™\–È˜\Ú[™\ÜÒY—JK›Û™JBˆYˆš\›H[™š\›K™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŽ‚ˆš\›VÈš[œ][™[ÜžH—OYš\›K™Ù]
+š[œ][™[ÜžH‹
+JÛÜ™\–Èœ]X[]H—BˆÜ™\–ÈœÝ]\È—OH™[™YØYÈŽÛÜ™\–È™[]™\™Y^H—O\Ý]VÈ™^H—Bˆ]Š’[œÝ[[ÜÈ™XÚXšYÜÈ‹ˆžÛÜ™\–ÉÜÝ\Y\‰×_H[™YðìÈÛÜ™\–ÉÜ]X[]I×_H[šYY\ÈHÛÜ™\–ÉØ\Ú[™\ÜÓ˜[YI×_H˜\ÈÙ\Ý[˜Ù_H˜[[ÜÈH]KˆŠBˆ[ÙN‚ˆÜ™\–ÈœÝ]\È—OH˜Ø[˜Ù[YÈŽÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OH‘[\™\ØHÙ\œ˜YH[\ÈH™XÚXš\ˆHØ\™ØH‚‚™Yˆ[ØØ]WÜ™YÚ[Û˜[Ù^ÜÙ[X[™
+ÚÜËÛÜšÙ›Ü˜ÙJN‚ˆˆˆ”™\\HÛÛ\˜YÜ™\È^\››ÜÈš[š]ÜÈ[™H[\™\Ø\ÈÛÛˆ\œÛÛ˜[HØ[YHÙðë\ÝXØKˆˆˆ‚ˆÝÜ˜YÙO\Ý]KœÙ]Y˜][
+œ™YÚ[Û˜[X\šÙ]‹Èš\ÝÜžHŽ–×K›\Ý™\ÜŽžß_JNÜÝÜ˜YÙKœÙ]Y˜][
+š\ÝÜžH‹×JBˆÛÜšÜXÙ\Ï^ÊÖÈž—KÖÈžH—JNÈ›ÜˆÈ[ˆÛÜšÙ›Ü˜ÙK™Ù]
+ÛÜšÜXÙ\È‹×J_NÜØÛÜ™\Ï^ßNØXØÙ\ÜÏ^ßBˆ\Ý[˜][ÛœÏVÊ”Ø[YHšX[™YÚ[Û˜[‹
+ŒËL
+JWBˆ\Ý[˜][ÛœË™^[™
+
+ˆ”Y\ÈØ‹™Ù]
+	Û˜[YIË	ÉÊ_H‹
+–Èž—K–ÈžH—JJH›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHœÜˆ[™‹™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠJBˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆš\›O\ÚÜ™Ù]
+˜\Ú[™\ÜÈ‹ßJNÜÚ]O]ÛÜšÜXÙ\Ë™Ù]
+
+ÚÜÈž—KÚÜÈžH—JKßJNÜÝY™™Y[X^
+[
+Ú]K™Ù]
+œÝY™™Y›ØœÈ‹
+JJNÜ›Ý]\ÏV×BˆYˆÝY™™Y‚ˆ›ÜˆX™[\Ý[˜][Ûˆ[ˆ\Ý[˜][ÛœÎ‚ˆ›Ý]O\›Ý]WØ™]ÙY[Š
+ÚÜÈž—KÚÜÈžH—JK\Ý[˜][ÛŠBˆYˆ›Ý]Nœ›Ý]\Ë˜\[™
+
+[Š›Ý]JKX™[
+JBˆYˆ›Ý›Ý]\ÎœØÛÜ™\ÖÙš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠWOLØXØÙ\ÜÖÙš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠWOS›Û™NØÛÛ[YBˆ\Ý[˜ÙKX™[[Z[Š›Ý]\ÊNØXØÙ\ÜÖÙš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠWO^È™\Ý[˜][ÛˆŽ›X™[™\Ý[˜ÙHŽ›X^
+\Ý[˜ÙKLJ_Bˆ›Ø—ÜÛÝÏ[X^
+K[
+š\›K™Ù]
+š›Ø”ÛÝÈ‹Ú]K™Ù]
+š›Ø”ÛÝÈ‹LŠJJJNÜÝY™—Ù˜XÝÜK
+ËŠ›Z[ŠKÝY™™YÚ›Ø—ÜÛÝÊNÜšXÙWÙ˜XÝÜJŒ‹ÛX^
+K[
+š\›K™Ù]
+œšXÙH‹N
+JJJJŠŒKŒMBˆ]X[]O[X^
+ŒÍKZ[ŠKŒMK›Ø]
+ÚÜ™Ù]
+\˜˜[ÛÛ™][Ûˆ‹ÚÜ™Ù]
+œ]X[]H‹ŠJJKÎŠJNÝ][]O[X^
+Œ‹Z[ŠK›Ø]
+š\›K™Ù]
+][]Q˜XÝÜˆ‹JJJJNÙœ™ZYÚLKÊJÛX^
+\Ý[˜ÙKLJJ‹ŒÊBˆØÛÜ™\ÖÙš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠWO\›Ý[™
+ÝY™—Ù˜XÝÜŠœšXÙWÙ˜XÝÜŠœ]X[]J][]J™œ™ZYÚŠBˆØÛÜ™WÝÝ[\Ý[JØÛÜ™\Ë˜[Y\Ê
+JNØÛÛ\]]Ü—ÜÝ™[™Ý\Ý[JVÈ˜ÛÛ\]]Ü”Ý™[™Ý—H›ÜˆH[ˆ‘QÒSÓSÓPT’ÑUÊNØÚ]WÜÚ\™O[Z[ŠÍØÛÜ™WÝÝ[ÛX^
+ŒKØÛÜ™WÝÝ[
+ØÛÛ\]]Ü—ÜÝ™[™Ý
+JHYˆØÛÜ™WÝÝ[[™[žJˆ›Üˆˆ[ˆXØÙ\ÜË˜[Y\Ê
+JH[ÙHˆØ\XÚ]Y\ÏV×NØYÙ]ÝÝ[Lˆ›ÜˆX\šÙ][ˆ‘QÒSÓSÓPT’ÑUÎ‚ˆ[š]Ï\›Ý[™
+X\šÙ]È›[ÛU[š]È—J˜Ú]WÜÚ\™JNØYÙ]\›Ý[™
+X\šÙ]È›[ÛPYÙ]—J˜Ú]WÜÚ\™JNØØ\XÚ]Y\Ë˜\[™
+ÈšYŽ›X\šÙ]ÈšY—K›˜[YHŽ›X\šÙ]È›˜[YH—Kœ™YÚ[Û˜[[X[™Ž›X\šÙ]È›[ÛU[š]È—K˜Ú]SÙ™™\ˆŽ[š]Ëœ™YÚ[Û˜[YÙ]Ž›X\šÙ]È›[ÛPYÙ]—K˜Ú]PYÙ]Ž˜YÙ]˜ÛÛ\]]Ü”Ú\™TÝŽœ›Ý[™
+
+KXÚ]WÜÚ\™JJŒL
+_JNØYÙ]ÝÝ[
+ÏXYÙ]ˆÝ[Ý[š]Ï\Ý[JVÈ˜Ú]SÙ™™\ˆ—H›ÜˆH[ˆØ\XÚ]Y\ÊBˆYˆ\ÝšX]JÝ[
+N‚ˆYˆÝ[LÜˆØÛÜ™WÝÝ[Lœ™]\›ˆÚÙ^NŒ›ÜˆÙ^H[ˆØÛÜ™\ßBˆ^XÝ^ÚÙ^NÝ[
+˜[YKÜØÛÜ™WÝÝ[›ÜˆÙ^K˜[YH[ˆØÛÜ™\Ëš][\Ê
+_NÜ™\Ý[^ÚÙ^Nš[
+˜[YJH›ÜˆÙ^K˜[YH[ˆ^XÝš][\Ê
+_NÛY]Ý[\Ý[J™\Ý[˜[Y\Ê
+JBˆ›ÜˆÙ^H[ˆÛÜY
+^XÝÙ^O[[X™HÎŠJ^XÝÚ×K\™\Ý[Ú×JKÊJVÎ›YNœ™\Ý[ÚÙ^WJÏLBˆ™]\›ˆ™\Ý[ˆ[š]×ØžWÙš\›OY\ÝšX]JÝ[Ý[š]ÊNØYÙ]ØžWÙš\›OY\ÝšX]JYÙ]ÝÝ[
+NÙ[X[™^ßBˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆš\›O\ÚÜ™Ù]
+˜\Ú[™\ÜÈ‹ßJNÚÙ^OYš\›K™Ù]
+šY‹ˆœÚÜ^ÜÚÜÉÞ	×_K^ÜÚÜÉÞI×_HŠNÙ^ÜÜšXÙO[X^
+K›Ý[™
+X^
+K[
+š\›K™Ù]
+œšXÙH‹N
+JJJ‹Î
+JNÙ[X[™ÚÙ^WO[Z[Š[š]×ØžWÙš\›K™Ù]
+Ù^K
+KYÙ]ØžWÙš\›K™Ù]
+Ù^K
+KËÙ^ÜÜšXÙJBˆ[ÛJX^
+K[
+Ý]K™Ù]
+™^H‹JJJKLJKËÌÌÜ™\Ü^È›[ÛŽ›[Û›™]ÛÜšÐXØÙ\ÜÈŽ˜›ÛÛ
+Ý[Ý[š]ÊK˜XØÙ\ÜÔ™X\ÛÛˆŽˆØ[\ÈÛÛ™XÝY\ÈHHØ[YH\ÝHÈ[Y\ÈˆYˆÝ[Ý[š]È[ÙH”Ú[ˆØ[HÛÛ™XÝYHHHØ[YH™YÚ[Û˜[šHH[ˆY\ÈÜ\˜]]›È‹˜ÛÛ\][™ÐÚ]Y\ÈŽ–ÙXÝ
+JH›ÜˆH[ˆØ\XÚ]Y\×Kœ™YÚ[Û˜[[X[™ŽœÝ[JVÈœ™YÚ[Û˜[[X[™—H›ÜˆH[ˆØ\XÚ]Y\ÊK˜Ú]SÙ™™\ˆŽÝ[Ý[š]Ë˜Ú]PYÙ]Ž˜YÙ]ÝÝ[˜Ø\\™Y[š]ÈŽŒ˜Ø\\™TÝŽœ›Ý[™
+Ú]WÜÚ\™JŒL
+Kœ™]™[YHŽŒ[›Y]Ù™™\ˆŽÝ[Ý[š]Ë˜ÛÛ\[šY\ÈŽœÝ[JŒ›Üˆˆ[ˆØÛÜ™\Ë˜[Y\Ê
+JK˜ÛÛ\[žQ[X[™Ž™[X[™œ›Ý]\ÈŽ˜XØÙ\ÜßBˆÝÜ˜YÙVÈ›\Ý™\Ü—O\™\ÜÜÝ]VÈœ™YÚ[Û˜[X\šÙ]™\Ü—O\™\Üˆ™]\›ˆ[X[™™\Ü‚™YˆÚ[][]WØ\Ú[™\Ü×Û[Û
+ÛÜšÙ›Ü˜ÙJN‚ˆÚÜÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\È—BˆÛY\ÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒBˆ[X[™^Ê–Èž—K–ÈžH—JNŒ›Üˆˆ[ˆÚÜßNÜÚÜ[™Ï^ÚÙ^N–×H›ÜˆÙ^H[ˆ[X[™NÜ›ØYÏ^Ý\JŠH›Üˆˆ[ˆÝ]VÈœ›ØYÈ—_Bˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NÝÛÜšÜXÙO^ÊÖÈž—KÖÈžH—JNÈ›ÜˆÈ[ˆÛÜšÙ›Ü˜ÙVÈÛÜšÜXÙ\È—_NÜ^\›ÛÜZY^ßBˆ›ÜˆÚÜ[ˆ\Ý
+ÚÜÊN‚ˆš\›O\ÚÜÈ˜\Ú[™\ÜÈ—NÜÚ]O]ÛÜšÜXÙK™Ù]
+
+ÚÜÈž—KÚÜÈžH—JKßJNÜ^\›Û[X^
+[
+Ú]K™Ù]
+œ^\›Û‹
+JJBˆš\›VÈ›\ÝÜ™Y]˜]È—OLÙš\›VÈ›\Ý[\™\Ý—OLÙš\›VÈ›\Ý™\^[Y[—OLˆYˆš\›K™Ù]
+˜Ø\Ú‹
+O‚ˆÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙK˜ØZ˜H™YØ]]˜H[\ÈHÝXœš\ˆH°ìÛZ[˜HŠNØÛÛ[YBˆYˆš\›K™Ù]
+˜Ø\Ú‹
+O^\›Û™˜]×Ø\Ú[™\Ü×ØÜ™Y]
+š\›K^\›ÛYš\›K™Ù]
+˜Ø\Ú‹
+JBˆYˆš\›K™Ù]
+˜Ø\Ú‹
+O^\›Û‚ˆÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙK›HØZ˜HH[Ü°êY]È\ÜÛšX›H›È[Ø[ž˜\›Ûˆ\˜HYØ\ˆØ[\š[ÜÈŠNØÛÛ[YBˆš\›VÈ˜Ø\Ú—KO\^\›ÛÜ^\›ÛÜZYÙš\›VÈšY—WO\^\›Ûˆ›Üˆ[\[ˆÛÜšÙ›Ü˜ÙK™Ù]
+™[\ÞYY\È‹×JN‚ˆYˆ[\ÈœÚ]H—H\ÈÚÜ‚ˆØYÙOY[\™Ù]
+™X\›™YØYÙH‹[\ÈØYÙH—JNÚÛYOY[\ÈšÛYH—BˆÛYVÈšÝ\ÙZÛØ\Ú—O\›Ý[™
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JÝØYÙJNÚÛYVÈ›[ÛUØYÙR[˜ÛÛYH—OZÛYK™Ù]
+›[ÛUØYÙR[˜ÛÛYH‹
+JÝØYÙBˆÚÜÏVØˆ›Üˆˆ[ˆÚÜÈYˆ‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\È—Bˆ[X[™^È
+–Èž—K–ÈžH—JNŒ›Üˆˆ[ˆÚÜßNÜÚÜ[™Ï^ÚÙ^N–×H›ÜˆÙ^H[ˆ[X[™Bˆ™YÚ[Û˜[Ù[X[™™YÚ[Û˜[Ü™\ÜX[ØØ]WÜ™YÚ[Û˜[Ù^ÜÙ[X[™
+ÚÜËÛÜšÙ›Ü˜ÙJBˆ›ÜˆÚÜ[ˆÚÜÎœÚÜÈ˜\Ú[™\ÜÈ—VÈ›\Ý™YÚ[Û˜[Ø[\È—OLˆÈ\È[\™\Ø\ÈZ\Ý[ˆ[™XÚ[ÈÛÛˆ\È™[\ÈH[[™[\š[È[\°ë[ÙÈ[\š[Ü‹‚ˆš[Ü—ÜšXÙ\Ï^Ê–Èž—K–ÈžH—JN›X^
+K–È˜\Ú[™\ÜÈ—K™Ù]
+œšXÙH‹N
+JH›Üˆˆ[ˆÚÜßBˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆš\›O\ÚÜÈ˜\Ú[™\ÜÈ—NÜšXÙO\š[Ü—ÜšXÙ\ÖÜÚÜÈž—KÚÜÈžH—WBˆYˆš\›K™Ù]
+›\ÝØØ[[X[™‹
+OŒ‚ˆ\››Ý™\Yš\›K™Ù]
+›\ÝØØ[Ø[\È‹
+KÛX^
+Kš\›VÈ›\ÝØØ[[X[™—JBˆÛÛ\]]ÜœÏVÜ›ÜˆK[ˆš[Ü—ÜšXÙ\Ëš][\Ê
+HYˆHOJÚÜÈž—KÚÜÈžH—JWBˆÛÛ\]][Û[Z[ŠÛÛ\]]ÜœÊHYˆÛÛ\]]ÜœÈ[ÙHšXÙBˆYˆ\››Ý™\Ìˆ[™š\›K™Ù]
+š[™[ÜžH‹
+OŒLŽœšXÙO[X^
+Z[ŠšXÙKLKÛÛ\]][ÛŠJBˆ[Yˆ\››Ý™\ŒKŒH[™š\›K™Ù]
+š[™[ÜžH‹
+OœšXÙO[Z[ŠÌ‹šXÙJÌJBˆš\›VÈœšXÙH—O\šXÙBˆ›ÜˆÛYH[ˆÛY\Î‚ˆÚÚXÙ\ÏV×Bˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆ›Ý]O\›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+ÚÜÈž—KÚÜÈžH—JJBˆYˆ›Ý›Ý]N˜ÛÛ[YBˆ\Ý[˜ÙO\Ý[JH›ÜˆH[ˆš\
+›Ý]K›Ý]VÌN—JHYˆ\J
+H[ˆ›ØYÈ[™\JJH[ˆ›ØYÊBˆ›Þ[Z]OLKÛX^
+K\Ý[˜ÙJÌJJŠŒKˆ™Y™\™[˜ÙO\›Þ[Z]JŠNÛX^
+KÚÜÈ˜\Ú[™\ÜÈ—K™Ù]
+œšXÙH‹N
+JJJŠŒ‚ˆÚÚXÙ\Ë˜\[™
+
+ÚÜ™Y™\™[˜ÙJJBˆYˆ›ÝÚÚXÙ\Î˜ÛÛ[YBˆÚÚXÙ\ËœÛÜ
+Ù^O[[X™HŠ^ÌWKÌVÈž—KÌVÈžH—JJBˆ\Ú\™Y[X^
+›Ý[™
+ÛYK™Ù]
+›ØØÝ\[È‹
+J‹ŒLŠJBˆÚX\\Ý[Z[ŠX^
+KÚÜÈ˜\Ú[™\ÜÈ—K™Ù]
+œšXÙH‹N
+JH›ÜˆÚÜÈ[ˆÚÚXÙ\ÊBˆ[š]Ï[Z[Š\Ú\™YX^
+[
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+KËØÚX\\Ý
+JJBˆÝ[ÝÙZYÚ\Ý[JÈ›ÜˆËÈ[ˆÚÚXÙ\ÊBˆÚ\™\ÏVÝ[š]ÊËÝÝ[ÝÙZYÚ›ÜˆËÈ[ˆÚÚXÙ\×Bˆ[ØØ][ÛœÏVÚ[
+˜[YJH›Üˆ˜[YH[ˆÚ\™\×Bˆ›Üˆ[™^[ˆÛÜY
+˜[™ÙJ[ŠÚÚXÙ\ÊJKÙ^O[[X™HNŠJÚ\™\ÖÚWKX[ØØ][ÛœÖÚWJKXÚÚXÙ\ÖÚWVÌWJJVÎ›X^
+[š]Ë\Ý[J[ØØ][ÛœÊJWN˜[ØØ][ÛœÖÚ[™^JÏLBˆ›Üˆ
+ÚÜÊK]X[]H[ˆš\
+ÚÚXÙ\Ë[ØØ][ÛœÊN‚ˆYˆ]X[]N‚ˆÙ^OJÚÜÈž—KÚÜÈžH—JNÙ[X[™ÚÙ^WJÏ\]X[]NÜÚÜ[™ÖÚÙ^WK˜\[™
+
+ÛYK]X[]JJBˆš\Ú]ÜœÏ\Ý]K™Ù]
+˜Z\œÜš\Ú]ÜœÕ\Ó[Û‹
+BˆYˆš\Ú]ÜœÈ[™ÚÜÎ‚ˆXØÙ\ÜÚX›OV×BˆZ\œÜ[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH˜Z\œÜˆ[™‹™Ù]
+›Ü\˜][Û˜[ŠJK›Û™JBˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆ›Ý]O\›Ý]WØ™]ÙY[Š
+Z\œÜÈž—KZ\œÜÈžH—JK
+ÚÜÈž—KÚÜÈžH—JJHYˆZ\œÜ[ÙH›Û™BˆYˆ›Ý]N˜XØÙ\ÜÚX›K˜\[™
+ÚÜ
+Bˆ[š]Ï[Z[Šš\Ú]ÜœËX^
+›Ý[™
+š\Ú]ÜœÊ‹JJJBˆ›Üˆ[™^ÚÜ[ˆ[[Y\˜]JÛÜY
+XØÙ\ÜÚX›KÙ^O[[X™HŽŠ–Èž—K–ÈžH—JJJN‚ˆ]X[]O][š]ËËÛ[ŠXØÙ\ÜÚX›JJÊHYˆ[™^[š]É[[ŠXØÙ\ÜÚX›JH[ÙH
+BˆYˆ]X[]N‚ˆÙ^OJÚÜÈž—KÚÜÈžH—JNÜšXÙO[X^
+K[
+ÚÜÈ˜\Ú[™\ÜÈ—K™Ù]
+œšXÙH‹N
+JJBˆ[X[™ÚÙ^WJÏ\]X[]NÜÚÜ[™ÖÚÙ^WK˜\[™
+
+ÈšÝ\ÙZÛØ\ÚŽœ]X[]JœšXÙ_K]X[]JJBˆX\šÙ]ÜÝ\Y\œÏ\Ý]VÈœÝ\H—KœÙ]Y˜][
+›X\šÙ]‹™]×ÛX\šÙ]ÜÝ\J
+JBˆX\šÙ]ÛÜ™\œÏ\Ý]VÈœÝ\H—KœÙ]Y˜][
+›X\šÙ]Ü™\œÈ‹×JBˆ™]™[YWÝÝ[\^\›ÛÝÝ[\Ø[\×ÝÝ[XÛÜÙYZ[œ]×ÝÝ[Lˆ›ÜˆÚÜ[ˆÚÜÎœÚÜÈ˜\Ú[™\ÜÈ—VÈ›\Ý™YÚ[Û˜[Ø[\È—OLˆ›ÜˆÚÜ[ˆÚÜÎ‚ˆš\›O\ÚÜÈ˜\Ú[™\ÜÈ—NÚÙ^OJÚÜÈž—KÚÜÈžH—JNÜÚ]O]ÛÜšÜXÙK™Ù]
+Ù^KßJBˆÝY™™Y[X^
+›Ý[™
+Ú]K™Ù]
+œÝY™™Y›ØœÈ‹
+JJNÚXYÛÝ[[X^
+[
+Ú]K™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹
+JJBˆØØ[Ù[X[™Y[X[™™Ù]
+Ù^K
+NÜÚÜÜ™YÚ[Û˜[Ù[X[™[X^
+™YÚ[Û˜[Ù[X[™™Ù]
+š\›K™Ù]
+šYŠK
+JNÝÝ[Ù[X[™[ØØ[Ù[X[™
+ÜÚÜÜ™YÚ[Û˜[Ù[X[™ˆ[™[ÜžO[X^
+[
+š\›K™Ù]
+š[™[ÜžH‹
+JJNÚ[œ]Ú[™[ÜžO[X^
+[
+š\›K™Ù]
+š[œ][™[ÜžH‹
+JJBˆ›ÙXÝ[Û—Ý\™Ù][Z[ŠX^
+ŒZ[™[ÜžJKX^
+X]˜ÙZ[
+Ý[Ù[X[™Z[™[ÜžJJKX^
+›Ý[™
+ÝY™™Y
+™š\›K™Ù]
+œ›ÙXÝ]š]H‹ŒŠJŒÌ
+™š\›K™Ù]
+][]Q˜XÝÜˆ‹JJJJBˆ›ÙXÝ[Û[Z[Š›ÙXÝ[Û—Ý\™Ù][œ]Ú[™[ÜžJBˆØØ[Ý\™Ù][Z[Š[™[ÜžJÜ›ÙXÝ[Û‹ØØ[Ù[X[™
+NÛØØ[ÛY[ØØ[Ý\™Ù]ÜÛÛÛØØ[Lˆ[š]ÜšXÙO[X^
+K[
+š\›K™Ù]
+œšXÙH‹N
+JJBˆ›ÜˆÛYK]X[]H[ˆÚÜ[™Ë™Ù]
+Ù^K×JN‚ˆYˆØØ[ÛYL˜œ™XZÂˆ›ÝYÚ[Z[Š]X[]KØØ[ÛYX^
+[
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+KËÝ[š]ÜšXÙJJJBˆYˆ›ÝYÚ‚ˆÛYVÈšÝ\ÙZÛØ\Ú—KOX›ÝYÚ
+[š]ÜšXÙNÜÛÛÛØØ[
+ÏX›ÝYÚÛØØ[ÛYOX›ÝYÚˆ™YÚ[Û˜[ÜØ[\Ï[Z[ŠX^
+[™[ÜžJÜ›ÙXÝ[Û‹\ÛÛÛØØ[
+KÚÜÜ™YÚ[Û˜[Ù[X[™
+BˆØ[\Ï\ÛÛÛØØ[
+Ü™YÚ[Û˜[ÜØ[\ÎÙ^ÜÜšXÙO[X^
+K›Ý[™
+[š]ÜšXÙJ‹Î
+JBˆ™]™[YO\ÛÛÛØØ[
+[š]ÜšXÙJÜ™YÚ[Û˜[ÜØ[\Ê™^ÜÜšXÙBˆ^\›Û\^\›ÛÜZY™Ù]
+š\›VÈšY—K
+NÛÝ™\šXY[X^
+[
+š\›K™Ù]
+™š^YÛÜÝ‹
+JJBˆš\›VÈš[œ][™[ÜžH—OZ[œ]Ú[™[ÜžK\›ÙXÝ[Û‚ˆØ\ÚØ™Y›Ü™WÛÜ™\œÏYš\›K™Ù]
+˜Ø\Ú‹
+JÜ™]™[YK[Ý™\šXYˆYˆØ\ÚØ™Y›Ü™WÛÜ™\œÏ‚ˆ˜]×Ø\Ú[™\Ü×ØÜ™Y]
+š\›KXØ\ÚØ™Y›Ü™WÛÜ™\œÊNØØ\ÚØ™Y›Ü™WÛÜ™\œÏYš\›K™Ù]
+˜Ø\Ú‹
+JÜ™]™[YK[Ý™\šXYˆYˆØ\ÚØ™Y›Ü™WÛÜ™\œÏ‚ˆš\›VÈ˜Ø\Ú—O\›Ý[™
+Ø\ÚØ™Y›Ü™WÛÜ™\œÊNØÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙK›\È™[\È›ÈÝXœšY\›ÛˆØ\ÝÜÈšZ›ÜÈHYÛÝ0ìÈÝH0ë[™XHHÜ°êY]ÈŠNØÛÜÙY
+ÏLNØÛÛ[YBˆ\™Ù]Ú[œ]Ï[Z[ŠLLX^
+L‹›Ý[™
+ÝY™™Y
+™š\›K™Ù]
+œ›ÙXÝ]š]H‹ŒŠJŒÌ
+ŒKŒMJJJBˆ[™[™Ï\Ý[JÜ™\‹™Ù]
+œ]X[]H‹
+H›ÜˆÜ™\ˆ[ˆX\šÙ]ÛÜ™\œÈYˆÜ™\‹™Ù]
+˜\Ú[™\ÜÒYŠOOYš\›K™Ù]
+šYŠH[™Ü™\‹™Ù]
+œÝ]\ÈŠOOH™[ˆ°è[œÚ]ÈŠBˆ™YYY[X^
+\™Ù]Ú[œ]ËYš\›VÈš[œ][™[ÜžH—K\[™[™ÊNÜ\˜Ú\Ù\Ï\›ØÝ\™[Y[ØÛÜÝLØÚÜÙ[V×BˆÛÝ\˜ÙOJL
+Bˆ›ÝšY\œÏV×Bˆ›Üˆ˜[YKÝ\Y\ˆ[ˆX\šÙ]ÜÝ\Y\œËš][\Ê
+N‚ˆYˆÝ\Y\‹™Ù]
+œÝØÚÈ‹
+OL˜ÛÛ[YBˆ›Ý]O\›Ý]WØ™]ÙY[ŠÛÝ\˜ÙK
+ÚÜÈž—KÚÜÈžH—JJBˆYˆ›Ý›Ý]N˜ÛÛ[YBˆ\Ý[˜ÙO[X^
+[Š›Ý]JKLJNÙ˜XÝÜ]˜Y™šX×Ù˜XÝÜŠ›Ý]JBˆœ™ZYÚY\Ý[˜ÙJ‹ŒMJÛX^
+˜XÝÜ‹LJJ‹ŒŒ‚ˆ[™Y\Ý\Y\–È[š]ÛÜÝ—JÙœ™ZYÚ
+ÜÝ\Y\‹™Ù]
+›XY^\È‹
+J‹ŒÍBˆ›ÝšY\œË˜\[™
+
+[™Y˜[YKÝ\Y\‹›Ý]K\Ý[˜ÙJJBˆ›ÝšY\œËœÛÜ
+Ù^O[[X™H][NŠ][VÌK][VÌ—K™Ù]
+›XY^\È‹
+K][VÌWJJBˆØ\ÚÙ›Ü—ÛÜ™\œÏ[X^
+[
+Ø\ÚØ™Y›Ü™WÛÜ™\œÊÛZ[ŠX^
+š\›K™Ù]
+˜Ü™Y][Z]‹
+KYš\›K™Ù]
+˜Ü™Y]X‹
+JKÝ]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—K™Ù]
+›\]ZY]H‹
+JJJBˆ›Üˆ[™Y˜[YKÝ\Y\‹›Ý]K\Ý[˜ÙH[ˆ›ÝšY\œÎ‚ˆYˆ™YYYLÜˆØ\ÚÙ›Ü—ÛÜ™\œÏL˜œ™XZÂˆ]X[]O[Z[Š™YYY[
+Ý\Y\‹™Ù]
+œÝØÚÈ‹
+JK[
+Ø\ÚÙ›Ü—ÛÜ™\œËËÛX^
+ŒK[™Y
+JJBˆYˆ]X[]OL˜ÛÛ[YBˆÛÜÝ\›Ý[™
+]X[]J›[™Y
+BˆYˆÛÜÝ˜Ø\ÚÙ›Ü—ÛÜ™\œÎœ]X[]O[X^
+[
+Ø\ÚÙ›Ü—ÛÜ™\œËËÛX^
+ŒK[™Y
+JJNØÛÜÝ\›Ý[™
+]X[]J›[™Y
+BˆYˆ›Ý]X[]N˜ÛÛ[YBˆYˆØ\ÚØ™Y›Ü™WÛÜ™\œÏÛÜÝ‚ˆ˜]×Ø\Ú[™\Ü×ØÜ™Y]
+š\›KÛÜÝXØ\ÚØ™Y›Ü™WÛÜ™\œÊNØØ\ÚØ™Y›Ü™WÛÜ™\œÏYš\›K™Ù]
+˜Ø\Ú‹
+JÜ™]™[YK[Ý™\šXYˆYˆØ\ÚØ™Y›Ü™WÛÜ™\œÏÛÜÝ‚ˆ]X[]O[X^
+[
+X^
+Ø\ÚØ™Y›Ü™WÛÜ™\œÊKËÛX^
+ŒK[™Y
+JJNØÛÜÝ\›Ý[™
+]X[]J›[™Y
+BˆYˆ›Ý]X[]N˜ÛÛ[YBˆÝ\Y\–ÈœÝØÚÈ—KO\]X[]NÜÝ\Y\–È˜Ø\Ú—O\Ý\Y\‹™Ù]
+˜Ø\Ú‹
+JØÛÜÝÜÝ\Y\–È›\ÝØ[\È—JÏ\]X[]BˆÜ™\^ÈšYŽ]ZY]ZY
+
+Kš^˜\Ú[™\ÜÒYŽ™š\›VÈšY—K˜\Ú[™\ÜÓ˜[YHŽ™š\›K™Ù]
+›˜[YH‹ÚÜ™Ù]
+›˜[YHŠJKœÝ\Y\ˆŽ›˜[YKœ]X[]HŽœ]X[]K[š]ÛÜÝŽœ›Ý[™
+[™YŠK˜ÛÜÝŽ˜ÛÜÝ›Ü™\™Y^HŽœÝ]VÈ™^H—KœÝ\Y\”™XYQ^HŽœÝ]VÈ™^H—JÜÝ\Y\‹™Ù]
+›XY^\È‹JK˜]™[\Ý[˜ÙHŽ™\Ý[˜ÙK˜]™[Y\Ý[˜ÙHŽŒžŽœÚÜÈž—KžHŽœÚÜÈžH—Kœ›Ý]HŽœ›Ý]K˜Y™šXÑ˜XÝÜˆŽŒKœÝ]\ÈŽˆ™[ˆ°è[œÚ]È‹œÝ]\ÐØ]\ÙHŽˆ”™\\˜XÚpìÛˆ[ˆ›Ý™YYÜˆŸBˆX\šÙ]ÛÜ™\œË˜\[™
+Ü™\ŠNÛ™YYYO\]X[]NØØ\ÚÙ›Ü—ÛÜ™\œËOXÛÜÝÜ\˜Ú\Ù\ÊÏ\]X[]NÜ›ØÝ\™[Y[ØÛÜÝ
+ÏXÛÜÝØÚÜÙ[‹˜\[™
+˜[YJBˆØ\ÚØY\—ÛÜÏXØ\ÚØ™Y›Ü™WÛÜ™\œË\›ØÝ\™[Y[ØÛÜÝˆXYš\›K™Ù]
+˜Ü™Y]X‹
+NÚ[\™\Ý\›Ý[™
+X
+™š\›K™Ù]
+˜Ü™Y]˜]H‹ŒŠJNÙš\›VÈ›\Ý[\™\Ý—OZ[\™\ÝˆYˆØ\ÚØY\—ÛÜÏ[\™\Ý™˜]×Ø\Ú[™\Ü×ØÜ™Y]
+š\›K[\™\ÝXØ\ÚØY\—ÛÜÊNØØ\ÚØY\—ÛÜÏYš\›K™Ù]
+˜Ø\Ú‹
+JÜ™]™[YK[Ý™\šXY\›ØÝ\™[Y[ØÛÜÝˆYˆØ\ÚØY\—ÛÜÏ‚ˆš\›VÈ˜Ø\Ú—O\›Ý[™
+Ø\ÚØY\—ÛÜÊNØÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙK˜YÛÝ0ìÈØZ˜HHÜ°êY]È[\ÈHÝXœš\ˆÝ\ÈÛÜÝÜÈÜ\˜]]›ÜÈŠNØÛÜÙY
+ÏLNØÛÛ[YBˆYˆØ\ÚØY\—ÛÜÏZ[\™\Ý‚ˆØ\ÚØY\—ÛÜËOZ[\™\ÝÙš\›VÈ˜Ü™Y][[œ]Y[˜ÞS[ÛÈ—OLÜÝ]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—VÈ›\]ZY]H—JÏZ[\™\Ýˆ[ÙN‚ˆZYÚ[\™\Ý[X^
+Ø\ÚØY\—ÛÜÊNØØ\ÚØY\—ÛÜÏLÜÝ]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—VÈ›\]ZY]H—JÏ\ZYÚ[\™\Ýˆš\›VÈ˜Ü™Y]X—JÏZ[\™\Ý\ZYÚ[\™\ÝÙš\›VÈ˜Ü™Y][[œ]Y[˜ÞS[ÛÈ—OYš\›K™Ù]
+˜Ü™Y][[œ]Y[˜ÞS[ÛÈ‹
+JÌBˆ™\^[Y[[Z[Šš\›K™Ù]
+˜Ü™Y]X‹
+KX^
+[
+Ø\ÚØY\—ÛÜËML
+JJBˆYˆ™\^[Y[‚ˆØ\ÚØY\—ÛÜËO\™\^[Y[Ùš\›VÈ˜Ü™Y]X—KO\™\^[Y[Ùš\›VÈ›\Ý™\^[Y[—O\™\^[Y[ÜÝ]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—VÈ›\]ZY]H—JÏ\™\^[Y[ˆš\›VÈ˜Ø\Ú—O\›Ý[™
+Ø\ÚØY\—ÛÜÊBˆš\›VÈš[™[ÜžH—OZ[™[ÜžJÜ›ÙXÝ[Û‹\Ø[\ÎÙš\›VÈ›\ÝØ[\È—O\Ø[\ÎÙš\›VÈ›\ÝØØ[Ø[\È—O\ÛÛÛØØ[Ùš\›VÈ›\Ý™YÚ[Û˜[Ø[\È—O\™YÚ[Û˜[ÜØ[\ÂˆYˆ™YÚ[Û˜[ÜØ[\ÏŒ‚ˆÙ[XÝYÜ›Ý]O\™YÚ[Û˜[Ü™\Ü™Ù]
+œ›Ý]\È‹ßJK™Ù]
+š\›K™Ù]
+šYŠKßJBˆ\Ý[˜][Û\Ù[XÝYÜ›Ý]K™Ù]
+™\Ý[˜][ÛˆŠHYˆ\Ú[œÝ[˜ÙJÙ[XÝYÜ›Ý]KXÝ
+H[ÙH›Û™BˆÜ[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÜˆ[™‹™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠH[™ˆ”Y\ÈØ‹™Ù]
+	Û˜[YIË	ÉÊ_HOY\Ý[˜][ÛŠK›Û™JBˆYˆÜœÝ]VÈœÝ\H—KœÙ]Y˜][
+œÜÜ™\œÈ‹×JK˜\[™
+ÈšYŽ]ZY]ZY
+
+Kš^œÜYŽœÜ™Ù]
+šY‹ˆœÜ^ÜÜÉÞ	×_K^ÜÜÉÞI×_HŠK˜\Ú[™\ÜÒYŽ™š\›K™Ù]
+šYŠK˜\Ú[™\ÜÓ˜[YHŽ™š\›K™Ù]
+›˜[YH‹ÚÜ™Ù]
+›˜[YH‹ÛÛY\˜Ú[ÈŠJKœ]X[]HŽœ™YÚ[Û˜[ÜØ[\Ë›Ü™\™Y^HŽœÝ]VÈ™^H—K˜]™[Y\Ý[˜ÙHŽŒœÝ]\ÈŽˆœ[™Y[H‹œ›Ý]HŽ–×_JBˆš\›VÈ›\ÝØØ[[X[™—O[ØØ[Ù[X[™Ùš\›VÈ›\Ý™YÚ[Û˜[[X[™—O\ÚÜÜ™YÚ[Û˜[Ù[X[™Ùš\›VÈ›\Ý™]™[YH—O\™]™[YNÙš\›VÈ›\Ý[œ]È—O\›ØÝ\™[Y[ØÛÜÝÙš\›VÈ›\Ý[œ][š]È—O\\˜Ú\Ù\ÎÙš\›VÈ›\Ý[œ]Ý\Y\ˆ—OHˆ0­È‹š›Ú[ŠÚÜÙ[ŠHYˆÚÜÙ[ˆ[ÙH”Ú[ˆÝØÚÈÈ›Û™ÜÈ‚ˆš\›VÈ›\Ý[œ]ÚÜYÙH—O[X^
+™YYY
+NÙš\›VÈ›\Ý›ÙXÝ[Ûˆ—O\›ÙXÝ[ÛŽÙš\›VÈ›\Ý^\›Û—O\^\›ÛÙš\›VÈ›\Ý›Ùš]—O\™]™[YK\^\›Û[Ý™\šXY\›ØÝ\™[Y[ØÛÜÝZ[\™\Ýˆš\›VÈ˜Ü™Y]]˜Z[X›H—O[X^
+Z[Šš\›K™Ù]
+˜Ü™Y][Z]‹
+KYš\›K™Ù]
+˜Ü™Y]X‹
+KÝ]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—K™Ù]
+›\]ZY]H‹
+JJBˆš\›VÈ˜Ü™Y]Ý]\È—OH›[Ü˜HˆYˆš\›K™Ù]
+˜Ü™Y][[œ]Y[˜ÞS[ÛÈ‹
+H[ÙH
+][^˜YHˆYˆš\›K™Ù]
+˜Ü™Y]X‹
+OŒ[ÙH™\ÜÛšX›HŠBˆš\›VÈ›\ÝÛÜšÙ\œÈ—OZXYÛÝ[Ùš\›VÈ›\Ý[X[™—O\›Ý[™
+Ý[Ù[X[™
+Bˆ™]™[YWÝÝ[
+Ï\™]™[YNÜ^\›ÛÝÝ[
+Ï\^\›ÛÜØ[\×ÝÝ[
+Ï\Ø[\ÎÚ[œ]×ÝÝ[
+Ï\›ØÝ\™[Y[ØÛÜÝˆYˆš\›VÈ˜Ø\Ú—OÜˆš\›K™Ù]
+˜Ü™Y][[œ]Y[˜ÞS[ÛÈ‹
+OLŽ‚ˆÛÜÙWØ\Ú[™\ÜÊÚÜÛÜšÙ›Ü˜ÙKš[˜Ý[\pìÈÜÈ™[˜Ú[ZY[ÜÈH[\™\Ù\ÈˆYˆš\›K™Ù]
+˜Ü™Y][[œ]Y[˜ÞS[ÛÈ‹
+OLˆ[ÙH˜ØZ˜H™YØ]]˜HHÜ°êY]ÈYÛÝYÈŠNØÛÜÙY
+ÏLBˆ™YÚ[Û˜[ÜÛÛ\Ý[JX^
+[
+‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\Ý™YÚ[Û˜[Ø[\È‹
+JJH›Üˆˆ[ˆÚÜÈYˆ‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠBˆ™YÚ[Û˜[Ü™]™[YO\Ý[JX^
+[
+‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\Ý™YÚ[Û˜[Ø[\È‹
+JJJ›X^
+K›Ý[™
+X^
+K[
+‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œšXÙH‹N
+JJJ‹Î
+JH›Üˆˆ[ˆÚÜÈYˆ‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠBˆ™YÚ[Û˜[Ü™\Ü\]JÈ˜Ø\\™Y[š]ÈŽœ™YÚ[Û˜[ÜÛÛœ™]™[YHŽœ™YÚ[Û˜[Ü™]™[YK[›Y]Ù™™\ˆŽ›X^
+™YÚ[Û˜[Ü™\ÜÈ˜Ú]SÙ™™\ˆ—K\™YÚ[Û˜[ÜÛÛ
+_JNÜÝ]VÈœ™YÚ[Û˜[X\šÙ]™\Ü—O\™YÚ[Û˜[Ü™\ÜÜÝ]VÈœ™YÚ[Û˜[X\šÙ]—VÈ›\Ý™\Ü—O\™YÚ[Û˜[Ü™\ÜÜÝ]VÈœ™YÚ[Û˜[X\šÙ]—VÈš\ÝÜžH—K˜\[™
+ÚÎœ™YÚ[Û˜[Ü™\ÜÚ×H›ÜˆÈ[ˆ
+›[Û‹œ™YÚ[Û˜[[X[™‹˜Ú]SÙ™™\ˆ‹˜Ø\\™Y[š]È‹˜Ø\\™TÝ‹œ™]™[YHŠ_JNÜÝ]VÈœ™YÚ[Û˜[X\šÙ]—VÈš\ÝÜžH—O\Ý]VÈœ™YÚ[Û˜[X\šÙ]—VÈš\ÝÜžH—VËL—Bˆ™]\›ˆÈœ™]™[YHŽœ™]™[YWÝÝ[œ^\›ÛŽœ^\›ÛÝÝ[œØ[\ÈŽœØ[\×ÝÝ[š[œ]ÈŽš[œ]×ÝÝ[˜ÛÜÙYŽ˜ÛÜÙYœ™YÚ[Û˜[[š]ÈŽœ™YÚ[Û˜[ÜÛÛœ™YÚ[Û˜[™]™[YHŽœ™YÚ[Û˜[Ü™]™[Y_B‚™Yˆ›Ý]WÝ×Ü›Ú™XÝ
+›Ú™XÝ
+Nœ™]\›ˆ›Ý]WØ™]ÙY[Š
+L
+K
+›Ú™XÝÈž—K›Ú™XÝÈžH—JJB‚™YˆÝÜ˜YÙWÛØØ][ÛŠØØ][Û—ÚY
+N‚ˆYˆ›ÝØØ][Û—ÚYÜˆØØ][Û—ÚYOHžX\™Žœ™]\›ˆÈšYŽˆžX\™‹žŽžHŽŒL˜Ø\XÚ]HŽœÝ]VÈœÝ\H—K™Ù]
+žX\™Ø\XÚ]H‹
+K›X™[Žˆ”][ÈHÛÛœÝXÝÜ˜\ÈŸBˆ™]\›ˆ™^
+
+›Üˆ[ˆÝ]VÈœÝ\H—K™Ù]
+™\ÝÈ‹×JHYˆÈšY—OO[ØØ][Û—ÚY
+K›Û™JB‚™YˆÝÜ˜YÙWÝ\ÙY
+ØØ][Û—ÚY
+N‚ˆYˆØØ][Û—ÚYOHžX\™Ž‚ˆ™]\›ˆÝ[JÝ[JÝØÚË˜[Y\Ê
+JH›ÜˆÝØÚÈ[ˆÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜœÈ—K˜[Y\Ê
+JBˆ\Ý\ÝÜ˜YÙWÛØØ][ÛŠØØ][Û—ÚY
+Bˆ™]\›ˆÝ[JÝ[JÝØÚË˜[Y\Ê
+JH›ÜˆÝØÚÈ[ˆ\ÝÈœÝØÚÜÈ—K˜[Y\Ê
+JHYˆ\Ý[ÙH‚™YˆÝÜ˜YÙWÜ™\Ù\™Y
+ØØ][Û—ÚY
+N‚ˆ™]\›ˆÝ[JÝ[JÜ™\‹™Ù]
+š][\È‹ßJK˜[Y\Ê
+JH›ÜˆÜ™\ˆ[ˆÝ]VÈœÝ\H—VÈ›Ü™\œÈ—BˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠH[ˆ
+™[ˆ°è[œÚ]È‹™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠH[™Ü™\‹™Ù]
+™\Ý[˜][Û’Y‹žX\™ŠOO[ØØ][Û—ÚY
+B‚™YˆÜ™\—Ý\™Ù[˜ÞJÜ™\ŠN‚ˆˆˆ”š[ÜšYYš\ÚX›HHÛÛNÈ^ÜÚXÚpìÛˆ\È[˜H\Ý[XXÚpìÛˆH[˜ØH[ˆ0êXš]Ëˆˆˆ‚ˆØZ][™Ï[X^
+Ý]VÈ™^H—K[Ü™\‹™Ù]
+˜\œš]™Y^H‹Ü™\‹™Ù]
+˜\œš]˜[^H‹Ý]VÈ™^H—JJJHYˆÜ™\‹™Ù]
+œÝ]\ÈŠH[ˆ
+™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠH[ÙHˆ›Ú™XÝ[™^
+
+›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆÈšY—OO[Ü™\‹™Ù]
+œ›Ú™XÝYŠJK›Û™JBˆÜš]XØ[V×BˆYˆ›Ú™XÝ[™›Ú™XÝ™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+œ]\ØYH‹\›Z[˜YHŠN‚ˆÛÝ\˜Ù\Ï[X]\šX[ÜÛÝ\˜Ù\Ê›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—K›Ú™XÝ
+Bˆ™YYY[X]\šX[Ù[J›Ú™XÝ›Ú™XÝ™Ù]
+™[\ÙY‹
+JÌJBˆ]˜Z[X›O^ÚÙ^NœÝ[JÝØÚÖÚÙ^WH›ÜˆËÝØÚËÈ[ˆÛÝ\˜Ù\ÊH›ÜˆÙ^H[ˆPUT’PSÓSQTßBˆXØÙ\ÜÚX›O^ÜÛÝ\˜ÙWÚY›ÜˆÛÝ\˜ÙWÚYËÈ[ˆÛÝ\˜Ù\ßBˆ\Ý[˜][Û[Ü™\‹™Ù]
+™\Ý[˜][Û’Y‹žX\™ŠBˆÛÝ\˜ÙWÚYHœ][ÈˆYˆ\Ý[˜][ÛOHžX\™ˆ[ÙH\Ý[˜][Û‚ˆYˆÛÝ\˜ÙWÚY[ˆXØÙ\ÜÚX›N‚ˆÜš]XØ[VÚÙ^H›ÜˆÙ^K[[Ý[[ˆ™YYYš][\Ê
+HYˆ]˜Z[X›VÚÙ^WO[[Ý[X]˜Z[X›VÚÙ^WJÛÜ™\‹™Ù]
+š][\È‹ßJK™Ù]
+Ù^K
+WBˆ^ÜÝ\™O\›Ý[™
+›Ú™XÝ™Ù]
+˜ÛÜÝ‹
+KÛX^
+K›Ú™XÝ™Ù]
+™\˜][Ûˆ‹JJJØZ][™ÊHYˆÜš]XØ[[™›Ú™XÝ[ÙHˆX[X[[Ü™\‹™Ù]
+œš[Üš]HŠOOH˜[H‚ˆÈÙY\^XÚ]X^[Ü˜[š[Üš]HZXYÙˆ]™\žH]]ÛX]XØ[HXØÝ[][]YØZ]‚ˆØÛÜ™OJLYˆX[X[[ÙH
+JÊLYˆÜš]XØ[[ÙH
+JÛZ[ŠØZ][™ËÍJJŒL
+ÛZ[ŠNNNK^ÜÝ\™JBˆ™X\ÛÛJ”š[ÜšYY][šXÚ\[[HˆYˆX[X[[ÙHˆŠBˆYˆÜš]XØ[‚ˆ˜[Y\ÏHˆH‹š›Ú[ŠPUT’PSÓSQTÖÚ×H›ÜˆÈ[ˆÜš]XØ[
+Bˆ™X\ÛÛJ™X\ÛÛŠÈˆ0­ÈˆYˆ™X\ÛÛˆ[ÙHˆŠJÙˆ™\Ý˜X˜H˜[HHÛ˜[Y\ßH‚ˆYˆ›Ý™X\ÛÛŽˆ™X\ÛÛH•\››ÈHYØYH‚ˆ™]\›ˆÈØZ][™Ñ^\ÈŽØZ][™Ë˜Üš]XØ[X]\šX[ÈŽ˜Üš]XØ[™[^Q^ÜÝ\™HŽ™^ÜÝ\™K\™Ù[˜ÞTØÛÜ™HŽœØÛÜ™K\™Ù[˜ÞT™X\ÛÛˆŽœ™X\ÛÛŸB‚™Yˆ›ØÙ\Ü×ÜÝ\WÛÜ™\œÊ
+N‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+Bˆ›ÜˆÜ™\ˆ[ˆÛÜY
+Ý]VÈœÝ\H—VÈ›Ü™\œÈ—KÙ^O[[X™HÎŠ[Ü™\—Ý\™Ù[˜ÞJÊVÈ\™Ù[˜ÞTØÛÜ™H—KË™Ù]
+˜\œš]™Y^H‹Ë™Ù]
+˜\œš]˜[^H‹
+JKË™Ù]
+›Ü™\™Y^H‹
+JJN‚ˆYˆÜ™\–ÈœÝ]\È—H›Ý[ˆ
+™[ˆ°è[œÚ]È‹™\Ü\˜[™È\]Z\È‹™\ØØ\™Ø[™ÈŠN˜ÛÛ[YBˆ\Ý[˜][Û[Ü™\‹™Ù]
+™\Ý[˜][Û’Y‹žX\™ŠBˆØØ][Û\ÝÜ˜YÙWÛØØ][ÛŠ\Ý[˜][ÛŠBˆ›Ý]O\›Ý]WØ™]ÙY[Š
+L
+K
+ØØ][Û–Èž—KØØ][Û–ÈžH—JJHYˆØØ][Ûˆ[ÙH›Û™BˆYˆ›Ý]H\È›Û™N‚ˆYˆÜ™\‹™Ù]
+œÝ]\ÐØ]\ÙHŠHOH”Ú[ˆXØÙ\ÛÈHØ[Z[Û™\ÈŽ‚ˆ]Š‘[™YØH™]˜\ØYH‹‘[Ø[ZpìÛˆ›È[˜ÝY[˜H[˜HØ[HÛÛ™XÝYH\ÝH[\0ìÜÚ]ÎÈ[YYÈ\Ü\˜H[˜H]HXšY\KˆŠBˆÜ™\–ÈœÝ]\È—OH™[ˆ°è[œÚ]ÈŽÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OH”Ú[ˆXØÙ\ÛÈHØ[Z[Û™\ÈŽÛÜ™\–È˜\œš]˜[^H—O\Ý]VÈ™^H—JÌNÛÜ™\–Èœ›Ý]H—OV×BˆÜ™\‹œÜ
+™›ÜšÛYY‹›Û™JNÛÜ™\–È[›ØYÛÜšÙ\œÈ—OLÛÜ™\–È[›ØY›ÙÜ™\ÜÈ—OLˆÛÛ[YBˆÜ™\–Èœ›Ý]H—O\›Ý]BˆYˆÜ™\–ÈœÝ]\È—OOH™[ˆ°è[œÚ]ÈŽ‚ˆÜ™\‹œÙ]Y˜][
+˜]™[\Ý[˜ÙH‹X^
+[Š›Ý]JKLJJBˆÜ™\‹œÙ]Y˜][
+˜]™[Y\Ý[˜ÙH‹
+BˆÜ™\‹œÙ]Y˜][
+œÝ\Y\”™XYQ^H‹Ü™\‹™Ù]
+›Ü™\™Y^H‹Ý]VÈ™^H—JJBˆÜ™\–È˜]™[\Ý[˜ÙH—O[X^
+[Š›Ý]JKLJBˆYˆÝ]VÈ™^H—O›Ü™\–ÈœÝ\Y\”™XYQ^H—H[™Ü™\–È˜]™[Y\Ý[˜ÙH—OÜ™\–È˜]™[\Ý[˜ÙH—N‚ˆ˜XÝÜ]˜Y™šX×Ù˜XÝÜŠ›Ý]KÜ™\ŠBˆÜ™\–È˜]™[Y\Ý[˜ÙH—O[Z[ŠÜ™\–È˜]™[\Ý[˜ÙH—KÜ™\–È˜]™[Y\Ý[˜ÙH—JÍ‹ÛX^
+K˜XÝÜŠJBˆ˜XÝÜ‹[^K\œš]˜[[Ü™\—Ü›Ý]WÙ]JÜ™\ŠBˆÜ™\–È˜Y™šXÑ˜XÝÜˆ—O\›Ý[™
+˜XÝÜ‹ŠNÛÜ™\–È˜Y™šXÑ[^Q^\È—OY[^NÛÜ™\–È˜\œš]˜[^H—OX\œš]˜[ˆÜ™\–Èœ›Ý]T›ÙÜ™\ÜÈ—OLHYˆ›ÝÜ™\–È˜]™[\Ý[˜ÙH—H[ÙHZ[ŠKÜ™\–È˜]™[Y\Ý[˜ÙH—KÛÜ™\–È˜]™[\Ý[˜ÙH—JBˆÜ™\–Èœ›ÙÜ™\ÜÈ—O[Ü™\–Èœ›Ý]T›ÙÜ™\ÜÈ—BˆYˆÝ]VÈ™^H—O[Ü™\–ÈœÝ\Y\”™XYQ^H—HÜˆÜ™\–È˜]™[Y\Ý[˜ÙH—OÜ™\–È˜]™[\Ý[˜ÙH—N‚ˆÜ™\–ÈœÝ]\ÐØ]\ÙH—OJ”™\\˜XÚpìÛˆ[ˆ›Ý™YYÜˆˆYˆÝ]VÈ™^H—O[Ü™\–ÈœÝ\Y\”™XYQ^H—H[ÙBˆˆ•°è[œÚ]È[È0­ÈÛÛ™Ù\ÝpìÛˆ0åÞÙ˜XÝÜŽ‹Œ™ŸHˆYˆ˜XÝÜLKŒÍH[ÙH‘[ˆ]HŠBˆÛÛ[YBˆÜ™\–ÈœÝ]\È—OH™\Ü\˜[™È\]Z\ÈŽÛÜ™\–È[›ØYÛÜšÙ\œÈ—OLÛÜ™\–Èœ›ÙÜ™\ÜÈ—OLNÛÜ™\–È˜\œš]™Y^H—O\Ý]VÈ™^H—Bˆ]ŠØ[ZpìÛˆ[ˆ›Û˜HH\ØØ\™ØH‹ˆžÛÜ™\–ÉÜÝ\Y\‰×_HYðìÈHÛÜ™\‹™Ù]
+	Ù\Ý[˜][Û“X™[	Ë	Ô][ÈHÛÛœÝXÝÜ˜\ÉÊ_NÈ\Ü\˜H]]Ù[]˜YÜˆHÜ\˜\š[ÜÈHÛÜ™\–ÉØÛÛ˜XÝÜ‰×_KˆŠBˆYˆÜ™\–ÈœÝ]\È—OOH™\Ü\˜[™È\]Z\ÈŽ‚ˆ™YÚ[—Ý[›ØY[™ÊÜ™\ŠBˆÛÛ[YBˆÜ™\–È[›ØY›ÙÜ™\ÜÈ—O[Z[ŠKX^
+
+Ý]VÈ™^H—K[Ü™\‹™Ù]
+[›ØYÝ\^H‹Ý]VÈ™^H—JJKÛX^
+KÜ™\‹™Ù]
+[›ØY[[^H‹Ý]VÈ™^H—JÌJK[Ü™\‹™Ù]
+[›ØYÝ\^H‹Ý]VÈ™^H—JJJJBˆYˆÝ]VÈ™^H—OÜ™\‹™Ù]
+[›ØY[[^H‹Ý]VÈ™^H—JN˜ÛÛ[YBˆÜ™\–ÈœÝ]\È—OH™[™YØYÈŽÛÜ™\–È™[]™\™Y^H—O\Ý]VÈ™^H—NÛÜ™\–ÈœÝ]\ÐØ]\ÙH—OHˆŽÛÜ™\–È[›ØYÛÜšÙ\œÈ—OLÛÜ™\‹œÜ
+™›ÜšÛYY‹›Û™JBˆÝØÚÏJÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜœÈ—VÛÜ™\–È˜ÛÛ˜XÝÜˆ—WHYˆ\Ý[˜][ÛOHžX\™‚ˆ[ÙHØØ][Û–ÈœÝØÚÜÈ—VÛÜ™\–È˜ÛÛ˜XÝÜˆ—WJBˆ›ÜˆX]\šX[[[Ý[[ˆÜ™\–Èš][\È—Kš][\Ê
+NœÝØÚÖÛX]\šX[JÏX[[Ý[ˆÝ[[X\žOHˆ0­È‹š›Ú[ŠˆžÓPUT’PSÓSQTÖÚ×_HÝŸHˆ›ÜˆËˆ[ˆÜ™\–Èš][\È—Kš][\Ê
+JBˆ]Š“X]\šX[\È[™YØYÜÈ‹ˆžÛÜ™\–ÉÜÝ\Y\‰×_H]°ìÈÜÝ[[X\ž_HHÛÜ™\–ÉÛX™[	×_HÜˆÛ[Š›Ý]JKL_H˜[[ÜÈHØ[KˆŠB‚™YˆÛÛXÝØ\×Ù˜\™\ÊÛÜšÙ›Ü˜ÙJN‚ˆ›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JN‚ˆ[™VÈ›[ÛQ˜\™T™]™[YH—OLˆYˆ›Ý[™K™Ù]
+›Ü\˜][Û˜[ŠN˜ÛÛ[YBˆ›Üˆ[\ÞYYH[ˆÛÜšÙ›Ü˜ÙK™Ù]
+™[\ÞYY\È‹×JN‚ˆYˆ[™K™Ù]
+šYŠH›Ý[ˆ[\ÞYYK™Ù]
+˜\Ó[™RYÈ‹Ù[\ÞYYK™Ù]
+˜\Ó[™RYŠWJN˜ÛÛ[YBˆÛYOY[\ÞYYVÈšÛYH—BˆÛÜÝY[\ÞYYK™Ù]
+›[ÛP\Ñ˜\™PžS[™H‹ßJK™Ù]
+[™VÈšY—K
+BˆZY[Z[ŠX^
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JKÛÜÝ
+BˆÛYVÈšÝ\ÙZÛØ\Ú—OZÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+K\ZYˆ[™VÈ›[ÛQ˜\™T™]™[YH—JÏ\ZYÛ[™VÈ™˜\™PÛÛXÝY^H—O\Ý]VÈ™^H—B‚™Yˆ[Ý™WÚÝ\ÙZÛÊ
+N‚ˆÛY\ÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ–ÈšÚ[™—OOHšÛYH—Bˆ\Ú\™Y[X^
+MKZ[ŠL‹›Ý[™
+
+Ý]VÈ˜\›Ý˜[—KMJKÎ
+JJBˆYˆ\Ú\™YŒ‚ˆ˜XØ[˜ÚY\Ï\Ý[JX^
+–È˜Ø\XÚ]H—KX–È›ØØÝ\[È—JH›Üˆˆ[ˆÛY\ÊBˆ›Øœ×Ü›ÛÛO[X^
+›Ý[™
+Ý]VÈš›ØœÈ—KË‹\Ý]VÈœÜ[][Ûˆ—JJBˆ\œš]˜[Ï[Z[Š\Ú\™Y˜XØ[˜ÚY\Ë›Øœ×Ü›ÛÛJBˆ›ÜˆÈ[ˆ˜[™ÙJ\œš]˜[ÊN‚ˆ]˜Z[X›OVØˆ›Üˆˆ[ˆÛY\ÈYˆ–È›ØØÝ\[È—O–È˜Ø\XÚ]H—WBˆYˆ›Ý]˜Z[X›Nˆœ™XZÂˆÛYO[Z[Š]˜Z[X›KÙ^O[[X™HŽ˜–È›ØØÝ\[È—KÛX^
+K–È˜Ø\XÚ]H—JJBˆÛYVÈ›ØØÝ\[È—JÏLBˆYˆÛYK™Ù]
+˜Y\]™T™]\ÙQ^HŠNšÛYKœÙ]Y˜][
+œ™[[X\ÙQ^\È‹×JK˜\[™
+Ý]K™Ù]
+™^H‹JJBˆYˆ\œš]˜[Î‚ˆÝ]VÈœÜ[][Ûˆ—JÏX\œš]˜[ÂˆÝ]VÈ›[ÛR[˜ÛÛYH—JÏX\œš]˜[ÊŒÂˆ]Š“Y]›ÜÈÙØ\™\È‹ˆžØ\œš]˜[ßH™\ÚY[\ÈÙH]Y\›ÛˆHš]šY[™\ÈÛÛˆ˜XØ[\ÈHXØÙ\ÛÈH[\[Ëˆ[™Ü™\ÛÈšX]\š[È]\›È
+ÉØ\œš]˜[ÊŒßKÛY\ËˆŠBˆ[Yˆ˜XØ[˜ÚY\ÏOL‚ˆ]Š•š]šY[™HÚ[ˆ˜XØ[\È‹“H[X[™HH]Y[ž˜H›ÈYYHÛÛ˜Ü™]\œÙNˆÜÈÙØ\™\È^\Ý[\È\Ý0è[ˆÛÛ\]ÜËˆŠBˆ[Yˆ›Øœ×Ü›ÛÛOOL‚ˆ]Š“ZYÜ˜XÚpìÛˆœ™[˜YHÜˆ[\[È‹’^Hš]šY[™\È\ÜÛšX›\Ë\›È˜[[ˆ[\[ÜÈ\˜H]˜Y\ˆY]›ÜÈÙØ\™\ËˆŠBˆ[Yˆ\Ú\™Y‚ˆ\\\™\Ï[Z[ŠY\Ú\™YÝ[J–È›ØØÝ\[È—H›Üˆˆ[ˆÛY\ÊJBˆ›ÜˆÈ[ˆ˜[™ÙJ\\\™\ÊN‚ˆØØÝ\YYVØˆ›Üˆˆ[ˆÛY\ÈYˆ–È›ØØÝ\[È—OŒBˆYˆ›ÝØØÝ\YYˆœ™XZÂˆÛYO[Z[ŠØØÝ\YYÙ^O[[X™HŽ˜‹™Ù]
+œ]X[]H‹Ì
+JBˆÛYVÈ›ØØÝ\[È—KOLBˆYˆÛYK™Ù]
+˜Y\]™T™]\ÙQ^HŠH[™ÛYK™Ù]
+œ™[[X\ÙQ^\ÈŠNšÛYVÈœ™[[X\ÙQ^\È—KœÜ
+
+BˆÝ]VÈœÜ[][Ûˆ—O[X^
+Ý]VÈœÜ[][Ûˆ—KY\\\™\ÊBˆÝ]VÈ›[ÛR[˜ÛÛYH—O[X^
+Ý]VÈ›[ÛR[˜ÛÛYH—KY\\\™\ÊŒÊBˆYˆ\\\™\Îˆ]Š”Ø[YHH™\ÚY[\È‹ˆžÙ\\\™\ßH\œÛÛ˜\ÈZ˜\›Ûˆš]šY[™\ÈHHÚ]YYÈÙH™YXÙ[ˆÜÈ[™Ü™\ÛÜÈšX]\š[ÜÈ[ˆ	Ù\\\™\ÊŒßKÛY\ËˆŠB‚™Yˆ›ØÙ\Ü×ÜÜÛÙÚ\ÝXÜÊ
+N‚ˆˆˆ‘^ÜXÚ[Û™\È™X[\ÈHÛÛY\˜Ú[ÜÎˆØ[ZpìÛˆÜˆØ[\Ë][È[Z]YÈH˜\˜ÛÈÜˆ[X[™Kˆˆˆ‚ˆÝ\O\Ý]VÈœÝ\H—NÜÜÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÜˆ[™‹™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠWBˆÜ™\œÏ\Ý\KœÙ]Y˜][
+œÜÜ™\œÈ‹×JNÝ›ÞXYÙ\Ï\Ý\KœÙ]Y˜][
+œÜ›ÞXYÙ\È‹×JBˆ›ÜˆÜ™\ˆ[ˆÜ™\œÎ‚ˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+œ[™Y[H‹™[ˆ°è[œÚ]È‹™\Ü\˜[™ÈXØÙ\ÛÈ‹™\Ü\˜[™È][ÈŠN˜ÛÛ[YBˆÜ[™^
+
+ˆ›Üˆˆ[ˆÜÈYˆ‹™Ù]
+šYŠOO[Ü™\‹™Ù]
+œÜYŠJK›Û™JBˆÚÜ[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+šYŠOO[Ü™\‹™Ù]
+˜\Ú[™\ÜÒYŠJK›Û™JBˆYˆ›ÝÜÜˆ›ÝÚÜ›Ü™\–ÈœÝ]\È—OH˜Ø[˜Ù[YÈŽØÛÛ[YBˆ›Ý]O\›Ý]WØ™]ÙY[Š
+ÚÜÈž—KÚÜÈžH—JK
+ÜÈž—KÜÈžH—JJBˆYˆ›Ý›Ý]N›Ü™\‹\]JÈœÝ]\ÈŽˆ™\Ü\˜[™ÈXØÙ\ÛÈ‹œ›Ý]HŽ–×_JNØÛÛ[YBˆÜ™\–Èœ›Ý]H—O\›Ý]NÙ\Ý[˜ÙO[X^
+K[Š›Ý]JKLJNÛÜ™\–ÈœÝ]\È—OH™[ˆ°è[œÚ]È‚ˆÜ™\–È˜]™[Y\Ý[˜ÙH—O[Z[Š\Ý[˜ÙKÜ™\‹™Ù]
+˜]™[Y\Ý[˜ÙH‹
+JÍ‹ÛX^
+K˜Y™šX×Ù˜XÝÜŠ›Ý]JJJBˆYˆÜ™\–È˜]™[Y\Ý[˜ÙH—O\Ý[˜ÙN˜ÛÛ[YBˆYˆÜ™Ù]
+˜Ø\™ÛÔÝÜ™Y‹
+JÛÜ™\–Èœ]X[]H—OœÜ™Ù]
+˜Ø\™ÛÐØ\XÚ]H‹L
+N›Ü™\–ÈœÝ]\È—OH™\Ü\˜[™È][ÈŽØÛÛ[YBˆÜÈ˜Ø\™ÛÔÝÜ™Y—O\Ü™Ù]
+˜Ø\™ÛÔÝÜ™Y‹
+JÛÜ™\–Èœ]X[]H—NÛÜ™\‹\]JÈœÝ]\ÈŽˆ™[ˆY\È‹˜\œš]™Y^HŽœÝ]VÈ™^H—_JBˆ]ŠØ\™ØH™XÚXšYH[ˆ[Y\È‹ˆžÛÜ™\–ÉÜ]X[]I×_H[šYY\ÈHÛÜ™\–ÉØ\Ú[™\ÜÓ˜[YI×_HYØ\›ÛˆÜˆØ[ZpìÛŽÈ][ÈÜÜÉØØ\™ÛÔÝÜ™Y	×_KÞÜÜ™Ù]
+	ØØ\™ÛÐØ\XÚ]IËL
+_KˆŠBˆ›ÜˆÜ[ˆÜÎ‚ˆYˆÜ™Ù]
+˜Ø\™ÛÔÝÜ™Y‹
+OŒÜˆÝ]VÈ™^H—K\Ü™Ù]
+›\ÝÚ\^H‹
+OL˜ÛÛ[YBˆ]X[]O[Z[ŠÜ™Ù]
+œÚ\Ø\XÚ]H‹N
+KÜÈ˜Ø\™ÛÔÝÜ™Y—JNÜÜÈ˜Ø\™ÛÔÝÜ™Y—KO\]X[]NÜÜÈ›\ÝÚ\^H—O\Ý]VÈ™^H—NÜÜÈœÚ\Ñ\\Y—O\Ü™Ù]
+œÚ\Ñ\\Y‹
+JÌBˆ™YO\›Ý[™
+]X[]J‹ŠNÜÜÈ™™YR[˜ÛÛYH—O\Ü™Ù]
+™™YR[˜ÛÛYH‹
+JÙ™YNÜÝ]VÈ›[Û™^H—JÏY™YBˆ›ÞXYÙO^ÈšYŽ]ZY]ZY
+
+Kš^œÜYŽœÜ™Ù]
+šY‹ˆœÜ^ÜÜÉÞ	×_K^ÜÜÉÞI×_HŠKœ]X[]HŽœ]X[]K™\\\™Q^HŽœÝ]VÈ™^H—K˜\œš]˜[^HŽœÝ]VÈ™^H—JÌ‹œÝ]\ÈŽˆ™[ˆ]H‹œ›Ý]HŽ–ÖÌŒËÜÈžH—WKÌÜÈžH—WKÌKÜÈžH—WKÌ‹ÜÈžH—WKÌËÜÈžH—WWK˜\Ú[™\ÜÓ˜[Y\ÈŽ–×_Bˆ›ÞXYÙ\Ë˜\[™
+›ÞXYÙJNÙ]Š\]YHHØ\™ØH˜\œ0ìÈ‹ˆ•[ˆ\]YH\pìÈÛÛˆÜ]X[]_H[šYY\È^ÜY\ÎÈ\ØHÜX\šXH	Ù™Y_H[™Ü™\ðìÈH\ÛÜ™\°ëXKˆŠBˆ›Üˆ›ÞXYÙH[ˆ›ÞXYÙ\Î‚ˆYˆ›ÞXYÙK™Ù]
+œÝ]\ÈŠOOH™[ˆ]Hˆ[™Ý]VÈ™^H—O]›ÞXYÙK™Ù]
+˜\œš]˜[^H‹NNNNNJN›ÞXYÙVÈœÝ]\È—OH™[™YØYÈŽÝ›ÞXYÙVÈ™[]™\™Y^H—O\Ý]VÈ™^H—NÙ]Š‘^ÜXÚpìÛˆ[™YØYH‹ˆ‘[Ø\™Ø[Y[ÈHÝ›ÞXYÙVÉÜ]X[]I×_H[šYY\ÈYðìÈ[Y\˜ØYÈ™YÚ[Û˜[ˆŠBˆÝ\VÈœÜÜ™\œÈ—O[Ü™\œÖËN—NÜÝ\VÈœÜ›ÞXYÙ\È—O]›ÞXYÙ\ÖËLÌ—B‚™YˆÚ[][]WØZ\œÜÛ[Û
+ÛÜšÙ›Ü˜ÙJN‚ˆZ\œÜÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH˜Z\œÜˆ[™‹™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠWBˆÝ]VÈ˜Z\œÜš\Ú]ÜœÕ\Ó[Û—OLÜÝ]VÈ˜Z\œÜ[ÛR[˜ÛÛYH—OLˆ›ÜˆZ\œÜ[ˆZ\œÜÎ‚ˆÛÜšÜXÙO[™^
+
+È›ÜˆÈ[ˆÛÜšÙ›Ü˜ÙK™Ù]
+ÛÜšÜXÙ\È‹×JHYˆË™Ù]
+žŠOOXZ\œÜÈž—H[™Ë™Ù]
+žHŠOOXZ\œÜÈžH—JKßJBˆÛÛ›™XÝYX›ÛÛ
+›Ý]WØ™]ÙY[Š
+L
+K
+Z\œÜÈž—KZ\œÜÈžH—JJJBˆ[YÚX›O\Ý[JH›ÜˆÛYH[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆÛYK™Ù]
+šÚ[™ŠOOHšÛYHˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JHYˆ\œÛÛ‹™Ù]
+œÝ]\ÈŠOOH™[\XYÈˆ[™ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+OLŒ
+Bˆ[X[™[Z[Š›Ý[™
+[YÚX›J‹ŒMJJNÜÝY™™Y]ÛÜšÜXÙK™Ù]
+œÝY™™Y›ØœÈ‹
+NÝ][]WÙ˜XÝÜ[Z[ŠZ\œÜ™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+œÝÙ\”Ù\™YÝ‹L
+KZ\œÜ™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹L
+KZ\œÜ™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹L
+JKÌLˆ™XYOXÛÛ›™XÝY[™ÝY™™YM[™[X[™N[™][]WÙ˜XÝÜKBˆ›YÚÏ[Z[ŠL‹X]˜ÙZ[
+[X[™Î
+JHYˆ™XYH[ÙHˆ\ÜÙ[™Ù\œÏ[Z[ŠZ\œÜ™Ù]
+œ\ÜÙ[™Ù\Ø\XÚ]H‹
+K›YÚÊŽ[X[™
+HYˆ›YÚÈ[ÙHˆZ\›[™WÜ™]™[YO\\ÜÙ[™Ù\œÊÌØZ\›[™WØÛÜÝY›YÚÊLˆYˆZ\›[™WÜ™]™[YOZ\›[™WØÛÜÝ™›YÚÏLÜ\ÜÙ[™Ù\œÏLˆ\œš]˜[Ï\\ÜÙ[™Ù\œËËÌŽÙ™YO\\ÜÙ[™Ù\œÊ
+Ù›YÚÊÍBˆZ\œÜ\]JÈ›Ü\˜][Û˜[Ž˜›ÛÛ
+›YÚÊK˜Z\›[™HŽˆY\›Û0ë[™X\È[]Ü˜[ˆYˆ›YÚÈ[ÙH›Û™K›[ÛT\ÜÙ[™Ù\œÈŽœ\ÜÙ[™Ù\œË›[ÛP\œš]˜[ÈŽ˜\œš]˜[Ë›[ÛQ\\\™\ÈŽœ\ÜÙ[™Ù\œËX\œš]˜[Ë›[ÛQ›YÚÈŽ™›YÚË›[ÛQ[X[™Ž™[X[™˜Z\›[™T™]™[YHŽ˜Z\›[™WÜ™]™[YHYˆ›YÚÈ[ÙH˜Z\›[™PÛÜÝŽ˜Z\›[™WØÛÜÝYˆ›YÚÈ[ÙH˜Z\œÜ™YR[˜ÛÛYHŽ™™YK˜XØÙ\ÜÐÛÛ›™XÝYŽ˜ÛÛ›™XÝYœÝY™™Y›ØœÈŽœÝY™™Yœ]\ÙT™X\ÛÛˆŽˆ”Ú[ˆXØÙ\ÛÈšX[™YÚ[Û˜[ˆYˆ›ÝÛÛ›™XÝY[ÙH‘˜[[ˆ˜X˜Z˜YÜ™\ÈY\›ÜÜX\š[ÜÈˆYˆÝY™™Y[ÙH‘[X[™H˜Z˜NˆHY\›Û0ë[™XH›ÈÝXœ™H[ÛÜÝÈH]HˆYˆ›Ý›YÚÈ[ÙH›Û™_JBˆÝ]VÈ˜Z\œÜš\Ú]ÜœÕ\Ó[Û—JÏX\œš]˜[ÎÜÝ]VÈ˜Z\œÜ[ÛR[˜ÛÛYH—JÏY™YBˆYˆ›YÚÎ™]Š”]Hpê\™XHÜ\˜]]˜H‹ˆžØZ\œÜÉØZ\›[™I×_H][™pìÈÜ\ÜÙ[™Ù\œßH\ØZ™\›ÜÈ
+Ø\œš]˜[ßHš\Ú][\ÊH[ˆÙ›YÚßHY[ÊÊNÈ\ØH][šXÚ\[	Ù™Y_KˆŠBˆ[YˆZ\œÜ™Ù]
+›[ÛT\ÜÙ[™Ù\œÈ‹
+N™]Š”]Hpê\™XHÝ\Ü[™YH‹ˆ“H]H™\]ZY\™HXØÙ\ÛË\œÛÛ˜[H[X[™HÝYšXÚY[\È\˜HÝXœš\ˆÝ\ÈÛÜÝÜËˆŠBˆ™]\›ˆÝ]VÈ˜Z\œÜš\Ú]ÜœÕ\Ó[Û—B‚™YˆÚ[][]WÚÝ[Û[Û
+ÛÜšÙ›Ü˜ÙJN‚ˆÝ[ÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÝ[ˆ[™‹™Ù]
+˜\Ú[™\ÜÈŠWBˆ\œš]˜[Ï\Ý]K™Ù]
+˜Z\œÜš\Ú]ÜœÕ\Ó[Û‹
+BˆÜ[—ØÛÝ[[X^
+KÝ[JH›Üˆ[ˆÝ[ÈYˆ™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\Èˆ[™›Ý]WØ™]ÙY[Š
+L
+K
+Èž—KÈžH—JJJJBˆ›ÜˆÝ[[ˆÝ[Î‚ˆš\›OZÝ[È˜\Ú[™\ÜÈ—BˆYˆš\›K™Ù]
+œÝ]\ÈŠHOH˜XšY\ÈŽ‚ˆš\›VÈ›\ÝÝ\š\ÛU^—OLˆÛÛ[YBˆÛÛ›™XÝYX›ÛÛ
+›Ý]WØ™]ÙY[Š
+L
+K
+Ý[Èž—KÝ[ÈžH—JJJBˆ\×ØZ\œÜX[žJK™Ù]
+šÚ[™ŠOOH˜Z\œÜˆ[™K™Ù]
+›Ü\˜][Û˜[ŠH[™›Ý]WØ™]ÙY[Š
+VÈž—KVÈžH—JK
+Ý[Èž—KÝ[ÈžH—JJH›ÜˆH[ˆÝ]VÈ˜Z[[™ÜÈ—JBˆ][]WÙ˜XÝÜ[Z[ŠÝ[™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+œÝÙ\”Ù\™YÝ‹L
+KÝ[™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹L
+KÝ[™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹L
+JKÌLˆÝY\ÝÏ[Z[ŠÝ[™Ù]
+˜™YÈ‹
+KX]™›ÛÜŠ\œš]˜[Ê‹KÛÜ[—ØÛÝ[
+][]WÙ˜XÝÜŠJHYˆÛÛ›™XÝY[™\×ØZ\œÜ[™][]WÙ˜XÝÜKH[ÙHˆšYÚÏYÝY\ÝÊŒŽØØ\XÚ]O[X^
+KÝ[™Ù]
+˜™YÈ‹
+JŒÌ
+NÛØØÝ\[˜ÞO\›Ý[™
+šYÚËØØ\XÚ]JŒL
+Bˆ™]™[YOYÝY\ÝÊ›X^
+LÝ[™Ù]
+›šYÚT˜]H‹L
+JNÝÛÜšÜXÙO[™^
+
+È›ÜˆÈ[ˆÛÜšÙ›Ü˜ÙK™Ù]
+ÛÜšÜXÙ\È‹×JHYˆË™Ù]
+žŠOOZÝ[Èž—H[™Ë™Ù]
+žHŠOOZÝ[ÈžH—JKßJBˆ^\›Û[X^
+[
+ÛÜšÜXÙK™Ù]
+œ^\›Û‹
+JJNØÛÜÝÏ\^\›Û
+ÙÝY\ÝÊŒN
+ÌŒÜ›Ùš]\™]™[YKXÛÜÝÎÝ^\›Ý[™
+™]™[YJ‹ŒJBˆ›Üˆ[\[ˆÛÜšÙ›Ü˜ÙK™Ù]
+™[\ÞYY\È‹×JN‚ˆYˆ[\™Ù]
+œÚ]HŠH\ÈÝ[‚ˆØYÙOY[\™Ù]
+™X\›™YØYÙH‹[\™Ù]
+ØYÙH‹
+JNÚÛYOY[\™Ù]
+šÛYH‹ßJNÚÛYVÈšÝ\ÙZÛØ\Ú—O\›Ý[™
+ÛYK™Ù]
+šÝ\ÙZÛØ\Ú‹
+JÝØYÙJNÚÛYVÈ›[ÛUØYÙR[˜ÛÛYH—OZÛYK™Ù]
+›[ÛUØYÙR[˜ÛÛYH‹
+JÝØYÙBˆÝ[\]JÈ›[ÛQÝY\ÝÈŽ™ÝY\ÝË›[ÛQÝY\ÝšYÚÈŽ›šYÚË›ØØÝ\[˜ÞHŽ›ØØÝ\[˜ÞK˜XØÙ\ÜÐÛÛ›™XÝYŽ˜ÛÛ›™XÝYJBˆš\›K\]JÈ›\Ý™]™[YHŽœ™]™[YK›\Ý^\›ÛŽœ^\›Û›\Ý›Ùš]Žœ›Ùš]›\ÝÝ\š\ÛU^Ž^˜Ø\ÚŽ™š\›K™Ù]
+˜Ø\Ú‹
+JÜ›Ùš]JBˆYˆØØÝ\[˜ÞONšÝ[È›šYÚT˜]H—O[X^
+MKÝ[™Ù]
+›šYÚT˜]H‹L
+KMJBˆ[YˆØØÝ\[˜ÞOÎšÝ[È›šYÚT˜]H—O[Z[ŠNÝ[™Ù]
+›šYÚT˜]H‹L
+JÍJBˆš\›VÈ˜ÛÜÝ\™S[ÛÈ—OYš\›K™Ù]
+˜ÛÜÝ\™S[ÛÈ‹
+JÌHYˆ›Ùš][ÙHˆYˆš\›VÈ˜Ø\Ú—O‚ˆš\›VÈœÝ]\È—OH˜Ù\œ˜YÈŽÚÝ[ÈœÝ]\È—OH˜Ù\œ˜YÈŽÜÝ]VÈš›ØœÈ—O[X^
+Ý]VÈš›ØœÈ—KYš\›K™Ù]
+š›Ø”ÛÝÈ‹L
+JBˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHŠN‚ˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JN‚ˆYˆ\œÛÛ‹™Ù]
+™[\ÞY\’YŠOOYš\›K™Ù]
+šYŠN‚ˆ\œÛÛ‹\]JÈœ™]š[Ý\Ñ[\ÞY\ˆŽ™š\›K™Ù]
+›˜[YHŠKœ™]š[Ý\Ñ[\ÞY\’YŽ™š\›K™Ù]
+šYŠK[™[\ÞYYÚ[˜ÙQ^HŽœÝ]VÈ™^H—K[™[\Þ[Y[™X\ÛÛˆŽˆ˜ÚY\œ™H[Ý[Üˆ˜[HHpê\ÜY\È‹œÝ]\ÈŽˆ˜\ØØ[™È‹™[\ÞY\’YŽ“›Û™K™[\ÞY\“˜[YHŽ“›Û™K›[ÛUØYÙHŽŒ˜][™[˜ÙHŽŒJBˆ]Š’Ý[Ù\œ˜YÈ‹ˆžÚÝ[™Ù]
+	Û˜[YIÊ_NˆHØZ˜HYðìÈH	Ü›Ý[™
+š\›VÉØØ\Ú	×J_NÈÚ[ˆpê\ÜY\È›ÈYÈÝXœš\ˆÝ\ÈÛÜÝÜÈHX™\°ìÈÝ\È˜XØ[\ËˆŠBˆ[YˆÝY\ÝÎ™]ŠXÝ]šYY\°ë\ÝXØH‹ˆžÚÝ[™Ù]
+	Û˜[YIÊ_NˆÙÝY\ÝßHpê\ÜY\È0­ÈÛšYÚßH›ØÚ\È0­ÈØÝ\XÚpìÛˆÛØØÝ\[˜Þ_IH0­È™[\È	Ü™]™[Y_H0­È[\Y\ÝÈ\°ë\ÝXÛÈ	Ý^KˆŠBˆ™]\›ˆÝ[J™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\ÝÝ\š\ÛU^‹
+H›Üˆ[ˆÝ[ÊB‚™YˆY˜[˜ÙWÝ][]WØ˜XÚÝ\ÙY[
+
+N‚ˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆ\ÙY[Z[Š›Ø]
+Z[[™Ë™Ù]
+˜˜XÚÝ\Y[ÝÚ‹
+JK›Ø]
+Z[[™Ë™Ù]
+˜˜XÚÝ\ÝÕÙ^H‹
+JJŒ
+BˆYˆ\ÙYŒ‚ˆZ[[™ÖÈ˜˜XÚÝ\Y[ÝÚ—O\›Ý[™
+X^
+Z[[™ÖÈ˜˜XÚÝ\Y[ÝÚ—K]\ÙY
+KŠBˆYˆZ[[™ÖÈ˜˜XÚÝ\Y[ÝÚ—OL‚ˆ]Š‘Ü\È[XÝ°ìÙÙ[›ÈÚ[ˆÛÛX\ÝX›H‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIË	ÔÙ\šXÚ[ÈÜ°ë]XÛÉÊ_HYÛÝ0ìÈÝH™\Ù\˜Kˆ™XX˜\ÝXÙ\ˆ\˜H™XÝ\\˜\ˆ[™\Ü[È[0êXÝšXÛËˆŠB‚™YˆXÚ×ÛÛ™WÙ^J
+N‚ˆYˆÝ]VÈœ]\ÙY—Nˆ™]\›‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+BˆÝ]VÈ™^H—H
+ÏHBˆ^O\Ý]VÈ™^H—BˆY˜[˜ÙWÚ\š]YÙWÝÛÜšÜÊ
+BˆY˜[˜ÙWÝ\˜˜[—Ù]›Û][ÛŠ
+BˆY˜[˜ÙWÝ\˜˜[—Ü™[™]Ø[Ê
+BˆY˜[˜ÙWØY\]™WÜ™]\ÙJ
+BˆY˜[˜ÙWÝ][]WÜ™\Z\œÊ
+BˆØ[Ý[]WÝ][]WØ˜[[˜ÙJ
+NØY˜[˜ÙWÝ][]WØ˜XÚÝ\ÙY[
+
+NØ\WØÛ[X]WÚ[\XÝÊ
+NØ\WÙ˜Z[˜YÙWÚ[\XÝÊ
+NØY˜[˜ÙWÜ™XÛÝ™\žWØÛÛ˜XÝÊ
+NØØ[Ý[]WÝØ\ÝWØ˜[[˜ÙJY˜[˜ÙOUYK\WÙY™™XÝÏUYJNÚX[ÜÙ\šXÙWÜ™\Ü
+Y˜[˜ÙOUYJNÙYXØ][Û—ÜÙ\šXÙWÜ™\Ü
+Y˜[˜ÙOUYJNÙš\™WÜÙ\šXÙWÜ™\Ü
+Y˜[˜ÙOUYJBˆ[ÛJ^KLJKËÌÌˆYˆ[ÛœÝ]VÈ›\Ý[Û—N‚ˆ›ÜˆÛYH[ˆÝ]VÈ˜Z[[™ÜÈ—N‚ˆYˆÛYK™Ù]
+šÚ[™ŠOOHšÛYHŽšÛYVÈ›[ÛUØYÙR[˜ÛÛYH—OLˆÝ\Y\—ÜÝØÚÏ\Ý]VÈœÝ\H—VÈœÝ\Y\œÈ—Bˆ™Yš[ÛX\šÙ]ÜÝ\Y\œÊ
+Bˆ›ÜˆÙ^K[[Ý[[ˆ‘QÒSÓSÔ“ÑPÕSÓ‹š][\Ê
+N‚ˆÝ\Y\—ÜÝØÚÖÈ‘\ÝšXZYÜ˜H™YÚ[Û˜[—VÚÙ^WJÏ\›Ý[™
+[[Ý[
+‹ŠBˆÝ\Y\—ÜÝØÚÖÈÛÜœ˜[0ìÛˆ[Y\È—VÚÙ^WJÏ\›Ý[™
+[[Ý[
+‹ŒJBˆÝ\Y\—ÜÝØÚÖÈ‘›]H\™Ù[H—VÚÙ^WJÏ\›Ý[™
+[[Ý[
+‹ŒMJBˆ]Š”›ÙXØÚpìÛˆ™YÚ[Û˜[‹Ø[\˜\ËXÙ\°ëX\ÈH[\™\È™\\ÚY\›Ûˆ\HH\È^\Ý[˜ÚX\ÈH›Ý™YYÜ™\ËˆŠBˆ›ØÙ\Ü×Ý˜Z[š[™×Ü›ÙÜ˜[\Ê
+BˆØ[Ý[]WÝ][]WØ˜[[˜ÙJ\WÙY™™XÝÏUYJBˆXÛÛ›ÛZXÏXÛÛ[]]WÛ[Ù[
+
+BˆX›X×Ü^\›Û\^WÜX›X×ÝØYÙ\ÊXÛÛ›ÛZXÊBˆÚ[][]WØZ\œÜÛ[Û
+XÛÛ›ÛZXÊBˆÝ\š\ÛWÝ^\Ú[][]WÚÝ[Û[Û
+XÛÛ›ÛZXÊBˆXÝ]š]O\Ú[][]WØ\Ú[™\Ü×Û[Û
+XÛÛ›ÛZXÊBˆ^Ü™\ÜXÛÛXÝÛ][šXÚ\[Ý^\Ê
+BˆXÛÛ›ÛZXÏXÛÛ[]]WÛ[Ù[
+
+BˆÛÛXÝØ\×Ù˜\™\ÊXÛÛ›ÛZXÊBˆ\Ú[™\Ü×Ú[˜ÛÛYO\›Ý[™
+XÛÛ›ÛZXÖÈœš]˜]TÝY™™Y›ØœÈ—JŒŠBˆ˜[œÚ]Ú[˜ÛÛYO\Ý[J[™K™Ù]
+›[ÛQ˜\™T™]™[YH‹
+H›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+›Ü\˜][Û˜[ŠJBˆ˜[œÚ]ØÛÜÝ\Ý[J[™K™Ù]
+›[ÛSÜ\˜][™ÐÛÜÝ‹
+H›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+›Ü\˜][Û˜[ŠJBˆZ\œÜÚ[˜ÛÛYO\Ý]K™Ù]
+˜Z\œÜ[ÛR[˜ÛÛYH‹
+Bˆ[ÛWÚ[˜ÛÛYO\Ý]VÈ›[ÛR[˜ÛÛYH—JØ\Ú[™\Ü×Ú[˜ÛÛYJÝ˜[œÚ]Ú[˜ÛÛYJØZ\œÜÚ[˜ÛÛYJÝÝ\š\ÛWÝ^
+Ý^Ü™\Ü™Ù]
+˜ÛÛXÝY‹
+Bˆ][]WÛXZ[[˜[˜ÙO\Ý]K™Ù]
+][]Y\È‹ßJK™Ù]
+œ™\Ü‹ßJK™Ù]
+›[ÛSXZ[[˜[˜ÙH‹
+Bˆ›ØYÛXZ[[˜[˜ÙO\›ØYÛXZ[[˜[˜ÙWÜ™\Ü
+
+K™Ù]
+›[ÛT™\]Z\™Y‹
+BˆØ\ÝWÜ™\ÜXØ[Ý[]WÝØ\ÝWØ˜[[˜ÙJ
+Bˆ™XÞXÛ[™×Ú[˜ÛÛYO]Ø\ÝWÜ™\Ü™Ù]
+œ™XÞXÛ[™Ô™]™[YS[Û‹
+Bˆ[ÛWÚ[˜ÛÛYJÏ\™XÞXÛ[™×Ú[˜ÛÛYBˆØ\ÝWØÛÜÝ]Ø\ÝWÜ™\Ü™Ù]
+›[ÛSÜ\˜][™ÐÛÜÝ‹
+BˆX[ØÛÜÝZX[ÜÙ\šXÙWÜ™\Ü
+XÛÛ›ÛZXÖÈÛÜšÜXÙ\È—JK™Ù]
+›[ÛTÝ\PÛÜÝ‹
+NÙYXØ][Û—ØÛÜÝYYXØ][Û—ÜÙ\šXÙWÜ™\Ü
+XÛÛ›ÛZXÖÈÛÜšÜXÙ\È—JK™Ù]
+›[ÛTÝ\Y\ÐÛÜÝ‹
+BˆÜ\˜][™×ØÛÜÝÏ^ÈœÙ\šXÙ\ÈŽœÝ]VÈ›[ÛQ^[œÙ\È—JÜX›X×Ü^\›Û
+ÚX[ØÛÜÝ
+ÙYXØ][Û—ØÛÜÝ›[Øš[]HŽ˜[œÚ]ØÛÜÝ›™]ÛÜšÜÈŽ][]WÛXZ[[˜[˜ÙJÝØ\ÝWØÛÜÝ
+Ü›ØYÛXZ[[˜[˜Ù_Bˆ[ÛÜ\˜][™×ØÛÜÝ\Ý[JÜ\˜][™×ØÛÜÝË˜[Y\Ê
+JBˆXÙYO[][šXÚ\[Ùš[˜[˜ÙWÜ™\Ü
+[ÛWÚ[˜ÛÛYK[ÛÜ\˜][™×ØÛÜÝ
+VÈ›[ÛQXÙ\šXÙH—Bˆ]˜Z[X›O\Ý]VÈ›[Û™^H—JÛ[ÛWÚ[˜ÛÛYBˆYÙ]Ü™\Ü\Ù]WÛ][šXÚ\[Ü›ÙÜ˜[WØYÙ]ÊÜ\˜][™×ØÛÜÝË]˜Z[X›JNØ]˜Z[X›OXYÙ]Ü™\ÜÈ˜Ø\Ú™[XZ[š[™È—Bˆ›ØYÛXZ[[˜[˜ÙWÜ™\Ü
+YÙ]Ü™\ÜÈœ›ÙÜ˜[\È—VÈ›™]ÛÜšÜÈ—VÈ™[™[™ÔÝ—KÌLY˜[˜ÙOUYJBˆY˜[˜ÙWÝ][]WÛ[™WØÛÛ™][ÛœÊYÙ]Ü™\ÜÈœ›ÙÜ˜[\È—VÈ›™]ÛÜšÜÈ—VÈ™[™[™ÔÝ—KÌL
+Bˆ›ØYÜ™\Ü\Ý]K™Ù]
+œ›ØYXZ[[˜[˜ÙT™\Ü‹ßJNÜÛÜ\›ØYÜ™\Ü™Ù]
+œÛÜ”ÙYÛY[È‹
+NÝÝ[\›ØYÜ™\Ü™Ù]
+œÙYÛY[È‹
+Bˆ˜XÚ[]Y\Ï\›ØYÜ™\Ü™Ù]
+™˜XÚ[]PÛÝ[‹
+NÝÛÜ›\›ØYÜ™\Ü™Ù]
+ÛÜ›‘˜XÚ[]Y\È‹
+BˆYˆ
+Ý[[™ÛÜ‹ÛX^
+KÝ[
+OKŒÍJHÜˆ
+˜XÚ[]Y\È[™ÛÜ›‹ÛX^
+K˜XÚ[]Y\ÊOKŒJN‚ˆÝ]VÈœÙ\šXÙ\È—O[X^
+KÝ]VÈœÙ\šXÙ\È—KLJNÙ]ŠØ[\ÈÛÛˆX[[š[ZY[ÈY™\šYÈ‹ˆØ[\È]\š[Ü˜Y\ÎˆÜÛÜŸKÞÝÝ[NÈYYšXÚ[ÜÈ0î˜›XÛÜÈ˜Z›ÈŒ	NˆÝÛÜ›ŸKÞÙ˜XÚ[]Y\ßKˆ[š]™[HÙ\šXÚ[ÜÈ][šXÚ\[\È˜Z˜H\ÝHš[˜[˜ÚX\ˆ™\\˜XÚ[Û™\ËˆŠBˆYOY[ÛÜ\˜][™×ØÛÜÝ
+ÙXÙYBˆ™][[ÛWÚ[˜ÛÛYKYYBˆYˆ]˜Z[X›OYXÙYN‚ˆÝ]VÈ›[Û™^H—OX]˜Z[X›KYXÙYBˆYˆXÙYN›][šXÚ\[ÙXÜ^[Y[
+
+Bˆ[ÙN‚ˆÈ[›Û™ÈH]YHÝXœ™H˜[[\ÈHÙ\šXÚ[ÎÈ›ÈÝY[HÛÛ[ÈØZ˜HHXœ™H\ÜÜÚXÚpìÛ‹‚ˆš[˜[˜ÙO\Ý]KœÙ]Y˜][
+™š[˜[˜ÙH‹™]×Ùš[˜[˜ÙJ
+JNÜ™\Ù\™O[X^
+[
+š[˜[˜ÙK™Ù]
+™X™\Ù\™H‹
+JJBˆ™\Ù\™WÝ\ÙY[Z[ŠXÙYKX^
+XÙYKX]˜Z[X›JK™\Ù\™JBˆYˆ™\Ù\™WÝ\ÙY[™]˜Z[X›JÜ™\Ù\™WÝ\ÙYYXÙYN‚ˆš[˜[˜ÙVÈ™X™\Ù\™H—O\™\Ù\™K\™\Ù\™WÝ\ÙYÜÝ]VÈ›[Û™^H—OX]˜Z[X›KYXÙYJÜ™\Ù\™WÝ\ÙYˆ][šXÚ\[ÙXÜ^[Y[
+
+NÙš[˜[˜ÙKœÙ]Y˜][
+™X™\Ù\™R\ÝÜžH‹×JK˜\[™
+È™^HŽ™^K˜[[Ý[Ž‹\™\Ù\™WÝ\ÙYœ™X\ÛÛˆŽˆ”Ù\šXÚ[ÈY[œÝX[H]YHŸJNÙ[š[˜[˜ÙVÈ™X™\Ù\™R\ÝÜžH—VÎ‹LBˆ]Š”™\Ù\˜HH]YH\XØYH‹ˆ‘[›Û™ÈH]YH\Ü0ìÈ	Ü™\Ù\™WÝ\ÙY‹H\˜HÛÛ\]\ˆ\ÈÝ[Ý\È][šXÚ\[\ËˆØ[È›ÝYÚYÎˆ	Ùš[˜[˜ÙVÉÙX™\Ù\™I×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[ÙN‚ˆÈ›ÈÛØœ™YÚ\›È[\0ëXÚ]ÎˆÙHYÛÝHHØZ˜HHØYHHØ\XÚYYHÙ\šXÚ[Èš[˜[˜ÚXYK‚ˆÚÜ˜[YXÙYKX]˜Z[X›BˆÝ]VÈ›[Û™^H—OLˆÜÜÏ[X^
+KZ[Š›Ý[™
+ÚÜ˜[ÎL
+JJBˆÝ]VÈœÙ\šXÙ\È—O[X^
+KÝ]VÈœÙ\šXÙ\È—K[ÜÜÊBˆÝ]VÈ˜\›Ý˜[—O[X^
+KÝ]VÈ˜\›Ý˜[—K[X^
+KÜÜËËÌŠJBˆ›ÜˆØ[ˆ[ˆÝ]K™Ù]
+™š[˜[˜ÙH‹ßJK™Ù]
+›][šXÚ\[Ø[œÈ‹×JN‚ˆYˆØ[‹™Ù]
+œÝ]\ÈŠOOH˜XÝ]™HŽ‚ˆØ[–È™[[œ]Y[[ÛÈ—O[Ø[‹™Ù]
+™[[œ]Y[[ÛÈ‹
+JÌBˆYˆØ[–È™[[œ]Y[[ÛÈ—OLŽœÝ]VÈœÙ\šXÙ\È—O[X^
+KÝ]VÈœÙ\šXÙ\È—KLJBˆ]Š”Ù\šXÚ[ÜÈÚ[ˆš[˜[˜ÚXXÚpìÛˆÛÛ\]H‹ˆ‘˜[\›Ûˆ	ÜÚÜ˜[‹H\˜H[Ø\ÝÈY[œÝX[ÈHÛØ™\\˜HØYHÛÜÜßH[ÜÈ\ÝH™XÝ\\˜\ˆØZ˜Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆÝ]VÈ›\Ý[Û—O[[Ûˆ]ŠXÝ]šYYH[\™\Ø\È‹ˆÛÛY\˜Ú[ÜÈ™[™Y\›ÛˆØXÝ]š]VÉÜØ[\É×_H[šYY\ÈÜˆ	ØXÝ]š]VÉÜ™]™[YI×N‹NÈ°ìÛZ[˜HYØYH	ØXÝ]š]VÉÜ^\›Û	×N‹Kˆ[\™\Ø\ÈÙ\œ˜Y\È\ÝHY\ÎˆØXÝ]š]VÉØÛÜÙY	×_Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ]Š˜[[˜ÙHY[œÝX[‹ˆ’[™Ü™\ÛÜÈ	Û[ÛWÚ[˜ÛÛYN‹H0­È›ÙÜ˜[X\ÈX›Û˜YÜÈ	ØYÙ]Ü™\ÜÉÜZY	×N‹H0­È[Ü˜H›ÙÜ˜[pè]XØH	ØYÙ]Ü™\ÜÉØ\œ™X\œÉ×N‹H0­ÈÝ[Ý\È	ÙXÙYN‹H0­ÈØZ˜Hš[˜[	ÜÝ]VÉÛ[Û™^I×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[Ý™WÚÝ\ÙZÛÊ
+BˆÛÛXÝØY\]™WÜ™[Ê
+Bˆ\]WÙÛÝ™\››Y[ØÞXÛJ
+BˆYˆ™]ˆ]Š”™\ÚpìÛˆÛØœ™HH\ÛÜ™\°ëXH‹‘[Ø\ÝÈY[œÝX[Ý\\˜HÜÈ[™Ü™\ÛÜÈ\ÜÛšX›\ÎÈ™]š\Ø\ˆÛÛ\›ÛZ\ÛÜÈHÙ\šXÚ[ÜËˆŠBˆ›ØÙ\Ü×ÙÛÝ™\››Y[Ù[XÝ[ÛŠ
+Bˆ›ØÙ\Ü×ÛX\šÙ]ÛÜ™\œÊ
+Bˆ›ØÙ\Ü×ÜÝ\WÛÜ™\œÊ
+Bˆ›ØÙ\Ü×ÜÜÛÙÚ\ÝXÜÊ
+Bˆ›Üˆ[ˆ\Ý
+Ý]VÈœ›Ú™XÝÈ—JN‚ˆYˆ™Ù]
+œÝ]\ÈŠOOHœ]\ØYHŽˆÛÛ[YBˆYˆ™Ù]
+œÝ]\ÈŠOOHœÝ\Ü[™YHŽ‚ˆYˆ›Ý™Ù]
+˜Ø]\ÙH‹ˆŠKœÝ\ÝÚ]
+‘˜[[ˆX]\šX[\ÈŠHÜˆZ\ÜÚ[™×ÛX]\šX[ÊÈ™[\ÙY—JÌJNˆÛÛ[YBˆÈœÝ]\È—OH˜ÛÛ˜]YHŽÜÈ˜Ø]\ÙH—OH’[œÝ[[ÜÈ™XÚXšYÜÎÈHÝXYš[HY[™HH˜X˜Z˜\ˆ‚ˆ]Š“Øœ˜H™X[YYHÜˆX˜\ÝXÚ[ZY[È‹ˆžÜÉÛX™[	×_H™XÚXšpìÈX]\šX[\ÈH™]ÛXH[]˜[˜ÙKˆŠBˆÏPÓÓ•PÕÔ”ÖÜÈ˜ÛÛ˜XÝÜˆ—WBˆ™^Ù[\ÙY\È™[\ÙY—JÌBˆZ\ÜÚ[™Ï[Z\ÜÚ[™×ÛX]\šX[Ê™^Ù[\ÙY
+BˆYˆZ\ÜÚ[™Î‚ˆÈœÝ]\È—OHœÝ\Ü[™YH‚ˆÈ˜Ø]\ÙH—OH‘˜[[ˆX]\šX[\ÎˆŠÈ‹‹š›Ú[ŠPUT’PSÓSQTÖÚÙ^WH›ÜˆÙ^H[ˆZ\ÜÚ[™ÊBˆ]Š“Øœ˜H[[Ü˜YHÜˆ[œÝ[[ÜÈ‹ˆžÜÉÛX™[	×_H[ˆÜÉÞ	×JÌ_KÜÉÞI×JÌ_NˆÜÉØØ]\ÙI×_KˆY0ëHÜÈX]\šX[\È˜[[\È\ÙHH\š™]HHHØœ˜KˆŠBˆÛÛ[YBˆ\™Ù]ZY\È˜ÛÜÝ—JŠŒŠËŽ
+›™^Ù[\ÙYÜÈ™\˜][Ûˆ—JBˆYO[X^
+\™Ù]ZY\ÈœZY—JBˆYˆ›Ý™Ù]
+œš]˜]TZYŠH[™YOœÝ]VÈ›[Û™^H—N‚ˆÈœÝ]\È—OHœÝ\Ü[™YHŽÈÈ˜Ø]\ÙH—OH•\ÛÜ™\°ëXH[œÝYšXÚY[H\˜H[YÛÈÜˆ]˜[˜ÙHŽÈÛÛ[YBˆX]\šX[ØÛÜÝ[X]\šX[Ù[J™^Ù[\ÙY
+BˆÛÛœÝ[YWÛX]\šX[ÊX]\šX[ØÛÜÝ
+Bˆ›ÜˆÙ^K[[Ý[[ˆX]\šX[ØÛÜÝš][\Ê
+NœÈ›X]\šX[Õ\ÙY—VÚÙ^WO\È›X]\šX[Õ\ÙY—K™Ù]
+Ù^K
+JØ[[Ý[ˆYˆ›Ý™Ù]
+œš]˜]TZYŠNˆÝ]VÈ›[Û™^H—KOYYBˆYˆYOŒˆÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VÜÈ˜ÛÛ˜XÝÜˆ—WJÏYYBˆÈœZY—O]\™Ù]ZYˆÈ™[\ÙY—O[™^Ù[\ÙYˆÈœ›ÙÜ™\ÜÈ—O[Z[ŠK™Ù]
+š[š]X[›ÙÜ™\ÜÈ‹
+JÊK\™Ù]
+š[š]X[›ÙÜ™\ÜÈ‹
+JJ›™^Ù[\ÙYÜÈ™\˜][Ûˆ—JBˆÝYÙOZ[
+Èœ›ÙÜ™\ÜÈ—J›[ŠÈœÝYÙ\È—JJBˆÈœÝYÙR[™^—O[Z[Š[ŠÈœÝYÙ\È—JKLKÝYÙJBˆYˆÈœ›ÙÜ™\ÜÈ—OLN‚ˆ]X[]O\›Ý[™
+ÖÈœ]X[]H—JŒL
+BˆYˆÈšÚ[™—OOHœ›ØYŽ‚ˆÝ]VÈœ›ØYÈ—K˜\[™
+ÜÈž—KÈžH—WJBˆÝ]VÈ›[ÛR[˜ÛÛYH—JÏNBˆXZ[[˜[˜ÙO\›Ý[™
+Ì
+ŠKŒ‹XÖÈœ]X[]H—JJBˆÝ]VÈ›[ÛQ^[œÙ\È—JÏ[XZ[[˜[˜ÙBˆÝ]VÈœ›ØY\ÜÙ]È—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—Kœ]X[]HŽœ]X[]K›[ÛPÛÜÝŽ›XZ[[˜[˜Ù_JBˆ[YˆÈšÚ[™—OOHšÛYHŽ‚ˆ^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆšÛYH‹›˜[YHŽˆ•š]šY[™\È[ˆØ[HY]˜H‹›]™[ŽŒK›ØØÝ\[ÈŽŒ˜Ø\XÚ]HŽŒŽœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]_NÈÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ŠBˆ™\ÚY[Ï[Z[ŠŽX^
+Ý]VÈš›ØœÈ—K\Ý]VÈœÜ[][Ûˆ—J‹ŠJNÈ–È›ØØÝ\[È—O\›Ý[™
+™\ÚY[ÊNÈÝ]VÈœÜ[][Ûˆ—JÏ\›Ý[™
+™\ÚY[ÊNÈÝ]VÈ›[ÛR[˜ÛÛYH—JÏ\›Ý[™
+™\ÚY[ÊŒÊBˆ]Š”š[Y\›ÜÈÙØ\™\ÈÙH]Y[ˆ‹ˆžÜ›Ý[™
+™\ÚY[Ê_H™\ÚY[\ÈØÝ\\›Ûˆ\ÈY]˜\Èš]šY[™\ÎÈXHY[™[ˆXØÙ\ÛÈšX[ˆŠBˆ[YˆÈšÚ[™—OOHœÚÜŽ‚ˆZ[[™Ï^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆœÚÜ‹›˜[YHŽˆ“Y]›ÈÛÛY\˜Ú[È‹›]™[ŽŒK›ØØÝ\[ÈŽŒœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]_BˆÜ[š[™×ØØ\][[Z[ŠLŒX^
+Ý]VÈœš]˜]PØ\][—JJNÜÝ]VÈœš]˜]PØ\][—KO[Ü[š[™×ØØ\][ˆZ[[™ÖÈ˜\Ú[™\ÜÈ—O[™]×Ø\Ú[™\ÜÊZ[[™ËL‹Ü[š[™×ØØ\][
+NÜÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+Z[[™ÊNÜÝ]VÈš›ØœÈ—JÏLL‚ˆ[YˆÈšÚ[™—OOH™\ÝŽ‚ˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ™\Ý‹›˜[YHŽˆ‘\0ìÜÚ]È][šXÚ\[‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹˜Ø\XÚ]PYYŽLœ]X[]HŽœ]X[]_JBˆ\ÝÚYYˆ™\Ý^ÜÉÞ	×_K^ÜÉÞI×_H‚ˆÝ]VÈœÝ\H—KœÙ]Y˜][
+™\ÝÈ‹×JK˜\[™
+ÈšYŽ™\ÝÚYžŽœÈž—KžHŽœÈžH—K˜Ø\XÚ]HŽL›X™[Žˆ‘\0ìÜÚ]È][šXÚ\[‹œÝØÚÜÈŽžÛ˜[YNžÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTßH›Üˆ˜[YH[ˆÓÓ•PÕÔ—ÓSQTß_JBˆÝ]VÈœÝ\H—VÈœÝÜ˜YÙPØ\XÚ]H—JÏMLÜÝ]VÈ›[ÛQ^[œÙ\È—JÏLNˆ]Š‘\0ìÜÚ]ÈÙðë\ÝXÛÈXš[]YÈ‹ˆ‘[\0ìÜÚ]ÈXœ™HÛÛˆL[šYY\ÈHØ\XÚYYYXÚ[Û˜[ˆÜ\˜XÚpìÛˆHÙYÝ\šYY	NÛY\ËˆŠBˆ[YˆÈšÚ[™—OOH˜\ÑØ\˜YÙHŽ‚ˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ˜\ÑØ\˜YÙH‹›˜[YHŽˆÛØÚ\˜H][šXÚ\[‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹˜\Ð˜^PØ\XÚ]HŽ›[ÛPÛÜÝŽLœ]X[]HŽœ]X[]_JBˆÝ]VÈ›[ÛQ^[œÙ\È—JÏMLˆ]ŠÛØÚ\˜HXš[]YH‹ˆ“HÛØÚ\˜HÙœ™XÙHÝX]›È^˜\È\˜HÛÛXÝ]›ÜÈÛÛˆXØÙ\ÛÈšX[ˆX[[š[ZY[È	LÛY\ÎÈØYH™Z0ëXÝ[È[Ú˜YÈZÜœ˜H	ÌÛY\Èœ™[H[[]Z[\ˆ^\››ËˆŠBˆ[YˆÈšÚ[™—OOHœÝÙ\”[Ž‚ˆ[^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆœÝÙ\”[‹›˜[YHŽˆÙ[˜[[0êXÝšXØH‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒN™Ù[™\˜][Û’ÝÈŽŽL›[ÛPÛÜÝŽŒBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+[
+NÜÝ]VÈš›ØœÈ—JÏLNÜÝ]VÈ›[ÛQ^[œÙ\È—JÏMŒˆ]ŠÙ[˜[[0êXÝšXØHXš[]YH‹ˆ\ÜH\ÝHLÕÈÚHÙHÛÛ™XÝHH\È™Y\È[0êXÝšXØHHHYÝXKˆÜ\˜XÚpìÛˆ	ŒÛY\ÎÈNY\ÝÜÈ0êXÛšXÛÜËˆŠBˆ[YˆÈšÚ[™—OOHØ]\”[Ž‚ˆ[^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆØ]\”[‹›˜[YHŽˆ”[HÝXš[^˜YÜ˜H‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒL‹™X]Y[LÑ^HŽŒŒŒ›[ÛPÛÜÝŽŒÍBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+[
+NÜÝ]VÈš›ØœÈ—JÏLLŽÜÝ]VÈ›[ÛQ^[œÙ\È—JÏLÍˆ]Š”[HÝXš[^˜YÜ˜HXš[]YH‹ˆ•˜]H\ÝHŒŒp¬ËÙ0ëXHÚHY[™HÛÛ™^[Û™\ÈH[XÝšXÚYYHYÝXKˆÜ\˜XÚpìÛˆ	ÍÛY\ÎÈLˆY\ÝÜÈ0êXÛšXÛÜËˆŠBˆ[YˆÈšÚ[™—OOHØ\Ý]Ø]\”[Ž‚ˆ[^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆØ\Ý]Ø]\”[‹›˜[YHŽˆ”[H\\˜YÜ˜H‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒM™X]Y[LÑ^HŽŒŒ›[ÛPÛÜÝŽŒÎBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+[
+NÜÝ]VÈš›ØœÈ—JÏLMÜÝ]VÈ›[ÛQ^[œÙ\È—JÏLÎˆ[YˆÈšÚ[™—OOHœ™XÞXÛ[™Ô[Ž‚ˆ˜XÚ[]O^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆœ™XÞXÛ[™Ô[‹›˜[YHŽˆ”[H][šXÚ\[H™XÚXÛZ™H‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒM‹œ›ØÙ\ÜÚ[™ÕÛœÑ^HŽŒKŒK›[ÛPÛÜÝŽLBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+˜XÚ[]JNÜÝ]VÈš›ØœÈ—JÏLM‚ˆ]Š”[HH™XÚXÛZ™HXš[]YH‹”YYHÛ\ÚYšXØ\ˆ\ÝHKHÙ0ëXNˆ™XÝ\\˜HÍIHHÈ™XÛÛXÝYÈH™[™HX]\šX[™XÝ\\˜YËˆÜ\˜XÚpìÛˆ	LÛY\ÎÈMˆY\ÝÜËˆŠBˆ[YˆÈšÚ[™—OOH›[™š[Ž‚ˆ˜XÚ[]O^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ›[™š[‹›˜[YHŽˆ”™[[›ÈØ[š]\š[È][šXÚ\[‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒL‹˜Ø\XÚ]PYYŽŒN›[ÛPÛÜÝŽŒBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+˜XÚ[]JNÜÝ]VÈš›ØœÈ—JÏLL‚ˆ]ŠÙ[HØ[š]\šXHXš[]YH‹ˆ‘[Y]›È™[[›È[\0ëXHH\ÜÜÚXÚpìÛˆš[˜[[ˆKŽÛ™[Y\ÈHÝ[XHLˆY\ÝÜËˆÜ\˜XÚpìÛˆ	ŒÛY\ËˆŠBˆ]Š”[H\\˜YÜ˜HXš[]YH‹ˆ•˜]H\ÝHŒp¬ËÙ0ëXHÚH\Ý0èHÛÛ™XÝYHHÛØXØ\Ë[™\™ðëXHHYÝXKˆÜ\˜XÚpìÛˆ	ÎÛY\ÎÈMY\ÝÜÈ0êXÛšXÛÜËˆŠBˆ[YˆÈšÚ[™—OOHšÝ[Ž‚ˆÜ[š[™Ï[Z[ŠLX^
+Ý]K™Ù]
+œš]˜]PØ\][‹
+JJNÜÝ]VÈœš]˜]PØ\][—KO[Ü[š[™ÂˆÝ[^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆšÝ[‹›˜[YHŽˆ’Ý[[™\[™Y[H‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒLœ›ÛÛ\ÈŽŒ˜™YÈŽ›šYÚT˜]HŽŽL›[ÛQÝY\ÝÈŽŒ›[ÛQÝY\ÝšYÚÈŽŒ˜\Ú[™\ÜÈŽžÊŠ›™]×Ø\Ú[™\ÜÊÈžŽœÈž—KžHŽœÈžH—K›˜[YHŽˆ’Ý[[™\[™Y[HŸKLÜ[š[™ÊKØYÙHŽŒL™š^YÛÜÝŽŒŒ˜ÛÜÝ\™S[ÛÈŽŒ›\ÝÝ\š\ÛU^ŽŒ_BˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+Ý[
+NÜÝ]VÈš›ØœÈ—JÏLLˆ]Š’Ý[š]˜YÈXš[]YÈ‹ˆXœšpìÈÛÛˆXš]XÚ[Û™\Ë^˜\ÈHL[\[ÜËˆ\[™HHYØY\ËXØÙ\ÛÈšX[HØZ˜Hš]˜YH\˜HÙYÝZ\ˆÜ\˜[™ËˆŠBˆ[YˆÈšÚ[™—OOH˜Z\œÜŽ‚ˆZ\œÜ^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ˜Z\œÜ‹›˜[YHŽˆY\›ÜY\È™YÚ[Û˜[‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒNœ\ÜÙ[™Ù\Ø\XÚ]HŽŽœ[Ø^S[Ý™[Y[ÈŽŒL‹›[ÛT\ÜÙ[™Ù\œÈŽŒ›[ÛP\œš]˜[ÈŽŒ›[ÛQ\\\™\ÈŽŒ›[ÛQ›YÚÈŽŒ˜Z\œÜ™YR[˜ÛÛYHŽŒ›[ÛPÛÜÝŽŒ›Ü\˜][Û˜[Ž‘˜[Ù_BˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+Z\œÜ
+NÜÝ]VÈš›ØœÈ—JÏLNÜÝ]VÈ›[ÛQ^[œÙ\È—JÏMŒˆ]ŠY\›ÜY\È™YÚ[Û˜[Xš[]YÈ‹ˆ”\ÝHH\›Z[˜[\Ø[ˆHYX˜\ËˆØ\XÚYY\ØZ™\›ÜÈHLˆY[ÜÈÜˆY\ÎÈNY\ÝÜÈH	ŒÛY\ÈHÜ\˜XÚpìÛ‹ˆŠBˆ[YˆÈšÚ[™—OOHœÜŽ‚ˆÜ^ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆœÜ‹›˜[YHŽˆ•\›Z[˜[ÜX\šXH‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]Kš›Ø”ÛÝÈŽŒL‹˜Ø\™ÛÐØ\XÚ]HŽL˜Ø\™ÛÔÝÜ™YŽŒœÚ\Ø\XÚ]HŽŒNœÚ\Ñ\\YŽŒ›\ÝÚ\^HŽŒ›[ÛPÛÜÝŽŒÌŒ™™YR[˜ÛÛYHŽŒBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+Ü
+NÜÝ]VÈš›ØœÈ—JÏLLŽÜÝ]VÈ›[ÛQ^[œÙ\È—JÏLÌŒˆ]Š•\›Z[˜[ÜX\šXHXš[]YH‹ˆ“]Y[HH][ÈHL[šYY\ÈXšY\ÜÎÈLˆY\ÝÜÈÙðë\ÝXÛÜÈHÛÜÝÈÜ\˜]]›È	ÌŒÛY\Ëˆ™\]ZY\™H]HšX[\˜H™XÚXš\ˆØ\™Ø\ËˆŠBˆ[YˆÈšÚ[™—OOH˜\ÔÝÜŽ‚ˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ˜\ÔÝÜ‹›˜[YHŽˆ”\˜YHHÛÛXÝ]›È‹›]™[ŽŒKœÝ]\ÈŽˆšXš[]YÈ‹œ]X[]HŽœ]X[]K›[ÛPÛÜÝŽŒ_JBˆÝ]VÈ›[ÛQ^[œÙ\È—JÏLBˆ]Š”\˜YHHÛÛXÝ]›ÈXš[]YH‹ˆ“H\˜YHXœšpìÈ[ÈHH°ëXHÛÛˆØ[YYÜ]X[]_IKˆÜ\˜XÚpìÛˆHX[[š[ZY[È	KÛY\ËˆŠBˆ[YˆÈšÚ[™—OOH˜Ú]šXÈŽ‚ˆÜ\˜][™×ØÛÜÝ\›Ý[™
+L
+ŠKXÖÈœ]X[]H—J‹JJBˆÛÝ™\˜YÙO\›Ý[™
+JÍJ˜ÖÈœ]X[]H—JBˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ˜Ú]šXÈ‹›˜[YHŽˆÙ[›ÈHØ[Y‹›]™[ŽŒK›ØØÝ\[ÈŽŒš›Ø”ÛÝÈŽŒM‹œÝ]\ÈŽˆšXš[]YÈ‹›[ÛPÛÜÝŽ›Ü\˜][™×ØÛÜÝœ]X[]HŽœ]X[]_JNÈÝ]VÈ›[ÛQ^[œÙ\È—JÏ[Ü\˜][™×ØÛÜÝÈÝ]VÈœÙ\šXÙ\È—O[Z[ŠLÝ]VÈœÙ\šXÙ\È—JØÛÝ™\˜YÙJNÈÝ]VÈ˜\›Ý˜[—O[Z[ŠLÝ]VÈ˜\›Ý˜[—JÌÊBˆ]ŠÙ[›ÈHØ[YXš[]YÈ‹ˆ’[œÜXØÚpìÛˆ\›Ø˜YHÛÛˆØ[YYÜ]X[]_IKˆÛØ™\\˜H
+ÞØÛÝ™\˜YÙ_H[ÜÎÈÜ\˜XÚpìÛˆHX[[š[ZY[È	ÛÜ\˜][™×ØÛÜÝKÛY\ËˆŠBˆ[YˆÈšÚ[™—OOHœØÚÛÛŽ‚ˆÜ\˜][™×ØÛÜÝNŒˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™ŽˆœØÚÛÛ‹›˜[YHŽˆ‘\ØÝY[Hš[X\šXH][šXÚ\[‹›]™[ŽŒK›ØØÝ\[ÈŽŒš›Ø”ÛÝÈŽŒL‹˜Û\ÜÜ›ÛÛ\ÈŽœÝ]\ÈŽˆšXš[]YÈ‹›[ÛPÛÜÝŽ›Ü\˜][™×ØÛÜÝœ]X[]HŽœ]X[]_JNÜÝ]VÈš›ØœÈ—JÏLLŽÜÝ]VÈ›[ÛQ^[œÙ\È—JÏ[Ü\˜][™×ØÛÜÝˆ]Š‘\ØÝY[HXš[]YH‹ÝX]›È][\È\˜HMˆ\ÝYX[\ÈÝ[˜ÚX[\Ëˆ[][šXÚ\[Èš[˜[˜ÚXH	ŒÛY\ÎÈHØ\XÚYYÜ\˜]]˜H\[™HHØÙ[\ËÙ\šXÚ[ÜÈH]\ËˆŠBˆ[YˆÈšÚ[™—OOH™š\™TÝ][ÛˆŽ‚ˆÝ]VÈ˜Z[[™ÜÈ—K˜\[™
+ÈžŽœÈž—KžHŽœÈžH—KšÚ[™Žˆ™š\™TÝ][Ûˆ‹›˜[YHŽˆÝX\[H›ÛX™\›ÜÈ][šXÚ\[‹›]™[ŽŒK›ØØÝ\[ÈŽŒš›Ø”ÛÝÈŽŒL‹™š\™Q[™Ú[™PØ\XÚ]HŽŒË™\Ü]Ú™XYQ^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆšXš[]YÈ‹›[ÛPÛÜÝŽŽMLœ]X[]HŽœ]X[]_JNÜÝ]VÈš›ØœÈ—JÏLLŽÜÝ]VÈ›[ÛQ^[œÙ\È—JÏNMLˆ]ŠÝX\[H›ÛX™\›ÜÈXš[]YÈ‹‘[ÝX\[Ùœ™XÙHLˆY\ÝÜÈH\ÝH™\ÈÝXÚ[Û™\ÈHÝX]›È›ÛX™\›ÜËˆÚ[ˆ\œÛÛ˜[ÝX[YšXØYÈÈ]H›ÈYYH™\ÜÛ™\ŽÈÜ\˜XÚpìÛˆHX[[š[ZY[È	MLÛY\ËˆŠBˆYˆÈšÚ[™—H›Ý[ˆ
+˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÜ‹˜Z\œÜ‹šÝ[‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠNˆ]ŠˆžÜÉÛX™[	×_HXš[]YÈ‹ˆžÜÉØÛÛ˜XÝÜ‰×_H[™YðìÈHØœ˜HÛÛˆØ[YYÜ]X[]_IKˆÝHX[[š[ZY[ÈY™XÝH[˜[[˜ÙH][šXÚ\[ˆˆYˆÈšÚ[™—OOHœ›ØYˆ[ÙHˆžÜÉØÛÛ˜XÝÜ‰×_HÛÛ\]0ìÈH[œÜXØÚpìÛˆH[™YðìÈHØœ˜HÛÛˆØ[YYÜ]X[]_IKˆŠBˆÝ]VÈœ›Ú™XÝÈ—Kœ™[[Ý™J
+BˆYˆ^ILÌOL[™Ý]VÈœ›Ú™XÝÈ—Nˆ]Š”™]š\ÚpìÛˆHÛÛ˜]ÜÈ‹ˆžÛ[ŠÝ]VÉÜ›Ú™XÝÉ×J_HØœ˜JÊHXÝ]˜JÊKˆ[]˜[˜ÙH\[™H[Y[\ÈHHÜÈYÛÜÈ\ÜÛšX›\ËˆŠB‚™YˆX[ÜÙ\šXÙWÜ™\Ü
+ÛÜšÜXÙ\ÏS›Û™KY˜[˜ÙOQ˜[ÙJN‚ˆX[\Ý]KœÙ]Y˜][
+™YXØ][Ûˆ‹È›\Ý›ØÙ\ÜÙY[ÛŽŠÝ]K™Ù]
+™^H‹JKLJKËÌÌJBˆÝ]KœÙ]Y˜][
+šX[‹È›\ÝY˜[˜ÙY^HŽ“›Û™K›\Ý[\XÝ[ÛŽ‹LKØ]\”ØY™]R\ÝÜžHŽžß_JBˆÛY\ÏVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒBˆÛÜšÜXÙ\Ï]ÛÜšÜXÙ\ÈYˆÛÜšÜXÙ\È\È›Ý›Û™H[ÙHÛÛ[]]WÛ[Ù[
+
+K™Ù]
+ÛÜšÜXÙ\È‹×JBˆÝY™^ÊË™Ù]
+žŠKË™Ù]
+žHŠJNÈ›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+šÚ[™ŠOOH˜Ú]šXÈŸBˆ][]Y\Ï\Ý]K™Ù]
+][]Y\È‹ßJK™Ù]
+œ™\Ü‹ßJBˆX]JÝ]K™Ù]
+˜Û[X]H‹ßJK™Ù]
+šX]›Ü™XØ\ÝŠHÜˆßJBˆX]Ü\—Ù^OJX]™Ù]
+˜XÝX[X[Ø\Ù\È‹X]™Ù]
+™^XÝYX[Ø\Ù\È‹
+JKÛX^
+KX]™Ù]
+™\˜][Û‘^\È‹JJJHYˆX]™Ù]
+˜XÝ]™HŠH[ÙHˆ\ÝÜžOZX[œÙ]Y˜][
+Ø]\”ØY™]R\ÝÜžH‹ßJBˆYˆY˜[˜ÙH[™X[™Ù]
+›\ÝY˜[˜ÙY^HŠHO\Ý]K™Ù]
+™^HŠN‚ˆ›ÜˆÛYH[ˆÛY\Î‚ˆÙ^OYˆžÚÛYVÉÞ	×_KÚÛYVÉÞI×_H‚ˆÙ\™YZÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹
+Bˆ™X]YZÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+BˆØ[\O[Z[ŠÙ\™Y™X]Y
+KÌLˆØ[\\ÏZ\ÝÜžKœÙ]Y˜][
+Ù^KÜØ[\WJŒÌ
+NÜØ[\\Ë˜\[™
+Ø[\JNÚ\ÝÜžVÚÙ^WO\Ø[\\ÖËLÌ—BˆX[È›\ÝY˜[˜ÙY^H—O\Ý]K™Ù]
+™^HŠBˆÛ[šXÜÏV×Bˆ›ÜˆZ[[™È[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆZ[[™Ë™Ù]
+šÚ[™ŠHOH˜Ú]šXÈˆÜˆZ[[™Ë™Ù]
+œÝ]\ÈŠH[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠN˜ÛÛ[YBˆÛÜšÜXÙO\ÝY™‹™Ù]
+
+Z[[™Ë™Ù]
+žŠKZ[[™Ë™Ù]
+žHŠJKßJNÜ[ÜO[X^
+[
+ÛÜšÜXÙK™Ù]
+œÝY™™Y›ØœÈ‹
+JJBˆXØÙ\ÜÏXZ[[™Ë™Ù]
+][]PXØÙ\ÜÈ‹ßJNÝ][]O[Z[ŠXØÙ\ÜË™Ù]
+œÝÙ\”Ù\™YÝ‹
+KXØÙ\ÜË™Ù]
+Ø]\”Ù\™YÝ‹
+KXØÙ\ÜË™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+JKÌL
+›X^
+Z[ŠK›Ø]
+Ý]K™Ù]
+™š[˜[˜ÙH‹ßJK™Ù]
+œ›ÙÜ˜[PYÙ]È‹ßJK™Ù]
+œÙ\šXÙ\Ñ[™[™Ñ˜XÝÜˆ‹JJJJBˆÛ[šXÜË˜\[™
+È˜Z[[™ÈŽ˜Z[[™Ë›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹Ù[›ÈHØ[YŠKœÝY™ˆŽœ[ÜK][]HŽ][]Kˆœš[X\žPØ\XÚ]HŽœ[ÜJŒ‹ŒŠ][]K\™Ù[Ø\XÚ]HŽœ[ÜJ‹ŒÍJ][]Kœš[X\žT™[XZ[š[™ÈŽœ[ÜJŒ‹ŒŠ][]K\™Ù[™[XZ[š[™ÈŽœ[ÜJ‹ŒÍJ][]KˆœÙ\™YŽŒ\™Ù[Ù\™YŽŒœ]Y[ÈŽŒ˜]™[Z[]\ÈŽ–×_JBˆÜ[][Û[X^
+KÝ[JX^
+‹™Ù]
+›ØØÝ\[È‹
+JH›Üˆˆ[ˆÛY\ÊJNØ˜\ÙWÙ[X[™LÝ\™Ù[Ù[X[™LÜš[X\žWÜÙ\™YLÝ\™Ù[ÜÙ\™YLØ\™X\ÏV×Bˆ›ÜˆÛYH[ˆÛY\Î‚ˆÙ^OYˆžÚÛYVÉÞ	×_KÚÛYVÉÞI×_HŽÜØ[\\ÏZ\ÝÜžK™Ù]
+Ù^K×JBˆYˆ›ÝØ[\\Î‚ˆØY™]O[Z[ŠÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹
+KÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+JKÌLÜØ[\\ÏVÜØY™]WJŒÌˆØY™]O\Ý[JØ[\\ÖËLÌ—JKÛX^
+K[ŠØ[\\ÊJNÝØ]\—Üš\ÚÏLK\ØY™]BˆØØÝ\[Ï[X^
+ÛYK™Ù]
+›ØØÝ\[È‹
+JNÜÙ]Ù\—Üš\ÚÏLKZÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+KÌLˆ™YY[ØØÝ\[Ê‹ŒJŠJÝØ]\—Üš\ÚÊ‹JÜÙ]Ù\—Üš\ÚÊ‹ŒJBˆ\™Ù[Û™YY[ØØÝ\[Ê‹Œ
+ÚX]Ü\—Ù^J›ØØÝ\[ËÜÜ[][Û‚ˆ˜\ÙWÙ[X[™
+Ï[™YYÝ\™Ù[Ù[X[™
+Ï]\™Ù[Û™YYˆÚÚXÙ\ÏV×Bˆ›ÜˆÛ[šXÈ[ˆÛ[šXÜÎ‚ˆZ[[™ÏXÛ[šXÖÈ˜Z[[™È—NÜ]\›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+Z[[™ÖÈž—KZ[[™ÖÈžH—JJBˆYˆ›Ý]˜ÛÛ[YBˆZ[]\Ï\›Ý[™
+X^
+[Š]
+KLJJŒ‹JÍ
+BˆYˆZ[]\ÏMN˜ÚÚXÙ\Ë˜\[™
+
+Z[]\ËÛ[šXÊJBˆYˆÚÚXÙ\Î‚ˆZ[]\ËÛ[šXÏ[Z[ŠÚÚXÙ\ËÙ^O[[X™H›ÝÎŠ›ÝÖÌK›ÝÖÌWVÈ›˜[YH—JJBˆÙ\™Y[Z[Š™YYÛ[šXÖÈœš[X\žT™[XZ[š[™È—JNØÛ[šXÖÈœš[X\žT™[XZ[š[™È—KO\Ù\™YØÛ[šXÖÈœÙ\™Y—JÏ\Ù\™YØÛ[šXÖÈœ]Y[È—JÏLNØÛ[šXÖÈ˜]™[Z[]\È—K˜\[™
+Z[]\ÊNÜš[X\žWÜÙ\™Y
+Ï\Ù\™Yˆ\™Ù[[Z[Š\™Ù[Û™YYÛ[šXÖÈ\™Ù[™[XZ[š[™È—JNØÛ[šXÖÈ\™Ù[™[XZ[š[™È—KO]\™Ù[ØÛ[šXÖÈ\™Ù[Ù\™Y—JÏ]\™Ù[Ý\™Ù[ÜÙ\™Y
+Ï]\™Ù[ˆ[ÙNœÙ\™YLÝ\™Ù[Lˆ\™X\Ë˜\[™
+È›˜[YHŽšÛYK™Ù]
+›˜[YH‹ˆ˜\œš[ÈÚÛYVÉÞ	×JÌ_KÚÛYVÉÞI×JÌ_HŠKœÜ[][ÛˆŽ›ØØÝ\[Ë˜]™[Z[]\ÈŽ›Z[]\ÈYˆÚÚXÙ\È[ÙH›Û™KØ]\”š\ÚÔÝŽœ›Ý[™
+Ø]\—Üš\ÚÊŒL
+Kœš[X\žQ[X[™Žœ›Ý[™
+™YYJKœš[X\žTÙ\™YŽœ›Ý[™
+Ù\™YJKØZ][™ÈŽœ›Ý[™
+X^
+™YY\Ù\™Y
+KJK\™Ù[[X[™Žœ›Ý[™
+\™Ù[Û™YYJK\™Ù[[œÙ\™YŽœ›Ý[™
+X^
+\™Ù[Û™YY]\™Ù[
+KJ_JBˆ˜XÚÛÙÏ[X^
+›Ø]
+X[™Ù]
+œš[X\žP˜XÚÛÙÈ‹
+JJNÜ[™[™ÏX˜\ÙWÙ[X[™
+Ø˜XÚÛÙÎÜš[X\žWÜÙ\™Y[Z[Šš[X\žWÜÙ\™Y[™[™ÊBˆ[œÙ\™Y[X^
+[™[™Ë\š[X\žWÜÙ\™Y
+NÝ\™Ù[Ý[œÙ\™Y[X^
+\™Ù[Ù[X[™]\™Ù[ÜÙ\™Y
+BˆYˆY˜[˜ÙH[™X[™Ù]
+›\Ý]Y]YQ^HŠHO\Ý]K™Ù]
+™^HŠN‚ˆX[Èœš[X\žP˜XÚÛÙÈ—O[Z[ŠÜ[][ÛŠ‹ŒK[œÙ\™Y
+NÚX[È›\Ý]Y]YQ^H—O\Ý]K™Ù]
+™^HŠBˆ[ÛJÝ]K™Ù]
+™^H‹JKLJKËÌÌˆYˆ[ÛšX[™Ù]
+›\Ý[\XÝ[Û‹LJH[™
+[™[™È[™š[X\žWÜÙ\™YÜ[™[™ÏHÜˆ\™Ù[Ù[X[™[™\™Ù[ÜÙ\™YÝ\™Ù[Ù[X[™JN‚ˆÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆYˆš[X\žWÜÙ\™YÛX^
+K[™[™ÊOÜˆ\™Ù[ÜÙ\™YÛX^
+K\™Ù[Ù[X[™
+OŒÍNœÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆ]Š‘[X[™HØ[š]\šXHÚ[ˆÝXœš\ˆ‹ˆ“H™Y][™pìÈÜ›Ý[™
+š[X\žWÜÙ\™Y
+_HHÜ›Ý[™
+[™[™Ê_HÛÛœÝ[\Èš[X\šX\ÈHÜ›Ý[™
+\™Ù[ÜÙ\™Y
+_HHÜ›Ý[™
+\™Ù[Ù[X[™
+_H\™Ù[˜ÚX\Ëˆ\ÈÛÛ\È™\Ú[Û˜[ˆÜÈÙ\šXÚ[ÜÈ][šXÚ\[\ËˆŠBˆX[È›\Ý[\XÝ[Û—O[[Ûˆ\™XWÜ›ÝÜÏ\ÛÜY
+\™X\ËÙ^O[[X™HNŠXVÈØZ][™È—KXVÈ\™Ù[[œÙ\™Y—KVÈ›˜[YH—JJBˆ[ÛWÜÝ\Y\Ï\›Ý[™
+š[X\žWÜÙ\™Y
+‹JŒÌ
+Ý\™Ù[ÜÙ\™Y
+Œ‹
+ŒÌ
+Bˆ[^YYÜš\ÚÏLˆ›ÜˆÛYH[ˆÛY\Î‚ˆÙ^OYˆžÚÛYVÉÞ	×_KÚÛYVÉÞI×_HŽÜØ[\\ÏZ\ÝÜžK™Ù]
+Ù^KÛZ[ŠÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø]\”Ù\™YÝ‹
+KÛYK™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+JKÌLJŒÌ
+Bˆ[^YYÜš\ÚÊÏJK\Ý[JØ[\\ÖËLÌ—JKÛX^
+K[ŠØ[\\ÖËLÌ—JJJJšÛYK™Ù]
+›ØØÝ\[È‹
+Bˆ™]\›ˆÈ™^HŽœÝ]K™Ù]
+™^H‹JKœÜ[][ÛˆŽœÜ[][Û‹œš[X\žHŽžÈ™[X[™\‘^HŽœ›Ý[™
+[™[™ËJKœÙ\™Y\‘^HŽœ›Ý[™
+š[X\žWÜÙ\™YJK˜Ø\XÚ]T\‘^HŽœ›Ý[™
+Ý[JÖÈœš[X\žPØ\XÚ]H—H›ÜˆÈ[ˆÛ[šXÜÊKJKØZ]\ÝŽœ›Ý[™
+[œÙ\™YJK˜ÛÝ™\˜YÙTÝŽœ›Ý[™
+Z[ŠLš[X\žWÜÙ\™YÛX^
+K[™[™ÊJŒL
+J_Kˆ\™Ù[ŽžÈ™[X[™\‘^HŽœ›Ý[™
+\™Ù[Ù[X[™JKœÙ\™Y\‘^HŽœ›Ý[™
+\™Ù[ÜÙ\™YJK˜Ø\XÚ]T\‘^HŽœ›Ý[™
+Ý[JÖÈ\™Ù[Ø\XÚ]H—H›ÜˆÈ[ˆÛ[šXÜÊKJK[œÙ\™Y\‘^HŽœ›Ý[™
+\™Ù[Ý[œÙ\™YJK˜ÛÝ™\˜YÙTÝŽœ›Ý[™
+Z[ŠL\™Ù[ÜÙ\™YÛX^
+K\™Ù[Ù[X[™
+JŒL
+J_Kˆ˜Û[šXÜÈŽ–ÞÈ›˜[YHŽ˜ÖÈ›˜[YH—KžŽ˜ÖÈ˜Z[[™È—VÈž—KžHŽ˜ÖÈ˜Z[[™È—VÈžH—KœÝY™ˆŽ˜ÖÈœÝY™ˆ—Kœš[X\žPØ\XÚ]HŽœ›Ý[™
+ÖÈœš[X\žPØ\XÚ]H—KJK\™Ù[Ø\XÚ]HŽœ›Ý[™
+ÖÈ\™Ù[Ø\XÚ]H—KJK][]TÝŽœ›Ý[™
+ÖÈ][]H—JŒL
+K˜]™\˜YÙU˜]™[Z[]\ÈŽœ›Ý[™
+Ý[JÖÈ˜]™[Z[]\È—JKÛX^
+K[ŠÖÈ˜]™[Z[]\È—JJJHYˆÖÈ˜]™[Z[]\È—H[ÙH›Û™Kœ]Y[ÈŽ˜ÖÈœ]Y[È—_H›ÜˆÈ[ˆÛ[šXÜ×Kˆ›™ZYÚ›ÜšÛÙÈŽ˜\™XWÜ›ÝÜÖÎ—K[œ™XXÚX›T™\ÚY[ÈŽœÝ[JVÈœÜ[][Ûˆ—H›ÜˆH[ˆ\™X\ÈYˆVÈ˜]™[Z[]\È—H\È›Û™JK™[^YYØ]\”š\ÚÔÝŽœ›Ý[™
+[^YYÜš\ÚËÜÜ[][ÛŠŒL
+K›[ÛTÝ\PÛÜÝŽ›[ÛWÜÝ\Y\Ëœš[X\žP˜XÚÛÙÈŽœ›Ý[™
+X[™Ù]
+œš[X\žP˜XÚÛÙÈ‹
+KJ_B‚™YˆYXØ][Û—ÜÙ\šXÙWÜ™\Ü
+ÛÜšÜXÙ\ÏS›Û™KY˜[˜ÙOQ˜[ÙJN‚ˆÛÜšÜXÙ\Ï]ÛÜšÜXÙ\ÈYˆÛÜšÜXÙ\È\È›Ý›Û™H[ÙHÛÛ[]]WÛ[Ù[
+
+K™Ù]
+ÛÜšÜXÙ\È‹×JBˆ\[ÏV×Bˆ›ÜˆÛYH[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÛYHˆ[™‹™Ù]
+›ØØÝ\[È‹
+OŒ
+N‚ˆ›Üˆ\œÛÛˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×JN‚ˆ[œÝ\™WÜ\œÛÛ—ÝÛÜš×Ü›Ùš[J\œÛÛŠBˆYˆ\œÛÛ‹™Ù]
+˜YÙHŠH\È›Û™N‚ˆÙYY\ÝX›WÜÚÚ[
+\œÛÛ‹™Ù]
+šY‹ˆŠK™YYŠBˆ\œÛÛ–È˜YÙH—OLN
+ÜÙYY	MYˆ\œÛÛ‹™Ù]
+ÛÜšÙ\‘[YÚX›HŠH[ÙH
+JÜÙYY	LLÈYˆÙYY	LLŒˆ[ÙHŠÜÙYY	LŒ
+BˆYˆO\\œÛÛ–È˜YÙH—OLMÎœ\[Ë˜\[™
+
+ÛYK\œÛÛŠJBˆØÚÛÛÏV×Bˆ›ÜˆZ[[™È[ˆ
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœØÚÛÛˆ[™‹™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠJN‚ˆÛÜšÏ[™^
+
+È›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+šÚ[™ŠOOHœØÚÛÛˆ[™Ë™Ù]
+žŠOOXZ[[™ÖÈž—H[™Ë™Ù]
+žHŠOOXZ[[™ÖÈžH—JKßJBˆXØÙ\ÜÏXZ[[™Ë™Ù]
+][]PXØÙ\ÜÈ‹ßJNÝ][]O[Z[ŠXØÙ\ÜË™Ù]
+œÝÙ\”Ù\™YÝ‹
+KXØÙ\ÜË™Ù]
+Ø]\”Ù\™YÝ‹
+KXØÙ\ÜË™Ù]
+Ø\Ý]Ø]\•™X]YÝ‹
+JKÌL
+›X^
+Z[ŠK›Ø]
+Ý]K™Ù]
+™š[˜[˜ÙH‹ßJK™Ù]
+œ›ÙÜ˜[PYÙ]È‹ßJK™Ù]
+œÙ\šXÙ\Ñ[™[™Ñ˜XÝÜˆ‹JJJJBˆØÚÛÛË˜\[™
+È˜Z[[™ÈŽ˜Z[[™ËXXÚ\œÈŽ›X^
+ÛÜšË™Ù]
+œÝY™™Y›ØœÈ‹
+JK][]HŽ][]KœÙX]ÈŽ›X^
+[
+Z[[™Ë™Ù]
+˜Û\ÜÜ›ÛÛ\È‹
+JJŒ
+K˜\ÜÚYÛ™YŽ–×_JBˆ›ÜˆÛYK\œÛÛˆ[ˆ\[Î‚ˆÜ[ÛœÏV×Bˆ›ÜˆØÚÛÛ[ˆØÚÛÛÎ‚ˆ]\›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+ØÚÛÛÈ˜Z[[™È—VÈž—KØÚÛÛÈ˜Z[[™È—VÈžH—JJBˆYˆ]‚ˆZ[]\Ï[X^
+[Š]
+KLJJŒ‹JÍˆYˆZ[]\ÏM›Ü[ÛœË˜\[™
+
+Z[]\ËØÚÛÛ
+JBˆYˆÜ[ÛœÎ‚ˆZ[]\ËØÚÛÛ[Z[ŠÜ[ÛœËÙ^O[[X™HŠÌKÌWVÈ˜Z[[™È—VÈž—KÌWVÈ˜Z[[™È—VÈžH—JJBˆØÚÛÛÈ˜\ÜÚYÛ™Y—K˜\[™
+
+\œÛÛ‹Z[]\ÊJBˆ›ÝÜÏV×NÝÚ][\Ù\™YLˆ›ÜˆØÚÛÛ[ˆØÚÛÛÎ‚ˆXXÚ\—ØØ\XÚ]O\ØÚÛÛÈXXÚ\œÈ—JŒNØØ\XÚ]O\›Ý[™
+Z[ŠØÚÛÛÈœÙX]È—KXXÚ\—ØØ\XÚ]JJœØÚÛÛÈ][]H—JBˆ[œ›ÛY[Z[ŠØ\XÚ]K[ŠØÚÛÛÈ˜\ÜÚYÛ™Y—JJNÝÚ][ŠÏ[[ŠØÚÛÛÈ˜\ÜÚYÛ™Y—JNÜÙ\™Y
+ÏY[œ›ÛYˆ›ÝÜË˜\[™
+È›˜[YHŽœØÚÛÛÈ˜Z[[™È—K™Ù]
+›˜[YH‹‘\ØÝY[H][šXÚ\[ŠKžŽœØÚÛÛÈ˜Z[[™È—VÈž—KžHŽœØÚÛÛÈ˜Z[[™È—VÈžH—KXXÚ\œÈŽœØÚÛÛÈXXÚ\œÈ—K˜Û\ÜÜ›ÛÛ\ÈŽœØÚÛÛÈ˜Z[[™È—K™Ù]
+˜Û\ÜÜ›ÛÛ\È‹
+KœÙX]Ø\XÚ]HŽœØÚÛÛÈœÙX]È—KXXÚ\Ø\XÚ]HŽXXÚ\—ØØ\XÚ]K›Ü\˜][Û˜[Ø\XÚ]HŽ˜Ø\XÚ]KœÝY[Ó™X\˜žHŽ›[ŠØÚÛÛÈ˜\ÜÚYÛ™Y—JK™[œ›ÛYŽ™[œ›ÛY[œÙ\™YŽ›X^
+[ŠØÚÛÛÈ˜\ÜÚYÛ™Y—JKY[œ›ÛY
+K][]TÝŽœ›Ý[™
+ØÚÛÛÈ][]H—JŒL
+K˜]™\˜YÙU˜]™[Z[]\ÈŽœ›Ý[™
+Ý[JÌWH›Üˆ[ˆØÚÛÛÈ˜\ÜÚYÛ™Y—JKÛX^
+K[ŠØÚÛÛÈ˜\ÜÚYÛ™Y—JJKJHYˆØÚÛÛÈ˜\ÜÚYÛ™Y—H[ÙH›Û™_JBˆ[ÛJÝ]K™Ù]
+™^H‹JKLJKËÌÌÙYXØ][Û\Ý]KœÙ]Y˜][
+™YXØ][Ûˆ‹È›\Ý›ØÙ\ÜÙY[ÛŽŠÝ]K™Ù]
+™^H‹JKLJKËÌÌJBˆYˆY˜[˜ÙH[™[Û™YXØ][Û‹™Ù]
+›\Ý›ØÙ\ÜÙY[Û‹LJN‚ˆYXØ][Û–È›\Ý›ØÙ\ÜÙY[Û—O[[Ûˆ›ÜˆØÚÛÛ›ÝÈ[ˆš\
+ØÚÛÛË›ÝÜÊN‚ˆ›Üˆ\œÛÛ‹È[ˆØÚÛÛÈ˜\ÜÚYÛ™Y—VÎœ›ÝÖÈ™[œ›ÛY—WN‚ˆ›ÙÜ™\ÜÏ\\œÛÛ‹œÙ]Y˜][
+™YXØ][Û”›ÙÜ™\ÜÈ‹È›[ÛÈŽŒ›]™[Žˆš[šXÚX[ŸJNÜ›ÙÜ™\ÜÖÈ›[ÛÈ—JÏLBˆYˆ›ÙÜ™\ÜÖÈ›[ÛÈ—ILLOL‚ˆ›ÙÜ™\ÜÖÈ›]™[—OHœš[X\šXHˆYˆ›ÙÜ™\ÜÖÈ›[ÛÈ—OÌˆ[ÙHœÙXÝ[™\šXH‚ˆ›ÜˆÚÚ[[ˆ
+˜ÛÛY\˜Ú[È‹˜YZ[š\Ý˜XÚ[Ûˆ‹›ÙÚ\ÝXØH‹œØ[YŠNœ\œÛÛ–ÈœÚÚ[È—VÜÚÚ[O[Z[ŠL\œÛÛ–ÈœÚÚ[È—K™Ù]
+ÚÚ[JJÌŠBˆ]ŠÚXÛÈ\ØÛÛ\ˆ‹ˆžÜÙ\™YH\ÝYX[\È\Ú\Ý[ŽÈÝÚ][‹\Ù\™YH]YY[ˆÚ[ˆ^˜HÜ\˜]]˜KˆØÙ[\ÈH][\È[Z][ˆHÛØ™\\˜KˆŠBˆÝ[[[Š\[ÊBˆ™]\›ˆÈœØÚÛÛYÙTÜ[][ÛˆŽÝ[Ú][”™XXÚŽÚ][‹™[œ›ÛYŽœÙ\™YØZ][™ÈŽÚ][‹\Ù\™Y[œ™XXÚX›HŽÝ[]Ú][‹˜ÛÝ™\˜YÙTÝŽœ›Ý[™
+Ù\™YÛX^
+KÝ[
+JŒL
+KœØÚÛÛÈŽœ›ÝÜË›[ÛTÝ\Y\ÐÛÜÝŽœ›Ý[™
+Ù\™Y
+‹ŒÍJ_B‚™Yˆš\™WÜÙ\šXÙWÜ™\Ü
+ÛÜšÜXÙ\ÏS›Û™KY˜[˜ÙOQ˜[ÙJN‚ˆˆˆ’[˜Ù[™[ÜÈ\˜˜[›ÜÈ]\›Z[š\Ý\ÎˆÛØ™\\˜K\ÜXÚÈHpì[È\[™[ˆH\œÛÛ˜[HØ[\Ëˆˆˆ‚ˆš\™O\Ý]KœÙ]Y˜][
+™š\™TÙ\šXÙH‹Èš[˜ÚY[ÈŽ–×K›\ÝÙ[™\˜]Y[ÛŽ‹LK™\Ü]Ú\ÈŽŒœ™\ÛÛ™YŽŒ[˜[œÝÙ\™YŽŒJBˆ[˜ÚY[ÏYš\™KœÙ]Y˜][
+š[˜ÚY[È‹×JNÙ^O\Ý]K™Ù]
+™^H‹JBˆÛÜšÜXÙ\Ï]ÛÜšÜXÙ\ÈYˆÛÜšÜXÙ\È\È›Ý›Û™H[ÙHÛÛ[]]WÛ[Ù[
+
+K™Ù]
+ÛÜšÜXÙ\È‹×JBˆYˆY˜[˜ÙN‚ˆ[ÛJ^KLJKËÌÌˆYˆ^ILÌOLL[™[Û™š\™K™Ù]
+›\ÝÙ[™\˜]Y[Û‹LJN‚ˆš\™VÈ›\ÝÙ[™\˜]Y[Û—O[[ÛˆXÝ]™OVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹šÝ[‹˜Z\œÜ‹œÜ‹œØÚÛÛŠH[™‹™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠWBˆÛ[X]O\Ý]K™Ù]
+˜Û[X]H‹ßJNÚX]JÛ[X]K™Ù]
+šX]›Ü™XØ\ÝŠHÜˆßJK™Ù]
+˜XÝ]™H‹˜[ÙJNÙ›ÝYÚJÛ[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠHÜˆßJK™Ù]
+œÝ]\ÈŠOOH˜XÝ]˜H‚ˆ™\ÚÛ[Z[Š‹LŠÛ[ŠXÝ]™JJŒŠÊLYˆX][ÙH
+JÊYˆ›ÝYÚ[ÙH
+JBˆ›Û\ÝX›WÜÚÚ[
+ˆžÛ[ÛNžÜÝ]K™Ù]
+	ÜÜ[][Û‰Ë
+_H‹š[˜Ù[™[ÈŠILLˆYˆXÝ]™H[™›Û™\ÚÛ[™›Ý[žJK™Ù]
+œÝ]\ÈŠOOH˜\™Y[™Èˆ›ÜˆH[ˆ[˜ÚY[ÊN‚ˆ\™Ù]XXÝ]™VÜÝX›WÜÚÚ[
+ÝŠ[Û
+Kœ\˜Ù[HŠI[[ŠXÝ]™JWBˆ[˜ÚY[^ÈšYŽ™ˆ™š\™K^Û[ÛK^Ý\™Ù]ÉÞ	×_K^Ý\™Ù]ÉÞI×_H‹žŽ\™Ù]Èž—KžHŽ\™Ù]ÈžH—K˜Z[[™ÒÚ[™Ž\™Ù]ÈšÚ[™—K›˜[YHŽ\™Ù]™Ù]
+›˜[YH‹\™Ù]ÈšÚ[™—JKœÝ\^HŽ™^KœÝ]\ÈŽˆ˜\™Y[™È‹™[XYÙHŽŒBˆ[˜ÚY[Ë˜\[™
+[˜ÚY[
+NÙ]Š’[˜Ù[™[È\˜˜[›È]XÝYÈ‹ˆ”ÙH[šXÚpìÈ[ˆ[˜Ù[™[È[ˆÚ[˜ÚY[ÉÛ˜[YI×_KˆHÝXÚpìÛ‹[\ÝYÈHÜÈ™Z0ëXÝ[ÜÈH[Y[\ÈÜˆØ[\ÈYš[™[ˆÚHYYHYØ\ˆHÛÛ›Û\›ËˆŠBˆÝ][ÛœÏV×Bˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆ‹™Ù]
+šÚ[™ŠHOH™š\™TÝ][ÛˆˆÜˆ‹™Ù]
+œÝ]\ÈŠH[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠN˜ÛÛ[YBˆÛÜšÏ[™^
+
+È›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+šÚ[™ŠOOH™š\™TÝ][Ûˆˆ[™Ë™Ù]
+žŠOOX‹™Ù]
+žŠH[™Ë™Ù]
+žHŠOOX‹™Ù]
+žHŠJKßJBˆÝ][ÛœË˜\[™
+È˜Z[[™ÈŽ˜‹œÝY™ˆŽ›X^
+ÛÜšË™Ù]
+œÝY™™Y›ØœÈ‹
+JKœ™XYHŽ˜‹™Ù]
+™\Ü]Ú™XYQ^H‹^J_JBˆ›Üˆ[˜ÚY[[ˆ[˜ÚY[Î‚ˆYˆ[˜ÚY[™Ù]
+œÝ]\ÈŠHOH˜\™Y[™ÈŽ˜ÛÛ[YBˆÚÚXÙ\ÏV×Bˆ›ÜˆÝ][Ûˆ[ˆÝ][ÛœÎ‚ˆYˆÝ][Û–ÈœÝY™ˆ—OÜˆÝ][Û–Èœ™XYH—O™^N˜ÛÛ[YBˆ]\›Ý]WØ™]ÙY[Š
+Ý][Û–È˜Z[[™È—VÈž—KÝ][Û–È˜Z[[™È—VÈžH—JK
+[˜ÚY[Èž—K[˜ÚY[ÈžH—JJBˆYˆ]˜ÚÚXÙ\Ë˜\[™
+
+JÛX^
+[Š]
+KLJJŒ‹KÝ][ÛŠJBˆYˆÚÚXÙ\Î‚ˆZ[]\ËÝ][Û[Z[ŠÚÚXÙ\ËÙ^O[[X™H›ÝÎŠ›ÝÖÌK›ÝÖÌWVÈ˜Z[[™È—VÈž—K›ÝÖÌWVÈ˜Z[[™È—VÈžH—JJBˆ\™Ù][™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+žŠOOZ[˜ÚY[Èž—H[™‹™Ù]
+žHŠOOZ[˜ÚY[ÈžH—JK›Û™JBˆ[XYÙO[X^
+KZ[ŠN›Ý[™
+Z[]\ËÍJJJBˆYˆ\™Ù]‚ˆ\™Ù]Èœ]X[]H—O[X^
+Œ\™Ù]™Ù]
+œ]X[]H‹ÍJKY[XYÙJBˆYˆ\™Ù]™Ù]
+šÚ[™ŠOOHšÛYHŽ\™Ù]ÈšÝ\ÙZÛØ\Ú—O[X^
+\™Ù]™Ù]
+šÝ\ÙZÛØ\Ú‹
+KY[XYÙJŒJBˆ[Yˆ\™Ù]™Ù]
+˜\Ú[™\ÜÈŠN\™Ù]È˜\Ú[™\ÜÈ—VÈ˜Ø\Ú—O[X^
+\™Ù]È˜\Ú[™\ÜÈ—K™Ù]
+˜Ø\Ú‹
+KY[XYÙJJBˆÝ][Û–È˜Z[[™È—VÈ™\Ü]Ú™XYQ^H—OY^JÌŽÚ[˜ÚY[\]JÈœÝ]\ÈŽˆ˜ÛÛ›ÛYÈ‹œ™\ÜÛœÙSZ[]\ÈŽœ›Ý[™
+Z[]\ÊKœÝ][ÛˆŽœÝ][Û–È˜Z[[™È—K™Ù]
+›˜[YH‹ÝX\[][šXÚ\[ŠKœÝ][Û–ŽœÝ][Û–È˜Z[[™È—VÈž—KœÝ][Û–HŽœÝ][Û–È˜Z[[™È—VÈžH—Kœ›Ý]HŽœ]™[XYÙHŽ™[XYÙKœ™\ÛÛ™Y^HŽ™^_JBˆš\™VÈ™\Ü]Ú\È—JÏLNÙš\™VÈœ™\ÛÛ™Y—JÏLBˆYˆ[XYÙOLLœÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLJBˆ]Š’[˜Ù[™[ÈÛÛ›ÛYÈ‹ˆžÜÝ][Û–ÉØZ[[™É×K™Ù]
+	Û˜[YIË	ÐÝX\[][šXÚ\[	Ê_HYðìÈ[ˆÜ›Ý[™
+Z[]\Ê_HZ[ˆÛÛˆÝX]›È›ÛX™\›ÜËˆpì[ÈHÛÛ™XÚpìÛŽˆÙ[XYÙ_H[ÜÎÈHÝXÚpìÛˆ]YYHØÝ\YHÜÈ0ëX\ËˆŠBˆ[ÙN‚ˆ[˜ÚY[È˜\›š[™Ñ^\È—OZ[˜ÚY[™Ù]
+˜\›š[™Ñ^\È‹
+JÌBˆ\™Ù][™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+žŠOOZ[˜ÚY[Èž—H[™‹™Ù]
+žHŠOOZ[˜ÚY[ÈžH—JK›Û™JBˆYˆ\™Ù]\™Ù]Èœ]X[]H—O[X^
+Œ\™Ù]™Ù]
+œ]X[]H‹ÍJKLŠBˆYˆ[˜ÚY[È˜\›š[™Ñ^\È—OMN‚ˆ[˜ÚY[\]JÈœÝ]\ÈŽˆ™^[™ÝZYÈÚ[ˆÝXÚpìÛˆ‹œ™\ÛÛ™Y^HŽ™^K™[XYÙHŽŒLJNÙš\™VÈ[˜[œÝÙ\™Y—JÏLBˆÝ]VÈœÙ\šXÙ\È—O[X^
+Ý]K™Ù]
+œÙ\šXÙ\È‹
+KLŠNÜÝ]VÈ˜\›Ý˜[—O[X^
+Ý]K™Ù]
+˜\›Ý˜[‹
+KLJBˆ]Š’[˜Ù[™[ÈÚ[ˆ™\ÜY\ÝH‹ˆžÚ[˜ÚY[ÉÛ˜[YI×_H\™pìÈ\˜[HÚ[˜ÛÈ0ëX\ÈÚ[ˆ[˜HÝXÚpìÛˆÝX[YšXØYHÈ[˜H]HÜ\˜]]˜KˆHÛÛ™XÚpìÛˆ[[›]YX›HHHÛÛ™šX[ž˜H0î˜›XØH[\[Ü˜\›Û‹ˆŠBˆÝ][ÛœÏV×Bˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JN‚ˆYˆ‹™Ù]
+šÚ[™ŠHOH™š\™TÝ][ÛˆˆÜˆ‹™Ù]
+œÝ]\ÈŠH[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠN˜ÛÛ[YBˆÛÜšÏ[™^
+
+È›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+šÚ[™ŠOOH™š\™TÝ][Ûˆˆ[™Ë™Ù]
+žŠOOX‹™Ù]
+žŠH[™Ë™Ù]
+žHŠOOX‹™Ù]
+žHŠJKßJBˆÝ][ÛœË˜\[™
+È›˜[YHŽ˜‹™Ù]
+›˜[YH‹ÝX\[H›ÛX™\›ÜÈŠKžŽ˜–Èž—KžHŽ˜–ÈžH—K™š\™YšYÚ\œÈŽ›X^
+ÛÜšË™Ù]
+œÝY™™Y›ØœÈ‹
+JK˜Ü™]ÜÈŽ›Z[ŠËX^
+ÛÜšË™Ù]
+œÝY™™Y›ØœÈ‹
+KËÍ
+JKœ™XYQ^HŽ˜‹™Ù]
+™\Ü]Ú™XYQ^H‹^J_JBˆ[YÚX›OVØˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+šÚ[™ŠH[ˆ
+šÛYH‹œÚÜ‹šÝ[‹˜Z\œÜ‹œÜ‹œØÚÛÛŠWBˆÛÝ™\™YLˆ›Üˆ\™Ù][ˆ[YÚX›N‚ˆYˆ[žJÖÈ™š\™YšYÚ\œÈ—OM[™
+\›Ý]WØ™]ÙY[Š
+ÖÈž—KÖÈžH—JK
+\™Ù]Èž—K\™Ù]ÈžH—JJJH[™[Š
+OLM›ÜˆÈ[ˆÝ][ÛœÊN˜ÛÝ™\™Y
+ÏLBˆ™]\›ˆÈ™^HŽ™^KœÝ][ÛœÈŽœÝ][ÛœË˜ÛÝ™\˜YÙTÝŽœ›Ý[™
+ÛÝ™\™YÛX^
+K[Š[YÚX›JJJŒL
+K˜ÛÝ™\™YZ[[™ÜÈŽ˜ÛÝ™\™Y™[YÚX›PZ[[™ÜÈŽ›[Š[YÚX›JK™\Ü]Ú\ÈŽ™š\™K™Ù]
+™\Ü]Ú\È‹
+Kœ™\ÛÛ™YŽ™š\™K™Ù]
+œ™\ÛÛ™Y‹
+K[˜[œÝÙ\™YŽ™š\™K™Ù]
+[˜[œÝÙ\™Y‹
+K˜XÝ]™R[˜ÚY[ÈŽ–ÙXÝ
+JH›ÜˆH[ˆ[˜ÚY[ÈYˆK™Ù]
+œÝ]\ÈŠOOH˜\™Y[™È—Kœ™XÙ[[˜ÚY[ÈŽ–ÙXÝ
+JH›ÜˆH[ˆ[˜ÚY[ÖËN—VÎŽ‹LWWK›[ÛSÜ\˜][™ÐÛÜÝŽ›[ŠÝ][ÛœÊJŽMLB‚™YˆX›X×ÜÝ]J^Y\—ÚYS›Û™JN‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+Bˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+BˆÝ]Ù™][YK[YJ
+KLBˆÛ›[™O\Ý[JH›Üˆ[ˆÝ]VÈœ^Y\œÈ—K˜[Y\Ê
+HYˆ˜Ý]Ù™ŠBˆ[œÝ\™WÝ][]WÜÝ]J
+NØØ[Ý[]WÝ][]WØ˜[[˜ÙJ
+NØØ[Ý[]WÝØ\ÝWØ˜[[˜ÙJ
+Bˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJBˆšY]Ï^ÚÎˆ›ÜˆËˆ[ˆÝ]Kš][\Ê
+HYˆÈ›Ý[ˆ
+œ^Y\œÈ‹šÜÝŠ_BˆšY]ÖÈ™ÛÝ™\››Y[™\Ü—OYÛÝ™\››Y[Ü™\Ü
+
+BˆšY]ÖÈ›][šXÚ\[š[˜[˜ÙH—O[][šXÚ\[Ùš[˜[˜ÙWÜ™\Ü
+
+BˆšY]ÖÈš\š]YÙT™\Ü—OZ\š]YÙWÜ™\Ü
+
+BˆšY]ÖÈ\˜˜[‘]›Û][Û”™\Ü—O]\˜˜[—Ù]›Û][Û—Ü™\Ü
+
+BˆšY]ÖÈœ™YÚ[Û˜[X\šÙ]™\Ü—O\Ý]K™Ù]
+œ™YÚ[Û˜[X\šÙ]™\Ü‹Ý]K™Ù]
+œ™YÚ[Û˜[X\šÙ]‹ßJK™Ù]
+›\Ý™\Ü‹ßJJBˆšY]ÖÈœ›ØYXZ[[˜[˜ÙT™\Ü—O\›ØYÛXZ[[˜[˜ÙWÜ™\Ü
+
+BˆÜ™\—ÝšY]ÜÏV×Bˆ›ÜˆÜ™\ˆ[ˆÝ]VÈœÝ\H—VÈ›Ü™\œÈ—N‚ˆ^˜O[Ü™\—Ý\™Ù[˜ÞJÜ™\ŠBˆYˆÜ™\‹™Ù]
+œÝ]\ÈŠOOH™[ˆ°è[œÚ]ÈŽ‚ˆ˜XÝÜ‹[^K\œš]˜[[Ü™\—Ü›Ý]WÙ]JÜ™\ŠBˆ^˜K\]JÈ˜Y™šXÑ˜XÝÜˆŽœ›Ý[™
+˜XÝÜ‹ŠK˜Y™šXÑ[^Q^\ÈŽ™[^K˜\œš]˜[^HŽ˜\œš]˜[ˆœ›Ý]T›ÙÜ™\ÜÈŽ›Ü™\‹™Ù]
+œ›Ý]T›ÙÜ™\ÜÈ‹Ü™\‹™Ù]
+œ›ÙÜ™\ÜÈ‹
+J_JBˆÜ™\—ÝšY]ÜË˜\[™
+ÊŠ›Ü™\‹
+Š™^˜_JBˆšY]ÖÈœÝ\H—O^ÊŠœÝ]VÈœÝ\H—K›Ü™\œÈŽ›Ü™\—ÝšY]ÜßBˆšY]ÖÈ˜Z\œÜÈ—OVÞÊŠœ˜XØÙ\ÜÐÛÛ›™XÝYŽ˜›ÛÛ
+›Ý]WØ™]ÙY[Š
+L
+K
+Èž—KÈžH—JJJHH›Üˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ™Ù]
+šÚ[™ŠOOH˜Z\œÜ—BˆšY]ÖÈšÝ[È—OVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÝ[—BˆšY]ÖÈÝ\š\ÛH—O^Èš\Ú]ÜœÈŽœÝ]K™Ù]
+˜Z\œÜš\Ú]ÜœÕ\Ó[Û‹
+K›Ý™\›šYÚÝY\ÝÈŽœÝ[J‹™Ù]
+›[ÛQÝY\ÝÈ‹
+H›Üˆˆ[ˆšY]ÖÈšÝ[È—JK™ÝY\ÝšYÚÈŽœÝ[J‹™Ù]
+›[ÛQÝY\ÝšYÚÈ‹
+H›Üˆˆ[ˆšY]ÖÈšÝ[È—JKšÝ[™]™[YHŽœÝ[J‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\Ý™]™[YH‹
+H›Üˆˆ[ˆšY]ÖÈšÝ[È—JK›][šXÚ\[^ŽœÝ[J‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\ÝÝ\š\ÛU^‹
+H›Üˆˆ[ˆšY]ÖÈšÝ[È—JK›Ü[’Ý[ÈŽœÝ[J‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\Èˆ›Üˆˆ[ˆšY]ÖÈšÝ[È—J_BˆšY]ÖÈœÜÈ—OVÞÊŠœš[•˜[œÚ]ŽœÝ[JË™Ù]
+œÝ]\ÈŠH[ˆ
+œ[™Y[H‹™[ˆ°è[œÚ]È‹™\Ü\˜[™ÈXØÙ\ÛÈ‹™\Ü\˜[™È][ÈŠH›ÜˆÈ[ˆÝ]VÈœÝ\H—K™Ù]
+œÜÜ™\œÈ‹×JHYˆË™Ù]
+œÜYŠOO\™Ù]
+šY‹ˆœÜ^ÜÉÞ	×_K^ÜÉÞI×_HŠJKØZ][™ÐXØÙ\ÜÈŽœÝ[JË™Ù]
+œÝ]\ÈŠOOH™\Ü\˜[™ÈXØÙ\ÛÈˆ›ÜˆÈ[ˆÝ]VÈœÝ\H—K™Ù]
+œÜÜ™\œÈ‹×JHYˆË™Ù]
+œÜYŠOO\™Ù]
+šY‹ˆœÜ^ÜÉÞ	×_K^ÜÉÞI×_HŠJ_H›Üˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ™Ù]
+šÚ[™ŠOOHœÜ—BˆÛÛ[]]OXÛÛ[]]WÛ[Ù[
+
+BˆšY]ÖÈ˜Y™šXÈ—O^ÚÎ˜ÛÛ[]]VÚ×H›ÜˆÈ[ˆ
+˜ÛÛ[]]\œÈ‹Ø[Ú[™ÐÛÛ[]]\œÈ‹˜]]ÐÛÛ[]]\œÈ‹™ZXÛ\È‹™Z[Q[Z\ÜÚ[ÛœÒÙÈ‹ÛÜšÙ\œÕÚ]Ý]›ØYXØÙ\ÜÈ‹›YX[‘\Ý[˜ÙH‹›YX[“Z[]\È‹™Y™™XÝ]™Q[\Þ[Y[‹™Y™™XÝ]™UÛÜšÙ\œÈ‹œÝY™™Y›ØœÈ‹œš]˜]TÝY™™Y›ØœÈ‹œÚÜ[™Õš\È‹œÚÜ[™Ô\ÜÙ[™Ù\œÈ‹œÚÜ[™Õ™ZXÛ\È‹œÚÜ[™Ñ[Z\ÜÚ[ÛœÒÙÈ‹œÙ\šXÙUš\È‹œÙ\šXÙUš\Ú]ÜœÈ‹œÙ\šXÙU™ZXÛ\È‹œÙ\šXÙQ[Z\ÜÚ[ÛœÒÙÈ‹™Z[Uš\ÈŠ_Bˆ›ÜˆÙ^H[ˆ
+œ™]\›ÛÛ[]]\œÈ‹œ™]\›\ÐÛÛ[]]\œÈ‹œ™]\›]]ÐÛÛ[]]\œÈ‹œ™]\›•Ø[Ú[™ÐÛÛ[]]\œÈ‹œ™]\›•˜[œÙ™\ÛÛ[]]\œÈ‹œ™]\›“YX[“Z[]\È‹œ™]\›•™ZXÛ\ÈŠNšY]ÖÈ˜Y™šXÈ—VÚÙ^WOXÛÛ[]]K™Ù]
+Ù^K
+BˆšY]ÖÈ˜Y™šXÈ—VÈ˜\ÐÛÛ[]]\œÈ—OXÛÛ[]]K™Ù]
+˜\ÐÛÛ[]]\œÈ‹
+BˆšY]ÖÈ˜Y™šXÈ—VÈ˜[œÙ™\ÛÛ[]]\œÈ—OXÛÛ[]]K™Ù]
+˜[œÙ™\ÛÛ[]]\œÈ‹
+BˆšY]ÖÈ˜Y™šXÈ—VÈ˜Ø\XØÙ\ÜÕÛÜšÙ\œÈ—OXÛÛ[]]K™Ù]
+˜Ø\XØÙ\ÜÕÛÜšÙ\œÈ‹
+BˆšY]ÖÈ˜ÛÛ[]]\È—OXÛÛ[]]VÈœ›Ý]\È—BˆšY]ÖÈ˜\Ô›Ý]PØ][ÙÈ—OX\×Ü›Ý]WØØ][ÙÊÛÛ[]]JBˆšY]ÖÈ˜\Ô›Ý]\È—O\Ý]K™Ù]
+˜\Ô›Ý]\È‹×JBˆšY]ÖÈ˜\ÑØ\˜YÙ\È—OVÞÈšYŽ™ˆ™Ø\˜YÙK^ÙÖÉÞ	×_K^ÙÖÉÞI×_H‹žŽ™ÖÈž—KžHŽ™ÖÈžH—K›˜[YHŽ™Ë™Ù]
+›˜[YH‹ÛØÚ\˜H][šXÚ\[ŠK˜Ø\XÚ]HŽ™Ë™Ù]
+˜\Ð˜^PØ\XÚ]H‹
+K›ØØÝ\YYŽœÝ[JVÈ˜\Ù\È—H›Üˆ[™H[ˆÝ]VÈ˜\Ô›Ý]\È—H›ÜˆH[ˆ[™K™Ù]
+™Ø\˜YÙP\ÜÚYÛ›Y[È‹×JHYˆVÈ™Ø\˜YÙRY—OOYˆ™Ø\˜YÙK^ÙÖÉÞ	×_K^ÙÖÉÞI×_HŠ_H›ÜˆÈ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆË™Ù]
+šÚ[™ŠOOH˜\ÑØ\˜YÙHˆ[™Ë™Ù]
+œÝ]\ÈŠH[ˆ
+šXš[]YÈ‹›Ü\˜]]›ÈŠWBˆšY]ÖÈš›ØœÈ—O\Ý]VÈš›ØœÈ—JÜÝ[J[™K™Ù]
+˜\Ù\È‹
+JŒˆ›Üˆ[™H[ˆÝ]VÈ˜\Ô›Ý]\È—HYˆ[™K™Ù]
+œÝ]\ÈŠOOH˜XÝ]™HŠBˆšY]ÖÈ˜\ÔÝÜÚ]\È—O^Û[™VÈšY—N˜\×ÜÝÜÜÚ]\Ê[™JH›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+œÝ]\ÈŠH[ˆ
+˜XÝ]™H‹œ]\ÙYŠ_BˆšY]ÖÈÛÜšÜXÙ\È—OXÛÛ[]]VÈÛÜšÜXÙ\È—BˆšY]ÖÈ›X›Ü“X\šÙ]—OXÛÛ[]]VÈ›X›Ü“X\šÙ]—BˆšY]ÖÈ˜Z[š[™ÐØ][ÙÈ—O]˜Z[š[™×ØØ][ÙÊ
+BˆšY]ÖÈšX[™\Ü—OZX[ÜÙ\šXÙWÜ™\Ü
+ÛÛ[]]VÈÛÜšÜXÙ\È—JNÝšY]ÖÈ™YXØ][Û”™\Ü—OYYXØ][Û—ÜÙ\šXÙWÜ™\Ü
+ÛÛ[]]VÈÛÜšÜXÙ\È—JNÝšY]ÖÈ™š\™T™\Ü—OYš\™WÜÙ\šXÙWÜ™\Ü
+ÛÛ[]]VÈÛÜšÜXÙ\È—JBˆ˜[šÏ\Ý]VÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—BˆšY]ÖÈ™š[˜[˜ÙH—VÈ˜\Ú[™\ÜÐ˜[šÈ—K\]JÈ›Ü[“Ø[œÈŽœÝ[J‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+˜Ü™Y]X‹
+H›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\ÈŠK˜›Üœ›ÝÙ\œÈŽœÝ[JH›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHœÚÜˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠOOH˜XšY\Èˆ[™‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+˜Ü™Y]X‹
+OŒ
+_JBˆšY]ÖÈšÝ\ÙZÛØYÙR[˜ÛÛYH—O\Ý[J™Ù]
+›[ÛUØYÙR[˜ÛÛYH‹
+H›Üˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ™Ù]
+šÚ[™ŠOOHšÛYHŠBˆšY]ÖÈœX›XÔ^\›Û—O\Ý[JË™Ù]
+œ^\›Û‹
+H›ÜˆÈ[ˆÛÛ[]]VÈÛÜšÜXÙ\È—HYˆÖÈšÚ[™—H[ˆ
+˜Ú]šXÈ‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹™\Ý‹›[™š[‹œ™XÞXÛ[™Ô[‹œÜ‹˜Z\œÜ‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[ŠJBˆ˜[œÚ]ØÛÜÝ\Ý[J[™K™Ù]
+›[ÛSÜ\˜][™ÐÛÜÝ‹
+H›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+›Ü\˜][Û˜[ŠJBˆ˜[œÚ]Ú[˜ÛÛYO\Ý[J[™K™Ù]
+›[ÛQ˜\™T™]™[YH‹
+H›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+›Ü\˜][Û˜[ŠJBˆšY]ÖÈ™Y™™XÝ]™S[ÛQ^[œÙ\È—O\›Ý[™
+Ý]VÈ›[ÛQ^[œÙ\È—JÝšY]ÖÈœX›XÔ^\›Û—JÝ˜[œÚ]ØÛÜÝ
+ÜÝ]K™Ù]
+][]Y\È‹ßJK™Ù]
+œ™\Ü‹ßJK™Ù]
+›[ÛSXZ[[˜[˜ÙH‹
+JÜÝ]K™Ù]
+Ø\ÝH‹ßJK™Ù]
+œ™\Ü‹ßJK™Ù]
+›[ÛSÜ\˜][™ÐÛÜÝ‹
+JÜ›ØYÛXZ[[˜[˜ÙWÜ™\Ü
+
+K™Ù]
+›[ÛT™\]Z\™Y‹
+JÝšY]ÖÈšX[™\Ü—K™Ù]
+›[ÛTÝ\PÛÜÝ‹
+JÝšY]ÖÈ™YXØ][Û”™\Ü—K™Ù]
+›[ÛTÝ\Y\ÐÛÜÝ‹
+JBˆšY]ÖÈ˜[œÚ][ÛR[˜ÛÛYH—O]˜[œÚ]Ú[˜ÛÛYBˆšY]ÖÈœ™XÞXÛ[™Ò[˜ÛÛYH—O\Ý]K™Ù]
+Ø\ÝH‹ßJK™Ù]
+œ™\Ü‹ßJK™Ù]
+œ™XÞXÛ[™Ô™]™[YS[Û‹
+BˆšY]ÖÈ˜[œÚ][ÛPÛÜÝ—O]˜[œÚ]ØÛÜÝˆ\Ú[™\Ü×Ú[˜ÛÛYO\›Ý[™
+ÛÛ[]]VÈœš]˜]TÝY™™Y›ØœÈ—JŒŠBˆÝ\š\ÛWÝ^\Ý[J‹™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+›\ÝÝ\š\ÛU^‹
+H›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOHšÝ[ŠBˆÜ›ÜÜÏ\›Ý[™
+Ý]VÈ›[ÛR[˜ÛÛYH—JØ\Ú[™\Ü×Ú[˜ÛÛYJÝ˜[œÚ]Ú[˜ÛÛYJÜÝ]K™Ù]
+˜Z\œÜ[ÛR[˜ÛÛYH‹
+JÝÝ\š\ÛWÝ^
+ÝšY]ÖÈœ™XÞXÛ[™Ò[˜ÛÛYH—JÜÝ]K™Ù]
+^\È‹ßJK™Ù]
+›\Ý™\Ü‹ßJK™Ù]
+˜ÛÛXÝY‹
+JBˆšY]ÖÈ›][šXÚ\[š[˜[˜ÙH—O[][šXÚ\[Ùš[˜[˜ÙWÜ™\Ü
+Ü›ÜÜËšY]ÖÈ™Y™™XÝ]™S[ÛQ^[œÙ\È—JBˆšY]ÖÈ^™\Ü—O\Ý]K™Ù]
+^\È‹ßJK™Ù]
+›\Ý™\Ü‹ßJBˆ™]\›ˆÊŠšY]Ë˜\Ú[™\ÜÒ[˜ÛÛYHŽ˜\Ú[™\Ü×Ú[˜ÛÛYK™Ü›ÜÜÓ[ÛR[˜ÛÛYHŽ™Ü›ÜÜË›Û›[™HŽ›Û›[™Kš\ÒÜÝŽœ^Y\—ÚY\È›Ý›Û™H[™^Y\—ÚYO\Ý]K™Ù]
+šÜÝŠK˜ÛÛ˜XÝÜœÈŽÓÓ•PÕÔ”ËœÝ\Y\œÈŽ”ÕTQT”Ë›X]\šX[šXÙ\ÈŽ“PUT’PSÔ’PÑKœ™\Ù\™YŽœ›Ý[™
+™\Ù\™Y
+K˜]˜Z[X›HŽ›X^
+›Ý[™
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+J_B‚™Yˆ\ØÛÝ™\žWÛÛÜ
+
+N‚ˆˆˆ[[˜ÚXHH\ØÝXœ™HØ[\È[ˆHÝXœ™YÈ›È\ØHÙ\šXÚ[ÜÈ^\››ÜËˆˆˆ‚ˆÛØÚÏ\ÛØÚÙ]œÛØÚÙ]
+ÛØÚÙ]Q—ÒS‘UÛØÚÙ]”ÓÐÒ×ÑÔSJBˆžN‚ˆÛØÚËœÙ]ÛØÚÛÜ
+ÛØÚÙ]”ÓÓÔÓÐÒÑUÛØÚÙ]”Ó×Ô‘UTÑPQ‹JBˆÛØÚËœÙ]ÛØÚÛÜ
+ÛØÚÙ]”ÓÓÔÓÐÒÑUÛØÚÙ]”Ó×Ð”“ÐQÐTÕJBˆÛØÚË˜š[™
+
+ŒŒŒŒ‹TÐÓÕ‘T–WÔÔ•
+JNÜÛØÚËœÙ][Y[Ý]
+JBˆ\ÝLˆÚ[HYN‚ˆ›ÝÏ][YK[YJ
+BˆYˆ“ÓÓWÓÔSˆ[™›ÝË[\ÝLÎ‚ˆXÚÙ]ZœÛÛ‹™[\ÊÈYÈŽˆÚ]YYš]˜SSˆ‹›˜[YHŽœÝ]K™Ù]
+›˜[YH‹Ú]YYš]˜HŠK˜ÛÙHŽ”“ÓÓWÐÓÑKœÜŽ”Ô•JK™[˜ÛÙJ
+BˆžNœÛØÚËœÙ[™ÊXÚÙ]
+ŒMKŒMKŒMKŒMH‹TÐÓÕ‘T–WÔÔ•
+JBˆ^Ù\ÔÑ\œ›ÜŽœ\ÜÂˆ\Ý[›ÝÂˆžN™]KY™\ÜÏ\ÛØÚËœ™XÝ™œ›ÛJLLŠBˆ^Ù\ÛØÚÙ][Y[Ý]˜ÛÛ[YBˆ^Ù\ÔÑ\œ›ÜŽ˜ÛÛ[YBˆžNœ›ÛÛOZœÛÛ‹›ØYÊ]JBˆ^Ù\
+˜[YQ\œ›Ü‹[šXÛÙQXÛÙQ\œ›ÜŠN˜ÛÛ[YBˆYˆ›ÛÛK™Ù]
+YÈŠHOHÚ]YYš]˜SSˆˆÜˆY™\ÜÖÌH[ˆØØ[Ú\Ê
+N˜ÛÛ[YBˆÚ]ÐÒÎ‘TÐÓÕ‘T‘QÔ“ÓÓTÖÊY™\ÜÖÌK›ÛÛK™Ù]
+œÜŠJWO^È›˜[YHŽœÝŠ›ÛÛK™Ù]
+›˜[YH‹Ú]YYš]˜HŠJVÎK˜ÛÙHŽœÝŠ›ÛÛK™Ù]
+˜ÛÙH‹ˆŠJVÎŽK˜Y™\ÜÈŽ™ˆš‹ËÞØY™\ÜÖÌ_NžÜ›ÛÛK™Ù]
+	ÜÜ	Ê_KÈ‹œÙY[ˆŽ››ÝßBˆš[˜[NœÛØÚË˜ÛÜÙJ
+B‚˜Û\ÜÈ[™\Š˜\ÙR™\]Y\Ý[™\ŠN‚ˆÙ\™\—Ý™\œÚ[ÛHÚ]YYš]˜KÌÍ‚ˆYˆÙ×ÛY\ÜØYÙJÙ[‹
+˜\™ÜÊNˆ\ÜÂˆYˆÜÙ[™
+Ù[‹Ý]\Ë›ÙK\H˜\XØ][Û‹ÚœÛÛŽÈÚ\œÙ]]]‹NŠN‚ˆ]OX›ÙHYˆ\Ú[œÝ[˜ÙJ›ÙKž]\ÊH[ÙH
+œÛÛ‹™[\Ê›ÙK[œÝ\™WØ\ØÚZOQ˜[ÙJK™[˜ÛÙJ
+HYˆ\œÝ\ÝÚ]
+˜\XØ][Û‹ÚœÛÛˆŠH[ÙH›ÙK™[˜ÛÙJ
+JBˆÙ[‹œÙ[™Ü™\ÜÛœÙJÝ]\ÊNÈÙ[‹œÙ[™ÚXY\ŠÛÛ[U\H‹\
+NÈÙ[‹œÙ[™ÚXY\ŠÛÛ[S[™Ý‹ÝŠ[Š]JJJNÈÙ[‹œÙ[™ÚXY\ŠØXÚKPÛÛ›Û‹››Ë\ÝÜ™HŠNÈÙ[‹™[™ÚXY\œÊ
+NÈÙ[‹Ùš[KÜš]J]JBˆYˆ×ÓÔSÓ”ÊÙ[ŠNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“pê]ÙÈ›È\›Z]YÈŸJBˆYˆ×ÑÑU
+Ù[ŠN‚ˆ]\Ù[‹œ]œÜ]
+È‹JVÌBˆYˆ]OH‹Ø\KÜÝ]HŽ‚ˆY\Ù[‹šXY\œË™Ù]
+–T^Y\‹RY‹šYØYÜ‹[ØØ[ŠBˆÚ]ÐÒÎ‚ˆYˆ›Ý“ÓÓWÓÔSŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØ[HÙ]°ëXH›ÈYHÜ™XYHÜˆ[[™š]špìÛ‹ˆŸJNÜ™]\›‚ˆÝ]VÈœ^Y\œÈ—VÜYO][YK[YJ
+Bˆ›ÜˆÙ^K\Ý[ˆ\Ý
+Ý]VÈœ^Y\œÈ—Kš][\Ê
+JN‚ˆYˆ\Ý[YK[YJ
+KLNˆ[Ý]VÈœ^Y\œÈ—VÚÙ^WBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JBˆ™]\›‚ˆYˆ]OH‹Ø\KÚ[™›ÈŽˆÙ[‹—ÜÙ[™
+ŒÈš\ÈŽ›ØØ[Ú\Ê
+KœÜŽ”Ô•œ›ÛÛSÜ[ˆŽ”“ÓÓWÓÔS‹œ›ÛÛPÛÙHŽ”“ÓÓWÐÓÑHYˆ“ÓÓWÓÔSˆ[ÙH›Û™_JNÈ™]\›‚ˆYˆ]OH‹Ø\KÜ›ÛÛ\ÈŽ‚ˆÚ]ÐÒÎ‚ˆ›ÝÏ][YK[YJ
+NÜ›ÛÛ\ÏVÞÈ›˜[YHŽœÝ]K™Ù]
+›˜[YH‹Ú]YYš]˜HŠK˜ÛÙHŽ”“ÓÓWÐÓÑK˜Y™\ÜÈŽ™ˆš‹ËÞÚ\NžÔÔ•KÈ‹šÜÝŽ•Y_H›Üˆ\[ˆØØ[Ú\Ê
+VÎŒWWHYˆ“ÓÓWÓÔSˆ[ÙH×Bˆ›ÛÛ\È
+ÏHÞÊŠžÚÎˆ›ÜˆËˆ[ˆ‹š][\Ê
+HYˆÈOHœÙY[ˆŸKšÜÝŽ‘˜[Ù_H›Üˆˆ[ˆTÐÓÕ‘T‘QÔ“ÓÓTË˜[Y\Ê
+HYˆ›ÝË\–ÈœÙY[ˆ—OL—BˆÙ[‹—ÜÙ[™
+ŒÈœ›ÛÛ\ÈŽœ›ÛÛ\ßJNÜ™]\›‚ˆ™[Hš[™^š[ˆYˆ]OH‹Èˆ[ÙH]›Ýš\
+‹ÈŠBˆYˆ™[›Ý[ˆ
+š[™^š[‹œÝ[K˜ÜÜÈ‹™Ø[YKšœÈ‹›Ù™›[™KšœÈ‹›Ù™›[™WÜÙYYšœÛÛˆ‹œ™[X\ÙWÛ›Ý\ËšœÛÛˆ‹ÛÜ›ÙšœÈ‹™˜]šXÛÛ‹œÝ™È‹™[™Ü‹Ý™YK›[Ù[KšœÈ‹™[™Ü‹Ý™YK˜ÛÜ™KšœÈŠN‚ˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“›È[˜ÛÛ˜YÈŸJNÈ™]\›‚ˆš[OJ“ÓÕÜ™[
+Kœ™\ÛÛ™J
+BˆYˆ“ÓÕ›Ý[ˆš[Kœ\™[È[™š[HOT“ÓÕˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆ”]H[°è[YHŸJNÈ™]\›‚ˆYˆ›Ýš[Kš\×Ùš[J
+NˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“›È[˜ÛÛ˜YÈŸJNÈ™]\›‚ˆ\H^Ú[ÈÚ\œÙ]]]‹NˆYˆš[KœÝY™š^OH‹š[ˆ[ÙH^ØÜÜÎÈÚ\œÙ]]]‹NˆYˆš[KœÝY™š^OH‹˜ÜÜÈˆ[ÙH˜\XØ][Û‹Ú˜]˜\ØÜš\ÈÚ\œÙ]]]‹NˆYˆš[KœÝY™š^OH‹šœÈˆ[ÙH˜\XØ][Û‹ÚœÛÛŽÈÚ\œÙ]]]‹NˆYˆš[KœÝY™š^OH‹šœÛÛˆˆ[ÙHš[XYÙKÜÝ™ÊÞ[ˆYˆš[KœÝY™š^OH‹œÝ™Èˆ[ÙH˜\XØ][Û‹ÛØÝ]\Ý™X[H‚ˆÙ[‹—ÜÙ[™
+Œš[Kœ™XYØž]\Ê
+K\
+BˆYˆ×ÔÔÕ
+Ù[ŠN‚ˆÛØ˜[Ý]BˆžNˆ]OZœÛÛ‹›ØYÊÙ[‹œ™š[Kœ™XY
+[
+Ù[‹šXY\œË™Ù]
+ÛÛ[S[™Ý‹ŒŠJJHÜˆˆžßHŠBˆ^Ù\^Ù\[ÛŽˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ’”ÓÓˆ[°è[YÈŸJNÈ™]\›‚ˆ]\Ù[‹œ]œÜ]
+È‹JVÌBˆY\Ù[‹šXY\œË™Ù]
+–T^Y\‹RY‹šYØYÜ‹[ØØ[ŠBˆÚ]ÐÒÎ‚ˆÛØ˜[“ÓÓWÓÔS‚ˆYˆ]OH‹Ø\KÜ›ÛÛKØÜ™X]HŽ‚ˆYˆÙ[‹˜ÛY[ØY™\ÜÖÌH›Ý[ˆ
+ŒLËŒŒŒH‹ŽŽŒHŠN‚ˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆ“HØ[HÛÛÈYYHÜ™X\›H[[™š]špìÛˆ\ÙHÝH\]Z\ËˆŸJNÜ™]\›‚ˆYˆ“ÓÓWÓÔSˆ[™Ý]K™Ù]
+šÜÝŠHO\Y‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XH^H[˜HØ[HÜ™XYH[ˆ\ÝH\]Z\ËˆŸJNÜ™]\›‚ˆ“ÓÓWÓÔSUYNÜÝ]VÈšÜÝ—O\YÜÝ]VÈœ^Y\œÈ—VÜYO][YK[YJ
+BˆÙ[‹—ÜÙ[™
+ŒÈœ›ÛÛPÛÙHŽ”“ÓÓWÐÓÑK˜Y™\ÜÈŽ™ˆš‹ËÞÛØØ[Ú\Ê
+VÌ_NžÔÔ•KÈŸJNÜ™]\›‚ˆYˆ]OH‹Ø\KÜ›ÛÛKÚ›Ú[ˆŽ‚ˆYˆ›Ý“ÓÓWÓÔSŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[™š]špìÛˆÙ]°ëXH›ÈÜ™pìÈHØ[KˆŸJNÜ™]\›‚ˆYˆ]K™Ù]
+˜ÛÙHŠH[™ÝŠ]VÈ˜ÛÙH—JK\\Š
+HOT“ÓÓWÐÓÑN‚ˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆðìÙYÛÈHØ[H[˜ÛÜœ™XÝËˆŸJNÜ™]\›‚ˆÝ]VÈœ^Y\œÈ—VÜYO][YK[YJ
+NÜÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆ]OH‹Ø\KØXÝ[ÛˆŽ‚ˆYˆ›Ý“ÓÓWÓÔSŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØ[H›È\Ý0èHXšY\KˆŸJNÜ™]\›‚ˆXÝ[ÛY]K™Ù]
+˜XÝ[ÛˆŠBˆ[œÝ\™WÙÛÝ™\››Y[ÜÝ]J
+BˆYˆÝ]VÈ™ÛÝ™\››Y[—K™Ù]
+œÝ]\ÈŠH[ˆ
+™\œ›ÝYÈ‹™\Ý]ZYÈŠH[™XÝ[Ûˆ›Ý[ˆ
+›™]È‹
+N‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[\]Z\ÈZ°ìÈ[ÛØšY\››ËˆH\YH]YY0ìÈ[ˆ[ÙÈØœÙ\˜XÚpìÛŽÈÙ0ê\ÈÝX\™\ˆHÚ]YYÈ[šXÚX\ˆ[˜HY]˜KˆŸJNÜ™]\›‚ˆYˆXÝ[ÛOHœ™XÛÜ™ÛÝ™\››Y[YÜ™Y[Y[Ž‚ˆžNœ™XÛÜ™ÙÛÝ™\››Y[ØYÜ™Y[Y[
+]K™Ù]
+˜ÛÛ\Z[YŠKY
+Bˆ^Ù\˜[YQ\œ›Üˆ\È\œ›ÜŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽœÝŠ\œ›ÜŠ_JNÜ™]\›‚ˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOHœÝ\Y\]™T™]\ÙHŽ‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+NÞZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJNØÛÛ˜XÝÜ\ÝŠ]K™Ù]
+˜ÛÛ˜XÝÜˆ‹ˆŠJBˆZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^JK›Û™JBˆYˆ›ÝZ[[™ÈÜˆZ[[™Ë™Ù]
+šÚ[™ŠHOHœÚÜˆÜˆZ[[™Ë™Ù]
+˜\Ú[™\ÜÈ‹ßJK™Ù]
+œÝ]\ÈŠHOH˜Ù\œ˜YÈŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”ÛÛÈÙHYY[ˆ™XÛÛ™\\ˆØØ[\ÈÛÛY\˜ÚX[\ÈÙ\œ˜YÜËˆŸJNÜ™]\›‚ˆš\›OXZ[[™Ë™Ù]
+˜\Ú[™\ÜÈ‹ßJNØ\œ™X\œÏ\Ý]K™Ù]
+^\È‹ßJK™Ù]
+˜\œ™X\œÐžP\ÜÙ]‹ßJK™Ù]
+š\›K™Ù]
+šY‹ˆœÚÜ^ÞK^Þ_HŠK
+BˆYˆZ[[™Ë™Ù]
+š\š]YÙQ[YÚX›HŠNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[›]YX›HØ][ÙØYÈX™HÛÛœÙ\˜\ˆÝH\ÛÈ]š[[ÛšX[ˆŸJNÜ™]\›‚ˆYˆš\›K™Ù]
+˜Ü™Y]X‹
+OŒÜˆ\œ™X\œÏŒœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[›]YX›HX[Y[™H]YH[\™\Ø\šX[ÈšX]\šXH[™Y[KˆŸJNÜ™]\›‚ˆYˆ[žJË™Ù]
+žŠOO^[™Ë™Ù]
+žHŠOO^H›ÜˆÈ[ˆÝ]K™Ù]
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JJNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H™XÛÛ™\œÚpìÛˆXH\Ý0èH[ˆX\˜ÚKˆŸJNÜ™]\›‚ˆYˆÛÛ˜XÝÜˆ›Ý[ˆÓÓ•PÕÔ”ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”Ù[XØÚ[Û°èH[˜HÛÛœÝXÝÜ˜HXš[]YKˆŸJNÜ™]\›‚ˆÜXÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—NØXÝ]™OVÜ›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜˆ[™™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+œ]\ØYH‹˜Ø[˜Ù[YHŠWNÚ\š]YÙOVÝÈ›ÜˆÈ[ˆÝ]K™Ù]
+š\š]YÙUÛÜšÜÈ‹×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜ—NÜ™]\ÙOVÝÈ›ÜˆÈ[ˆÝ]K™Ù]
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜ—NÝ\ÙY\Ý[J™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹P“Ô—Ó‘QQË™Ù]
+™Ù]
+šÚ[™ŠK
+JH›Üˆ[ˆXÝ]™JJÜÝ[JË™Ù]
+ÛÜšÙ\œÈ‹
+H›ÜˆÈ[ˆ\š]YÙJÜ™]\ÙJBˆYˆ[ŠXÝ]™JJÛ[Š\š]YÙJJÛ[Š™]\ÙJO\ÜXÖÈ˜Ø\XÚ]H—HÜˆ\ÙY
+ÍœÜXÖÈÛÜšÙ\œÈ—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™H[˜HÝXYš[HXœ™HHÝX]›È˜X˜Z˜YÜ™\ËˆŸJNÜ™]\›‚ˆ[™\ÝY[MŒÜ\›Z]LŒˆYˆÝ]K™Ù]
+œš]˜]PØ\][‹
+O[™\ÝY[œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘[›ÞYXÝÈš]˜YÈ™\]ZY\™H	Ú[™\ÝY[‹HHØ\][\ÜÛšX›Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆÝ]VÈœš]˜]PØ\][—KOZ[™\ÝY[ÜÝ]VÈ›[Û™^H—JÏ\\›Z]ÜÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—JÏZ[™\ÝY[Ù\˜][Û[X^
+Œ›Ý[™
+
+œÜXÖÈ™^\È—KÌÌ
+JNÝÛÜšÏ^ÈšYŽ™ˆœ™]\ÙK^ÞK^Þ_K^ÜÝ]VÉÙ^I×_H‹žŽžžHŽžK›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YH‹“ØØ[Ù\œ˜YÈŠK˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹š[™\ÝY[Žš[™\ÝY[œ\›Z]™YHŽœ\›Z]ÛÜšÙ\œÈŽ™\˜][Û‘^\ÈŽ™\˜][Û‹™[\ÙY^\ÈŽŒœ›ÙÜ™\ÜÈŽŒœÝYÙHŽˆ‘\Û[ÛZ™HHXYÛ°ìÜÝXÛÈ‹œ™[ŽŒœ]X[]HŽœ›Ý[™
+ÜXÖÈœ]X[]H—JŒL
+KœÝ\^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆ™[ˆØœ˜HŸNÜÝ]KœÙ]Y˜][
+˜Y\]™T™]\ÙUÛÜšÜÈ‹×JK˜\[™
+ÛÜšÊNÙ]Š”\›Z\ÛÈH™XÛÛ™\œÚpìÛˆ\›Ø˜YÈ‹ˆžÝÛÜšÖÉÛ˜[YI×_H\ØHHØØ[Ù\œ˜YÈHš]šY[™Nˆ[™\œÚpìÛˆš]˜YH	Ú[™\ÝY[‹K\›Z\ÛÈ][šXÚ\[	Ü\›Z]KÝX]›È˜X˜Z˜YÜ™\ÈHÙ\˜][ÛŸH0ëX\ËˆÙH™\]ZY\™H[œÜXØÚpìÛˆHYÝXKØ[™X[ZY[ÈHÙYÝ\šYYˆ‹œ™\XÙJ‹‹‹ˆŠJNÜÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOHš\š]YÙT›ÝXÝŽ‚ˆ[œÝ\™WÚ\š]YÙWÜÝ]J
+BˆZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJNÛ]™[\ÝŠ]K™Ù]
+›]™[‹ˆŠJNØZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+š\š]YÙQ[YÚX›HŠJK›Û™JBˆYˆ›ÝZ[[™ÈÜˆ]™[›Ý[ˆ
+œ›ÝXØÚpìÛˆ\˜ÚX[‹œ›ÝXØÚpìÛˆ[YÜ˜[ŠNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[YðëH[ˆ[›]YX›H\Ý0ìÜšXÛÈH[ˆš]™[H›ÝXØÚpìÛˆ°è[YËˆŸJNÜ™]\›‚ˆYˆZ[[™Ë™Ù]
+š\š]YÙS]™[ŠOOHœ›ÝXØÚpìÛˆ[YÜ˜[ŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[›]YX›HXHY[™H›ÝXØÚpìÛˆ[YÜ˜[ˆŸJNÜ™]\›‚ˆZ[[™ÖÈš\š]YÙS]™[—O[]™[ØZ[[™ÖÈœ›ÝXÝY^H—O\Ý]K™Ù]
+™^H‹JNÙ]Š’[›]YX›H\Ý0ìÜšXÛÈ›ÝYÚYÈ‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIÊ_NˆÛ]™[KˆÙHÛÛœÙ\˜HÝH\ÛÈHÙHXš[]H[˜H™ZXš[]XÚpìÛˆ]š[[ÛšX[š[˜[˜ÚXYKˆŠBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOHœÝ\\˜˜[”™[™]Ø[Ž‚ˆžNœÝ\Ý\˜˜[—Ü™[™]Ø[
+]K™Ù]
+›™YYYŠKÝŠ]K™Ù]
+˜ÛÛ˜XÝÜˆ‹ˆŠJJBˆ^Ù\˜[YQ\œ›Üˆ\È\œ›ÜŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽœÝŠ\œ›ÜŠ_JNÜ™]\›‚ˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOHš\š]YÙT™\ÝÜ™HŽ‚ˆ[œÝ\™WÜÝ\WÜÝ]J
+BˆZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJNØÛÛ˜XÝÜ\ÝŠ]K™Ù]
+˜ÛÛ˜XÝÜˆ‹ˆŠJNØZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+˜Z[[™ÜÈ‹×JHYˆ‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+š\š]YÙQ[YÚX›HŠH[™‹™Ù]
+š\š]YÙS]™[ŠH[ˆ
+œ›ÝXØÚpìÛˆ\˜ÚX[‹œ›ÝXØÚpìÛˆ[YÜ˜[ŠJK›Û™JBˆYˆ›ÝZ[[™ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”š[Y\›È[™[\špèHH›ÝYðêH[[›]YX›H\Ý0ìÜšXÛËˆŸJNÜ™]\›‚ˆYˆZ[[™Ë™Ù]
+˜ÛÛœÙ\˜][Ûˆ‹L
+ONMœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÛÛœÙ\˜XÚpìÛˆ\Ý0èH[ˆY[ˆ\ÝYÎÈ›È™XÙ\Ú]H\ÝH™ZXš[]XÚpìÛ‹ˆŸJNÜ™]\›‚ˆYˆÛÛ˜XÝÜˆ›Ý[ˆÓÓ•PÕÔ”ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”Ù[XØÚ[Û°èH[˜HÛÛœÝXÝÜ˜HXš[]YKˆŸJNÜ™]\›‚ˆÝ\O\Ý]KœÙ]Y˜][
+œÝ\H‹™]×ÜÝ\J
+JNØ\ÞOVÜ›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜˆ[™™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+œ]\ØYH‹˜Ø[˜Ù[YHŠWBˆÛÜšÜÏVÝÈ›ÜˆÈ[ˆÝ]K™Ù]
+š\š]YÙUÛÜšÜÈ‹×JHYˆË™Ù]
+˜ÛÛ˜XÝÜˆŠOOXÛÛ˜XÝÜ—Bˆ\ÙY\Ý[J™Ù]
+ÛÜšÙ\œÐ\ÜÚYÛ™Y‹P“Ô—Ó‘QQË™Ù]
+™Ù]
+šÚ[™ŠK
+JH›Üˆ[ˆ\ÞJJÜÝ[JË™Ù]
+ÛÜšÙ\œÈ‹
+H›ÜˆÈ[ˆÛÜšÜÊNÜÜXÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—BˆYˆ[Š\ÞJJÛ[ŠÛÜšÜÊO\ÜXÖÈ˜Ø\XÚ]H—HÜˆ\ÙY
+ÍœÜXÖÈÛÜšÙ\œÈ—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™H[˜HÝXYš[HXœ™HHÝX]›È˜X˜Z˜YÜ™\ËˆŸJNÜ™]\›‚ˆÝ\Y\—Û˜[YOS›Û™Bˆ›ÜˆØ[™Y]H[ˆÛÜY
+ÕTQT”ËÙ^O[[X™H˜[YNŠÕTQT”ÖÛ˜[YWVÈœšXÙH—KÕTQT”ÖÛ˜[YWVÈ™^\È—JJN‚ˆÝØÚÏ\Ý\KœÙ]Y˜][
+œÝ\Y\œÈ‹ßJKœÙ]Y˜][
+Ø[™Y]KÕTQT—ÔÕÐÒÖØØ[™Y]WK˜ÛÜJ
+JBˆYˆ[
+ÝØÚË™Ù]
+Ë
+O]ˆ›ÜˆËˆ[ˆT’UQÑWÓPUT’PSËš][\Ê
+JNœÝ\Y\—Û˜[YOXØ[™Y]NØœ™XZÂˆYˆ›ÝÝ\Y\—Û˜[YNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“ÜÈ›Ý™YYÜ™\È›ÈY[™[ˆ[ÝHH™YY\ž›ÈH\›Z[˜XÚ[Û™\Ëˆ\Ü\°èHH™\ÜÚXÚpìÛˆ™YÚ[Û˜[ˆŸJNÜ™]\›‚ˆÝØÚÏ\Ý\VÈœÝ\Y\œÈ—VÜÝ\Y\—Û˜[YWNÛX]\šX[×ØÛÜÝ\›Ý[™
+Ý[JT’UQÑWÓPUT’PSÖÚ×J“PUT’PSÔ’PÑVÚ×H›ÜˆÈ[ˆT’UQÑWÓPUT’PSÊJ”ÕTQT”ÖÜÝ\Y\—Û˜[YWVÈœšXÙH—JBˆX›Ü—ØÛÜÝ\›Ý[™
+
+ŒŒ
+ÛX^
+LXZ[[™Ë™Ù]
+˜ÛÛœÙ\˜][Ûˆ‹LŠJJŒ
+JœÜXÖÈœšXÙH—JNØÛÜÝ[X]\šX[×ØÛÜÝ
+ÛX›Ü—ØÛÜÝˆ™\Ù\™Y\Ý[JX^
+™Ù]
+˜ÛÜÝ‹
+K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+[
+Ý]K™Ù]
+›[Û™^H‹
+JK\™\Ù\™Y
+BˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›N‹HXœ™\ÎÈ™\Ý]\˜\ˆØZ[[™Ë™Ù]
+	Û˜[YIÊ_HÝY\ÝH	ØÛÜÝ‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆ›ÜˆÙ^K[[Ý[[ˆT’UQÑWÓPUT’PSËš][\Ê
+NœÝØÚÖÚÙ^WKOX[[Ý[ˆÝ]VÈ›[Û™^H—KOXÛÜÝÜÝ\KœÙ]Y˜][
+˜ÛÛ˜XÝÜØ\Ú‹ÓÓ•PÕÔ—ÐÐTÒ˜ÛÜJ
+JVØÛÛ˜XÝÜ—O\Ý\KœÙ]Y˜][
+˜ÛÛ˜XÝÜØ\Ú‹ÓÓ•PÕÔ—ÐÐTÒ˜ÛÜJ
+JK™Ù]
+ÛÛ˜XÝÜ‹
+JÛX›Ü—ØÛÜÝˆXYTÕTQT”ÖÜÝ\Y\—Û˜[YWVÈ™^\È—NÙ^\Ï[X^
+MK›Ý[™
+
+œÜXÖÈ™^\È—KÌÌ
+JNÝÛÜšÏ^ÈšYŽ™ˆš\š]YÙK^ÞK^Þ_K^ÜÝ]VÉÙ^I×_H‹žŽžžHŽžK›˜[YHŽ˜Z[[™Ë™Ù]
+›˜[YHŠK˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹œÝ\Y\ˆŽœÝ\Y\—Û˜[YK›X]\šX[ÈŽ™XÝ
+T’UQÑWÓPUT’PSÊK›X]\šX[ÛÜÝŽ›X]\šX[×ØÛÜÝ›X›ÜÛÜÝŽ›X›Ü—ØÛÜÝ˜ÛÜÝŽ˜ÛÜÝÛÜšÙ\œÈŽ™[]™\žQ^HŽœÝ]VÈ™^H—JÛXY™[]™\žQ^\ÈŽ›XY™\˜][Û‘^\ÈŽ™^\Ë™[\ÙY^\ÈŽŒœ›ÙÜ™\ÜÈŽŒœÝYÙHŽˆ‘\Ü\˜[™ÈX]\šX[\È‹œÝ\^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆ™[ˆØœ˜HŸBˆÝ]KœÙ]Y˜][
+š\š]YÙUÛÜšÜÈ‹×JK˜\[™
+ÛÜšÊNÙ]Š”™ZXš[]XÚpìÛˆ]š[[ÛšX[ÛÛ˜]YH‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIÊ_NˆÝX]›È˜X˜Z˜YÜ™\ËX]\šX[\ÈÜÝ\Y\—Û˜[Y_H
+YØ[ˆ[ˆÛXYH0ëX\ÊHHÙ^\ßH0ëX\ÈHØœ˜Kˆ[™\œÚpìÛˆ	ØÛÜÝ‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOH˜Y\Ý^Ž‚ˆ^\ÏY[œÝ\™WÝ^ÜÝ]J
+NÚÚ[™\ÝŠ]K™Ù]
+šÚ[™‹ˆŠJNÙ[OZ[
+]K™Ù]
+™[H‹
+JBˆYˆÚ[™OHœ›Ü\HŽšÙ^OHœ›Ü\T˜]PœŽÛÝËYÚÝ\LŒMLˆ[YˆÚ[™OH˜\Ú[™\ÜÈŽšÙ^OH˜\Ú[™\ÜÔ˜]PœŽÛÝËYÚÝ\LLBˆ[ÙNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ•\ÈH[\Y\ÝÈ›È™XÛÛ›ØÚYËˆŸJNÜ™]\›‚ˆYˆ[H›Ý[ˆ
+\Ý\Ý\
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆØ[Xš[ÈH[0ëXÝ[ÝH[°è[YËˆŸJNÜ™]\›‚ˆÛ]^\Ë™Ù]
+Ù^KŒYˆÚ[™OHœ›Ü\Hˆ[ÙHŒ
+NÛ™]Ï[X^
+ÝËZ[ŠYÚÛ
+Ù[JJBˆYˆ™]ÏO[ÛœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H[0ëXÝ[ÝHXH\Ý0èH[ˆÝH0ë[Z]KˆŸJNÜ™]\›‚ˆ^\ÖÚÙ^WO[™]ÎÙ]Š”Û0ë]XØHšX]\šXHZ\ÝYH‹ˆ’[\Y\ÝÈÉÚ[›[Øš[X\š[È[X[	ÈYˆÚ[™OIÜ›Ü\IÈ[ÙH	ØH™[\ÈÛÛY\˜ÚX[\ÉßNˆÛÛÌL‹Œ™ŸIH8¡¤ˆÛ™]ËÌL‹Œ™ŸIKˆ[ÛØœ›È™X[HH[Ü˜HÙHXÝX[^˜\°è[ˆ[ÚY\œ™HY[œÝX[ˆŠBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOH›][šXÚ\[X™\Ù\™HŽ‚ˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NÙš[˜[˜ÙO\Ý]VÈ™š[˜[˜ÙH—NÙ\™XÝ[Û\ÝŠ]K™Ù]
+™\™XÝ[Ûˆ‹ˆŠJNØ[[Ý[Z[
+]K™Ù]
+˜[[Ý[‹
+JBˆYˆ\™XÝ[Ûˆ›Ý[ˆ
+™\ÜÚ]‹Ú]˜]ÈŠHÜˆ[[Ý[›Ý[ˆ
+LLL
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[YðëH[ˆ[Ýš[ZY[È°è[YÈH	L	KŒÈ	‹LˆŸJNÜ™]\›‚ˆ™\Ù\™O[X^
+[
+š[˜[˜ÙK™Ù]
+™X™\Ù\™H‹
+JJBˆYˆ\™XÝ[ÛOH™\ÜÚ]Ž‚ˆ™\Ù\™Y\Ý[JX^
+™Ù]
+˜ÛÜÝ‹
+K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]K™Ù]
+œ›Ú™XÝÈ‹×JHYˆ›Ý™Ù]
+œš]˜]TZYŠJNÙœ™YO[X^
+[
+Ý]K™Ù]
+›[Û™^H‹
+JK\™\Ù\™Y
+BˆYˆœ™YO[[Ý[œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ùœ™YN‹HXœ™\È\Üpê\ÈHÛÛ\›ÛZ\ÛÜÎÈ›È[Ø[ž˜H\˜H\\\ˆ	Ø[[Ý[‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOX[[Ý[Ùš[˜[˜ÙVÈ™X™\Ù\™H—O\™\Ù\™JØ[[Ý[ÛX™[H˜\\YÜÈ\˜H]YH‚ˆ[ÙN‚ˆYˆ™\Ù\™O[[Ý[œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘[›Û™ÈH]YHÛÛÈY[™H	Ü™\Ù\™N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆš[˜[˜ÙVÈ™X™\Ù\™H—O\™\Ù\™KX[[Ý[ÜÝ]VÈ›[Û™^H—JÏX[[Ý[ÛX™[H™]Y[ÜÈHØZ˜H‚ˆš[˜[˜ÙKœÙ]Y˜][
+™X™\Ù\™R\ÝÜžH‹×JK˜\[™
+È™^HŽœÝ]K™Ù]
+™^H‹JK˜[[Ý[Ž˜[[Ý[Yˆ\™XÝ[ÛOH™\ÜÚ]ˆ[ÙHX[[Ý[œ™X\ÛÛˆŽˆ\ÜH[›Û™ÈH]YHˆYˆ\™XÝ[ÛOH™\ÜÚ]ˆ[ÙH”™]\›È[›Û™ÈH]YHŸJNÙ[š[˜[˜ÙVÈ™X™\Ù\™R\ÝÜžH—VÎ‹LBˆ]Š‘›Û™ÈH]YHXÝX[^˜YÈ‹ˆ‰Ø[[Ý[‹HÛX™[Kˆ›Û™È›ÝYÚYÎˆ	Ùš[˜[˜ÙVÉÙX™\Ù\™I×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJNÜÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOH˜Y\Ý›ØYXZ[[˜[˜ÙHŽ‚ˆ[OZ[
+]K™Ù]
+™[H‹
+JNÛÛ[X^
+Z[ŠŒ[
+Ý]K™Ù]
+œ›ØYXZ[[˜[˜ÙTÝ‹L
+JJJNÛ™]Ï[X^
+Z[ŠŒÛ
+Ù[JJBˆYˆ[H›Ý[ˆ
+LKJHÜˆ™]ÏO[ÛœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[ˆØ[XšXH[ˆ\ÛÜÈHIK[™H	HHŒ	KˆŸJNÜ™]\›‚ˆÝ]VÈœ›ØYXZ[[˜[˜ÙTÝ—O[™]ÎÙ]Š”[ˆ][šXÚ\[HX[[š[ZY[ÈXÝX[^˜YÈ‹ˆ“X[[š[ZY[È™]™[]›ÈHØ[\ÈHYYšXÚ[ÜÈ0î˜›XÛÜÎˆÛ™]ßIHHH™XÙ\ÚYYY[œÝX[\Ý[XYKˆ[™\Ý\Y\ÝÈH™Y\È]\›Z[˜HÝpè[È˜X˜Z›ÈÙHZ™XÝ]HHHÛÛ™XÚpìÛˆØ[XšXHÜˆ\ÛËˆŠBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOH˜Y\Ý›ÙÜ˜[PYÙ]Ž‚ˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NØYÙ]Ï\Ý]VÈ™š[˜[˜ÙH—VÈœ›ÙÜ˜[PYÙ]È—NÜ›ÙÜ˜[O\ÝŠ]K™Ù]
+œ›ÙÜ˜[H‹ˆŠJNÙ[OZ[
+]K™Ù]
+™[H‹
+JBˆÙ^\Ï^ÈœÙ\šXÙ\ÈŽˆœÙ\šXÙ\ÔÝ‹›[Øš[]HŽˆ›[Øš[]TÝ‹›™]ÛÜšÜÈŽˆ›™]ÛÜšÜÔÝŸBˆYˆ›ÙÜ˜[H›Ý[ˆÙ^\ÈÜˆ[H›Ý[ˆ
+LLL
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”›ÙÜ˜[XHÈZ\ÝHH™\Ý\Y\ÝÈ[°è[YËˆŸJNÜ™]\›‚ˆÙ^OZÙ^\ÖÜ›ÙÜ˜[WNÛÛZ[
+YÙ]Ë™Ù]
+Ù^KL
+JNÛ™]Ï[X^
+Z[ŠŒÛ
+Ù[JJBˆYˆ™]ÏO[ÛœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[™\Ý\Y\ÝÈXH\Ý0èH[ˆÝH0ë[Z]KˆŸJNÜ™]\›‚ˆYÙ]ÖÚÙ^WO[™]ÎÛX™[^ÈœÙ\šXÙ\ÈŽˆœÙ\šXÚ[ÜÈ0î˜›XÛÜÈ‹›[Øš[]HŽˆ˜[œÜÜH‹›™]ÛÜšÜÈŽˆœ™Y\ÈH™\ÚY[ÜÈŸVÜ›ÙÜ˜[WBˆ]Š”™\Ý\Y\ÝÈ][šXÚ\[XÝX[^˜YÈ‹ˆ\ÚYÛ˜XÚpìÛˆY[œÝX[HÛX™[NˆÛ™]ßIH[ÛÜÝÈšYÙ[KˆÙH\]ZYH[°ìÞ[[ÈÚY\œ™NÈÈ]YH›È[Ø[˜ÙH]YYHÛÛ[ÈØ›YØXÚpìÛˆ[›ÙÜ˜[XKˆŠBˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[ÛOH›][šXÚ\[Ø[ˆŽ‚ˆ[œÝ\™WÙš[˜[˜ÙWÜÝ]J
+NØ[[Ý[Z[
+]K™Ù]
+˜[[Ý[‹
+JNÝ\›OZ[
+]K™Ù]
+\›S[ÛÈ‹
+JNÜ™\Ü[][šXÚ\[Ùš[˜[˜ÙWÜ™\Ü
+
+BˆYˆ[[Ý[›Ý[ˆ
+LLŒ
+HÜˆ\›H›Ý[ˆ
+
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[YðëH[ˆ[ÛÈH^›È\ÜÛšX›\ËˆŸJNÜ™]\›‚ˆYˆ[[Ý[œ™\ÜÈ˜Ü™Y][Z]—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘[0ë[Z]HHÛÛ™[˜ÚXHXÝX[\È	Ü™\ÜÉØÜ™Y][Z]	×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆ˜]OKŒNÛ[ÛOX[[Ý[
+œ˜]JŠJÜ˜]JJŠ\›KÊ
+JÜ˜]JJŠ\›KLJNÙÜ›ÜÜÏ[X^
+K™\ÜÈ›[ÛR[˜ÛÛYH—JNÙ^\Ý[™Ï\™\ÜÈ›[ÛQXÙ\šXÙH—BˆYˆ[ÛJÙ^\Ý[™Ï™Ü›ÜÜÊ‹ŒÍNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÝ[ÝHÝ\\˜\°ëXH[ÍIHHÜÈ[™Ü™\ÛÜÈY[œÝX[\ÈH™Y™\™[˜ÚXKˆŸJNÜ™]\›‚ˆØ[^ÈšYŽ™ˆ›][‹^Ý]ZY]ZY
+
+Kš^ÎŒL_H‹›X™[ŽˆÜ°êY]ÈH[™\œÚpìÛˆ][šXÚ\[‹œš[˜Ú\[Ž˜[[Ý[˜˜[[˜ÙHŽ˜[[Ý[˜[›X[˜]HŽ‹ŒL‹›[ÛT˜]HŽœ˜]K\›S[ÛÈŽ\›K›[ÛÔ™[XZ[š[™ÈŽ\›Kœ^[Y[Žœ›Ý[™
+[ÛJK˜Ü™X]Y^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆ˜XÝ]™H‹™[[œ]Y[[ÛÈŽŒÝ[ØÚY[YŽœ›Ý[™
+[ÛJ\›J_BˆÝ]VÈ™š[˜[˜ÙH—VÈ›][šXÚ\[Ø[œÈ—K˜\[™
+Ø[ŠNÜÝ]VÈ›[Û™^H—JÏX[[Ý[Ù]ŠÜ°êY]È][šXÚ\[ÛÛ˜]YÈ‹ˆ’[™Ü™\Ø\›Ûˆ	Ø[[Ý[‹HHØZ˜KˆÝ[ÝHšZ˜H	ÛØ[–ÉÜ^[Y[	×N‹KÛY\È\˜[HÝ\›_HY\Ù\ÎÈÛÜÝÈÝ[\Ý[XYÈ	ÛØ[–ÉÝÝ[ØÚY[Y	×N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠJNÜÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÜ™]\›‚ˆYˆXÝ[Ûˆ[ˆ
+œÜYY‹œ]\ÙH‹›™]ÈŠH[™YO\Ý]K™Ù]
+šÜÝŠN‚ˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆ‘\ÝHXØÚpìÛˆ\Ý0èH™\Ù\˜YH[[™š]špìÛˆHHØ[KˆŸJNÈ™]\›‚ˆYˆXÝ[ÛOHœÜYYŽˆÝ]VÈœÜYY—O[X^
+KZ[Š[
+]K™Ù]
+˜[YH‹JJJJBˆ[YˆXÝ[ÛOHœ]\ÙHŽˆÝ]VÈœ]\ÙY—O[›ÝÝ]VÈœ]\ÙY—Bˆ[YˆXÝ[ÛOHœÝ\\Ô›Ý]HŽ‚ˆØ][ÙÏ^ÞÈšY—Nž›Üˆ[ˆ\×Ü›Ý]WØØ][ÙÊ
+_NÛÙ™™\XØ][ÙË™Ù]
+ÝŠ]K™Ù]
+œ›Ý]RY‹ˆŠJJBˆ\Ù\Ï[X^
+KZ[ŠË[
+]K™Ù]
+˜\Ù\È‹JJJJBˆYˆ›ÝÙ™™\ŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[ÛÜœ™YÜˆX›Ü˜[XH›È\Ý0èH\ÜÛšX›KˆŸJNÜ™]\›‚ˆYˆ[žJ™Ù]
+™œ›ÛHŠOO[Ù™™\–È™œ›ÛH—H[™™Ù]
+ÈŠOO[Ù™™\–ÈÈ—H[™™Ù]
+œÝ]\ÈŠHOH˜Ø[˜Ù[Yˆ›Üˆ[ˆÝ]KœÙ]Y˜][
+˜\Ô›Ý]\È‹×JJN‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XH^\ÝH[˜H0ë[™XH\˜H\ÙHÛÜœ™YÜ‹ˆŸJNÜ™]\›‚ˆÛÜÝX\Ù\Ê•T×ÔTÒTÑWÐÓÔÕÜ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ“H›ÝHÝY\ÝH	ØÛÜÝ‹HH]YY[ˆ	Ø]˜Z[X›N‹H\Üpê\ÈHÛÛ˜]ÜËˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆ[™O^ÈšYŽ]ZY]ZY
+
+Kš^™œ›ÛHŽ›Ù™™\–È™œ›ÛH—KÈŽ›Ù™™\–ÈÈ—Kœ›Ý]HŽ›Ù™™\–Èœ›Ý]H—KœÝÜÈŽ›Ù™™\–ÈœÝÜÈ—K›ÜšYÚ[“˜[YHŽ›Ù™™\–È›ÜšYÚ[“˜[YH—K™\Ý[˜][Û“˜[YHŽ›Ù™™\–È™\Ý[˜][Û“˜[YH—K˜\Ù\ÈŽ˜\Ù\Ë˜Ø\XÚ]HŽ˜\Ù\Ê•T×ÔÑPUËšXYØ^SZ[]\ÈŽ›X^
+‹X]˜ÙZ[
+
+Ù™™\–È™\Ý[˜ÙH—JŒËŠKØ\Ù\ÊJK™˜\™HŽ•T×ÑT‘KœÝ]\ÈŽˆ˜XÝ]™H‹›Ü\˜][Û˜[Ž•YK™Z[TšY\œÈŽŒ›[ÛQ˜\™T™]™[YHŽŒ›[ÛSÜ\˜][™ÐÛÜÝŽ˜\Ù\Ê•T×ÓSÓ•WÓÔTUS‘×ÐÓÔÕœ\˜Ú\ÙPÛÜÝŽ˜ÛÜÝ˜Ü™X]Y^HŽœÝ]VÈ™^H—_BˆÝ]VÈ›[Û™^H—KOXÛÜÝÜÝ]VÈ˜\Ô›Ý]\È—K˜\[™
+[™JNÙ]Š“0ë[™XHH]]Ø°îœÈ[˜]YÝ\˜YH‹ˆžÛ[™VÉÛÜšYÚ[“˜[YI×_H8 $ÈÛ[™VÉÙ\Ý[˜][Û“˜[YI×_H0­ÈØ\Ù\ßHÛÛXÝ]›ÊÊH0­ÈÛ[Š[™VÉÜÝÜÉ×J_H\˜Y\È0­Èœ™XÝY[˜ÚXHØYHÛ[™VÉÚXYØ^SZ[]\É×_HZ[ˆ0­È[™\œÚpìÛˆ	ØÛÜÝ‹KˆÜ\˜XÚpìÛˆ	Û[™VÉÛ[ÛSÜ\˜][™ÐÛÜÝ	×N‹KÛY\Ëˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[Ûˆ[ˆ
+œ]\ÙP\Ô›Ý]H‹œ™\Ý[YP\Ô›Ý]H‹˜Ø[˜Ù[\Ô›Ý]HŠN‚ˆ[™O[™^
+
+ˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+˜\Ô›Ý]\È‹×JHYˆ‹™Ù]
+šYŠOO\ÝŠ]K™Ù]
+šYŠJJK›Û™JBˆYˆ›Ý[™NœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“H0ë[™XHXH›È^\ÝKˆŸJNÜ™]\›‚ˆYˆXÝ[ÛOHœ]\ÙP\Ô›Ý]HŽ›[™K\]JÈœÝ]\ÈŽˆœ]\ÙY‹›Ü\˜][Û˜[Ž‘˜[ÙKœ]\ÙT™X\ÛÛˆŽˆ”]\ØHXÚYYHÜˆ[ÛØšY\››ÈŸJNÙ]Š“0ë[™XHH]]Ø°îœÈ]\ØYH‹ˆžÛ[™VÉÛÜšYÚ[“˜[YI×_H8 $ÈÛ[™VÉÙ\Ý[˜][Û“˜[YI×_NˆÙH]Y[™[ˆÙ\šXÚ[ÈHØ\ÝÈÜ\˜]]›ËˆŠBˆ[YˆXÝ[ÛOHœ™\Ý[YP\Ô›Ý]HŽ‚ˆ]\›Ý]WØ™]ÙY[Š\J[™VÈ™œ›ÛH—JK\J[™VÈÈ—JJBˆYˆ›Ý]œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[ÛÜœ™YÜˆÙ]°ëXH›ÈY[™HÛÛ™^pìÛˆšX[ˆŸJNÜ™]\›‚ˆ[™K\]JÈœ›Ý]HŽœ]œÝ]\ÈŽˆ˜XÝ]™H‹›Ü\˜][Û˜[Ž•YKœ]\ÙT™X\ÛÛˆŽ“›Û™_JNÙ]Š“0ë[™XHH]]Ø°îœÈ™X[YYH‹ˆžÛ[™VÉÛÜšYÚ[“˜[YI×_H8 $ÈÛ[™VÉÙ\Ý[˜][Û“˜[YI×_HY[™HHÜ\˜\ˆÛÛˆÛ[™VÉØ\Ù\É×_HÛÛXÝ]›ÊÊKˆŠBˆ[ÙN‚ˆ™Y[™\›Ý[™
+[™K™Ù]
+œ\˜Ú\ÙPÛÜÝ‹[™VÈ˜\Ù\È—J•T×ÔTÒTÑWÐÓÔÕ
+J‹JNÜÝ]VÈ›[Û™^H—JÏ\™Y[™Û[™K\]JÈœÝ]\ÈŽˆ˜Ø[˜Ù[Y‹›Ü\˜][Û˜[Ž‘˜[ÙK˜Ø[˜Ù[Y^HŽœÝ]VÈ™^H—_JNÙ]Š“0ë[™XHH]]Ø°îœÈ™]\˜YH‹ˆ”ÙH™]\°ìÈÛ[™VÉÛÜšYÚ[“˜[YI×_H8 $ÈÛ[™VÉÙ\Ý[˜][Û“˜[YI×_NÈÙH™XÝ\\˜\›Ûˆ	Ü™Y[™‹HÜˆÜÈ™Z0ëXÝ[ÜËˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOHœÝ\˜Z[š[™Ô›ÙÜ˜[HŽ‚ˆØ]YÛÜžO\ÝŠ]K™Ù]
+˜Ø]YÛÜžH‹ˆŠJBˆYˆØ]YÛÜžH›Ý[ˆRS’S‘×ÐÐUQÓÔ’QTÎœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ”\™š[H›Ü›XXÚpìÛˆ[°è[YËˆŸJNÜ™]\›‚ˆ[œÝ\™WÜ™\ÚY[Ü›ÜÝ\Š
+NØØ][ÙÏ^ÞÈ˜Ø]YÛÜžH—Nž›Üˆ[ˆ˜Z[š[™×ØØ][ÙÊ
+_NÛÙ™™\XØ][ÙÖØØ]YÛÜžWBˆYˆ›ÝÙ™™\–È˜Ø[”Ý\—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ›Ù™™\–Èœ™X\ÛÛˆ—HÜˆ‘[›ÙÜ˜[XH›È\Ý0èH\ÜÛšX›KˆŸJNÜ™]\›‚ˆÙ[\[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šY‹ˆ˜Ú]šXË^Ø–ÉÞ	×_K^Ø–ÉÞI×_HŠOO[Ù™™\–È˜Ù[\’Y—JK›Û™JBˆ›ÙÜ˜[\Ï\Ý]KœÙ]Y˜][
+˜Z[š[™Ô›ÙÜ˜[\È‹×JNÙ^ÛYY^Ü\œÛÛ—ÚY›Üˆ[ˆ›ÙÜ˜[\ÈYˆ™Ù]
+œÝ]\ÈŠH[ˆ
+˜XÝ]™H‹œ]\ÙYŠH›Üˆ\œÛÛ—ÚY[ˆ™Ù]
+˜Z[™YRYÈ‹×J_BˆØ[™Y]\Ï]˜Z[š[™×ØØ[™Y]\ÊØ]YÛÜžKÙ[\‹^ÛYY
+NØÛÚÜXØ[™Y]\ÖÎ•RS’S‘×ÔÑPU×BˆYˆ›ÝÛÚÜœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›È^H™\ÚY[\ÈÛÛˆ\ØH™XÙ\ÚYYH›Ü›XXÚpìÛˆHXØÙ\ÛÈ[][KˆŸJNÜ™]\›‚ˆ[ÛOURS’S‘×ÐTÑWÓSÓ•WÐÓÔÕ
+ÕRS’S‘×ÐÓÔÕÔT—ÔÕQS•
+›[ŠÛÚÜ
+NÝÝ[[[ÛJ•RS’S‘×ÓSÓ•Âˆ™\Ù\™Y\Ý[JX^
+[™[™ÖÈ˜ÛÜÝ—K\[™[™Ë™Ù]
+œZY‹
+JH›Üˆ[™[™È[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý[™[™Ë™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÝ[œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘[Ý\œÛÈÝY\ÝH	ÝÝ[‹HH]YY[ˆ	Ø]˜Z[X›N‹H\ÜÛšX›\È\Üpê\ÈHÜÈÛÛ˜]ÜËˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆ˜Z[™YWÚYÏVÜ›ÝÖÈœ\œÛÛˆ—K™Ù]
+šYŠH›Üˆ›ÝÈ[ˆÛÚÜNÛX™[URS’S‘×ÐÐUQÓÔ’QTÖØØ]YÛÜžWVÌBˆ›ÙÜ˜[O^ÈšYŽ]ZY]ZY
+
+Kš^˜Ø]YÛÜžHŽ˜Ø]YÛÜžK›X™[Ž›X™[˜Ù[\’YŽ›Ù™™\–È˜Ù[\’Y—K˜Ù[\“˜[YHŽ›Ù™™\–È˜Ù[\“˜[YH—KœÝ]\ÈŽˆ˜XÝ]™H‹˜Ü™X]Y^HŽœÝ]VÈ™^H—K™\˜][Û“[ÛÈŽ•RS’S‘×ÓSÓ•Ë›[ÛÐÛÛ\]YŽŒœÙX]ÈŽ›[ŠÛÚÜ
+K˜Z[™YRYÈŽ˜Z[™YWÚYË˜Z[™YT›ÙÜ™\ÜÈŽžÜ›ÝÖÈœ\œÛÛˆ—VÈšY—Nœ›ÝÖÈœÚÚ[—H›Üˆ›ÝÈ[ˆÛÚÜKœÚÚ[ØZ[”\“[ÛŽ•RS’S‘×ÔÒÒSÑÐRS‹›[ÛPÛÜÝŽ›[ÛK˜ÛÜÝŽÝ[œZYŽÝ[œÜ[ŽŒœ™[XZ[š[™ÐYÙ]ŽÝ[BˆÝ]VÈ›[Û™^H—KO]Ý[Ü›ÙÜ˜[\Ë˜\[™
+›ÙÜ˜[JNÙ[›ÙÜ˜[\ÖÎ‹LÌBˆ]Š”›ÙÜ˜[XHH›Ü›XXÚpìÛˆYYXØYÈ‹ˆ][H][šXÚ\[0­ÈÛX™[H0­ÈÛ[ŠÛÚÜ
+_H\XÚ\[\È0­ÈÕRS’S‘×ÓSÓ•ßHÚXÛÜÈ0­È	ÝÝ[‹H™\YØYÜËˆH›Ü›XXÚpìÛˆ[\Y^˜H[ˆ[°ìÞ[[ÈÚY\œ™HY[œÝX[ˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[Ûˆ[ˆ
+œ]\ÙU˜Z[š[™Ô›ÙÜ˜[H‹œ™\Ý[YU˜Z[š[™Ô›ÙÜ˜[H‹˜Ø[˜Ù[˜Z[š[™Ô›ÙÜ˜[HŠN‚ˆ›ÙÜ˜[O[™^
+
+›Üˆ[ˆÝ]KœÙ]Y˜][
+˜Z[š[™Ô›ÙÜ˜[\È‹×JHYˆ™Ù]
+šYŠOO\ÝŠ]K™Ù]
+šYŠJJK›Û™JBˆYˆ›Ý›ÙÜ˜[NœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ‘[Ý\œÛÈXH›È\Ý0èH\ÜÛšX›KˆŸJNÜ™]\›‚ˆYˆXÝ[ÛOHœ]\ÙU˜Z[š[™Ô›ÙÜ˜[HŽ‚ˆYˆ›ÙÜ˜[K™Ù]
+œÝ]\ÈŠHOH˜XÝ]™HŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”ÛÛÈÙHYYH]\Ø\ˆ[ˆÝ\œÛÈ[ˆX\˜ÚKˆŸJNÜ™]\›‚ˆ›ÙÜ˜[K\]JÈœÝ]\ÈŽˆœ]\ÙY‹œ]\ÙT™X\ÛÛˆŽˆ”]\ØHXÚYYHÜˆ[ÛØšY\››ÈŸJNÙ]ŠÝ\œÛÈ]\ØYÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_Nˆ[Ø[ÈH	Ü›ÙÜ˜[K™Ù]
+	Ü™[XZ[š[™ÐYÙ]	Ë
+N‹H]YYH™\Ù\˜YËˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOHœ™\Ý[YU˜Z[š[™Ô›ÙÜ˜[HŽ‚ˆYˆ›ÙÜ˜[K™Ù]
+œÝ]\ÈŠHOHœ]\ÙYŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[Ý\œÛÈ›È\Ý0èH]\ØYËˆŸJNÜ™]\›‚ˆÙ[\[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šY‹ˆ˜Ú]šXË^Ø–ÉÞ	×_K^Ø–ÉÞI×_HŠOO\›ÙÜ˜[K™Ù]
+˜Ù[\’YŠH[™‹™Ù]
+šÚ[™ŠOOH˜Ú]šXÈŠK›Û™JBˆÛY\Ï^Ü™Ù]
+šYŠNšÛYH›ÜˆÛYH[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆÛYK™Ù]
+šÚ[™ŠOOHšÛYHˆ›Üˆ[ˆÛYK™Ù]
+œ™\ÚY[È‹×J_BˆYˆ›ÝÙ[\ˆÜˆ›Ý[žJ
+ÛYNZÛY\Ë™Ù]
+\œÛÛ—ÚY
+JH[™›Ý]WØ™]ÙY[Š
+ÛYVÈž—KÛYVÈžH—JK
+Ù[\–Èž—KÙ[\–ÈžH—JJH›Üˆ\œÛÛ—ÚY[ˆ›ÙÜ˜[K™Ù]
+˜Z[™YRYÈ‹×JJN‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÛÚÜHÙ]°ëXH›ÈY[™HXØÙ\ÛÈšX[[][KˆŸJNÜ™]\›‚ˆ›ÙÜ˜[K\]JÈœÝ]\ÈŽˆ˜XÝ]™H‹œ]\ÙT™X\ÛÛˆŽ“›Û™_JNÙ]ŠÝ\œÛÈ™X[YYÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_H™]ÛX\°èHH›Ü›XXÚpìÛˆ[ˆ[°ìÞ[[ÈÚY\œ™HY[œÝX[ˆŠBˆ[ÙN‚ˆ™Y[™[X^
+›ÙÜ˜[K™Ù]
+œ™[XZ[š[™ÐYÙ]‹
+JNÜÝ]VÈ›[Û™^H—JÏ\™Y[™Ü›ÙÜ˜[K\]JÈœÝ]\ÈŽˆ˜Ø[˜Ù[Y‹œ™[XZ[š[™ÐYÙ]ŽŒ˜Ø[˜Ù[Y^HŽœÝ]VÈ™^H—_JNÙ]ŠÝ\œÛÈØ[˜Ù[YÈ‹ˆžÜ›ÙÜ˜[VÉÛX™[	×_NˆÙH]›ÛšY\›Ûˆ	Ü™Y[™‹HH™\Ý\Y\ÝÈ›È][^˜YËˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOHœXÙHŽ‚ˆÚ[™Y]K™Ù]
+šÚ[™ŠNÈZ[
+]K™Ù]
+ž‹LJJNÈOZ[
+]K™Ù]
+žH‹LJJNÈÛÛ˜XÝÜY]K™Ù]
+˜ÛÛ˜XÝÜˆŠBˆYˆÚ[™›Ý[ˆ“Ò‘PÕÈÜˆÜˆOÜˆLŽÜˆOLŒˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ”›ÞYXÝÈÈ\˜Ù[H[°è[YÜÈŸJNÈ™]\›‚ˆYˆ\×ÝØ]\ŠJH[™›Ý
+Ú[™OHœÜˆ[™OLŒÈ[™›Ý\×ÝØ]\ŠJH[™\×ÝØ]\Š
+ÌKJJNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\›Z[˜[X™HØÝ\\ˆHœ˜[š˜HÛÜÝ\˜HYYšXØX›K[È[YÝXKˆŸJNÈ™]\›‚ˆYˆÚ[™OHœÜˆ[™
+OLŒÈÜˆ›Ý\×ÝØ]\Š
+ÌKJJNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\›Z[˜[ÜX\šXHX™HXšXØ\œÙH[ˆHÛÜÝH\ÝH
+\˜Ù[H
+HÛÛˆYÝXH[YËˆŸJNÈ™]\›‚ˆYˆÚ[™OHœÜˆ[™[žJ‹™Ù]
+šÚ[™ŠOOHœÜˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÚ]YYXHY[™H[˜H\›Z[˜[ÜX\šXKˆŸJNÈ™]\›‚ˆYˆÚ[™OH˜Z\œÜˆ[™[žJ‹™Ù]
+šÚ[™ŠOOH˜Z\œÜˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÚ]YYXHY[™H[ˆY\›ÜY\È™YÚ[Û˜[ˆŸJNÈ™]\›‚ˆÛÛ˜XÝÜXÛÛ˜XÝÜˆYˆÛÛ˜XÝÜˆ[ˆÓÓ•PÕÔ”È[ÙHÛÛœÝXÝÜ˜H[H‚ˆYˆ›ÝÛÛ˜XÝÜ—Ú\×ØØ\XÚ]JÛÛ˜XÝÜŠNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™HÝXYš[\È\ÜÛšX›\Ëˆ[YðëHÝ˜H[\™\ØHÈ\Ü\°èHH[™YØHH[˜HØœ˜KˆŸJNÈ™]\›‚ˆYˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊÛÛ˜XÝÜŠOP“Ô—Ó‘QQÖÚÚ[™NˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH™XÙ\Ú]HÓP“Ô—Ó‘QQÖÚÚ[™_H˜X˜Z˜YÜ™\È\˜H\ÝHØœ˜HHÛÛÈY[™HØÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊÛÛ˜XÝÜŠ_HXœ™\ËˆŸJNÈ™]\›‚ˆYˆ[žJ–Èž—OO^[™–ÈžH—OO^H›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—JHÜˆ[žJÈž—OO^[™ÈžH—OO^H›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—JHÜˆ[žJVÈž—OO^[™VÈžH—OO^H›ÜˆH[ˆÝ]K™Ù]
+˜X˜[™Û™Y‹×JJNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\˜Ù[HXH\Ý0èHØÝ\YHŸJNÈ™]\›‚ˆYˆÚ[™OHœ›ØYˆ[™ÞWH[ˆÝ]VÈœ›ØYÈ—NˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›ÈÙHYYHÛÛœÝZ\ˆÛØœ™H[˜HØ[H^\Ý[KˆŸJNÈ™]\›‚ˆYˆÚ[™OHœ›ØYˆ[™ÞWH[ˆÝ]VÈœ›ØYÈ—NˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘\ÙH˜[[ÈXH›Ü›XH\HHH™YšX[ˆŸJNÈ™]\›‚ˆYˆÚ[™OHœ›ØYˆ[™›Ý[žJXœÊž^
+JØXœÊžK^JOOLH›ÜˆžžH[ˆÝ]VÈœ›ØYÈ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\˜Ù[H™XÙ\Ú]HXØÙ\ÛÈH[˜HØ[H\›Z[˜YHŸJNÈ™]\›‚ˆYˆÚ[™[ˆ
+˜Z\œÜ‹šÝ[‹œØÚÛÛ‹™š\™TÝ][Ûˆ‹œÝÙ\”[‹Ø]\”[‹Ø\Ý]Ø]\”[‹›[™š[‹œ™XÞXÛ[™Ô[ŠH[™›Ý›Ý]WØ™]ÙY[Š
+L
+K
+JJNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØœ˜H™XÙ\Ú]H[˜HÛÛ™^pìÛˆšX[ÛÛ[XHÛÛˆHÚ]YYˆŸJNÈ™]\›‚ˆ\×Û[™OS›Û™BˆYˆÚ[™OH˜\ÔÝÜŽ‚ˆ\×Û[™O[™^
+
+[™H›Üˆ[™H[ˆÝ]K™Ù]
+˜\Ô›Ý]\È‹×JHYˆ[™K™Ù]
+šYŠOO\ÝŠ]K™Ù]
+˜\Ó[™RYŠJH[™[™K™Ù]
+œÝ]\ÈŠOOH˜XÝ]™HŠK›Û™JBˆYˆ›Ý\×Û[™NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[YðëH[˜H0ë[™XHXÝ]˜H\˜HXšXØ\ˆH\˜YKˆŸJNÜ™]\›‚ˆYˆ›Ý[žJÚ]VÈž—OO^[™Ú]VÈžH—OO^H›ÜˆÚ]H[ˆ\×ÜÝÜÜÚ]\Ê\×Û[™JJN‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\˜Ù[HXH›È\Ý0èH\ÜÛšX›H[È[™XÛÜœšYÈÈH0ë[™XH[Ø[ž°ìÈÝH0ë[Z]HH\˜Y\ËˆŸJNÜ™]\›‚ˆ›Û™O[™^
+
+ˆ›Üˆˆ[ˆÝ]K™Ù]
+ž›Û™\È‹×JHYˆ–Èž—OO^[™–ÈžH—OO^JK›Û™JBˆYˆÚ[™[ˆ
+šÛYH‹œÚÜŠH[™
+›Ý›Û™HÜˆ›Û™VÈšÚ[™—HOZÚ[™
+N‚ˆ™\]Z\™YHœ™\ÚY[˜ÚX[ˆYˆÚ[™OHšÛYHˆ[ÙH˜ÛÛY\˜ÚX[‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”š[Y\›È\ÚYÛ°èH\ÛÈÜ™\]Z\™YHH\ÝH\˜Ù[KˆŸJNÈ™]\›‚ˆYˆÚ[™OHœ›ØYŽ‚ˆYˆ›Ý[žJXœÊž^
+JØXœÊžK^JOLH›ÜˆžžH[ˆÝ]VÈœ›ØYÈ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØ[HX™HÛÛ™XÝ\ˆÛÛˆH™Y^\Ý[HŸJNÈ™]\›‚ˆÛÛ˜XÝÜXÛÛ˜XÝÜˆYˆÛÛ˜XÝÜˆ[ˆÓÓ•PÕÔ”È[ÙHÛÛœÝXÝÜ˜H[H‚ˆ[YˆÚ[™[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠN‚ˆÈ›Û[ÝÜˆš]˜YÈš[˜[˜ÚXHH[™\œÚpìÛŽÈ[][šXÚ\[ÈÝXœ™H\›Z\ÛÜÈH[œÜXØÚpìÛ‹‚ˆ™YYT“Ò‘PÕÖÚÚ[™VÈ˜ÛÜÝ—J‹ŒL‚ˆYˆÝ]VÈ›[Û™^H—O™YYˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘›Û™ÜÈ][šXÚ\[\È[œÝYšXÚY[\È\˜H\›Z\ÛÜÈ
+	Û™YY‹ŒŸJHŸJNÈ™]\›‚ˆÝ]VÈ›[Û™^H—KO[™YYˆÛÛ˜XÝÜXÛÛ˜XÝÜˆYˆÛÛ˜XÝÜˆ[ˆÓÓ•PÕÔ”È[ÙHÛÛœÝXÝÜ˜H[H‚ˆ[ÙN‚ˆÛÛ˜XÝÜXÛÛ˜XÝÜˆYˆÛÛ˜XÝÜˆ[ˆÓÓ•PÕÔ”È[ÙHÛÛœÝXÝÜ˜H[H‚ˆÜXÏT“Ò‘PÕÖÚÚ[™NÈÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—NÈÝ[\›Ý[™
+ÜXÖÈ˜ÛÜÝ—J˜ÖÈœšXÙH—JNÈ\˜][Û\›Ý[™
+ÜXÖÈ™^\È—J˜ÖÈ™^\È—KÌÌ
+BˆÈ›ÞYXÝÜÈš]˜YÜÈYØ[ˆ[ÛÛ˜]\ÝH\ÙHØ\][š]˜YÎÈ›Û™ÜÈ[™Ü™\Ø[ˆÜˆ]ÜÈHYYYH]YHYØ[‹‚ˆ^ÈšYŽ]ZY]ZY
+
+Kš^šÚ[™ŽšÚ[™›X™[ŽœÜXÖÈ›X™[—KžŽžžHŽžK˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹˜ÛÜÝŽÝ[™\˜][ÛˆŽ™\˜][Û‹™[\ÙYŽŒœ›ÙÜ™\ÜÈŽŒœZYŽŒœÝYÙ\ÈŽœÜXÖÈœÝYÙS˜[Y\È—KœÝYÙR[™^ŽŒœÝ]\ÈŽˆ˜ÛÛ˜]YH‹˜Ø]\ÙHŽ˜ÖÈœ›Ùš[H—K›[ÛPÛÜÝŽŒÛÜšÙ\œÐ\ÜÚYÛ™YŽ“P“Ô—Ó‘QQÖÚÚ[™K›X]\šX[Ô™\]Z\™YŽ›X]\šX[Ü[ŠÚ[™
+K›X]\šX[Õ\ÙYŽžÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTß_BˆYˆÚ[™OH˜\ÔÝÜŽœÈ˜\Ó[™RY—OX\×Û[™VÈšY—BˆYˆÚ[™[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠN‚ˆÈœš]˜]TZY—OUYNÈÈ›][šXÚ\[\›Z]ZY—O\›Ý[™
+ÜXÖÈ˜ÛÜÝ—J‹ŒLŠNÈÈ˜ÛÜÝ—O]Ý[\È›][šXÚ\[\›Z]ZY—BˆYˆÝ]VÈœš]˜]PØ\][—OÈ˜ÛÜÝ—N‚ˆÝ]VÈ›[Û™^H—JÏ\›Ý[™
+ÜXÖÈ˜ÛÜÝ—J‹ŒLŠNÈÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“ÜÈ›Û[ÝÜ™\ÈØØ[\È›ÈY[™[ˆØ\][ÝYšXÚY[Kˆ\Ü\°èHY]›ÜÈ[™Ü™\ÛÜËˆŸJNÈ™]\›‚ˆÝ]VÈœš]˜]PØ\][—KO\È˜ÛÜÝ—BˆY˜[˜ÙO\›Ý[™
+È˜ÛÜÝ—J‹ŒŠNÜÈœZY—OXY˜[˜ÙBˆÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—JÏXY˜[˜ÙBˆ[ÙN‚ˆ™\Ù\™Y\Ý[JX^
+[™[™ÖÈ˜ÛÜÝ—K\[™[™Ë™Ù]
+œZY‹
+JH›Üˆ[™[™È[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý[™[™Ë™Ù]
+œš]˜]TZYŠJBˆ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÝ[ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘›Û™ÜÈ\ÜÛšX›\È[œÝYšXÚY[\ËˆÛÛ˜]Îˆ	ÝÝ[‹NÈ\ÜÛšX›H\Üpê\ÈHÛÛ\›ÛZ\ÛÜÎˆ	Ø]˜Z[X›N‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÈ™]\›‚ˆY˜[˜ÙO\›Ý[™
+Ý[
+‹ŒŠBˆÝ]VÈ›[Û™^H—KOXY˜[˜ÙNÈÈœZY—OXY˜[˜ÙBˆÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—JÏXY˜[˜ÙBˆÝ]VÈœ›Ú™XÝÈ—K˜\[™
+
+NÈ]ŠˆÛÛ˜]ÈYYXØYÎˆÜÜXÖÉÛX™[	×_H‹ˆžØÛÛ˜XÝÜŸH0­È	ÝÝ[‹H0­ÈÓP“Ô—Ó‘QQÖÚÚ[™_H˜X˜Z˜YÜ™\È0­È^›È\Ý[XYÈÙ\˜][ÛŸH0ëX\ËˆÙH™\Ù\°ìÈ[[XÚ\Ëˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOH›Ü™\“X]\šX[ÈŽ‚ˆ›Ú™XÝ[™^
+
+›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆÈšY—OO\ÝŠ]K™Ù]
+œ›Ú™XÝYŠJJK›Û™JBˆÝ\Y\Y]K™Ù]
+œÝ\Y\ˆŠNÚ][\ÏY]K™Ù]
+š][\ÈŠBˆYˆ›Ý›Ú™XÝœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“HØœ˜HXH›È\Ý0èHXÝ]˜KˆŸJNÜ™]\›‚ˆYˆÝ\Y\ˆ›Ý[ˆÕTQT”ÎœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ”›Ý™YYÜˆ[°è[YËˆŸJNÜ™]\›‚ˆYˆ›Ý\Ú[œÝ[˜ÙJ][\ËXÝ
+NœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ‘][HHX]\šX[\È[°è[YËˆŸJNÜ™]\›‚ˆÛX[^ßBˆžN‚ˆ›ÜˆX]\šX[[[Ý[[ˆ][\Ëš][\Ê
+N‚ˆYˆX]\šX[›Ý[ˆPUT’PSÓSQTÎˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆØ]YÛÜ°ëXHHX]\šX[[°è[YKˆŸJNÜ™]\›‚ˆ]OZ[
+[[Ý[
+BˆYˆ]OÜˆ]OŒÌœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆØYHYYÈYZ]HHHÌ[šYY\ÈÜˆX]\šX[ˆŸJNÜ™]\›‚ˆYˆ]N˜ÛX[–ÛX]\šX[O\]Bˆ^Ù\
+\Q\œ›Ü‹˜[YQ\œ›ÜŠNœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“\ÈØ[YY\ÈX™[ˆÙ\ˆ°î›Y\›ÜÈ[\›ÜËˆŸJNÜ™]\›‚ˆYˆ›ÝÛX[ŽœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ’[™XðèH[Y[›ÜÈ[ˆX]\šX[ˆŸJNÜ™]\›‚ˆ\Ý[˜][Û—ÚY\ÝŠ]K™Ù]
+™\Ý[˜][Û’Y‹žX\™ŠJNÛØØ][Û\ÝÜ˜YÙWÛØØ][ÛŠ\Ý[˜][Û—ÚY
+Bˆš[Üš]O\ÝŠ]K™Ù]
+œš[Üš]H‹››Ü›X[ŠJBˆYˆš[Üš]H›Ý[ˆ
+››Ü›X[‹˜[HŠNœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ”š[ÜšYYH\ØØ\™ØH[°è[YKˆŸJNÜ™]\›‚ˆYˆ›ÝØØ][ÛŽœÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ‘\0ìÜÚ]ÈH\Ý[›È[°è[YËˆŸJNÜ™]\›‚ˆ›Ý]O\›Ý]WØ™]ÙY[Š
+L
+K
+ØØ][Û–Èž—KØØ][Û–ÈžH—JJBˆYˆ›Ý]H\È›Û™NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[\0ìÜÚ]È[YÚYÈ›ÈY[™HXØÙ\ÛÈHØ[Z[Û™\ÈÜˆH™YšX[ˆŸJNÜ™]\›‚ˆœ™YO[X^
+ØØ][Û–È˜Ø\XÚ]H—K\ÝÜ˜YÙWÝ\ÙY
+\Ý[˜][Û—ÚY
+K\ÝÜ˜YÙWÜ™\Ù\™Y
+\Ý[˜][Û—ÚY
+JBˆYˆÝ[JÛX[‹˜[Y\Ê
+JO™œ™YN‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžÛØØ][Û–ÉÛX™[	×HYˆ	ÛX™[	È[ˆØØ][Ûˆ[ÙH	Ñ[\0ìÜÚ]ÉßHY[™H\ÜXÚ[È\˜HÙœ™Y_H[šYY\Èpè\Ëˆ[YðëHÝ›È\Ý[›ÈÈ™YXðëH[YYËˆŸJNÜ™]\›‚ˆ\Ý[˜ÙO[X^
+[Š›Ý]JKLJNÜ›ÝšY\TÕTQT”ÖÜÝ\Y\—NÚ[™[ÜžO\Ý]VÈœÝ\H—VÈœÝ\Y\œÈ—VÜÝ\Y\—BˆZ\ÜÚ[™ÏVÓPUT’PSÓSQTÖÚ×H›ÜˆËH[ˆÛX[‹š][\Ê
+HYˆ[™[ÜžVÚ×OWBˆYˆZ\ÜÚ[™ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[›Ý™YYÜˆ›ÈY[™HÝØÚÈHŠÈ‹‹š›Ú[ŠZ\ÜÚ[™ÊJÈ‹ˆŸJNÜ™]\›‚ˆœ™ZYÚ[X^
+\Ý[˜ÙKM
+JBˆÛÜÝ\›Ý[™
+Ý[JJ“PUT’PSÔ’PÑVÚ×Jœ›ÝšY\–ÈœšXÙH—H›ÜˆËH[ˆÛX[‹š][\Ê
+JJÙœ™ZYÚ
+BˆØ\Ú\Ý]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VÜ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—WBˆYˆØ\ÚÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžÜ›Ú™XÝÉØÛÛ˜XÝÜ‰×_HY[™H	ØØ\Ú‹HHØZ˜HHØœ˜NÈ[YYÈÝY\ÝH	ØÛÜÝ‹Kˆ‹œ™\XÙJ‹‹‹ˆŠ_JNÜ™]\›‚ˆ]O\›ÝšY\–È™^\È—JÛX]˜ÙZ[
+\Ý[˜ÙKÍŠBˆ›ÜˆX]\šX[]H[ˆÛX[‹š][\Ê
+Nš[™[ÜžVÛX]\šX[KO\]BˆÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VÜ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—WKOXÛÜÝˆÜ™\^ÈšYŽ]ZY]ZY
+
+Kš^œ›Ú™XÝYŽœ›Ú™XÝÈšY—K›X™[Žœ›Ú™XÝÈ›X™[—K˜ÛÛ˜XÝÜˆŽœ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—KœÝ\Y\ˆŽœÝ\Y\‹š][\ÈŽ˜ÛX[‹˜ÛÜÝŽ˜ÛÜÝ™\Ý[˜][Û’YŽ™\Ý[˜][Û—ÚY™\Ý[˜][Û“X™[Ž›ØØ][Û‹™Ù]
+›X™[‹ˆ‘\0ìÜÚ]È][šXÚ\[ÛØØ][Û–ÉÞ	×JÌ_KÛØØ][Û–ÉÞI×JÌ_HŠKœš[Üš]HŽœš[Üš]K›Ü™\™Y^HŽœÝ]VÈ™^H—KœÝ\Y\”™XYQ^HŽœÝ]VÈ™^H—JÜ›ÝšY\–È™^\È—K˜]™[\Ý[˜ÙHŽ™\Ý[˜ÙK˜]™[Y\Ý[˜ÙHŽŒœ›Ý]T›ÙÜ™\ÜÈŽŒ˜\œš]˜[^HŽœÝ]VÈ™^H—JÙ]Kœ›ÙÜ™\ÜÈŽŒœÝ]\ÈŽˆ™[ˆ°è[œÚ]È‹œÝ]\ÐØ]\ÙHŽˆ”™\\˜XÚpìÛˆ[ˆ›Ý™YYÜˆ‹œ›Ý]HŽœ›Ý]_BˆÝ]VÈœÝ\H—VÈ›Ü™\œÈ—K˜\[™
+Ü™\ŠBˆÜ™\–È˜Y™šXÑ˜XÝÜˆ—O\›Ý[™
+˜Y™šX×Ù˜XÝÜŠ›Ý]KÜ™\ŠKŠBˆÜ™\–È˜\œš]˜[^H—O[Ü™\—Ü›Ý]WÙ]JÜ™\ŠVÌ—Bˆ]Z[Hˆ0­È‹š›Ú[ŠˆžÓPUT’PSÓSQTÖÚ×_HÝŸHˆ›ÜˆËˆ[ˆÛX[‹š][\Ê
+JBˆ]O[X^
+Ü™\–È˜\œš]˜[^H—K\Ý]VÈ™^H—JBˆ]Š”YYÈHX]\šX[\È‹ˆžÜ›Ú™XÝÉØÛÛ˜XÝÜ‰×_HÛÛ\°ìÈÙ]Z[HHÜÝ\Y\ŸHÜˆ	ØÛÜÝ‹NÈ[™YØH\Ý[XYH[ˆÙ]_H0ëX\ÈÜˆÙ\Ý[˜Ù_H˜[[ÜÈ
+ÛÛˆÛÛ™Ù\ÝpìÛˆ\Ý[XYJKˆš[ÜšYYH\ØØ\™ØNˆÜš[Üš]_Kˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[Ûˆ[ˆ
+š[œÝ[ÝÙ\˜XÚÝ\‹œ™YY[ÝÙ\˜XÚÝ\ŠN‚ˆZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJNØZ[[™Ï[™^
+
+ˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+žŠOO^[™‹™Ù]
+žHŠOO^H[™‹™Ù]
+šÚ[™ŠH[ˆ
+˜Ú]šXÈ‹Ø]\”[‹Ø\Ý]Ø]\”[ŠJK›Û™JBˆYˆ›ÝZ[[™ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[™\Ü[ÈÛÛÈÙH[œÝ[H[ˆÜÜ][\Ë›ÛX™[ÈHYÝXHH[\ÈÛØXØ[\ËˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆXÝ[ÛOHš[œÝ[ÝÙ\˜XÚÝ\Ž‚ˆYˆZ[[™Ë™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÈ‹
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘\ÝHÙ\šXÚ[ÈXHY[™H[ˆÜ\È[XÝ°ìÙÙ[›ËˆŸJNÜ™]\›‚ˆÛÜÝLŽˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[œÝ[\ˆHØ\™Ø\ˆ[Ü\ÈÝY\ÝH	ØÛÜÝKˆŸJNÜ™]\›‚ˆÝÏ[Z[ŠÍKX^
+KZ[[™Ë™Ù]
+][]Q[X[™‹ßJK™Ù]
+œÝÙ\’ÝÈ‹ÌŠJJNØZ[[™Ë\]JÈ˜˜XÚÝ\Ø\XÚ]RÝÈŽšÝË˜˜XÚÝ\Ø\XÚ]RÝÚŽšÝÊŒ
+ŒË˜˜XÚÝ\Y[ÝÚŽšÝÊŒ
+ŒË˜˜XÚÝ\[œÝ[Y^HŽœÝ]VÈ™^H—_JNÜÝ]VÈ›[Û™^H—KOXÛÜÝˆ]Š‘Ü\È[XÝ°ìÙÙ[›È[œÝ[YÈ‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIË	ÔÙ\šXÚ[ÈÜ°ë]XÛÉÊ_NˆÚÝÎ™ßHÕÈH™\È0ëX\ÈH™\Ù\˜H[šXÚX[0­È[™\œÚpìÛˆ	‹Ž0­ÈX[[š[ZY[È	ÌÛY\ËˆŠBˆ[ÙN‚ˆYˆ›ÝZ[[™Ë™Ù]
+˜˜XÚÝ\Ø\XÚ]RÝÈ‹
+NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ”š[Y\›È[œÝ[0èH[ˆÜ\È[XÝ°ìÙÙ[›ËˆŸJNÜ™]\›‚ˆZ\ÜÚ[™Ï[X^
+Z[[™ÖÈ˜˜XÚÝ\Ø\XÚ]RÝÚ—KXZ[[™Ë™Ù]
+˜˜XÚÝ\Y[ÝÚ‹
+JNØÛÜÝ[X]˜ÙZ[
+Z\ÜÚ[™Ê‹ŒLŠBˆYˆZ\ÜÚ[™ÏLœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H™\Ù\˜HHÛÛX\ÝX›HXH\Ý0èHÛÛ\]KˆŸJNÜ™]\›‚ˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[ÛÛX\ÝX›HÝY\ÝH	ØÛÜÝKˆŸJNÜ™]\›‚ˆZ[[™ÖÈ˜˜XÚÝ\Y[ÝÚ—OXZ[[™ÖÈ˜˜XÚÝ\Ø\XÚ]RÝÚ—NÜÝ]VÈ›[Û™^H—KOXÛÜÝˆ]ŠÛÛX\ÝX›HH[Y\™Ù[˜ÚXH™\Y\ÝÈ‹ˆžØZ[[™Ë™Ù]
+	Û˜[YIË	ÔÙ\šXÚ[ÈÜ°ë]XÛÉÊ_Nˆ™\Ù\˜H™\Ý]\˜YHH™\È0ëX\È0­ÈÛÜÝÈ	ØÛÜÝKˆŠBˆ[YˆXÝ[ÛOHš[œÜXÝ™XÛÝ™\žHŽ‚ˆ™YY[™^
+
+ˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JHYˆ‹™Ù]
+šYŠOO\ÝŠ]K™Ù]
+šYŠJH[™‹™Ù]
+œÝ]\ÈŠOOH˜XšY\HŠK›Û™JBˆYˆ›Ý™YYÜˆ™YY™Ù]
+š[œÜXÝ[Û”Ý]\ÈŠHOHœ[™Y[HŽœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H[œÜXØÚpìÛˆXHÛÛY[ž°ìÈÈ[XÝ]›È›È™\]ZY\™H[˜H[œÜXØÚpìÛˆY]˜KˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OMLœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈH[œÜXØÚpìÛˆ][šXÚ\[ÝY\ÝH	MLˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOLMLÛ™YY\]JÈš[œÜXÝ[Û”Ý]\ÈŽˆ™[ˆÝ\œÛÈ‹š[œÜXÝ[Û”™[XZ[š[™Ñ^\ÈŽŒKš[œÜXÝ[ÛÛÜÝŽŒMLJBˆ]Š’[œÜXØÚpìÛˆ™]™[]˜H[šXÚXYHˆYˆ™YY™Ù]
+œØÚY[Y[œÜXÝ[ÛˆŠH[ÙH’[œÜXØÚpìÛˆH[Y\™Ù[˜ÚXH[šXÚXYH‹ˆ•[˜HÝXYš[H™]š\Ø\°èHÛ™YYÉÛ˜[YI×_H\˜[H[ˆ0ëXNÈÛÜÝÈ][šXÚ\[	MLˆ[[™›Ü›YH]\›Z[˜\°èHÚH™\]ZY\™H[˜H™ZXš[]XÚpìÛ‹ˆŠBˆ[YˆXÝ[ÛOH˜]Ø\™™XÛÝ™\žHŽ‚ˆ™YY[™^
+
+ˆ›Üˆˆ[ˆÝ]KœÙ]Y˜][
+œ™XÛÝ™\žS™YYÈ‹×JHYˆ‹™Ù]
+šYŠOO\ÝŠ]K™Ù]
+šYŠJH[™‹™Ù]
+œÝ]\ÈŠOOH˜XšY\Hˆ[™‹™Ù]
+š[œÜXÝ[Û”Ý]\ÈŠOOHš[œÜXØÚ[Û˜YHŠK›Û™JBˆÛÛ˜XÝÜY]K™Ù]
+˜ÛÛ˜XÝÜˆŠBˆYˆ›Ý™YYÜˆÛÛ˜XÝÜˆ›Ý[ˆÓÓ•PÕÔ”ÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H[œÜXØÚpìÛˆX™H\Ý\ˆÛÛ\]HH[ÛÛ˜]ÈÙYÝZ\ˆ\ÜÛšX›KˆŸJNÜ™]\›‚ˆYˆ›ÝÛÛ˜XÝÜ—Ú\×ØØ\XÚ]JÛÛ˜XÝÜŠNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™H[˜HÝXYš[H\ÜÛšX›KˆŸJNÜ™]\›‚ˆYˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊÛÛ˜XÝÜŠOœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™HÜÈÝX]›È˜X˜Z˜YÜ™\ÈXœ™\È\˜H\ÝH™\\˜XÚpìÛ‹ˆŸJNÜ™]\›‚ˆÛÜÝ\›Ý[™
+™YYÈ™\Ý[X]H—JÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—VÈœšXÙH—JNÜ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[ÛÛ˜]ÈÝY\ÝH	ØÛÜÝHY[pè\ÈH\ÈØœ˜\ÈÛÛ\›ÛY]Y\ËˆŸJNÜ™]\›‚ˆ\˜][Û[X^
+‹›Ý[™
+
+ÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—VÈ™^\È—KÌÌ
+JNØÛÛ˜XÝ^ÈšYŽ]ZY]ZY
+
+Kš^›™YYYŽ›™YYÈšY—K\™Ù]\HŽ›™YYÈ\™Ù]\H—KžŽ›™YYÈž—KžHŽ›™YYÈžH—K›˜[YHŽ›™YYÈ›˜[YH—K˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹˜ÛÜÝŽ˜ÛÜÝœZYŽ˜ÛÜÝ™\˜][ÛˆŽ™\˜][Û‹œ™[XZ[š[™Ñ^\ÈŽ™\˜][Û‹ÛÜšÙ\œÈŽœÝ\^HŽœÝ]VÈ™^H—KœÝ]\ÈŽˆ™[ˆØœ˜H‹œÝYÙHŽˆ”™YY\ž›È\ÝXÝ\˜[H™[›Ý˜XÚpìÛˆH[œÝ[XÚ[Û™\ÈˆYˆ™YY™Ù]
+˜Ø]\ÙHŠOOH™\ÙØ\ÝHÜˆ\ÛÈH[YðïYYˆ[ÙH‘\ØYÛÝHH™]\›ÈHX]\šX[\ÈpìXYÜÈŸBˆÝ]VÈ›[Û™^H—KOXÛÜÝÜÝ]KœÙ]Y˜][
+œ™XÛÝ™\žPÛÛ˜XÝÈ‹×JK˜\[™
+ÛÛ˜XÝ
+NÛ™YYÈœÝ]\È—OH™[ˆ™\\˜XÚpìÛˆŽÛ™YYÈ˜ÛÛ˜XÝY—OXÛÛ˜XÝÈšY—Bˆ]ŠÛÛ˜]È][šXÚ\[YYXØYÈ‹ˆžØÛÛ˜XÝÜŸH™ZXš[]\°èHÛ™YYÉÛ˜[YI×_HÜˆ	ØÛÜÝ‹H[ˆÙ\˜][ÛŸH0ëX\ÎÈÝX]›È˜X˜Z˜YÜ™\È]YY[ˆ\ÚYÛ˜YÜËˆ[YÛÈØ[HHH\ÛÜ™\°ëXH[[šXÚX\‹ˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOHœ™\\™RX]Ø]™HŽ‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ›Ü™XØ\ÝXÛ[X]K™Ù]
+šX]›Ü™XØ\ÝŠHÜˆßNÝ\™Ù]Z[
+]K™Ù]
+\™Ù]^H‹LJJBˆYˆ›Ü™XØ\Ý™Ù]
+\™Ù]^HŠHO]\™Ù]Üˆ›Ü™XØ\Ý™Ù]
+œÝ]\ÈŠHOHœ›Û›ÜÝXØYHˆÜˆ\™Ù]\Ý]VÈ™^H—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›È^H[˜HÛHHØ[Üˆ]\˜H\ÜÛšX›H\˜H™\\˜\‹ˆŸJNÜ™]\›‚ˆYˆÛ[X]K™Ù]
+˜ÛÛÛ[™Ô™\\™Y›Ü‘^HŠOO]\™Ù]œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XH^HÙ[›ÜÈH[™œšX[ZY[È™\\˜YÜÈ\˜H\ÝH\\ÛÙ[ËˆŸJNÜ™]\›‚ˆžNÛÜšÜXÙ\ÏXÛÛ[]]WÛ[Ù[
+
+K™Ù]
+ÛÜšÜXÙ\È‹×JBˆ^Ù\^Ù\[ÛŽÛÜšÜXÙ\ÏV×BˆÙ[\œÏVØˆ›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—HYˆ‹™Ù]
+šÚ[™ŠOOH˜Ú]šXÈˆ[™‹™Ù]
+œÝ]\ÈŠH›Ý[ˆ
+˜Ù\œ˜YÈ‹˜X˜[™Û˜YÈŠH[™™^
+
+È›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+žŠOOX‹™Ù]
+žŠH[™Ë™Ù]
+žHŠOOX‹™Ù]
+žHŠH[™Ë™Ù]
+œÝY™™Y›ØœÈ‹
+OLŠK›Û™JH[™‹™Ù]
+][]PXØÙ\ÜÈ‹ßJK™Ù]
+œÝÙ\”Ù\™YÝ‹
+OMÍH[™›Ý]WØ™]ÙY[Š
+L
+K
+–Èž—K–ÈžH—JJWBˆYˆ›ÝÙ[\œÎœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›È^HÙ[›ÜÈ][šXÚ\[\ÈÛÛˆ\œÛÛ˜[[XÝšXÚYYHXØÙ\ÛÈšX[\˜HXœš\ˆ™YYÚ[ÜËˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OLœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈXš[]\ˆ™YYÚ[ÜÈH\››ÜÈH[Y\™Ù[˜ÚXHÝY\ÝH	LˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOMLØÛ[X]VÈ˜ÛÛÛ[™Ô™\\™Y›Ü‘^H—O]\™Ù]ˆ]Š”™YYÚ[ÜÈHØ[Üˆ™\\˜YÜÈ‹ˆ”ÙHXš[]\°è[ˆ\ÝHÛ[ŠÙ[\œÊ_HÙ[›ÜÈ][šXÚ\[\È\˜H[0ëXHÝ\™Ù]NÈØ\XÚYYÛÛš[HHÜÝ[JZ[ŠLX^
+™^
+ÖÉÜÝY™™Y›ØœÉ×H›ÜˆÈ[ˆÛÜšÜXÙ\ÈYˆË™Ù]
+	Þ	ÊOOX–ÉÞ	×H[™Ë™Ù]
+	ÞIÊOOX–ÉÞI×JJŒŠJH›Üˆˆ[ˆÙ[\œÊ_H™\ÚY[\Ëˆ\œÛÛ˜[YÝXHH[XÝšXÚYYÛÛˆ™\]Z\Ú]ÜÈÜ\˜]]›ÜËˆÛÜÝÈ	LˆŠBˆ[YˆXÝ[ÛOHÙÙÛUØ]\”™\ÝšXÝ[ÛœÈŽ‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ›Ü™XØ\ÝXÛ[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠHÜˆßNÝ\™Ù]Z[
+›Ü™XØ\Ý™Ù]
+\™Ù]^H‹LJJBˆYˆ\™Ù]Ý]VÈ™^H—HÜˆ\™Ù]œÝ]VÈ™^H—JÌÌœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“\È™\ÝšXØÚ[Û™\ÈÛÛÈYY[ˆXÝ]˜\œÙH[H[˜HÙ\]pëXH™]š\ÝHÈ[ˆÝ\œÛËˆŸJNÜ™]\›‚ˆÛ[X]VÈØ]\”™\ÝšXÝ[ÛœÕ\™Ù]—O]\™Ù]ØÛ[X]VÈØ]\”™\ÝšXÝ[ÛœÈ—O[›ÝÛ[X]K™Ù]
+Ø]\”™\ÝšXÝ[ÛœÈ‹˜[ÙJBˆYˆÛ[X]VÈØ]\”™\ÝšXÝ[ÛœÈ—N™]Š”™\ÝšXØÚpìÛˆHYÝXH›È\Ù[˜ÚX[‹ˆÛÛY\˜Ú[ÜËÝ[\ËY\ÈHY\›ÜY\È™YXÙ[ˆÍIHÝH[X[™H0ëYšXØH\˜[HHÙ\]pëXKˆÝ\ÈÜ\˜XÚ[Û™\ÈYY[ˆ›ÙXÚ\ˆY[›ÜÎÈÜÈÙØ\™\ÈHÙ\šXÚ[ÜÈ\Ù[˜ÚX[\ÈÛÛœÙ\˜[ˆš[ÜšYYˆŠBˆ[ÙN™]Š”™\ÝšXØÚpìÛˆHYÝXH]˜[YH‹”ÙH™\ÝX›XÙH[ÛÛœÝ[[ÈÛÛY\˜ÚX[›Ü›X[ÈHÙ\]pëXHYYH›Û™\ˆHØ]\Ø\ˆ˜[[\È[ˆH™YˆŠBˆ[YˆXÝ[ÛOH™\ÞUØ]\•[šÙ\œÈŽ‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ›Ü™XØ\ÝXÛ[X]K™Ù]
+™›ÝYÚ›Ü™XØ\ÝŠHÜˆßNÝ\™Ù]Z[
+›Ü™XØ\Ý™Ù]
+\™Ù]^H‹LJJBˆYˆ\™Ù]Ý]VÈ™^H—HÜˆ\™Ù]œÝ]VÈ™^H—JÌÌœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“ÜÈØ[Z[Û™\ÈÚ\Ý\›˜HÛÛÈÙH\ÜYYØ[ˆ[H[˜HÙ\]pëXH™]š\ÝHÈ[ˆÝ\œÛËˆŸJNÜ™]\›‚ˆYˆÛ[X]K™Ù]
+Ø]\•[šÙ\‘›Ü‘^HŠOO]\™Ù]œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XHÙHÛÛ˜]0ìÈ[™YY\ž›ÈHÚ\Ý\›˜\È\˜H\ÝHÙ\]pëXKˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+NØÛÜÝLLŒˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[\ÜYYÝYHHÚ\Ý\›˜\ÈÝY\ÝH	ØÛÜÝKˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOXÛÜÝØÛ[X]K\]JÈØ]\•[šÙ\‘›Ü‘^HŽ\™Ù]Ø]\•[šÙ\”Ý\Ž›X^
+Ý]VÈ™^H—K\™Ù]
+KØ]\•[šÙ\•[[Ž\™Ù]
+ÌLJBˆ]ŠÚ\Ý\›˜\ÈÛÛ˜]Y\È‹ˆ‘[™YY\ž›È[™YØ\°èH\ÝHÌp¬ËÙ0ëXH\˜[HY^ˆ0ëX\È\ÙH[0ëXHÝ\™Ù]KˆÛÜÝÈÝ[	KŒŒˆŠBˆ[YˆXÝ[ÛOHœ™\\™TÝÜ›HŽ‚ˆÛ[X]OY[œÝ\™WØÛ[X]WÜÝ]J
+NÙ›Ü™XØ\ÝXÛ[X]K™Ù]
+™›Ü™XØ\ÝŠNÝ\™Ù]Z[
+]K™Ù]
+\™Ù]^H‹LJJBˆYˆ›Ý›Ü™XØ\ÝÜˆ›Ü™XØ\Ý™Ù]
+\™Ù]^HŠHO]\™Ù]Üˆ›Ü™XØ\Ý™Ù]
+Ø\›š[™Ó]™[ŠOOH˜˜Z›ÈˆÜˆ\™Ù]\Ý]VÈ™^H—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›È^H[˜H[\H]\˜HHšY\ÙÛÈ]YH™XÙ\Ú]H\ÜYYÝYKˆŸJNÜ™]\›‚ˆYˆÛ[X]K™Ù]
+œ™\\™Y›Ü‘^HŠOO]\™Ù]œÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XH^H›ÛX˜\ÈpìÝš[\ÈHÝXYš[\È\ÚYÛ˜Y\È\˜H\ØHÜ›Y[KˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+NØÛÜÝNLˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[\ÜYYÝYHH›ÛX˜\ÈH[\Y^˜HÝY\ÝH	ØÛÜÝKˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOXÛÜÝØÛ[X]VÈœ™\\™Y›Ü‘^H—O]\™Ù]Ù›Ü™XØ\ÝÈœ™\\™Y—OUYBˆ]Š”™\ÜY\ÝH™]™[]˜H\ÜYØYH‹ˆ”ÙH[\X\›ÛˆÝ[ZY\›ÜÈHÙH™\ÜÚXÚ[Û˜\›Ûˆ›ÛX˜\È\˜H[0ëXHÝ\™Ù]Kˆ	LÈHØ\XÚYY]šX[][Y[\°èHIH\˜[HHÜ›Y[KˆŠBˆ[YˆXÝ[ÛOHœ™\Z\•][]HŽ‚ˆ˜Z[\™O[™^
+
+ˆ›Üˆˆ[ˆ[œÝ\™WÝ][]WÜÝ]J
+VÈ™˜Z[\™\È—HYˆ‹™Ù]
+šYŠOO\ÝŠ]K™Ù]
+šYŠJH[™‹™Ù]
+œÝ]\ÈŠOOH˜]™\°ëXHŠK›Û™JBˆYˆ›Ý˜Z[\™NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H]™\°ëXHXHYH™\\˜YHÈY[™H[˜HÝXYš[H\ÚYÛ˜YKˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›O˜Z[\™VÈœ™\Z\ÛÜÝ—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈH™\\˜XÚpìÛˆÝY\ÝH	Ù˜Z[\™VÉÜ™\Z\ÛÜÝ	×_HY[pè\ÈHÜÈÛÛ˜]ÜËˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOY˜Z[\™VÈœ™\Z\ÛÜÝ—NÙ˜Z[\™VÈœÝ]\È—OH™[ˆ™\\˜XÚpìÛˆŽÙ˜Z[\™VÈœ™[XZ[š[™Ñ^\È—OLÎÙ˜Z[\™VÈœÝ\Y^H—O\Ý]VÈ™^H—Bˆ]ŠÝXYš[HHÙ\šXÚ[ÜÈÛÛ˜]YH‹ˆ”™\\˜XÚpìÛˆHÙ˜Z[\™VÉÛ™]ÛÜšÉ×_H[ˆØ[HÙ˜Z[\™VÉÞ	×JÌ_KÙ˜Z[\™VÉÞI×JÌ_Nˆ	Ù˜Z[\™VÉÜ™\Z\ÛÜÝ	×_H0­ÈÈ0ëX\ÈH˜X˜Z›ËˆŠBˆ[YˆXÝ[ÛOH][]S[™HŽ‚ˆ™]ÛÜšÏY]K™Ù]
+›™]ÛÜšÈŠNÞZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJBˆYˆ™]ÛÜšÈ›Ý[ˆ
+œÝÙ\ˆ‹Ø]\ˆ‹œÙ]Ù\ˆ‹™˜Z[˜YÙH‹™Ø\È‹[XÛÛHŠHÜˆÞWH›Ý[ˆÝ]VÈœ›ØYÈ—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[[™YÈ™XÙ\Ú]H[ˆ˜[[ÈHØ[H\›Z[˜YÈH[˜H™Y°è[YKˆŸJNÜ™]\›‚ˆ][]Y\ÏY[œÝ\™WÝ][]WÜÝ]J
+NÚÙ^O^ÈœÝÙ\ˆŽˆœÝÙ\“[™\È‹Ø]\ˆŽˆØ]\”\\È‹œÙ]Ù\ˆŽˆœÙ]Ù\“[™\È‹™˜Z[˜YÙHŽˆ™˜Z[“[™\È‹™Ø\ÈŽˆ™Ø\Ó[™\È‹[XÛÛHŽˆ[XÛÛS[™\ÈŸVÛ™]ÛÜš×NØÛÜÝ^ÈœÝÙ\ˆŽŒMKØ]\ˆŽŒLÌœÙ]Ù\ˆŽŒMK™˜Z[˜YÙHŽŒMMK™Ø\ÈŽŒLŒ[XÛÛHŽŒL_VÛ™]ÛÜš×BˆYˆÞWH[ˆ][]Y\ÖÚÙ^WNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘\ÝH˜[[ÈXH\Ý0èHÛÛ™XÝYÈH\ØH™YˆŸJNÜ™]\›‚ˆÛÛ›™XÝYY[™\™Ú^™YÝ][]WÝ[\Ê™]ÛÜšÊBˆYˆ›Ý[žJ
+
+ÙJÙJH[ˆÛÛ›™XÝY›ÜˆH[ˆ
+
+K
+K
+LK
+K
+JK
+LJJJNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[Y]›È˜[[ÈX™H›ÛÛ™Ø\ˆ[˜H™YÛÛ™XÝYH[Ú\Ý[XKˆŸJNÜ™]\›‚ˆ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[[™YÈÝY\ÝH	ØÛÜÝHY[pè\ÈHÜÈÛÛ˜]ÜËˆŸJNÜ™]\›‚ˆÝ]VÈ›[Û™^H—KOXÛÜÝÝ][]Y\ÖÚÙ^WK˜\[™
+ÞWJNÛ™]ÛÜš×Û˜[YO^ÈœÝÙ\ˆŽˆ™[0êXÝšXØH‹Ø]\ˆŽˆ™HYÝXH‹œÙ]Ù\ˆŽˆ˜ÛØXØ[‹™˜Z[˜YÙHŽˆœ]šX[‹™Ø\ÈŽˆ™HØ\È‹[XÛÛHŽˆ™HšXœ˜H0ìÜXØHŸVÛ™]ÛÜš×BˆXZ[[˜[˜ÙO^ÈœÝÙ\ˆŽŒKŒ‹Ø]\ˆŽ‹ŽœÙ]Ù\ˆŽ‹ŽK™˜Z[˜YÙHŽ‹Ë™Ø\ÈŽŒKŒK[XÛÛHŽ‹ŸVÛ™]ÛÜš×Bˆ]Š”™YHÙ\šXÚ[ÜÈ[\XYH‹ˆ”ÙHÛÛ™XÝ0ìÈ[ˆ˜[[ÈÛ™]ÛÜš×Û˜[Y_HÛØœ™HHØ[HÞ
+Ì_KÞJÌ_NÈX[[š[ZY[È\›Þ[XYÈ	ÛXZ[[˜[˜ÙN‹ŒYŸKÛY\ËˆŠBˆ[YˆXÝ[ÛOHØ\ÝPÛÛZ[™\ˆŽ‚ˆZ[
+]K™Ù]
+ž‹LJJNÞOZ[
+]K™Ù]
+žH‹LJJNÝØ\ÝOY[œÝ\™WÝØ\ÝWÜÝ]J
+BˆYˆÞWH›Ý[ˆÝ]VÈœ›ØYÈ—NœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘[ÛÛ[™YÜˆX™HÛÛØØ\œÙHÛØœ™H[˜HØ[H\›Z[˜YKˆŸJNÜ™]\›‚ˆYˆ[žJË™Ù]
+žŠOO^[™Ë™Ù]
+žHŠOO^H›ÜˆÈ[ˆØ\ÝVÈ˜ÛÛZ[™\œÈ—JNœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–XH^H[ˆÛÛ[™YÜˆ[ˆ\ÙH˜[[ËˆŸJNÜ™]\›‚ˆÛÜÝLÍLÜ™\Ù\™Y\Ý[JX^
+È˜ÛÜÝ—K\™Ù]
+œZY‹
+JH›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›Ý™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÛÜÝœÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ”]YY[ˆ	Ø]˜Z[X›_NÈ[ÛÛ[™YÜˆÝY\ÝH	ØÛÜÝHY[pè\ÈHÜÈÛÛ˜]ÜËˆŸJNÜ™]\›‚ˆØ\ÝVÈ˜ÛÛZ[™\œÈ—K˜\[™
+ÈšYŽ™ˆ˜š[‹^ÞK^Þ_H‹žŽžžHŽžK˜Ø\XÚ]UÛœÈŽŒ‹œÝÜ™YÛœÈŽŒš[œÝ[Y^HŽœÝ]VÈ™^H—_JNÜÝ]VÈ›[Û™^H—KOXÛÜÝˆ]ŠÛÛ[™YÜˆ[œÝ[YÈ‹ˆØ[HÞ
+Ì_KÞJÌ_Nˆ[™\œÚpìÛˆ	ÍL0­ÈØ\XÚYYH™XÛÛXØÚpìÛˆ
+ÌMHÙ0ëXKˆØYH\0ìÜÚ]ÈÛÛ™XÝYÈÝ[XHY[pè\È[˜H\ÝXÚpìÛˆH˜[œÙ™\™[˜ÚXHÛÛˆLˆH[XXÙ[˜[ZY[ÈH\ÜXÚÈHKHÙ0ëXKˆŠBˆ[YˆXÝ[ÛOHž›Û™HŽ‚ˆZ[
+]K™Ù]
+ž‹LJJNÈOZ[
+]K™Ù]
+žH‹LJJNÈÚ[™Y]K™Ù]
+šÚ[™ŠBˆYˆÚ[™›Ý[ˆ
+šÛYH‹œÚÜŠHÜˆÜˆOÜˆLŽÜˆOLŒˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ•\ÛÈHÝY[ÈÈ\˜Ù[H[°è[YÜÈŸJNÈ™]\›‚ˆYˆ\×ÝØ]\ŠJNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›ÈÙHYYH›ÛšYšXØ\ˆ[YÝXHÛÜÝ\˜KˆŸJNÈ™]\›‚ˆYˆ[žJ–Èž—OO^[™–ÈžH—OO^H›Üˆˆ[ˆÝ]VÈ˜Z[[™ÜÈ—JHÜˆ[žJÈž—OO^[™ÈžH—OO^H›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—JHÜˆ[žJVÈž—OO^[™VÈžH—OO^H›ÜˆH[ˆÝ]K™Ù]
+˜X˜[™Û™Y‹×JJHÜˆ[žJ–Èž—OO^[™–ÈžH—OO^H›Üˆˆ[ˆÝ]K™Ù]
+ž›Û™\È‹×JJHÜˆÞWH[ˆÝ]VÈœ›ØYÈ—N‚ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ‘\ÝH\˜Ù[HXHY[™H[ˆ\ÛÈ\ÚYÛ˜YÈHØÝ\YÈŸJNÈ™]\›‚ˆYˆ›Ý[žJXœÊž^
+JØXœÊžK^JOOLH›ÜˆžžH[ˆÝ]VÈœ›ØYÈ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ–›ÛšYšXØ\ˆ™\]ZY\™HXØÙ\ÛÈH[˜HØ[H\›Z[˜YHŸJNÈ™]\›‚ˆÝ]KœÙ]Y˜][
+ž›Û™\È‹×JK˜\[™
+ÈžŽžžHŽžKšÚ[™ŽšÚ[™›ÝÛ™\ˆŽˆ›][šXÚ\[‹œÝ]\ÈŽˆ™\ÜÛšX›HŸJBˆ]Š•\ÛÈHÝY[È\ÚYÛ˜YÈ‹ˆ”\˜Ù[HÞ
+Ì_KÞJÌ_Nˆ›Û˜HÉÜ™\ÚY[˜ÚX[	ÈYˆÚ[™OIÚÛYIÈ[ÙH	ØÛÛY\˜ÚX[	ßKˆH›ÛšYšXØXÚpìÛˆ\›Z]H[™\œÚpìÛŽÈ›ÈÛÛœÝ^YHÜˆðëHÛÛKˆŠBˆ[YˆXÝ[Ûˆ[ˆ
+œ]\ÙT›Ú™XÝ‹œ™\Ý[YT›Ú™XÝ‹˜Ø[˜Ù[›Ú™XÝŠN‚ˆ›Ú™XÝ[™^
+
+›Üˆ[ˆÝ]VÈœ›Ú™XÝÈ—HYˆÈšY—OO\ÝŠ]K™Ù]
+šYŠJJK›Û™JBˆYˆ›Ý›Ú™XÝˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“HØœ˜HXH›È\Ý0èHXÝ]˜KˆŸJNÈ™]\›‚ˆYˆXÝ[ÛOHœ]\ÙT›Ú™XÝŽ‚ˆYˆ›Ú™XÝÈœÝ]\È—OOHœ]\ØYHŽˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØœ˜HXH\Ý0èH]\ØYKˆŸJNÈ™]\›‚ˆ›Ú™XÝÈœÝ]\È—OHœ]\ØYHŽÈ›Ú™XÝÈÛÜšÙ\œÐ\ÜÚYÛ™Y—OLÈ›Ú™XÝÈ˜Ø]\ÙH—OH”]\ØHXÚYYHÜˆ[\]Z\ÈHÛØšY\››ÈŽÈ]Š“Øœ˜H]\ØYH‹ˆžÜ›Ú™XÝÉÛX™[	×_NˆÙHÛÛœÙ\˜H[]˜[˜ÙH
+Ü›Ý[™
+›Ú™XÝÉÜ›ÙÜ™\ÜÉ×JŒL
+_IJHHÙHX™\˜[ˆÝXYš[\ËˆŠBˆ[YˆXÝ[ÛOHœ™\Ý[YT›Ú™XÝŽ‚ˆYˆ›Ú™XÝÈœÝ]\È—H›Ý[ˆ
+œ]\ØYH‹œÝ\Ü[™YHŠNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HØœ˜H›È\Ý0èH]\ØYHšHÝ\Ü[™YKˆŸJNÈ™]\›‚ˆ™^^[Y[LYˆ›Ú™XÝ™Ù]
+œš]˜]TZYŠH[ÙH›Ú™XÝÈ˜ÛÜÝ—J‹ŽÜ›Ú™XÝÈ™\˜][Ûˆ—BˆYˆÝ]VÈ›[Û™^H—O™^^[Y[ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆ‘˜[HØZ˜H\˜H[°ìÞ[[ÈÙ\YšXØYÈH	Û™^^[Y[‹ŒŸKˆŸJNÈ™]\›‚ˆYˆ›Ú™XÝÈœÝ]\È—OOHœ]\ØYHŽ‚ˆYˆ›ÝÛÛ˜XÝÜ—Ú\×ØØ\XÚ]J›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—JNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÛÛœÝXÝÜ˜HY[™HÙÜÈÝ\ÈÝ\ÜÈØÝ\YÜËˆ\Ü\°èHÝ˜H[™YØH[\ÈH™X[Y\‹ˆŸJNÈ™]\›‚ˆYˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—JOP“Ô—Ó‘QQÖÜ›Ú™XÝÈšÚ[™—WNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“HÛÛœÝXÝÜ˜H›ÈY[™H˜X˜Z˜YÜ™\ÈXœ™\È\˜H™X[Y\ˆ\ÝHØœ˜KˆŸJNÈ™]\›‚ˆ›Ú™XÝÈÛÜšÙ\œÐ\ÜÚYÛ™Y—OSP“Ô—Ó‘QQÖÜ›Ú™XÝÈšÚ[™—WBˆ›Ú™XÝÈœÝ]\È—OH˜ÛÛ˜]YHŽÈ›Ú™XÝÈ˜Ø]\ÙH—OPÓÓ•PÕÔ”ÖÜ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—WVÈœ›Ùš[H—NÈ]Š“Øœ˜H™X[YYH‹ˆžÜ›Ú™XÝÉÛX™[	×_HÛÛ[°î˜H\ÙHÜ›Ý[™
+›Ú™XÝÉÜ›ÙÜ™\ÜÉ×JŒL
+_IHÛÛˆ[Ø[È[™Y[HÛÛ\›ÛY]YËˆŠBˆ[ÙN‚ˆÜ[\›Ý[™
+›Ú™XÝ™Ù]
+œš[Ü”Ü[‹
+JÊ›Ú™XÝÈ˜ÛÜÝ—JÜ›Ú™XÝ™Ù]
+›][šXÚ\[\›Z]ZY‹
+HYˆ›Ú™XÝ™Ù]
+œš]˜]TZYŠH[ÙH›Ú™XÝ™Ù]
+œZY‹
+JJNÈ›ÙÜ™\ÜÏ\›Ú™XÝ™Ù]
+œ›ÙÜ™\ÜÈ‹
+BˆYˆ›ÙÜ™\ÜÏŒ‚ˆÝ]KœÙ]Y˜][
+˜X˜[™Û™Y‹×JK˜\[™
+ÈšYŽœ›Ú™XÝÈšY—KžŽœ›Ú™XÝÈž—KžHŽœ›Ú™XÝÈžH—KšÚ[™Žœ›Ú™XÝÈšÚ[™—K›X™[Žœ›Ú™XÝÈ›X™[—Kœ›ÙÜ™\ÜÈŽœ›ÙÜ™\ÜËœÜ[ŽœÜ[˜ÛÛ˜XÝÜˆŽœ›Ú™XÝÈ˜ÛÛ˜XÝÜˆ—KœÝYÙHŽœ›Ú™XÝÈœÝYÙ\È—VÜ›Ú™XÝÈœÝYÙR[™^—WKœÝ]\ÈŽˆ›Øœ˜H[˜ÛÛ˜Û\ØH‹œš]˜]TZYŽœ›Ú™XÝ™Ù]
+œš]˜]TZY‹˜[ÙJK˜\Ó[™RYŽœ›Ú™XÝ™Ù]
+˜\Ó[™RYŠ_JBˆÝ]VÈœ›Ú™XÝÈ—Kœ™[[Ý™J›Ú™XÝ
+Bˆ]ŠÛÛ˜]ÈØ[˜Ù[YÈ‹ˆžÜ›Ú™XÝÉÛX™[	×_NˆØ\ÝÈ[™YÈ	ÜÜ[‹NÈÙHX™\˜H[Ø[ÈÛÛ˜XÝX[›ÈYØYËˆÊ	ÓH\ÝXÝ\˜H[˜ÛÛ˜Û\ØH\›X[™XÙH[ˆH\˜Ù[K‰ÈYˆ›ÙÜ™\ÜÏŒ[ÙH	ÓHØœ˜H›ÈX°ëXH[šXÚXYÈ˜X˜Z›ÜÈ°ë\ÚXÛÜË‰ÊHH‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOHœ™\ØÝYHŽ‚ˆX˜[™Û™Y[™^
+
+H›ÜˆH[ˆÝ]K™Ù]
+˜X˜[™Û™Y‹×JHYˆVÈšY—OO\ÝŠ]K™Ù]
+šYŠJJK›Û™JBˆÛÛ˜XÝÜY]K™Ù]
+˜ÛÛ˜XÝÜˆŠNÂˆYˆ›ÝX˜[™Û™YˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“HØœ˜H[˜ÛÛ˜Û\ØHXH›È\Ý0èH\ÜÛšX›KˆŸJNÈ™]\›‚ˆYˆÛÛ˜XÝÜˆ›Ý[ˆÓÓ•PÕÔ”ÎˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆÛÛœÝXÝÜ˜H[°è[YKˆŸJNÈ™]\›‚ˆYˆ›ÝÛÛ˜XÝÜ—Ú\×ØØ\XÚ]JÛÛ˜XÝÜŠNˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™HÝXYš[\È\ÜÛšX›\È\˜H™\ØØ]\ˆHØœ˜KˆŸJNÈ™]\›‚ˆÚ[™XX˜[™Û™YÈšÚ[™—NÈ[š]X[XX˜[™Û™YÈœ›ÙÜ™\ÜÈ—NÈÜXÏT“Ò‘PÕÖÚÚ[™NÈÏPÓÓ•PÕÔ”ÖØÛÛ˜XÝÜ—BˆYˆÛÛ˜XÝÜ—Ùœ™YWÝÛÜšÙ\œÊÛÛ˜XÝÜŠOP“Ô—Ó‘QQÖÚÚ[™NˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽ™ˆžØÛÛ˜XÝÜŸH›ÈY[™HÓP“Ô—Ó‘QQÖÚÚ[™_H˜X˜Z˜YÜ™\ÈXœ™\È\˜H[™\ØØ]KˆŸJNÈ™]\›‚ˆÝ[\›Ý[™
+ÜXÖÈ˜ÛÜÝ—JŠKZ[š]X[
+J˜ÖÈœšXÙH—JNÈ\˜][Û[X^
+K›Ý[™
+ÜXÖÈ™^\È—JŠKZ[š]X[
+J˜ÖÈ™^\È—KÌÌ
+JBˆ^ÈšYŽ]ZY]ZY
+
+Kš^šÚ[™ŽšÚ[™›X™[Ž˜X˜[™Û™YÈ›X™[—KžŽ˜X˜[™Û™YÈž—KžHŽ˜X˜[™Û™YÈžH—K˜ÛÛ˜XÝÜˆŽ˜ÛÛ˜XÝÜ‹˜ÛÜÝŽÝ[™\˜][ÛˆŽ™\˜][Û‹™[\ÙYŽŒœ›ÙÜ™\ÜÈŽš[š]X[š[š]X[›ÙÜ™\ÜÈŽš[š]X[œZYŽŒœš[Ü”Ü[Ž˜X˜[™Û™Y™Ù]
+œÜ[‹
+KœÝYÙ\ÈŽœÜXÖÈœÝYÙS˜[Y\È—KœÝYÙR[™^Ž›Z[Š[ŠÜXÖÈœÝYÙS˜[Y\È—JKLK[
+[š]X[
+›[ŠÜXÖÈœÝYÙS˜[Y\È—JJJKœÝ]\ÈŽˆ˜ÛÛ˜]YH‹˜Ø]\ÙHŽ˜ÖÈœ›Ùš[H—K›[ÛPÛÜÝŽŒÛÜšÙ\œÐ\ÜÚYÛ™YŽ“P“Ô—Ó‘QQÖÚÚ[™K›X]\šX[Ô™\]Z\™YŽ›X]\šX[Ü[ŠÚ[™[š]X[
+K›X]\šX[Õ\ÙYŽžÚÙ^NŒ›ÜˆÙ^H[ˆPUT’PSÓSQTß_BˆYˆÚ[™OH˜\ÔÝÜŽœÈ˜\Ó[™RY—OXX˜[™Û™Y™Ù]
+˜\Ó[™RYŠBˆš]˜]OZÚ[™[ˆ
+šÛYH‹œÚÜ‹šÝ[ŠBˆYˆš]˜]N‚ˆ™YO[X^
+L›Ý[™
+ÜXÖÈ˜ÛÜÝ—JŠKZ[š]X[
+J‹ŒLŠJNÜš]˜]PÛÜÝ]Ý[Y™YBˆYˆÝ]VÈ›[Û™^H—O™YHÜˆÝ]VÈœš]˜]PØ\][—Oš]˜]PÛÜÝˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“›È[Ø[ž˜H[Ø\][›Û[ÝÜˆÈ][šXÚ\[\˜Hš[˜[˜ÚX\ˆ[™\ØØ]KˆŸJNÈ™]\›‚ˆÝ]VÈ›[Û™^H—KOY™YNÜÝ]VÈœš]˜]PØ\][—KO\š]˜]PÛÜÝÜÈ˜ÛÜÝ—O\š]˜]PÛÜÝÜÈ›][šXÚ\[\›Z]ZY—OY™YNÜÈœš]˜]TZY—OUYBˆÈœZY—O\›Ý[™
+š]˜]PÛÜÝ
+‹ŒŠNÜÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—JÏ\ÈœZY—Bˆ[ÙN‚ˆ™\Ù\™Y\Ý[JX^
+VÈ˜ÛÜÝ—K\K™Ù]
+œZY‹
+JH›ÜˆH[ˆÝ]VÈœ›Ú™XÝÈ—HYˆ›ÝK™Ù]
+œš]˜]TZYŠJNØ]˜Z[X›O[X^
+Ý]VÈ›[Û™^H—K\™\Ù\™Y
+BˆYˆ]˜Z[X›OÝ[ˆÙ[‹—ÜÙ[™
+KÈ™\œ›ÜˆŽˆ“H\ÛÜ™\°ëXH\ÜÛšX›H›ÈÝXœ™H[ÛÛ˜]ÈH™\ØØ]KˆŸJNÈ™]\›‚ˆÈœZY—O\›Ý[™
+Ý[
+‹ŒŠNÜÝ]VÈ›[Û™^H—KO\ÈœZY—NÜÝ]VÈœÝ\H—VÈ˜ÛÛ˜XÝÜØ\Ú—VØÛÛ˜XÝÜ—JÏ\ÈœZY—BˆÝ]VÈ˜X˜[™Û™Y—Kœ™[[Ý™JX˜[™Û™Y
+NÜÝ]VÈœ›Ú™XÝÈ—K˜\[™
+
+Bˆ]Š”™\ØØ]HHØœ˜HYYXØYÈ‹ˆžØX˜[™Û™YÉÛX™[	×_HÛÛ[°î˜H\ÙHÜ›Ý[™
+[š]X[
+ŒL
+_IHÛÛˆØÛÛ˜XÝÜŸNÈÛÛ˜]ÈY]›È	ÝÝ[‹HH^›È\Ý[XYÈÙ\˜][ÛŸH0ëX\Ëˆ‹œ™\XÙJ‹‹‹ˆŠJBˆ[YˆXÝ[ÛOH›™]ÈŽˆÝ]OZ[š]X[ÜÝ]J
+NÈÝ]VÈšÜÝ—O\YÈÝ]VÈœ^Y\œÈ—VÜYO][YK[YJ
+NÈ]Š“Y]˜H\YH‹”Y\ÈÛ\›ÈÛÛY[ž°ìÈ[˜HY]˜HÙ\ÝpìÛˆ][šXÚ\[ˆŠBˆ[ÙNˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆXØÚpìÛˆ\ØÛÛ›ØÚYHŸJNÈ™]\›‚ˆÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÈ™]\›‚ˆYˆ]OH‹Ø\KÜØ]™HŽ‚ˆYˆYO\Ý]K™Ù]
+šÜÝŠNˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆ”ÛÛÈ[[™š]špìÛˆYYHÝX\™\ˆHÚ]YYˆŸJNÈ™]\›‚ˆÐU‘KÜš]WÝ^
+œÛÛ‹™[\ÊÚÎˆ›ÜˆËˆ[ˆÝ]Kš][\Ê
+HYˆÈ›Ý[ˆ
+œ^Y\œÈ‹šÜÝŠ_K[œÝ\™WØ\ØÚZOQ˜[ÙK[™[LŠK[˜ÛÙ[™ÏH]‹NŠNÈÙ[‹—ÜÙ[™
+ŒÈ›ÚÈŽ•YK™š[HŽ”ÐU‘K›˜[Y_JNÈ™]\›‚ˆYˆ]OH‹Ø\KÛØYŽ‚ˆYˆYO\Ý]K™Ù]
+šÜÝŠNˆÙ[‹—ÜÙ[™
+ËÈ™\œ›ÜˆŽˆ”ÛÛÈ[[™š]špìÛˆYYHØ\™Ø\ˆHÚ]YYˆŸJNÈ™]\›‚ˆYˆ›ÝÐU‘K™^\ÝÊ
+NˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“›È^HÚ]YYÝX\™YHÙ]°ëXHŸJNÈ™]\›‚ˆØYYZœÛÛ‹›ØYÊÐU‘Kœ™XYÝ^
+[˜ÛÙ[™ÏH]‹NŠJNÈØYYœÙ]Y˜][
+œ^Y\œÈ‹ßJNÈØYYÈšÜÝ—O\YÈÝ]O[ØYYÈ]ŠÚ]YYØ\™ØYH‹”ÙH™\Ý]\°ìÈ[0î›[[È\ÝYÈÝX\™YËˆŠNÈÙ[‹—ÜÙ[™
+ŒX›X×ÜÝ]JY
+JNÈ™]\›‚ˆÙ[‹—ÜÙ[™
+È™\œ›ÜˆŽˆ“›È[˜ÛÛ˜YÈŸJB‚™YˆÚ[][][Û—ÛÛÜ
+
+N‚ˆ\Ý][YK›[Û›ÝÛšXÊ
+BˆÚ[HYN‚ˆ[YKœÛY\
+ŒJBˆ›ÝÏ][YK›[Û›ÝÛšXÊ
+BˆÚ]ÐÒÎ‚ˆYˆÝ]VÈœ]\ÙY—Nˆ\Ý[›ÝÎÈÛÛ[YBˆ[\ÙY[›ÝË[\ÝˆYˆ[\ÙYLKÛX^
+KÝ]VÈœÜYY—JN‚ˆ^\ÏZ[
+[\ÙY
+›X^
+KÝ]VÈœÜYY—JJBˆ\Ý[›ÝÂˆ›ÜˆÈ[ˆ˜[™ÙJZ[Š^\ËŒ
+JNˆXÚ×ÛÛ™WÙ^J
+B‚™YˆXZ[Š
+N‚ˆÛØ˜[Ý]BˆYˆÐU‘K™^\ÝÊ
+N‚ˆžN‚ˆØYYZœÛÛ‹›ØYÊÐU‘Kœ™XYÝ^
+[˜ÛÙ[™ÏH]‹NŠJNÈÝ]O^ÊŠš[š]X[ÜÝ]J
+K
+Š›ØYYœ^Y\œÈŽžß_Bˆ^Ù\^Ù\[ÛŽˆ\ÜÂˆÜU™XY[™ÒÙ\™\Š
+ŒŒŒŒ‹Ô•
+K[™\ŠBˆ™XY[™Ë•™XY
+\™Ù]\Ú[][][Û—ÛÛÜY[[ÛUYJKœÝ\
+
+Bˆ™XY[™Ë•™XY
+\™Ù]Y\ØÛÝ™\žWÛÛÜY[[ÛUYJKœÝ\
+
+Bˆ\›Yˆš‹ËÌLËŒŒŒNžÔÔ•KÈ‚ˆYˆ‹K[›ËXœ›ÝÜÙ\ˆˆ›Ý[ˆÞ\Ë˜\™ÝŽˆ™XY[™Ë•[Y\ŠŽ[X™NÙX˜œ›ÝÜÙ\‹›Ü[Š\›
+JKœÝ\
+
+Bˆš[
+Ú]YYš]˜H\Ý0èH\ÝNˆ‹\›
+Bˆš[
+‘\™XØÚ[Û™\ÈSŽˆŠBˆ›Üˆ\[ˆØØ[Ú\Ê
+Nˆš[
+ˆˆ‹ËÞÚ\NžÔÔ•KÈŠBˆš[
+‘Z°èH\ÝH™[[˜HXšY\HZY[˜\ÈÙHYYØKˆÝ›
+ÐÈ\˜HÙ\œ˜\‹ˆŠBˆžNˆÜ‹œÙ\™WÙ›Ü™]™\Š
+Bˆ^Ù\Ù^X›Ø\™[\œ\ˆ\ÜÂˆš[˜[NˆÜ‹œÙ\™\—ØÛÜÙJ
+B‚šYˆ×Û˜[YW×ÏOH—×ÛXZ[—×ÈŽˆXZ[Š
+B

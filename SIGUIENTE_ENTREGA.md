@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.73
+## Estado al cerrar Alfa 0.74
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -73,7 +73,7 @@ Priorizar un primer circuito jugable de evolución por décadas: avanzar edad/é
 
 Pendiente de completar antes de publicar: compilación Python/JavaScript, flujo de acuerdo en ambos motores y revisión visual móvil/escritorio de Cambios y Gobierno. LAN con dos equipos físicos permanece sin probar.
 
-## Sistema agregado en Alfa 0.73
+## Sistema agregado en Alfa 0.74
 
 Fase 33: edades de residentes, entradas y salidas de empleo, nacimientos condicionados por capacidad y fondos familiares, envejecimiento de activos privados y rehabilitaciones con capital, inventario de constructora, permiso, cuadrilla, plazo e inspección. La ciudad muestra barrios y edades de forma legible; edificios deteriorados y andamios se distinguen en el 3D. Online/Offline, esquema 57. Fase todavía parcial: no está demostrado un escenario continuo de 30 años.
 
@@ -84,3 +84,14 @@ Seguir fase 33 con un simulacro reproducible de 30 años en ambos motores: hacer
 ## Verificación de Alfa 0.73
 
 Compilación Python/JavaScript correcta. Pruebas del motor Online cubrieron ingreso a edad laboral, jubilación y vacante, desgaste y necesidad, inventario real, costo privado, permiso, obra con cuadrilla y plazo, inspección y capacidad adicional; también nacimientos y balance decenal. La acción HTTP en sala y la acción Offline pasaron. Chromium revisó Evolución en móvil (390×844) y escritorio (1440×900); no hubo overflow horizontal ni errores JS, y el botón de rehabilitación fue alcanzable tras scroll vertical. La corrida continua de treinta años sigue pendiente. LAN física/Vercel sin prueba.
+
+
+Fase 33 sube a 25% orientativo: las exportaciones ahora compiten por unidades y presupuesto de tres mercados finitos según personal, precio, condición, servicios y acceso vial/portuario, en Online y Offline (esquema 58).
+
+## Punto exacto para continuar
+
+Implementar una apertura privada de comercios enlazada al mercado regional finito y a suelo/capital/trabajo reales, junto con ciclos de inversión; medir cierres y supervivencia durante trayectorias de largo plazo. Después construir la prueba acelerada de 30 años y los escenarios pequeño, metropolitano, portuario y turístico. Evitar nuevas entregas de detalle de UI salvo correcciones de legibilidad.
+
+## Verificación Alfa 0.74
+
+Online: sin ruta, oferta 0; con salida, reparto finito y cierre comercial respetaron el cupo (127 unidades, ingreso $1.778 ≤ presupuesto $3.091). Offline en Chromium migró esquema 57→58 y cerró mes con cupo real (116 unidades, $1.624 ≤ $2.826). Sintaxis y JSON correctos. Puerto se revisó en 390×844 y 1440×900, sin overflow horizontal ni errores JS. LAN entre dos equipos físicos, Vercel y corrida de 30 años siguen pendientes.

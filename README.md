@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.73
+# Ciudad Viva · Alfa 0.74
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -193,3 +193,7 @@ La ciudad registra envejecimiento de residentes y edificios. Cumplir 18 permite 
 Fase 33 sigue en desarrollo: falta probar 30 años y los escenarios urbanos indicados en el roadmap.
 
 Verificación de la entrega: compilación, prueba del ciclo de edad y renovación Online/Offline, endpoint de anfitrión y revisión del panel en 390×844 y 1440×900. La simulación continua aceptada de 30 años sigue pendiente; tampoco se probó LAN con dos equipos físicos en esta sesión.
+
+## Mercado regional finito · Alfa 0.74
+
+Los comercios asignan sus exportaciones entre tres mercados regionales con volúmenes y presupuestos mensuales finitos. Su participación depende de personal, precio, estado, servicios y acceso a la salida vial o al puerto. Las ventas exportadas consumen esa asignación; el ingreso no supera el presupuesto comprador, de modo que el mercado externo no crea demanda ni dinero ilimitados. La vista Ciudad > Puerto muestra destinos, participación y resultado del último mes. Implementado en Online y Offline, con persistencia en el esquema 58.

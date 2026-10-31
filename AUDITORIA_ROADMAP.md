@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.73
+# Auditoría del roadmap · Alfa 0.74
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -20,7 +20,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 30 | Parcial: patrimonio y rehabilitación; locales cerrados sin deudas pueden convertirse en vivienda privada con permiso, inversión, cuadrilla, etapas, inspección, alquiler y migración condicionada | Evolución arquitectónica por épocas, protección de alquileres y desplazamiento social medido |
 | 31 | Parcial: calles, edificios públicos y redes técnicas con condición, mantenimiento, averías y contratos; calles críticas cierran rutas; tres clases de planta pierden capacidad por desgaste y reciben inspecciones programadas cada 180 días | Calendario preventivo para otras clases de activos, restricciones de planta durante obra, puentes, activos privados, rehabilitación mayor y reemplazo |
 | 32 | Parcial: mandatos, elecciones, objetivos, reclamos con evidencia territorial y acuerdos de seguimiento con vencimiento | Navegación/reparación directa desde evidencia, transparencia completa, padrón demográfico y consultas vecinales |
-| 33 | Pendiente como sistema completo | Simulación urbana de décadas, transformaciones demográficas y arquitectura de largo plazo |
+| 33 | Parcial: edades, nacimientos condicionados, deterioro/reforma privada, balance barrial y competencia por demanda externa finita | Escenario de 30 años, ciclos económicos e inversión/apertura empresarial, proyectos entre mandatos y escenarios regionales |
 
 ## Evidencia de esta revisión
 
@@ -250,3 +250,6 @@ Continuar la fase 33: ejecutar escenarios reproducibles de 30 años y conectar l
 **Pendiente / no verificado:** escenario continuo de 30 años; ciclos económicos, oferta regional finita e inversión competidora; trayectorias pequeña, metropolitana, portuaria y turística; contratos y deuda que cruzan mandatos sin explosión/duplicación de recursos. Por eso la fase sigue parcial (20% orientativo), no completada.
 
 **Verificación de Alfa 0.73:** pasó compilación Python/JavaScript; prueba de transiciones, desgaste, transacción de materiales/capital/permiso, plazo, inspección, plazas y nacimiento en motor Online; acción HTTP del anfitrión y arranque de renovación Offline en Chromium. Revisada UI de Evolución en 390×844 y 1440×900: sin overflow horizontal ni errores JS, contenido vertical navegable hasta las acciones. La corrida de treinta años sigue pendiente; por eso no se acepta aún el criterio central de la fase.
+
+
+Alfa 0.74 agrega mercados de exportación mensuales finitos en Online y Offline. El reparto por comercio pondera personal, precio, condición, servicios y ruta a salida vial/puerto; volumen y presupuesto comprador limitan ventas e ingresos. Persistencia en esquema 58; fase 33 pasa de 20% a 25% orientativo. Verificación de esta entrega documentada en ESTADO_DESARROLLO.md.

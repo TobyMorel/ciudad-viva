@@ -35,7 +35,8 @@ MATERIAL_NEEDS = {
     "busGarage":{"aggregate":30,"steel":16,"timber":8,"components":10},
     "busStop":{"aggregate":10,"steel":0,"timber":5,"components":2},
     "port":{"aggregate":58,"steel":34,"timber":18,"components":30},
-    "airport":{"aggregate":90,"steel":65,"timber":22,"components":55}}
+    "airport":{"aggregate":90,"steel":65,"timber":22,"components":55},
+    "hotel":{"aggregate":55,"steel":25,"timber":24,"components":32}}
 CONTRACTOR_NAMES = ("Sur Obras","Constructora Delta","Estudio y Obra Norte")
 MARKET_SUPPLIERS = {
     "Cooperativa Regional":{"unitCost":3.7,"stock":120,"maxStock":260,"monthlyOutput":65,"leadDays":4,"profile":"Precio bajo · lotes limitados · entrega lenta"},
@@ -59,6 +60,7 @@ JOB_PROFILES = {
     "depot": ("logistica", "Logística", 42),
     "port": ("logistica", "Logística", 42),
     "airport": ("logistica", "Logística", 42),
+    "hotel": ("comercio", "Hotelería", 35),
 }
 TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42)}
 TRAINING_SEATS=6
@@ -93,8 +95,8 @@ def ensure_person_work_profile(person):
 
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
-    firm=site.get("business",{}) if site.get("kind")=="shop" else {}
-    wage=max(1,int(firm.get("wage",10) if site.get("kind")=="shop" else 12 if site.get("kind")=="airport" else 8))
+    firm=site.get("business",{}) if site.get("kind") in ("shop","hotel") else {}
+    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel") else 12 if site.get("kind")=="airport" else 8))
     return category,label,minimum,wage
 
 def training_candidates(category,center,excluded=None):
@@ -191,7 +193,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":23,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":24,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -213,8 +215,8 @@ CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
-PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y licitación","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]}}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16}
+PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y licitación","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
+LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -273,7 +275,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(23,state.get("version",1))
+    state["version"]=max(24,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
@@ -669,7 +671,7 @@ def commute_model():
     roads={tuple(r) for r in state["roads"]}
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
     sites=[b for b in state["buildings"] if b.get("status","operativo") in ("operativo","habilitado") and
-           (b.get("kind") in ("civic","depot","port","airport") or (b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"))]
+           (b.get("kind") in ("civic","depot","port","airport") or (b.get("kind") in ("shop","hotel") and b.get("business",{}).get("status")=="abierto"))]
     state.setdefault("busRoutes",[])
     for line in state["busRoutes"]:
         path=bus_line_route(line)
@@ -692,11 +694,11 @@ def commute_model():
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
         return _commute_cache
     weights={"shop":1.0,"civic":.8,"depot":.65,"port":.85,"airport":.9}
-    company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"]=="shop")
+    company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel"))
     public_sites=[b for b in sites if b["kind"] in ("civic","depot","port","airport")]
     public_jobs=max(0,state["jobs"]-company_jobs)
     public_weight=sum(weights[b["kind"]] for b in public_sites)
-    caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"]=="shop" else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
+    caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","hotel") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
     routes={}; distances={}
     for hi,home in enumerate(homes):
         for si,site in enumerate(sites):
@@ -705,7 +707,7 @@ def commute_model():
                 routes[hi,si]=path
                 distances[hi,si]=sum(1 for aa,bb in zip(path,path[1:]) if tuple(aa) in roads and tuple(bb) in roads)
     residents=[(hi,home,person) for hi,home in enumerate(homes) for person in home.get("residents",[]) if person.get("workerEligible")]
-    airport_jobs=sum(max(0,int(site.get("jobSlots",0))) for site in sites if site.get("kind")=="airport")
+    airport_jobs=sum(max(0,int(site.get("jobSlots",0))) for site in sites if site.get("kind") in ("airport","hotel"))
     target=min(round(len(residents)*max(0,min(100,state["employment"]))/100)+airport_jobs,round(sum(caps)))
     remaining={si:int(math.floor(cap)) for si,cap in enumerate(caps)}
     # Priorizar residentes sin empleo; rutas cortas primero. Cada residente recibe un solo empleador.
@@ -732,7 +734,7 @@ def commute_model():
         if len(employees)>=target:break
         si=next((candidate for _,candidate in choices if remaining[candidate]>0),None)
         if si is None:continue
-        site=sites[si];firm=site.get("business",{}) if site["kind"]=="shop" else {}
+        site=sites[si];firm=site.get("business",{}) if site["kind"] in ("shop","hotel") else {}
         wage=workplace_profile(site)[3]
         employer_id=firm.get("id",f"public-{site['kind']}-{site['x']}-{site['y']}")
         person.update({"status":"empleado","employerId":employer_id,"employerName":site.get("name",site["kind"]),"monthlyWage":wage})
@@ -1403,6 +1405,37 @@ def simulate_airport_month(workforce):
         elif airport.get("monthlyPassengers",0):ev("Ruta aérea suspendida",f"La ruta requiere acceso, personal y demanda suficientes para cubrir sus costos.")
     return state["airportVisitorsThisMonth"]
 
+def simulate_hotel_month(workforce):
+    hotels=[b for b in state["buildings"] if b.get("kind")=="hotel" and b.get("business")]
+    arrivals=state.get("airportVisitorsThisMonth",0)
+    open_count=max(1,sum(1 for h in hotels if h.get("business",{}).get("status")=="abierto" and route_between((4,10),(h["x"],h["y"]))))
+    for hotel in hotels:
+        firm=hotel["business"]
+        if firm.get("status")!="abierto":continue
+        connected=bool(route_between((4,10),(hotel["x"],hotel["y"])))
+        has_airport=any(a.get("kind")=="airport" and a.get("operational") and route_between((a["x"],a["y"]),(hotel["x"],hotel["y"])) for a in state["buildings"])
+        guests=min(hotel.get("beds",48),math.floor(arrivals*.45/open_count)) if connected and has_airport else 0
+        nights=guests*2;capacity=max(1,hotel.get("beds",48)*30);occupancy=round(nights/capacity*100)
+        revenue=guests*max(50,hotel.get("nightlyRate",90));workplace=next((w for w in workforce.get("workplaces",[]) if w.get("x")==hotel["x"] and w.get("y")==hotel["y"]),{})
+        payroll=max(0,int(workplace.get("payroll",0)));costs=payroll+guests*18+260;profit=revenue-costs;tax=round(revenue*.05)
+        for emp in workforce.get("employees",[]):
+            if emp.get("site") is hotel:
+                wage=emp.get("earnedWage",emp.get("wage",0));home=emp.get("home",{});home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+        hotel.update({"monthlyGuests":guests,"monthlyGuestNights":nights,"occupancy":occupancy,"accessConnected":connected})
+        firm.update({"lastRevenue":revenue,"lastPayroll":payroll,"lastProfit":profit,"lastTourismTax":tax,"cash":firm.get("cash",0)+profit})
+        if occupancy<25:hotel["nightlyRate"]=max(55,hotel.get("nightlyRate",90)-5)
+        elif occupancy>78:hotel["nightlyRate"]=min(180,hotel.get("nightlyRate",90)+5)
+        firm["closureMonths"]=firm.get("closureMonths",0)+1 if profit<0 else 0
+        if firm["cash"]<0:
+            firm["status"]="cerrado";hotel["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",10))
+            for home in (b for b in state["buildings"] if b.get("kind")=="home"):
+                for person in home.get("residents",[]):
+                    if person.get("employerId")==firm.get("id"):
+                        person.update({"previousEmployer":firm.get("name"),"previousEmployerId":firm.get("id"),"unemployedSinceDay":state["day"],"unemploymentReason":"cierre del hotel por falta de huéspedes","status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
+            ev("Hotel cerrado",f"{hotel.get('name')}: la caja llegó a $ {round(firm['cash'])}; sin huéspedes no pudo cubrir sus costos y liberó sus vacantes.")
+        elif guests:ev("Actividad turística",f"{hotel.get('name')}: {guests} huéspedes · {nights} noches · ocupación {occupancy}% · ventas $ {revenue} · impuesto turístico $ {tax}.")
+    return sum(h.get("business",{}).get("lastTourismTax",0) for h in hotels)
+
 def tick_one_day():
     if state["paused"]: return
     ensure_supply_state()
@@ -1423,6 +1456,7 @@ def tick_one_day():
         economic=commute_model()
         public_payroll=pay_public_wages(economic)
         simulate_airport_month(economic)
+        tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
         economic=commute_model()
         collect_bus_fares(economic)
@@ -1430,7 +1464,7 @@ def tick_one_day():
         transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
         airport_income=state.get("airportMonthlyIncome",0)
-        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income
+        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax
         due=state["monthlyExpenses"]+public_payroll+transit_cost
         available=state["money"]+monthly_income
         net=monthly_income-due
@@ -1506,6 +1540,11 @@ def tick_one_day():
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
                 state["monthlyExpenses"]+=50
                 ev("Cochera habilitada",f"La cochera ofrece cuatro plazas para colectivos con acceso vial. Mantenimiento $ 50/mes; cada vehículo alojado ahorra $ 30/mes frente al alquiler externo.")
+            elif p["kind"]=="hotel":
+                opening=min(4500,max(0,state.get("privateCapital",0)));state["privateCapital"]-=opening
+                hotel={"x":p["x"],"y":p["y"],"kind":"hotel","name":"Hotel Independiente","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"rooms":24,"beds":48,"nightlyRate":90,"monthlyGuests":0,"monthlyGuestNights":0,"business":{**new_business({"x":p["x"],"y":p["y"],"name":"Hotel Independiente"},10,opening),"wage":10,"fixedCost":260,"closureMonths":0,"lastTourismTax":0}}
+                state["buildings"].append(hotel);state["jobs"]+=10
+                ev("Hotel privado habilitado",f"Abrió con 24 habitaciones, 48 plazas y 10 empleos. Depende de llegadas, acceso vial y caja privada para seguir operando.")
             elif p["kind"]=="airport":
                 airport={"x":p["x"],"y":p["y"],"kind":"airport","name":"Aeropuerto regional","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"passengerCapacity":800,"runwayMovements":12,"monthlyPassengers":0,"monthlyArrivals":0,"monthlyDepartures":0,"monthlyFlights":0,"airportFeeIncome":0,"monthlyCost":600,"operational":False}
                 state["buildings"].append(airport);state["jobs"]+=18;state["monthlyExpenses"]+=600
@@ -1523,7 +1562,7 @@ def tick_one_day():
                 coverage=round(5+5*c["quality"])
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"civic","name":"Centro de salud","level":1,"occupants":0,"status":"habilitado","monthlyCost":operating_cost,"quality":quality}); state["monthlyExpenses"]+=operating_cost; state["services"]=min(100,state["services"]+coverage); state["approval"]=min(100,state["approval"]+3)
                 ev("Centro de salud habilitado",f"Inspección aprobada con calidad {quality}%. Cobertura +{coverage} puntos; operación y mantenimiento $ {operating_cost}/mes.")
-            if p["kind"] not in ("civic","depot","port","airport"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
+            if p["kind"] not in ("civic","depot","port","airport","hotel"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
             state["projects"].remove(p)
     if day%30==0 and state["projects"]: ev("Revisión de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
 
@@ -1543,6 +1582,8 @@ def public_state(player_id=None):
         order_views.append({**order,**extra})
     view["supply"]={**state["supply"],"orders":order_views}
     view["airports"]=[{**p,"accessConnected":bool(route_between((4,10),(p["x"],p["y"]))) } for p in state["buildings"] if p.get("kind")=="airport"]
+    view["hotels"]=[b for b in state["buildings"] if b.get("kind")=="hotel"]
+    view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
     view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
@@ -1596,7 +1637,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.39"
+    server_version="CiudadViva/0.40"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -1719,7 +1760,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
-                    if kind=="airport" and not route_between((4,10),(x,y)): self._send(409,{"error":"El aeropuerto necesita una conexión vial continua con la ciudad."}); return
+                    if kind in ("airport","hotel") and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
                     bus_line=None
                     if kind=="busStop":
                         bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)
@@ -1733,7 +1774,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="road":
                         if not any(abs(rx-x)+abs(ry-y)<=1 for rx,ry in state["roads"]): self._send(409,{"error":"La calle debe conectar con la red existente"}); return
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    elif kind in ("home","shop"):
+                    elif kind in ("home","shop","hotel"):
                         # Promotor privado financia la inversión; el municipio cubre permisos e inspección.
                         need=PROJECTS[kind]["cost"]*.12
                         if state["money"]<need: self._send(409,{"error":f"Fondos municipales insuficientes para permisos ($ {need:.0f})"}); return
@@ -1745,7 +1786,7 @@ class Handler(BaseHTTPRequestHandler):
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
-                    if kind in ("home","shop"):
+                    if kind in ("home","shop","hotel"):
                         p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
                         if state["privateCapital"]<p["cost"]:
                             state["money"]+=round(spec["cost"]*.12); self._send(409,{"error":"Los promotores locales no tienen capital suficiente. Esperá nuevos ingresos."}); return
@@ -1842,7 +1883,7 @@ class Handler(BaseHTTPRequestHandler):
                     total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
-                    private=kind in ("home","shop")
+                    private=kind in ("home","shop","hotel")
                     if private:
                         fee=max(50,round(spec["cost"]*(1-initial)*.12));privateCost=total-fee
                         if state["money"]<fee or state["privateCapital"]<privateCost: self._send(409,{"error":"No alcanza el capital promotor o municipal para financiar el rescate."}); return

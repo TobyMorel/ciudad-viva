@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.39 · 31 de octubre de 2026
+**Entrega:** Alfa 0.40 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -275,15 +275,31 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - La fase 23 es parcial: faltan importaciones, tipos de terminal, calado, dragado, capacidad de grúas, colas de atraque, acceso ferroviario, competencia portuaria y balance de pérdidas/ganancias específico. No se estima porcentaje global: sigue faltando una matriz estable de pesos y criterios que cubra las 34 fases.
 
 
-## Alfa 0.39 · aeropuerto regional y viajes aéreos
+## Alfa 0.40 · aeropuerto regional y viajes aéreos
 
 - Fase 24 parcial: licitación por cinco etapas en una parcela con conexión vial, 16 trabajadores, materiales Online, terminal con 800 plazas mensuales y pista con 12 movimientos de vuelo al mes. La obra base cuesta $19.500 y tarda 112 días; operar cuesta $600/mes y agrega 18 puestos de trabajo.
 - Aerolíneas del Litoral solo sirve una ruta si hay conexión vial, por lo menos cuatro trabajadores aeroportuarios, residentes con recursos para viajar y margen operativo esperado. La ciudad puede ofrecer la obra sin que eso garantice vuelos.
 - Las llegadas generan visitantes diferenciados de la población residente. Una parte compra unidades en comercios alcanzables y con inventario; tasas por pasajeros/vuelos ingresan a la tesorería. La pista, terminal y una aeronave se ven en 3D. Online y Offline comparten el circuito. Guardado esquema 23.
 
-### Verificación Alfa 0.39
+### Verificación Alfa 0.40
 
 - Python: compilación y smoke Online asignaron 18 trabajadores aeroportuarios, abrieron una ruta con 33 pasajeros, 16 visitantes y $207 de tasas; el paso de visitantes elevó ventas locales y `public_state` informó la operación.
 - Offline: el contrato se acepta por 112 días con 16 trabajadores; en cierre mensual el aeropuerto empleó residentes, atendió 33 pasajeros y 16 visitantes, ingresó $207 y sumó las tasas al ingreso municipal.
 - Chromium en 390×844: Ciudad > Aeropuerto quedó dentro del popup, sin desborde horizontal, texto recortado ni errores JavaScript. La subcategoría es navegable junto con Puerto y las demás áreas de Ciudad.
 - Fase 24 parcial: faltan carga aérea, balances persistentes de aerolíneas, rutas múltiples, horarios, meteorología, ruido localizado, seguridad de emergencia y accesos terrestres de pasajeros. Porcentaje global aún no estimable; no hay matriz estable que pese las 34 fases.
+
+
+## Alfa 0.40 · hoteles privados y actividad visitante
+
+La fase 25 avanza de forma parcial. En Online y Offline se puede contratar un hotel con capital promotor, permiso municipal, contrato, cinco etapas y materiales (Online). Al abrir dispone de habitaciones, 48 plazas, 10 puestos y caja de operación. Solo recibe una parte de las llegadas aeroportuarias si hay vuelos activos y ruta vial conectada. Registra huéspedes, noches, ocupación, tarifa, salarios, gasto privado, resultado, caja e impuesto municipal del 5%. La tarifa reacciona a la ocupación y pérdidas persistentes cierran el hotel, liberan empleos y devuelven trabajadores a búsqueda.
+
+Ciudad > Turismo presenta actividad y empresas; el modelo 3D identifica hoteles. No se contabilizan visitantes como residentes. La base todavía carece de eventos y temporadas, turismo no aéreo, atractivo cultural/natural, impactos de congestión/alquileres y reportes distritales. No se marca terminada la fase 25.
+
+### Verificación Alfa 0.40
+
+- `python -m py_compile server.py`, comprobación de sintaxis de los tres módulos JavaScript y `git diff --check` completadas.
+- Prueba del contrato Online: el endpoint aceptó Hotel privado con Constructora Delta, capital privado y permiso; creó contrato de 76 días, 10 trabajadores, costo promotor de $13.992 y permiso de $1.584.
+- Prueba de la acción Offline: creó el mismo proyecto privado de 76 días y 10 trabajadores en parcela conectada.
+- Pruebas de cálculo: 100 llegadas operativas produjeron 45 huéspedes, 90 noches, $2.980 de resultado y $202 de tasa; una firma vacía continuó operando hasta agotar caja y cerró.
+- Chromium en 390×844: la ventana Ciudad > Turismo mostró sus siete categorías sin recorte horizontal; el panel admite desplazamiento vertical para llegar a todo el contenido.
+- Prueba física LAN y Vercel quedan pendientes en esta sesión; la simulación Online no se ejecutó como dos computadoras físicas.

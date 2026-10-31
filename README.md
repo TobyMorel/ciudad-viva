@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.39
+# Ciudad Viva · Alfa 0.40
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -37,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto y Aeropuerto. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.39 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto y Turismo. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.39 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -66,3 +66,8 @@ Cada colectivo requiere dos conductores distintos para cubrir los turnos de mañ
 Los **transbordos** necesitan una parada construida accesible a dos líneas. Cada tramo ocupa aforo y cobra su tarifa; el panel Movilidad muestra viajeros, parada y tiempo adicional. El acceso al auto se asigna de forma estable a cada residente, por lo que la elección modal tiene una causa verificable.
 
 El **billete integrado** de un transbordo cuesta $0,35 por viaje con tarifa base: $0,25 para la primera línea y $0,10 para la segunda. Ambas líneas registran su parte del cobro mensual y el hogar paga el total.
+
+
+## Turismo y hoteles · Alfa 0.40
+
+Construí un hotel privado junto a una calle conectada. La empresa financia la obra por etapas, abre habitaciones, contrata trabajadores y necesita caja para pagar salarios y costos. Solo recibe huéspedes cuando opera el aeropuerto; tarifas, ocupación, gasto e impuesto se muestran en Ciudad > Turismo. Sin visitas rentables, el hotel puede cerrar. Esta es una primera parte de la fase 25: todavía faltan eventos, temporadas, atractivos y presiones territoriales.

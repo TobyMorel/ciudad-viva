@@ -1,25 +1,17 @@
-Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md`.
-
 # Siguiente entrega · continuidad
 
-**Regla de alcance:** priorizar primero un circuito jugable nuevo por mecánica y avanzar por varias fases del roadmap. Limitar el pulido de una mecánica ya jugable a errores que bloqueen uso; dejar balance fino, casos extremos y detalle visual adicional para una ronda posterior. Cada entrega debe mostrar al menos un cambio nuevo que afecte la ciudad y documentar sus límites.
+Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Mantener una entrega jugable por ciclo: priorizar mecánicas causales que cambien la ciudad; dejar balance fino y embellecimiento para después. Corregir de inmediato cualquier bloqueo de uso o desborde de interfaz.
 
-1. Extender los viajes cotidianos desde compras a servicios y ocio; hacer que ventas/visitas compartan destinos, presupuesto y demanda en lugar de cobrar dos veces.
-2. Dar el primer paso de transporte de superficie: propuesta de corredor de tranvía con trazado, costo estimado y demanda; luego construir vía, paradas, flota y operación en etapas.
-3. Completar movilidad con bicicletas, capacidad vial y carga gradualmente, sin cerrar detalles finos del bus antes.
-4. Retomar las redes físicas de agua, energía, cloacas y residuos con una versión inicial conectada a edificios.
-5. Seguir con educación, vivienda, gobierno y sistemas de las fases posteriores, conservando una entrega jugable por ciclo.
+## Estado al cerrar Alfa 0.40
 
-Alfa 0.20 simplifica la interfaz con un dock sobre el mapa y paneles emergentes. El historial paginado de 0.1–0.37 se mantiene en `release_notes.json`; actualizarlo en cada subida. Los registros originales 0.1–0.9 no están en el historial de este repositorio y quedan señalados como no conservados. Alfa 0.21 registra el tiempo que los residentes buscan trabajo y Alfa 0.22 agrega filtros básicos de habilidades, salario esperado y acceso. Alfa 0.23 permite iniciar cursos de comercio, administración y logística con cohorte, acceso, duración, costo, mejora de habilidades y control de saldo en ambos modos. La fase 21 sigue parcial; educación formal, capacidad docente y diferencias territoriales continúan pendientes. Alfa 0.24 inicia la fase 22 con elección modal laboral a pie/auto, tiempo puerta a puerta, congestión vehicular y emisiones aproximadas. Alfa 0.25 incorpora flotas de bus con frecuencia, aforo, tarifa, cobro familiar, gastos y efecto modal; Alfa 0.26 añade paradas en edificios junto al recorrido y cobertura de varios pares hogar–empleo por línea. Alfa 0.27 convierte las paradas seleccionadas en obras municipales, estaciones 3D y desvíos con mantenimiento. El próximo incremento debe asignar conductores identificables con turnos, materializar depósitos y permitir transbordos; después seguir con tren y carga. Offline juega y guarda en el navegador en Vercel; Online conecta a la sala LAN servida por el anfitrión. La transferencia entre equipos físicos por Wi-Fi continúa pendiente de una prueba fuera de este entorno.
+La fase 25 inició con hoteles privados: contrato, etapas, personal, pasajeros aéreos, ocupación, tarifa, finanzas, impuesto y cierre por caja agotada. Continúa parcial. La pestaña Ciudad > Turismo se comprobó en Chromium a 390 × 844: las siete subcategorías caben sin recorte horizontal y el panel desplaza verticalmente su contenido.
 
-Alfa 0.28 incorpora sala LAN explícita, descubrimiento UDP local, subcategorías en Ciudad, sonidos básicos y colectivo 3D reconocible. Siguiente paso concreto: validar conexión entre dos máquinas reales, persistencia del anfitrión al reconectar y ocupación de conductores por turno; revisar el rendimiento del render con más edificios.
+## Próximo sistema
 
-Alfa 0.29 asigna conductores identificables a cada línea y vincula la dotación con el servicio real en ambos modos. Próximo: depósitos físicos de bus, transbordos, horarios completos y prueba LAN entre dos computadoras.
+Iniciar fase 26 con balances simples pero físicos de electricidad y agua: capacidad disponible, edificios conectados, consumo por actividad, déficit y costo municipal. Una conexión directa a edificio debe alterar el servicio recibido; evitar barras sin efectos. Luego sumar saneamiento y residuos con sus propias unidades/capacidades. No dedicar otra entrega a expandir el aeropuerto o el detalle visual de hoteles.
 
-Alfa 0.30 habilita una cochera construible de cuatro plazas, vinculada por ruta vial a las líneas. El siguiente incremento debe dar turnos de conducción separados y transbordos. La prueba LAN física continúa pendiente.
+Continuar fase 25 en una pasada posterior con eventos temporales, estacionalidad, llegadas por puerto/ferrocarril, atractivos patrimoniales/naturales y costos/efectos urbanos. Mantener visitantes separados de población residente.
 
-Alfa 0.31 exige dos conductores distintos por colectivo, uno por turno pico; con dotación incompleta el vehículo no se cuenta. Próximo: transbordos reales entre líneas y horario más allá de los picos. La prueba LAN física sigue pendiente.
+## Verificación pendiente
 
-Alfa 0.32 habilita un transbordo físico entre dos líneas por una parada construida, con ocupación y cobro por tramo. Próximo: viaje de regreso separado, horario por franja, boleto integrado y validación LAN entre dos computadoras.
-
-Alfa 0.39 abre vuelos regionales condicionados por vacantes, accesibilidad y demanda solvente, con visitantes y compra local. Próximo: fase 25, hoteles privados por etapas, visitantes de un día/alojados, ocupación y efectos sobre vivienda, servicios y comercios. Continuar luego con redes urbanas conectadas; no profundizar los aeropuertos o puertos salvo bloqueos. La prueba LAN física continúa pendiente.
+La sintaxis de Python y módulos JavaScript pasó. Chromium confirmó el panel Turismo en móvil; falta verificación física entre dos computadoras LAN y publicar/desplegar la nueva build en Vercel. Actualizar `release_notes.json`, `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md` y esta hoja en cada entrega. Git usa un correo válido vinculado a GitHub para evitar el rechazo de Vercel.

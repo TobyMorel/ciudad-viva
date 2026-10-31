@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.70",
+  "currentVersion": "0.71",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.71",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 32 (parcial): cada mandato fija metas de empleo, vivienda y servicios; el avance se revisa mensualmente y las metas cumplidas afectan el resultado electoral.",
+        "Reclamos vecinales persistentes aparecen por distrito al caer empleo, vivienda, servicios o confianza por debajo de umbrales visibles; se cierran al corregir la causa y presionan el apoyo mientras siguen abiertos.",
+        "Crisis institucional grave tiene alerta después de dos cierres críticos y destitución compartida tras el tercero. Recuperar caja o servicios evita la destitución.",
+        "Panel Gobierno separa metas, sondeos y reclamos, con scroll vertical y tarjetas adaptables. Online/Offline, guardado esquema 55."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.70",
       "date": "2026-10-31",
@@ -601,12 +612,12 @@
   ],
   "upcoming": [
     {
-      "title": "Compromisos y reclamos barriales",
-      "detail": "Fase 32: registrar problemas locales observables, metas municipales por mandato y confianza según el cumplimiento de cada compromiso."
+      "title": "Protección social y compromisos de barrio",
+      "detail": "Fase 32: conectar reclamos con proyectos, fallas y tiempos de respuesta; añadir registro transparente de acuerdos compartidos y efectos en la confianza local."
     },
     {
-      "title": "Crisis y gobierno cooperativo",
-      "detail": "Fase 32: sumar alertas y vías justificadas de recuperación ante crisis prolongadas; conservar derrotas compartidas y revisión de la ciudad."
+      "title": "Décadas de evolución urbana",
+      "detail": "Fase 33: ampliar envejecimiento, sustitución y transformación por décadas con cambios visibles en población, patrimonio e infraestructura."
     }
   ]
 }

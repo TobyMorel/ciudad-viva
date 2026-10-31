@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.70 · 31 de octubre de 2026
+**Entrega:** Alfa 0.71 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.71 · Fase 32 (parcial): metas verificables de empleo, plazas libres de vivienda y servicios se fijan por mandato, se revisan al cierre mensual y suman o restan apoyo electoral. Umbrales críticos de empleo, vivienda, servicios o confianza abren reclamos persistentes con barrio, evidencia, antigüedad y resolución automática al corregir la causa; la persistencia reduce apoyo. Si coinciden caja agotada, servicios ≤30% y apoyo ponderado <35%, el segundo cierre emite alerta y el tercero destituye al equipo; recuperar caja o servicios antes evita el desenlace. Online/Offline, esquema 55. Python verificó apertura y resolución de reclamos, metas en el escrutinio, alerta, recuperación y destitución; la API Online inicia una partida con los tres objetivos. Chromium Offline abrió reclamos en un cierre mensual. UI revisada a 390×900 y 1440×900: tres metas, tres distritos y lista de reclamos sin overflow horizontal ni errores JS; popup largo conserva scroll. No se probó la conexión entre equipos físicos. Faltan conectar cada reclamo con expedientes físicos concretos, ampliar transparencia/acuerdos y distinguir el padrón por edad cívica.
 
 - Alfa 0.70 · Fase 32 (parcial): mandatos de cuatro años y elecciones cada 1.440 días. El sondeo y escrutinio se calculan en Oeste, Centro y Puerto a partir de empleo residente, ocupación/calidad de hogares, servicios y aprobación municipal; el distrito muestra su indicador más rezagado. Participación inicial determinista del 72%. El resultado se guarda, se sincroniza mediante el estado anfitrión LAN y afecta a todo el equipo: victoria renueva el mandato; derrota pausa el juego competitivo y deja disponible la observación/guardado. Online/Offline, esquema 54. Python verificó renovación y derrota tras cambios de gestión; Chromium confirmó derrota persistida y pausa en Offline. UI de Gobierno comprobada a 390×900 y 1440×900: tres distritos visibles, scroll vertical utilizable, sin overflow horizontal ni errores JavaScript. No se probó la conexión entre dos equipos físicos. Faltan metas municipales, reclamos localizados, transparencia y destitución extraordinaria.
 

@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.70
+## Estado al cerrar Alfa 0.71
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -50,3 +50,12 @@ Se incorporó la primera mecánica de gobierno competitivo de fase 32: mandatos 
 ## Punto exacto para continuar
 
 Próxima entrega: fase 32, crear registro de reclamos ligados a averías/colas y necesidades reales por distrito; añadir metas de mandato medibles (empleo, plazas de vivienda, servicios y mantenimiento) y comparar su avance en elecciones. Mantener en paralelo el modo de observación tras una derrota. No dedicar la próxima versión a pulir visuales; primero cerrar el circuito de sistema y comprobar sus efectos en ambos modos.
+
+
+## Sistema agregado en Alfa 0.71
+
+La fase 32 ahora establece metas de empleo, vivienda y servicios por mandato; cada cierre mensual actualiza los resultados. Reclamos vecinales se abren cuando indicadores de un distrito cruzan umbrales y bajan su apoyo hasta corregirse. Una crisis simultánea de caja, servicios y confianza emite alerta antes de destituir al equipo; recuperar caja o servicios permite evitarlo. Disponible Online/Offline, esquema 55.
+
+## Punto exacto para continuar
+
+Conectar los reclamos a incidentes observables existentes (servicios cortados, listas de espera, deterioro vial) y registrar quién toma acuerdos municipales en la sala, sin introducir formularios desconectados del estado del juego. Luego ampliar fase 33 con envejecimiento y transformación de barrios por décadas.

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.70
+# Ciudad Viva · Alfa 0.71
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -175,3 +175,8 @@ Los comercios que cierran pueden volver a usarse como vivienda si no tienen deud
 ## Alfa 0.70 · mandatos y elecciones
 
 Cada 1.440 días de juego se realiza una elección para renovar el gobierno municipal. La estimación y el escrutinio se presentan por Oeste, Centro y Puerto, utilizando empleo residente, hacinamiento/calidad de vivienda, servicios y aprobación. La participación inicial es 72% para una simulación determinista. Si el equipo gana, inicia un nuevo mandato; si pierde, la partida compartida se pausa en modo observación. Disponible Online y Offline, guardado esquema 54. La fase 32 continúa: todavía faltan planes con metas, reclamos localizados, transparencia y causales de destitución extraordinaria.
+
+
+## Alfa 0.71 · compromisos de gobierno y reclamos locales
+
+Cada mandato recibe metas medibles de empleo, reserva de vivienda y servicios. Los cierres mensuales actualizan el avance; las metas cumplidas mejoran el resultado electoral. Umbrales críticos en Oeste, Centro o Puerto abren reclamos persistentes que reducen el apoyo hasta resolver la causa. Una crisis institucional solo destituye al gobierno tras tres cierres con tesorería agotada, servicios bajo 30% y apoyo bajo 35%; el segundo cierre alerta y una recuperación de caja o servicios lo evita. Online/Offline, guardado esquema 55.

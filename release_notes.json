@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.48",
+  "currentVersion": "0.49",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.49",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): grupos electrógenos para centros de salud municipales, potabilizadoras y plantas cloacales. Ante faltantes de red, priorizan la demanda crítica y consumen combustible cada día; agotada la reserva, cesa el respaldo.",
+        "La instalación cuesta $2.800 e incluye tres días de combustible; reponer cuesta $0,12/kWh y mantener $70/mes. Un generador limitado a 75 kW se representa en el edificio. Acciones y balances sincronizados Online/Offline; guardados anteriores migran al esquema 34."
+      ]
+    },
     {
       "version": "0.48",
       "date": "2026-10-31",

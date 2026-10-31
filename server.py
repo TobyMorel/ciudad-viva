@@ -203,7 +203,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":33,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":34,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -290,7 +290,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(33,state.get("version",1))
+    state["version"]=max(34,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
@@ -627,6 +627,17 @@ def calculate_utility_balance(apply_effects=False):
             spent=need*fraction;remaining=max(0,remaining-spent);delivered+=spent
         return total,connected_demand,delivered
     power_total,power_connected,power_delivered=allocate("power",power_usable,"powerKw","powerServedPct")
+    critical_backup=[b for b in buildings if b.get("kind") in ("civic","waterPlant","wastewaterPlant")]
+    backup_served=0
+    for building in critical_backup:
+        demand_kw=building["utilityDemand"]["powerKw"]
+        backup_kw=min(float(building.get("backupCapacityKw",0)),demand_kw*(100-building["utilityAccess"]["powerServedPct"])/100,float(building.get("backupFuelKwh",0))/24)
+        building["backupKwToday"]=round(max(0,backup_kw),2)
+        building["utilityAccess"]["backupPowerKw"]=building["backupKwToday"]
+        building["utilityAccess"]["powerServedPct"]=round(min(100,building["utilityAccess"]["powerServedPct"]+backup_kw/max(1,demand_kw)*100))
+        backup_served+=backup_kw
+    power_total,power_connected,power_delivered_grid=power_total,power_connected,power_delivered
+    power_delivered+=backup_served
     water_total,water_connected,water_delivered=allocate("water",water_usable,"waterM3Day","waterServedPct")
     generated=sum(b["utilityDemand"]["waterM3Day"]*.8*b["utilityAccess"]["waterServedPct"]/100 for b in buildings)
     sewer_connected=[b for b in buildings if b["utilityAccess"]["sewerConnected"]]
@@ -690,14 +701,14 @@ def calculate_utility_balance(apply_effects=False):
         if building.get("kind")=="hotel":
             building["utilityShortage"]="energía" if access["powerServedPct"]<100 else "agua" if access["waterServedPct"]<100 else "cloacas" if access["wastewaterTreatedPct"]<100 else "gas" if access["gasServedPct"]<100 else "telecomunicaciones" if access["telecomServedPct"]<100 else None
     report={"day":state.get("day",1),"season":"Verano" if summer else "Templada","serviceCoveragePct":coverage,
-        "power":{"installedKw":round(power_capacity),"usableKw":round(power_usable),"demandKw":round(power_total),"connectedDemandKw":round(power_connected),"servedKw":round(power_delivered),"shortageKw":round(max(0,power_total-power_delivered)),"lossPct":round(utilities["powerLossRate"]*100),"connectedSegments":len(power_tiles),"connectedBuildings":sum(b["utilityAccess"]["powerConnected"] for b in buildings)},
+        "power":{"installedKw":round(power_capacity),"usableKw":round(power_usable),"demandKw":round(power_total),"connectedDemandKw":round(power_connected),"servedKw":round(power_delivered),"gridServedKw":round(power_delivered_grid),"backupServedKw":round(backup_served),"backupGenerators":sum(b.get("backupCapacityKw",0)>0 for b in critical_backup),"backupStoredKwh":round(sum(b.get("backupFuelKwh",0) for b in critical_backup)),"backupCapacityKwh":round(sum(b.get("backupCapacityKwh",0) for b in critical_backup)),"shortageKw":round(max(0,power_total-power_delivered)),"lossPct":round(utilities["powerLossRate"]*100),"connectedSegments":len(power_tiles),"connectedBuildings":sum(b["utilityAccess"]["powerConnected"] for b in buildings)},
         "water":{"installedM3Day":round(water_capacity),"usableM3Day":round(water_usable),"demandM3Day":round(water_total),"connectedDemandM3Day":round(water_connected),"servedM3Day":round(water_delivered),"shortageM3Day":round(max(0,water_total-water_delivered)),"leakPct":round(utilities["waterLeakRate"]*100),"connectedSegments":len(water_tiles),"connectedBuildings":sum(b["utilityAccess"]["waterConnected"] for b in buildings)},
         "wastewater":{"treatmentCapacityM3Day":round(wastewater_capacity),"generatedM3Day":round(generated),"connectedM3Day":round(sewer_flow),"treatedM3Day":round(treated),"untreatedM3Day":round(untreated),"coveragePct":sewer_coverage,"connectedSegments":len(sewer_tiles),"connectedBuildings":sum(b["utilityAccess"]["sewerConnected"] for b in buildings),"plants":sum(b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")) for b in buildings)},
         "gas":{"capacityM3Day":round(gas_capacity),"demandM3Day":round(gas_total,2),"servedM3Day":round(gas_delivered,2),"shortageM3Day":round(max(0,gas_total-gas_delivered),2),"connectedSegments":len(gas_tiles),"connectedBuildings":sum(b["utilityAccess"]["gasConnected"] for b in buildings)},
         "telecommunications":{"capacityMbps":round(telecom_capacity),"demandMbps":round(telecom_total,2),"servedMbps":round(telecom_delivered,2),"shortageMbps":round(max(0,telecom_total-telecom_delivered),2),"connectedSegments":len(telecom_tiles),"connectedBuildings":sum(b["utilityAccess"]["telecomConnected"] for b in buildings)},
         "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings))},
         "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
-        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6),
+        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
         "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
     utilities["report"]=report
     if apply_effects:
@@ -1767,13 +1778,21 @@ def simulate_hotel_month(workforce):
         elif guests:ev("Actividad turística",f"{hotel.get('name')}: {guests} huéspedes · {nights} noches · ocupación {occupancy}% · ventas $ {revenue} · impuesto turístico $ {tax}.")
     return sum(h.get("business",{}).get("lastTourismTax",0) for h in hotels)
 
+def advance_utility_backup_fuel():
+    for building in state.get("buildings",[]):
+        used=min(float(building.get("backupFuelKwh",0)),float(building.get("backupKwToday",0))*24)
+        if used>0:
+            building["backupFuelKwh"]=round(max(0,building["backupFuelKwh"]-used),2)
+            if building["backupFuelKwh"]<=0:
+                ev("Grupo electrógeno sin combustible",f"{building.get('name','Servicio crítico')} agotó su reserva. Reabastecer para recuperar el respaldo eléctrico.")
+
 def tick_one_day():
     if state["paused"]: return
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
     advance_utility_repairs()
-    calculate_utility_balance();apply_drainage_impacts();calculate_waste_balance(advance=True,apply_effects=True)
+    calculate_utility_balance();advance_utility_backup_fuel();apply_drainage_impacts();calculate_waste_balance(advance=True,apply_effects=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
         for home in state["buildings"]:
@@ -1999,7 +2018,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.48"
+    server_version="CiudadViva/0.49"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2204,6 +2223,23 @@ class Handler(BaseHTTPRequestHandler):
                     detail=" · ".join(f"{MATERIAL_NAMES[k]} {v}" for k,v in clean.items())
                     eta=max(0,order["arrivalDay"]-state["day"])
                     ev("Pedido de materiales",f"{project['contractor']} compró {detail} a {supplier} por $ {cost:,}; entrega estimada en {eta} días por {distance} tramos (con congestión estimada). Prioridad de descarga: {priority}.".replace(",","."))
+                elif action in ("installPowerBackup","refuelPowerBackup"):
+                    x=int(data.get("x",-1));y=int(data.get("y",-1));building=next((b for b in state["buildings"] if b.get("x")==x and b.get("y")==y and b.get("kind") in ("civic","waterPlant","wastewaterPlant")),None)
+                    if not building:self._send(409,{"error":"El respaldo solo se instala en hospitales, bombeo de agua y plantas cloacales."});return
+                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
+                    if action=="installPowerBackup":
+                        if building.get("backupCapacityKw",0):self._send(409,{"error":"Este servicio ya tiene un grupo electrógeno."});return
+                        cost=2800
+                        if available<cost:self._send(409,{"error":f"Quedan $ {available}; instalar y cargar el grupo cuesta $ {cost}."});return
+                        kw=min(75,max(1,building.get("utilityDemand",{}).get("powerKw",32)));building.update({"backupCapacityKw":kw,"backupCapacityKwh":kw*24*3,"backupFuelKwh":kw*24*3,"backupInstalledDay":state["day"]});state["money"]-=cost
+                        ev("Grupo electrógeno instalado",f"{building.get('name','Servicio crítico')}: {kw:g} kW y tres días de reserva inicial · inversión $2.800 · mantenimiento $70/mes.")
+                    else:
+                        if not building.get("backupCapacityKw",0):self._send(409,{"error":"Primero instalá un grupo electrógeno."});return
+                        missing=max(0,building["backupCapacityKwh"]-building.get("backupFuelKwh",0));cost=math.ceil(missing*.12)
+                        if missing<=0:self._send(409,{"error":"La reserva de combustible ya está completa."});return
+                        if available<cost:self._send(409,{"error":f"Quedan $ {available}; el combustible cuesta $ {cost}."});return
+                        building["backupFuelKwh"]=building["backupCapacityKwh"];state["money"]-=cost
+                        ev("Combustible de emergencia repuesto",f"{building.get('name','Servicio crítico')}: reserva restaurada a tres días · costo $ {cost}.")
                 elif action=="repairUtility":
                     failure=next((f for f in ensure_utility_state()["failures"] if f.get("id")==str(data.get("id")) and f.get("status")=="avería"),None)
                     if not failure:self._send(409,{"error":"La avería ya fue reparada o tiene una cuadrilla asignada."});return

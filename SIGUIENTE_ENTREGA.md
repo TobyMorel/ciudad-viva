@@ -2,17 +2,17 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar mecánicas jugables con causas y efectos en la ciudad; evitar dedicar varias versiones a detalles de un sistema mientras quedan fases vacías. Revisar la interfaz si un cambio introduce contenido.
 
-## Estado al cerrar Alfa 0.48
+## Estado al cerrar Alfa 0.49
 
-La fase 26 sigue parcial. Alfa 0.48 agrega contenedores viales y estaciones de transferencia en depósitos, con capacidad de almacenamiento y despacho que limita el flujo. Online y Offline ya incluyen tendidos físicos de electricidad, agua, cloacas, pluviales, gas y telecomunicaciones; capacidad, demanda, mantenimiento, residuos y reciclaje. Las inundaciones pueden dañar un tramo de red conectado; el corte se propaga por continuidad y afecta la cobertura. El gobierno puede pagar una cuadrilla, esperar tres días de reparación y recuperar el servicio. Las capas 3D muestran la avería.
+La fase 26 sigue parcial. Alfa 0.49 agrega respaldo eléctrico consumible para servicios críticos: hasta 75 kW por edificio, reserva inicial de tres días, repostaje y mantenimiento mensual. Alfa 0.48 agrega contenedores viales y estaciones de transferencia en depósitos, con capacidad de almacenamiento y despacho que limita el flujo. Online y Offline ya incluyen tendidos físicos de electricidad, agua, cloacas, pluviales, gas y telecomunicaciones; capacidad, demanda, mantenimiento, residuos y reciclaje. Las inundaciones pueden dañar un tramo de red conectado; el corte se propaga por continuidad y afecta la cobertura. El gobierno puede pagar una cuadrilla, esperar tres días de reparación y recuperar el servicio. Las capas 3D muestran la avería.
 
 ## Próximo sistema
 
-Siguiente: redundancia eléctrica para bombeo y servicios críticos y una primera ruta visible de recolección entre calles, depósitos y destino final; después ampliar fase 27 con riesgos climáticos y respuesta municipal. Mantener entregas cortas de mecánicas nuevas y no gastar varias versiones puliendo este sistema.
+Siguiente: una primera ruta visible de recolección entre calles, depósitos y destino final; después ampliar fase 27 con riesgos climáticos y respuesta municipal. Mantener entregas cortas de mecánicas nuevas y no gastar varias versiones puliendo este sistema.
 
 ## Verificación pendiente
 
-Alfa 0.47: se probaron corte y restauración de redes en Online y Offline, acción HTTP, compilación/sintaxis y panel de Servicios con falla en móvil y escritorio. Alfa 0.48: pruebas HTTP y Offline comprobaron costo, rechazo de duplicados, buffers y saturación; Chromium (390×844 y 1440×900) mostró el panel y la herramienta sin desborde horizontal ni errores JS. La prueba de LAN entre dos computadoras físicas sigue pendiente. En cada publicación, actualizar `release_notes.json`, `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md` y esta hoja. Usar el correo GitHub noreply vinculado a la cuenta para los commits.
+Alfa 0.47: se probaron corte y restauración de redes en Online y Offline, acción HTTP, compilación/sintaxis y panel de Servicios con falla en móvil y escritorio. Alfa 0.48: pruebas HTTP y Offline comprobaron costo, rechazo de duplicados, buffers y saturación; Chromium (390×844 y 1440×900) mostró el panel y la herramienta sin desborde horizontal ni errores JS. Alfa 0.49: balance Online/Offline, costo, corte de red, reserva, consumo y reposición; inspección responsive del panel de respaldo pendiente hasta ejecutar el navegador. La prueba de LAN entre dos computadoras físicas sigue pendiente. En cada publicación, actualizar `release_notes.json`, `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md` y esta hoja. Usar el correo GitHub noreply vinculado a la cuenta para los commits.
 
 ## Medición del progreso global
 

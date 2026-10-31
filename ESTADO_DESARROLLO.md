@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.48 · 31 de octubre de 2026
+**Entrega:** Alfa 0.49 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,9 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.49 · Fase 26 (parcial): grupos electrógenos para centros de salud municipales, plantas potabilizadoras y depuradoras. Cuando la red no cubre la demanda crítica, el generador entrega hasta 75 kW según combustible disponible; se consume combustible por día, la reserva agotada detiene el respaldo y puede reponerse. Instalación $2.800 con tres días de autonomía, $0,12/kWh para repostar y $70/mes de mantenimiento. Generadores visibles en 3D; balances y acciones Online/Offline; migración al esquema 34. Esto no equivale aún a una simulación detallada de combustible, bombas o microredes.
+
 
 - Alfa 0.48 · Fase 26 (parcial): contenedores municipales colocables en tramos viales por $350, con +0,15 t/día de capacidad por unidad y representación 3D. Cada depósito municipal operativo y conectado a la ruta central añade 12 t de almacenamiento de transferencia y despacho limitado a 1,5 t/día. La recolección que no cabe en las estaciones o no puede salir queda acumulada; la disposición final y el reciclaje procesan el flujo despachado según sus capacidades. Ciudad > Servicios informa capacidad, stock y despacho. Online y Offline migran al esquema 33.
 

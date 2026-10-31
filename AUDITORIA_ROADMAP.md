@@ -90,3 +90,8 @@ Implementado: una inundación puede inutilizar un tramo conectado físicamente; 
 ## Alfa 0.48 · transferencia de residuos (fase 26, parcial)
 
 Contenedores viales y almacenamiento/expedición de residuos en depósitos municipales conectados ya están implementados en Online y Offline. Capacidad física, despacho diario y saturación afectan el volumen procesado y la basura acumulada; no son solo indicadores de UI. Quedan pendientes rutas de camiones individualizadas, clasificación separada en origen y mercado material regional para reciclables.
+
+
+## Alfa 0.49 · respaldo eléctrico (fase 26, parcial)
+
+Centros de salud municipales, potabilizadoras y depuradoras pueden instalar un grupo electrógeno limitado por su demanda, hasta 75 kW. El depósito inicial sostiene tres días a potencia plena; el faltante de la red activa respaldo, que se agota por día y necesita repostaje. La inversión cuesta $2.800, combustible $0,12/kWh y mantenimiento $70/mes. Online/Offline comparten balances, acciones y estado; los generadores tienen representación 3D. Se mantiene pendiente la redundancia de líneas, operación hidráulica detallada y rutas de camiones.

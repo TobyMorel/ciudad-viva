@@ -167,7 +167,28 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24}}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[]}
+
+def municipal_finance_report(monthly_income=None, monthly_expenses=None):
+    finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
+    outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
+    service=round(sum(max(0,x.get("payment",0)) for x in loans if x.get("status")=="active"))
+    income=max(0,round(monthly_income if monthly_income is not None else state.get("monthlyIncome",0)))
+    expenses=max(0,round(monthly_expenses if monthly_expenses is not None else state.get("monthlyExpenses",0)))
+    net=income-expenses-service
+    # Proyección de referencia; mantiene las bases actuales y los pagos contratados constantes.
+    return {"cash":round(state.get("money",0)),"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+net*12),"forecast48":round(state.get("money",0)+net*48),"loans":loans}
+
+def municipal_debt_payment():
+    finance=state.setdefault("finance",new_finance());total=0
+    for loan in finance.setdefault("municipalLoans",[]):
+        if loan.get("status")!="active":continue
+        balance=max(0,loan.get("balance",0));payment=min(balance+balance*loan.get("monthlyRate",.01),max(0,loan.get("payment",0)))
+        interest=round(balance*loan.get("monthlyRate",.01));principal=max(0,round(payment-interest))
+        loan["lastInterest"]=interest;loan["lastPrincipal"]=min(balance,principal);loan["lastPayment"]=round(payment)
+        loan["balance"]=max(0,round(balance-loan["lastPrincipal"]));loan["monthsRemaining"]=max(0,loan.get("monthsRemaining",0)-1);loan["delinquentMonths"]=0;total+=round(payment)
+        if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan.update({"balance":0,"status":"paid","paidDay":state.get("day",1)});ev("Crédito municipal cancelado",f"El municipio terminó de pagar {loan.get('label','el préstamo')}.")
+    return total
 
 def new_supply():
     return {"regional":INITIAL_REGIONAL_STOCK.copy(),
@@ -207,7 +228,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":41,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":42,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -270,6 +291,7 @@ def ensure_business_state():
 
 def ensure_finance_state():
     state.setdefault("finance",new_finance())
+    state["finance"].setdefault("municipalLoans",[])
     bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
     for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
 
@@ -296,7 +318,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(41,state.get("version",1))
+    state["version"]=max(42,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
@@ -2082,11 +2104,13 @@ def tick_one_day():
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        due=state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost
+        debt_due=municipal_finance_report(monthly_income,state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost)["monthlyDebtService"]
+        due=state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost+debt_due
         available=state["money"]+monthly_income
         net=monthly_income-due
         if available>=due:
             state["money"]=available-due
+            if debt_due:municipal_debt_payment()
         else:
             # No sobregiro implícito: se agota la caja y cae la capacidad de servicio financiada.
             shortfall=due-available
@@ -2094,6 +2118,10 @@ def tick_one_day():
             loss=max(1,min(8,round(shortfall/900)))
             state["services"]=max(5,state["services"]-loss)
             state["approval"]=max(5,state["approval"]-max(1,loss//2))
+            for loan in state.get("finance",{}).get("municipalLoans",[]):
+                if loan.get("status")=="active":
+                    loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1
+                    if loan["delinquentMonths"]>=2:state["services"]=max(5,state["services"]-1)
             ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
@@ -2384,11 +2412,13 @@ def fire_service_report(workplaces=None,advance=False):
 
 def public_state(player_id=None):
     ensure_supply_state()
+    ensure_finance_state()
     cutoff=time.time()-25
     online=sum(1 for t in state["players"].values() if t>cutoff)
     ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
+    view["municipalFinance"]=municipal_finance_report()
     order_views=[]
     for order in state["supply"]["orders"]:
         extra=order_urgency(order)
@@ -2430,7 +2460,9 @@ def public_state(player_id=None):
     view["transitMonthlyCost"]=transit_cost
     business_income=round(commute["privateStaffedJobs"]*2)
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
-    return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
+    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"])
+    view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
+    return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 def discovery_loop():
     """Anuncia y descubre salas en la subred; no usa servicios externos."""
@@ -2511,6 +2543,14 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                if action=="municipalLoan":
+                    ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
+                    if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return
+                    if amount>report["creditLimit"]:self._send(409,{"error":f"El límite de solvencia actual es $ {report['creditLimit']:,}.".replace(",",".")});return
+                    rate=.01;monthly=amount*rate*(1+rate)**term/((1+rate)**term-1);gross=max(1,report["monthlyIncome"]);existing=report["monthlyDebtService"]
+                    if monthly+existing>gross*.35:self._send(409,{"error":"La cuota superaría el 35% de los ingresos mensuales de referencia."});return
+                    loan={"id":f"mun-{uuid.uuid4().hex[:10]}","label":"Crédito de inversión municipal","principal":amount,"balance":amount,"annualRate":.12,"monthlyRate":rate,"termMonths":term,"monthsRemaining":term,"payment":round(monthly),"createdDay":state["day"],"status":"active","delinquentMonths":0,"totalScheduled":round(monthly*term)}
+                    state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
                 if action in ("speed","pause","new") and pid!=state.get("host"):
                     self._send(403,{"error":"Esta acción está reservada al anfitrión de la sala."}); return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))

@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.56",
+  "currentVersion": "0.58",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.58",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 29 (parcial): se puede solicitar crédito municipal de $5.000, $10.000 o $20.000 sujeto a un límite de solvencia y a que el servicio de deuda no supere 35% del ingreso mensual de referencia. Cuotas fijas con tasa anual del 12%, plazos de 24/48 meses, amortización de principal e intereses y registro persistente.",
+        "Hacienda informa caja, ingresos, gastos, deuda activa, cuota mensual y proyecciones base a 12/48 meses. El crédito suma dinero a la tesorería inmediatamente y las cuotas reducen caja; no crea ingresos ni es gratuito. Disponible Online/Offline; guardados migran al esquema 42.",
+        "Se restauró la revisión válida Alfa 0.56 después de detectar una codificación incorrecta en un intento previo de publicación; la versión financiera se verificó desde los archivos restaurados."
+      ]
+    },
     {
       "version": "0.56",
       "date": "2026-10-31",

@@ -116,3 +116,8 @@
 - Daño por respuesta rápida: redondeo de tiempo/5, entre 1 y 18 puntos de condición. Sin respuesta el edificio pierde 2 puntos/día; al quinto día, servicios −2 y aprobación −1. Los hogares/negocios absorben pérdida de caja privada; no se simulan lesiones ni fallecimientos.
 - Los controles de Ciudad muestran cobertura vial (hasta 14 tramos), disponibilidad de dotación y últimas llamadas. El camión 3D recorre la ruta un día de juego después del despacho; un incendio activo tiene marcador visual. Estas representaciones derivan del estado de incidentes y no alteran sus resultados.
 - El costo operativo es $950/mes al habilitar el edificio; la nómina es un gasto público normal. No se factura combustible ni se simulan tipos de vehículo/equipo por separado todavía.
+
+
+## Alfa 0.58 · hacienda inicial
+
+El préstamo municipal usa amortización fija con interés del 1% mensual y plazos cerrados de 24 o 48 meses. Los montos se ofrecen en tres tramos; la solvencia limita la deuda total a $40.000 o ocho meses de ingresos de referencia (el menor) y el servicio mensual combinado no puede exceder 35% del ingreso. La proyección a 12/48 meses congela el flujo operativo actual y pagos mensuales; es una referencia, no pronóstico con crecimiento/inflación. Las obligaciones se comparten en el estado autoritativo Online y se persisten en el guardado Offline. Si la caja mensual no cubre gastos y deuda, la cuota se difiere y se marca mora; no se crea sobregiro.

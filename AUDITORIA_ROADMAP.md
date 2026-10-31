@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.56
+# Auditoría del roadmap · Alfa 0.58
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -139,3 +139,10 @@ Chromium comprobó Ciudad > Educación a 390×844 y 1440×900. El contenido pued
 El cuartel se licita por $11.200 y 74 días base. Al habilitarlo, suma 12 empleos cualificados (Bomberos ≥48), hasta tres grupos de cuatro y $950/mes de mantenimiento; hay nómina municipal por cada puesto ocupado. Una revisión el día 10 de cada mes usa un hash estable para determinar si la ciudad presenta un incendio: la presión aumenta según inmuebles habitables, ola de calor y sequía; solo existe un incidente en curso. El inmueble afectado se escoge de manera reproducible. Las estaciones con cuatro empleados, dotación libre y ruta conectada compiten por tiempo de llegada (5 min + 2,5 min por tramo); se elige la más rápida y queda ocupada dos días. El tiempo de llegada modifica el daño (1–18 puntos de condición), que también reduce caja privada en hogares/comercios. Sin acceso o personal, el edificio empeora 2 puntos diarios; tras cinco días el incidente termina sin respuesta y servicios/apoyo caen. Ciudad > Bomberos informa cobertura por calle, dotaciones, gastos e historial; modelo 3D de cuartel, marcador activo y camión en recorrido. Online y Offline; migración 41.
 
 Las regresiones confirmaron despacho en ambas modalidades: 35 minutos y siete puntos de daño con personal; cinco días sin equipo deterioran el inmueble y apoyo. También se verificó el contrato Offline, los puestos y el gasto. Chromium revisó Ciudad > Bomberos a 390×844 y 1440×900: contenido legible, scroll vertical, sin desborde horizontal ni errores JS. No se verificó red LAN física ni Vercel. Offline aún no compra ni entrega materiales. Fase parcial: no hay ambulancias ni hospitalización, equipos por especialidad, múltiples niveles educativos, policía o programas de protección social.
+
+
+## Alfa 0.58 · crédito municipal y proyección de caja (fase 29, parcial)
+
+Online y Offline permiten contratar créditos de $5.000, $10.000 o $20.000 cuando el límite de solvencia y la cuota lo permiten. La tasa fija es 12% anual, con amortización mensual y plazos de 24 o 48 meses. El efectivo ingresa a tesorería al firmar; la cuota reduce caja al cierre de mes. Los impagos quedan registrados. Hacienda separa saldo de deuda y servicio mensual, y muestra proyecciones de caja a 12 y 48 meses manteniendo constantes las bases actuales, con ese supuesto declarado. Guardados migran al esquema 42.
+
+Verificado en servidor Online y adaptador Offline: $5.000 acreditados, cuota mensual de $132 a 48 meses; el primer pago separó $50 de interés y $82 de capital, saldo $4.918. La interfaz añade Hacienda dentro de Economía y suministros para no ampliar las categorías de Ciudad. Pendiente: escenarios, reservas, presupuestos por programa, refinanciación y compromiso de contratos futuros. No se validó LAN física ni Vercel.

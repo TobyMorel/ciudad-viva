@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.49 · 31 de octubre de 2026
+**Entrega:** Alfa 0.50 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,9 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.50 · Fase 26 (parcial): los camiones calculan recorridos sobre la red vial, distribuyen contenedores entre camiones municipales y de depósitos, y enlazan paradas con transferencia o disposición final. Se representan rutas y vehículos circulando por ellas. Los contenedores guardan hasta 2 t; los alcanzados se vacían a un ritmo de 0,15 t/día y los aislados acumulan hasta rebalsar hacia la basura sin recolectar. El acceso vial define qué contenedores aportan capacidad diaria. Online y Offline comparten reglas; guardados migran al esquema 35.
+
 
 - Alfa 0.49 · Fase 26 (parcial): grupos electrógenos para centros de salud municipales, plantas potabilizadoras y depuradoras. Cuando la red no cubre la demanda crítica, el generador entrega hasta 75 kW según combustible disponible; se consume combustible por día, la reserva agotada detiene el respaldo y puede reponerse. Instalación $2.800 con tres días de autonomía, $0,12/kWh para repostar y $70/mes de mantenimiento. Generadores visibles en 3D; balances y acciones Online/Offline; migración al esquema 34. Esto no equivale aún a una simulación detallada de combustible, bombas o microredes.
 

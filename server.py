@@ -203,7 +203,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":34,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":35,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -290,7 +290,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(34,state.get("version",1))
+    state["version"]=max(35,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
@@ -465,6 +465,44 @@ def route_between(start_coord, destination_coord):
     if destination_coord not in roads:path.append(list(destination_coord))
     return path
 
+def build_waste_collection_routes(containers,depots,facilities):
+    trucks=[{"id":"municipal-1","name":"Camión municipal","start":{"x":4,"y":10},"depot":None,"bins":[]}]
+    for i,depot in enumerate(depots):
+        trucks.append({"id":f"depot-{depot['x']}-{depot['y']}","name":f"Camión de {depot.get('name','depósito municipal')}","start":{"x":depot["x"],"y":depot["y"]},"depot":depot,"bins":[]})
+    for index,truck in enumerate(trucks):truck["payloadTons"]=1.15 if index==0 else .75
+    for container in sorted(containers,key=lambda c:(c.get("y",0),c.get("x",0))):
+        options=[]
+        for index,truck in enumerate(trucks):
+            if len(truck["bins"])*.15>=truck["payloadTons"]-.001:continue
+            origin=truck["bins"][-1] if truck["bins"] else truck["start"]
+            path=route_between((origin["x"],origin["y"]),(container["x"],container["y"]))
+            if path:options.append((len(path)+len(truck["bins"])*5,index))
+        if options:
+            _,index=min(options);trucks[index]["bins"].append(container)
+    routes=[]
+    for truck in trucks:
+        start=truck["start"];destination=truck["depot"]
+        if destination is None:
+            destination=min(depots,key=lambda b:len(route_between((4,10),(b["x"],b["y"])) or [0])) if depots else None
+        if destination is None and facilities:
+            reachable=[(len(route_between((4,10),(b["x"],b["y"])) or []),b) for b in facilities]
+            reachable=[row for row in reachable if row[0]>0]
+            if reachable:destination=min(reachable,key=lambda row:row[0])[1]
+        path=[];stops=[];current=start
+        for container in truck["bins"]:
+            segment=route_between((current["x"],current["y"]),(container["x"],container["y"]))
+            if not segment:continue
+            path.extend(segment if not path else segment[1:]);stops.append({"kind":"container","x":container["x"],"y":container["y"],"id":container.get("id",f"bin-{container['x']}-{container['y']}")});current=container
+        if destination:
+            segment=route_between((current["x"],current["y"]),(destination["x"],destination["y"]))
+            if segment:path.extend(segment if not path else segment[1:]);stops.append({"kind":"transfer" if destination.get("kind")=="depot" else "disposal","x":destination["x"],"y":destination["y"],"name":destination.get("name","Destino final")});current=destination
+        back=route_between((current["x"],current["y"]),(start["x"],start["y"]))
+        if back:path.extend(back if not path else back[1:])
+        if truck["bins"] and destination is None:stops.append({"kind":"base","x":start["x"],"y":start["y"],"name":"Base municipal"})
+        bin_ids={stop["id"] for stop in stops if stop["kind"]=="container"}
+        routes.append({"id":truck["id"],"name":truck["name"],"payloadTons":truck["payloadTons"],"path":path,"stops":stops,"containerIds":sorted(bin_ids),"distanceTiles":max(0,len(path)-1),"reachable":len(path)>1 and bool(stops),"destination":stops[-1]["kind"] if stops else "sin destino"})
+    return routes
+
 def ensure_utility_state():
     utilities=state.setdefault("utilities",{})
     roads=[list(point) for point in state.get("roads",[])]
@@ -511,6 +549,7 @@ def ensure_waste_state():
     waste.setdefault("lastRecycledTonsDay",0)
     waste.setdefault("transferStoredTons",0)
     waste.setdefault("containers",[])
+    waste.setdefault("routes",[])
     return waste
 
 def calculate_waste_balance(advance=False,apply_effects=False):
@@ -522,10 +561,17 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     public=public_staff*.00075
     visitors=sum(max(0,b.get("monthlyGuests",0)) for b in buildings if b.get("kind")=="hotel")/30*.0015
     generated=household+businesses+public+visitors
-    active_depots=sum(1 for b in buildings if b.get("kind")=="depot" and b.get("status","habilitado") not in ("cerrado","abandonado") and route_between((4,10),(b.get("x",0),b.get("y",0))))
+    active_depot_buildings=[b for b in buildings if b.get("kind")=="depot" and b.get("status","habilitado") not in ("cerrado","abandonado") and route_between((4,10),(b.get("x",0),b.get("y",0)))]
+    active_depots=len(active_depot_buildings)
     trucks=1+active_depots
     containers=waste.setdefault("containers",[])
-    collection_capacity=waste["baseCollectionTonsDay"]+active_depots*.75+len(containers)*.15
+    facilities=[b for b in buildings if b.get("kind") in ("landfill","recyclingPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
+    routes=build_waste_collection_routes(containers,active_depot_buildings,facilities)
+    waste["routes"]=routes
+    routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
+    routed_bin_ids=set(routed_by_id)
+    for container in containers:container["routeId"]=routed_by_id.get(container.get("id",f"bin-{container['x']}-{container['y']}"),{}).get("id")
+    collection_capacity=waste["baseCollectionTonsDay"]+active_depots*.75+len(routed_bin_ids)*.15
     transfer_capacity=active_depots*12
     transfer_dispatch=active_depots*1.5
     landfills=[b for b in buildings if b.get("kind")=="landfill" and b.get("status","habilitado") not in ("cerrado","abandonado")]
@@ -534,30 +580,56 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     landfill_capacity=waste["baseLandfillCapacityTons"]+sum(max(0,b.get("capacityAdded",1800)) for b in landfills)
     if advance:
         backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
-        picked=min(backlog+generated,collection_capacity)
         transfer_stored=max(0,waste.get("transferStoredTons",0))
+        routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
+        per_bin=min(.15,generated/max(1,len(containers))) if containers else 0
+        bin_generation=0;bin_overflow=0;bin_picked=0
+        route_load={route["id"]:0.0 for route in routes}
+        for container in containers:
+            container_id=container.get("id",f"bin-{container['x']}-{container['y']}")
+            container["id"]=container_id
+            container["storedTons"]=max(0,float(container.get("storedTons",0)))
+            incoming=per_bin;bin_generation+=incoming
+            capacity=max(.15,float(container.get("capacityTons",2)))
+            overflow=max(0,container["storedTons"]+incoming-capacity)
+            container["storedTons"]=min(capacity,container["storedTons"]+incoming)
+            route=routed_by_id.get(container_id);picked=0
+            if route:
+                room=max(0,route.get("payloadTons",.75)-route_load[route["id"]])
+                picked=min(container["storedTons"],.15,room)
+                route_load[route["id"]]+=picked;container["storedTons"]=round(container["storedTons"]-picked,3)
+            container["lastPickedTons"]=round(picked,3);container["routeId"]=route["id"] if route else None
+            bin_picked+=picked;bin_overflow+=overflow
+        curb_generated=max(0,generated-bin_generation)
+        curb_capacity=waste["baseCollectionTonsDay"]+active_depots*.75
+        curb_picked=min(backlog+curb_generated,curb_capacity)
+        picked=curb_picked+bin_picked
+        accepted=min(picked,max(0,transfer_capacity-transfer_stored)) if active_depots else picked
         if active_depots:
-            accepted=min(picked,max(0,transfer_capacity-transfer_stored))
             waste["transferStoredTons"]=round(transfer_stored+accepted,3)
             dispatched=min(waste["transferStoredTons"],transfer_dispatch)
             available_downstream=dispatched
         else:
-            accepted=picked;waste["transferStoredTons"]=0;available_downstream=accepted
+            waste["transferStoredTons"]=0;available_downstream=accepted
         recycled=min(available_downstream*.35,recycling_capacity)
         disposed=min(max(0,available_downstream-recycled),max(0,landfill_capacity-stored))
         processed=recycled+disposed
         if active_depots:waste["transferStoredTons"]=round(max(0,waste["transferStoredTons"]-processed),3)
-        waste["uncollectedTons"]=round(backlog+generated-accepted+(0 if active_depots else max(0,available_downstream-processed)),3)
+        remaining_curb=max(0,backlog+curb_generated-curb_picked)
+        waste["uncollectedTons"]=round(remaining_curb+bin_overflow+max(0,picked-accepted)+(0 if active_depots else max(0,available_downstream-processed)),3)
         waste["landfillStoredTons"]=round(stored+disposed,3)
         waste["lastCollectionTons"]=round(processed,3)
+        waste["lastRouteCollectedTons"]=round(bin_picked,3)
+        waste["lastBinOverflowTons"]=round(bin_overflow,3)
         waste["lastRecycledTonsDay"]=round(recycled,3)
+    backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
     backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
     roads=sorted(state.get("roads",[]),key=lambda p:(p[1],p[0]));pile_count=min(18,math.ceil(backlog/1.5))
     litter_tiles=[list(roads[(i*max(1,len(roads)//max(1,pile_count)))%len(roads)]) for i in range(pile_count)] if roads and pile_count else []
     collected=waste.get("lastCollectionTons",0);recycled=waste.get("lastRecycledTonsDay",0)
     operating=round(280+max(0,trucks-1)*160+len(landfills)*420+len(recyclers)*650+collected*30*7.5)
     recycling_income=round(recycled*30*18)
-    report={"generatedTonsDay":round(generated,3),"householdTonsDay":round(household,3),"businessTonsDay":round(businesses,3),"publicTonsDay":round(public,3),"visitorTonsDay":round(visitors,3),"collectedTonsDay":round(collected,3),"collectionCapacityTonsDay":round(collection_capacity,2),"activeTrucks":trucks,"landfillStoredTons":round(stored,1),"landfillCapacityTons":round(landfill_capacity,1),"landfillRemainingTons":round(max(0,landfill_capacity-stored),1),"landfillFillPct":round(min(100,stored/max(1,landfill_capacity)*100)),"uncollectedTons":round(backlog,1),"litterTiles":litter_tiles,"landfills":len(landfills),"activeDepots":active_depots,"transferStoredTons":round(waste.get("transferStoredTons",0),1),"transferCapacityTons":round(transfer_capacity,1),"transferDispatchTonsDay":round(transfer_dispatch,2),"containers":len(containers),"recyclingPlants":len(recyclers),"recyclingCapacityTonsDay":round(recycling_capacity,2),"recycledTonsDay":round(recycled,3),"recyclingRevenueMonth":recycling_income,"monthlyOperatingCost":operating}
+    report={"generatedTonsDay":round(generated,3),"householdTonsDay":round(household,3),"businessTonsDay":round(businesses,3),"publicTonsDay":round(public,3),"visitorTonsDay":round(visitors,3),"collectedTonsDay":round(collected,3),"collectionCapacityTonsDay":round(collection_capacity,2),"activeTrucks":trucks,"landfillStoredTons":round(stored,1),"landfillCapacityTons":round(landfill_capacity,1),"landfillRemainingTons":round(max(0,landfill_capacity-stored),1),"landfillFillPct":round(min(100,stored/max(1,landfill_capacity)*100)),"uncollectedTons":round(backlog,1),"litterTiles":litter_tiles,"landfills":len(landfills),"activeDepots":active_depots,"transferStoredTons":round(waste.get("transferStoredTons",0),1),"transferCapacityTons":round(transfer_capacity,1),"transferDispatchTonsDay":round(transfer_dispatch,2),"containers":len(containers),"recyclingPlants":len(recyclers),"recyclingCapacityTonsDay":round(recycling_capacity,2),"recycledTonsDay":round(recycled,3),"recyclingRevenueMonth":recycling_income,"routeCount":sum(r["reachable"] for r in routes),"routeContainersServed":len(routed_bin_ids),"routeContainersUnserved":max(0,len(containers)-len(routed_bin_ids)),"routeDistanceTiles":sum(r["distanceTiles"] for r in routes if r["reachable"]),"routeCollectedTons":round(waste.get("lastRouteCollectedTons",0),3),"containerStoredTons":round(sum(c.get("storedTons",0) for c in containers),2),"monthlyOperatingCost":operating,"routes":[{"id":r["id"],"name":r["name"],"reachable":r["reachable"],"stops":len(r["containerIds"]),"distanceTiles":r["distanceTiles"],"destination":r["destination"]} for r in routes]}
     waste["report"]=report
     if apply_effects and state.get("day",0)%30==0 and waste.get("lastWasteImpactDay")!=state.get("day"):
         threshold=max(8,population*.035)
@@ -2018,7 +2090,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.49"
+    server_version="CiudadViva/0.50"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2265,7 +2337,7 @@ class Handler(BaseHTTPRequestHandler):
                     if any(c.get("x")==x and c.get("y")==y for c in waste["containers"]):self._send(409,{"error":"Ya hay un contenedor en ese tramo."});return
                     cost=350;reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
                     if available<cost:self._send(409,{"error":f"Quedan $ {available}; el contenedor cuesta $ {cost} además de los contratos."});return
-                    waste["containers"].append({"x":x,"y":y,"capacityTons":2,"installedDay":state["day"]});state["money"]-=cost
+                    waste["containers"].append({"id":f"bin-{x}-{y}","x":x,"y":y,"capacityTons":2,"storedTons":0,"installedDay":state["day"]});state["money"]-=cost
                     ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversión $350 · capacidad de recolección +0,15 t/día. Cada depósito conectado suma además una estación de transferencia con 12 t de almacenamiento y despacho de 1,5 t/día.")
                 elif action=="zone":
                     x=int(data.get("x",-1)); y=int(data.get("y",-1)); kind=data.get("kind")

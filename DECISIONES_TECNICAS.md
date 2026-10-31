@@ -87,3 +87,6 @@
 
 
 - **Alfa 0.49 · respaldo crítico:** los edificios `civic`, `waterPlant` y `wastewaterPlant` pueden instalar un grupo de hasta 75 kW. Su depósito representa kWh de combustible, se consume a razón de potencia respaldada × 24 h al avanzar un día y se repone a $0,12/kWh. Instalación y tres días iniciales cuestan $2.800; mantenimiento añade $70/mes. El respaldo suma a la cobertura de potencia solo para ese edificio. No se habilita a hogares ni comercios. Online y Offline usan iguales costos, límites y estados.
+
+
+- **Alfa 0.50 · rutas de residuos:** los camiones se originan en la base municipal y depósitos alcanzables por calle. Un BFS asigna contenedores a la ruta viable de menor costo; cada recorrido termina en transferencia (camiones de depósito) o destino alcanzable y vuelve al origen. La capacidad efectiva por ruta es 1,15 t/día para el camión municipal y 0,75 t/día por camión de depósito; cada parada alcanzable añade 0,15 t/día. Cada contenedor tiene 2 t de almacenamiento y produce hasta 0,15 t/día de la generación municipal; el camión retira hasta 0,15 t/día por parada. Si no hay ruta, el almacenamiento se acumula y el desborde alimenta la basura urbana pendiente. La asignación y costos son automáticos, sin una pantalla de edición de rutas.

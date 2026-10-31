@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.49",
+  "currentVersion": "0.50",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.50",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): los camiones de residuos ahora calculan recorridos sobre las calles que realmente conectan, asignan contenedores alcanzables y regresan a depósitos, transferencia o disposición. Los camiones 3D circulan por esos recorridos; Ciudad > Servicios informa paradas, cuadras, acceso, recolección y carga almacenada.",
+        "Los contenedores guardan residuos hasta 2 t. Se vacían solo si un camión puede llegar; aislados se saturan y el excedente se suma a la basura acumulada. Capacidad y flujo de Online y Offline usan las rutas calculadas. Guardados anteriores migran al esquema 35."
+      ]
+    },
     {
       "version": "0.49",
       "date": "2026-10-31",

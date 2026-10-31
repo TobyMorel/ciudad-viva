@@ -95,3 +95,8 @@ Contenedores viales y almacenamiento/expedición de residuos en depósitos munic
 ## Alfa 0.49 · respaldo eléctrico (fase 26, parcial)
 
 Centros de salud municipales, potabilizadoras y depuradoras pueden instalar un grupo electrógeno limitado por su demanda, hasta 75 kW. El depósito inicial sostiene tres días a potencia plena; el faltante de la red activa respaldo, que se agota por día y necesita repostaje. La inversión cuesta $2.800, combustible $0,12/kWh y mantenimiento $70/mes. Online/Offline comparten balances, acciones y estado; los generadores tienen representación 3D. Se mantiene pendiente la redundancia de líneas, operación hidráulica detallada y rutas de camiones.
+
+
+## Alfa 0.50 · rutas físicas de recolección (fase 26, parcial)
+
+Los camiones municipales y de depósitos calculan circuitos sobre calles conectadas, visitan contenedores alcanzables y terminan en transferencia o disposición. Se asignan paradas por rutas viables; la capacidad por camión y parada limita retiro. Los contenedores guardan hasta 2 t; los aislados se llenan y desbordan a basura urbana. Los vehículos 3D recorren el camino calculado y Servicios reporta circuitos, carga y acceso. Implementación Online/Offline; esquema 35. Pendientes: elección manual de turnos, rutas separadas por reciclaje y flota diferenciada.

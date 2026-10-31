@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.38",
+  "currentVersion": "0.39",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.39",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Fase 24: aeropuerto regional contratable con cinco etapas de pista y terminal, 16 trabajadores, materiales Online y acceso vial conectado. Capacidad separada: 800 pasajeros y hasta 12 vuelos al mes.",
+        "La aerolínea abre solo con acceso, cuatro empleados, demanda de residentes y margen para cubrir los costos de los vuelos. La demanda y la dotación pueden dejar la ruta inactiva.",
+        "Pasajeros entrantes se convierten en visitantes, y una parte compra en comercios conectados que tienen inventario. Tasas por pasajero y vuelo llegan al municipio; operación cuesta $600/mes.",
+        "Se muestra terminal y aeronave en el mapa 3D y se agregó Ciudad > Aeropuerto. Chromium verificó la pantalla móvil sin desborde ni contenido recortado."
+      ]
+    },
     {
       "version": "0.38",
       "date": "31 de octubre de 2026",
@@ -318,12 +328,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 24 · Aeropuerto funcional inicial",
-      "detail": "Obra por etapas, acceso terrestre, demanda verificable de pasajeros y carga, capacidad de terminal y pista, costos e impacto urbano."
+      "title": "Fase 25 · Turismo y hoteles",
+      "detail": "Visitantes diferenciados de residentes, hoteles privados con construcción y ocupación, gasto local, estacionalidad y presión sobre vivienda/servicios."
     },
     {
-      "title": "Fases 25–28 · Turismo y redes urbanas",
-      "detail": "Hoteles y visitantes con actividad visible; continuar agua, energía y saneamiento conectados a edificios, además de clima y riesgos."
+      "title": "Fases 26–28 · Redes y riesgos urbanos",
+      "detail": "Conectar agua, energía y saneamiento a edificios; clima, inundaciones y efectos de infraestructura en los barrios."
     }
   ]
 }

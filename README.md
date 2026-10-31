@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.38
+# Ciudad Viva · Alfa 0.39
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -13,6 +13,10 @@ Al abrir la página se puede elegir **Offline** u **Online · red local**. Onlin
 ## Movilidad cotidiana · Alfa 0.36
 
 Además de los viajes al empleo, hogares con acceso vial generan recorridos de compras hacia comercios abiertos. La elección prioriza cercanía y actividad comercial reciente, alterna entre destinos accesibles, estima peatones o autos según distancia y acceso familiar, y registra el regreso, emisiones y presencia animada en la escena. El resumen de Ciudad los muestra por separado. Es una primera capa de demanda no laboral: todavía no compra productos de nuevo ni contempla ocio, salud, educación, bicicletas o transporte público para esos viajes.
+
+## Aeropuerto regional · Alfa 0.39
+
+El aeropuerto se licita como obra municipal de cinco etapas ($19.500 y 112 días base) con materiales Online y una cuadrilla de 16. Exige una parcela conectada a la red vial. Al terminar, habilita una terminal de 800 pasajeros al mes y una pista de hasta 12 vuelos mensuales; incorpora 18 empleos aeroportuarios y cuesta $600 mensuales. Aerolíneas del Litoral programa vuelos solo si hay al menos cuatro trabajadores, viajeros potenciales y margen previsto para cubrir el costo de ruta. Cada pasajero y vuelo aporta tasas municipales. La mitad de los pasajeros que llegan se registra como visitantes; una parte compra bienes en comercios conectados con inventario. El terminal y una aeronave aparecen en el mapa 3D. Esta primera implementación no incluye carga aérea, conexiones por aerolínea persistentes, horarios de vuelo, meteorología, ruido zonal ni viajes terrestres individuales al aeropuerto.
 
 ## Puerto comercial · Alfa 0.38
 
@@ -33,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación y Puerto. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.38 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto y Aeropuerto. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.39 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 

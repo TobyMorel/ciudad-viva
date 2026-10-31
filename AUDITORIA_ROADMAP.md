@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.38
+# Auditoría del roadmap · Alfa 0.39
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -11,7 +11,8 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 21 | Parcial: salarios, habilidades, búsqueda y cursos | Desigualdad territorial, carga habitacional, movilidad social y educación formal |
 | 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Viajes de ocio, integración multimodal, trenes, metro, carga, accidentes y capacidad vial detallada |
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
-| 24–28 | Pendiente como sistemas completos | Aeropuertos, turismo, redes completas, clima y servicios profundos |
+| 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
+| 25–28 | Pendiente como sistemas completos | Turismo y hoteles, redes completas, clima y riesgos profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -41,3 +42,6 @@ Alfa 0.37 suma visitas agregadas a centros cívicos accesibles. Fase 22 continú
 
 
 Alfa 0.38 inicia la fase 23 con terminal construible, exportación causada por ventas regionales, camiones en calles, patio con capacidad, despacho por carga reunida, buque visible, entrega regional, tasa y empleo. Pruebas de servidor y Offline confirmaron el ciclo inicial. No satisface aún los criterios de importación, calado, dragado, productividad de grúas, cola de atraque, acceso ferroviario, competencia ni pérdidas por baja utilización; fase parcial. La siguiente entrega debe abrir fase 24 con un aeropuerto como nuevo circuito, evitando profundizar detalles portuarios antes de ampliar el resto de sistemas.
+
+
+Alfa 0.39 abre la fase 24 con obra, pista y terminal, personal real, condiciones de demanda y acceso, una ruta de aerolínea condicionada por margen, pasajeros y compras locales de visitantes. La verificación de Online y Offline confirmó contratación, personal, vuelos y tasas. Fase parcial: aún no hay carga aérea, cartera persistente de aerolíneas, horario, clima, ruido territorial ni acceso multimodal del pasajero. Siguiente: fase 25, turismo y hoteles privados conectados con visitantes, gasto y demanda.

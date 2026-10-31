@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.38 · 31 de octubre de 2026
+**Entrega:** Alfa 0.39 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -273,3 +273,17 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Offline: se aceptó la terminal como contrato de 82 días con una cuadrilla de 14; prueba de exportación generó el viaje de barco y el ingreso portuario.
 - Chromium en 390×844 mostró Ciudad > Puerto sin desplazamiento horizontal, sin desbordes de contenido ni elementos internos recortados; el tablero de construcción incluye la obra portuaria.
 - La fase 23 es parcial: faltan importaciones, tipos de terminal, calado, dragado, capacidad de grúas, colas de atraque, acceso ferroviario, competencia portuaria y balance de pérdidas/ganancias específico. No se estima porcentaje global: sigue faltando una matriz estable de pesos y criterios que cubra las 34 fases.
+
+
+## Alfa 0.39 · aeropuerto regional y viajes aéreos
+
+- Fase 24 parcial: licitación por cinco etapas en una parcela con conexión vial, 16 trabajadores, materiales Online, terminal con 800 plazas mensuales y pista con 12 movimientos de vuelo al mes. La obra base cuesta $19.500 y tarda 112 días; operar cuesta $600/mes y agrega 18 puestos de trabajo.
+- Aerolíneas del Litoral solo sirve una ruta si hay conexión vial, por lo menos cuatro trabajadores aeroportuarios, residentes con recursos para viajar y margen operativo esperado. La ciudad puede ofrecer la obra sin que eso garantice vuelos.
+- Las llegadas generan visitantes diferenciados de la población residente. Una parte compra unidades en comercios alcanzables y con inventario; tasas por pasajeros/vuelos ingresan a la tesorería. La pista, terminal y una aeronave se ven en 3D. Online y Offline comparten el circuito. Guardado esquema 23.
+
+### Verificación Alfa 0.39
+
+- Python: compilación y smoke Online asignaron 18 trabajadores aeroportuarios, abrieron una ruta con 33 pasajeros, 16 visitantes y $207 de tasas; el paso de visitantes elevó ventas locales y `public_state` informó la operación.
+- Offline: el contrato se acepta por 112 días con 16 trabajadores; en cierre mensual el aeropuerto empleó residentes, atendió 33 pasajeros y 16 visitantes, ingresó $207 y sumó las tasas al ingreso municipal.
+- Chromium en 390×844: Ciudad > Aeropuerto quedó dentro del popup, sin desborde horizontal, texto recortado ni errores JavaScript. La subcategoría es navegable junto con Puerto y las demás áreas de Ciudad.
+- Fase 24 parcial: faltan carga aérea, balances persistentes de aerolíneas, rutas múltiples, horarios, meteorología, ruido localizado, seguridad de emergencia y accesos terrestres de pasajeros. Porcentaje global aún no estimable; no hay matriz estable que pese las 34 fases.

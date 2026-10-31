@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.31",
+  "currentVersion": "0.32",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.32",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los trabajadores pueden cambiar entre dos líneas de colectivo solo en una parada construida accesible a ambas. El itinerario comprueba dirección, aforo de cada tramo, espera, caminata de intercambio y duración total.",
+        "Cada línea reserva una plaza y cobra su tarifa al hogar; el informe muestra parada, tiempo adicional y viajeros con transbordo. Offline ahora cobra también los viajes que empiezan lejos del origen de la línea.",
+        "Los residentes tienen acceso al auto determinado por su identidad (65% de la población laboral); quienes no lo tienen pueden caminar o elegir un colectivo aunque tarde algo más. Movilidad muestra esta condición y agrupa los transbordos en un panel compacto."
+      ]
+    },
     {
       "version": "0.31",
       "date": "31 de octubre de 2026",
@@ -253,8 +262,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Transbordos",
-      "detail": "Permitir viajes entre dos líneas con una parada de intercambio, tiempos de espera, aforo y tarifa calculados para cada tramo."
+      "title": "Fase 22 · Horarios y billetes",
+      "detail": "Modelar el regreso vespertino como recorrido propio, esperas por franja y una tarifa integrada entre líneas."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",

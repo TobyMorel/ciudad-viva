@@ -78,3 +78,7 @@ canvas#city{touch-action:none}
 .bus-garages{max-width:100%;min-width:0;border:1px solid #c8ddd0;border-radius:13px;background:#eef7ed;padding:.55rem .7rem;margin:.45rem 0 .8rem}.bus-garages summary{cursor:pointer;color:#245d55;font-size:.84rem;font-weight:800;overflow-wrap:anywhere}.bus-garages>div{display:grid;gap:.25rem;padding:.45rem 0 .1rem}.bus-garages small{display:block;color:#496b61;line-height:1.45;overflow-wrap:anywhere}
 
 @media(max-width:650px){.tool-list .tool:last-child:nth-child(odd){grid-column:1/-1}}
+
+.bus-transfers{max-width:100%;min-width:0;border:1px solid #bfd8dc;border-radius:13px;background:#edf5f5;padding:.55rem .7rem;margin:.45rem 0 .8rem}.bus-transfers summary{cursor:pointer;color:#245e65;font-size:.84rem;font-weight:800;overflow-wrap:anywhere}.bus-transfers>div{display:grid;gap:.3rem;padding:.45rem 0 .1rem}.bus-transfers small{display:block;color:#456b6c;line-height:1.45;overflow-wrap:anywhere}
+
+.bus-mode-hint{display:block;margin:-.25rem 0 .65rem;color:#52736e;line-height:1.45;overflow-wrap:anywhere}

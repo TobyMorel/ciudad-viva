@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.31
+# Ciudad Viva · Alfa 0.32
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -21,7 +21,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo y Formación. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.31 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo y Formación. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.32 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -46,3 +46,5 @@ Para desplegar el sitio estático en Vercel, usá el repositorio raíz como proy
 La **cochera municipal** se construye desde Herramientas (tecla 7). Tiene cuatro plazas y mantenimiento de $50/mes; cada colectivo alojado reduce su costo operativo de $140 a $110/mes. Las líneas conservan plazas alquiladas cuando no hay cochera accesible.
 
 Cada colectivo requiere dos conductores distintos para cubrir los turnos de mañana y tarde. La línea solo opera con ambos puestos asignados; Movilidad identifica los turnos de cada unidad.
+
+Los **transbordos** necesitan una parada construida accesible a dos líneas. Cada tramo ocupa aforo y cobra su tarifa; el panel Movilidad muestra viajeros, parada y tiempo adicional. El acceso al auto se asigna de forma estable a cada residente, por lo que la elección modal tiene una causa verificable.

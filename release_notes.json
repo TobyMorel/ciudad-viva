@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.40",
+  "currentVersion": "0.41",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.41",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Fase 26 (parcial): redes de electricidad y agua se construyen por tramos sobre calles terminadas; cada tramo debe prolongar una red conectada.",
+        "Los edificios calculan demanda según hogares, camas, actividad comercial o uso público. Capacidad, pérdidas de red, fugas y demanda estacional afectan el suministro real.",
+        "Déficits reducen servicios y, en crisis severa, aprobación; comercios y hoteles reducen actividad con baja cobertura, y los vuelos pueden suspenderse. El tablero Ciudad > Servicios muestra demanda, entrega, cobertura, pérdidas y mantenimiento.",
+        "Se pueden licitar una central eléctrica (+900 kW) y una planta potabilizadora (+220 m³/día); ambas deben quedar conectadas a electricidad y agua. Las redes tienen capas visibles al seleccionar sus herramientas.",
+        "Online y Offline comparten la mecánica. Continúan pendientes saneamiento, drenaje, residuos, gas, telecomunicaciones, reparación de fugas y redundancia entre fuentes."
+      ]
+    },
     {
       "version": "0.40",
       "date": "31 de octubre de 2026",

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.40
+# Ciudad Viva · Alfa 0.41
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -37,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto y Turismo. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.39 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.41 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -51,7 +51,7 @@ La migración mensual se limita por plazas de vivienda vacantes y capacidad de e
 
 La alfa incluye vista 3D generada localmente, localidad inicial con 22 edificios, cámara giratoria, tráfico ambiental, calendario, presupuesto, vivienda, calles, zonificación, licitaciones, constructoras, depósitos logísticos, pedidos logísticos, inventarios, trabajadores por contrato, servicios municipales, guardado y sincronización LAN por HTTP.
 
-Pendientes: educación y capacitación laboral, contratos y horarios, habilidades avanzadas, demanda diferenciada, personas como agentes urbanos, servicios físicos, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
+Pendientes: educación y capacitación laboral, contratos y horarios, habilidades avanzadas, demanda diferenciada, personas como agentes urbanos, completar redes de saneamiento/drenaje/residuos/gas/telecomunicaciones, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
 
 ## Publicación en Vercel
 
@@ -71,3 +71,10 @@ El **billete integrado** de un transbordo cuesta $0,35 por viaje con tarifa base
 ## Turismo y hoteles · Alfa 0.40
 
 Construí un hotel privado junto a una calle conectada. La empresa financia la obra por etapas, abre habitaciones, contrata trabajadores y necesita caja para pagar salarios y costos. Solo recibe huéspedes cuando opera el aeropuerto; tarifas, ocupación, gasto e impuesto se muestran en Ciudad > Turismo. Sin visitas rentables, el hotel puede cerrar. Esta es una primera parte de la fase 25: todavía faltan eventos, temporadas, atractivos y presiones territoriales.
+
+
+## Redes de servicios · Alfa 0.41
+
+La red inicial aporta 1.200 kW y 180 m³/día antes de pérdidas. Construí líneas eléctricas y tuberías sobre calles terminadas, conectándolas desde la red existente; los edificios aislados no reciben servicio. La demanda aumenta con hogares, camas, comercios, terminales y servicios públicos, con mayor consumo estacional. Las pérdidas eléctricas y fugas reducen lo entregado; los déficits afectan servicios, comercios, hoteles y operación aeroportuaria.
+
+Las licitaciones permiten construir una central eléctrica de 900 kW y una planta potabilizadora de 220 m³/día. Cada fuente debe estar conectada a ambas redes para aportar capacidad. El panel Ciudad > Servicios presenta demanda, suministro, cobertura, pérdidas, conexiones y mantenimiento. Esta primera parte de la fase 26 todavía no modela saneamiento, drenaje, residuos, gas, telecomunicaciones, reparación ni redundancia.

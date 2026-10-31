@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.40
+# Auditoría del roadmap · Alfa 0.41
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -13,7 +13,8 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
-| 26–28 | Pendiente como sistemas completos | Redes conectadas de electricidad/agua/saneamiento, clima y riesgos profundos |
+| 26 | Parcial: redes de electricidad y agua, demanda por uso, pérdidas/fugas, suministro limitado, plantas construibles y consecuencias en servicios, comercios, hoteles y aeropuerto | Saneamiento, drenaje, residuos, gas, telecomunicaciones, reparación y redundancia |
+| 27–28 | Pendiente | Clima, inundaciones, desastres y riesgos profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -49,3 +50,6 @@ Alfa 0.40 abre la fase 24 con obra, pista y terminal, personal real, condiciones
 
 
 Alfa 0.40 incorpora el primer circuito de hotelería: una firma privada construye, emplea, atiende visitantes que llegan en vuelos conectados, recauda ingresos, incurre en costos y puede cerrar. El 5% de ventas se transfiere a la ciudad; los pasajeros siguen separados de residentes. Las llegadas derivan del sistema aeroportuario de fase 24. El turismo general sigue parcial: no se agregaron temporadas/eventos, otras vías de llegada, valor de patrimonio/naturaleza, presión en alquileres ni impactos de distritos. Próximo: iniciar fase 26 con balances físicos básicos y conexión de agua/energía en lugar de más pulido visual.
+
+
+Alfa 0.41 inicia fase 26 en Online y Offline. Cables y tuberías se extienden sobre calles conectadas; el suministro asigna capacidad limitada a usos con prioridad, contempla pérdidas/fugas y estacionalidad, y registra costos de mantenimiento. Las plantas agregan capacidad al conectarse a ambas redes. Cobertura insuficiente afecta servicios, aprobación y producción privada; el aeropuerto/hotel requiere niveles mínimos. La fase continúa parcial según las brechas tabuladas.

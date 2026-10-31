@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.40 · 31 de octubre de 2026
+**Entrega:** Alfa 0.41 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -303,3 +303,16 @@ Ciudad > Turismo presenta actividad y empresas; el modelo 3D identifica hoteles.
 - Pruebas de cálculo: 100 llegadas operativas produjeron 45 huéspedes, 90 noches, $2.980 de resultado y $202 de tasa; una firma vacía continuó operando hasta agotar caja y cerró.
 - Chromium en 390×844: la ventana Ciudad > Turismo mostró sus siete categorías sin recorte horizontal; el panel admite desplazamiento vertical para llegar a todo el contenido.
 - Prueba física LAN y Vercel quedan pendientes en esta sesión; la simulación Online no se ejecutó como dos computadoras físicas.
+
+
+## Alfa 0.41 · redes eléctricas y agua potable (fase 26, parcial)
+
+Se agregaron redes separadas de tendido eléctrico y agua sobre calles. El mapa inicia con las calles existentes ya conectadas; las extensiones requieren conectar un tramo de calle a una línea previa y pagan un costo de instalación. La capacidad de base es 1.200 kW y 180 m³/día; pérdidas eléctricas del 6% y fugas del 8% reducen el suministro utilizable. La demanda depende del uso de hogares, comercios, hoteles, terminales y edificios públicos, y sube en verano. La asignación prioriza salud y viviendas.
+
+El jugador puede licitar una central (900 kW, 18 empleos, $460/mes) y una planta potabilizadora (220 m³/día, 12 empleos, $340/mes). Para aportar capacidad cada planta debe tocar una red conectada de ambos servicios. Los déficits bajan el indicador de servicios y, con cobertura crítica, la aprobación; ventas privadas, huéspedes y vuelos también dependen de la cobertura. Ciudad > Servicios informa unidades, pérdidas, conexiones y mantenimiento. El modo Offline replica acciones y balance.
+
+### Verificación Alfa 0.41
+
+Verificada sintaxis Python/JavaScript, migración de guardados a esquema 26, balance inicial de los dos servicios, tendido conectado y desconectado, costo de mantenimiento, déficits y efectos en actividad. Se comprobó en servidor el alta de un contrato de central eléctrica con sus cinco etapas y plazo de 96 días; las capacidades de ambos tipos de fuente se verificaron por balance. No se esperó en esta entrega el plazo completo hasta su inauguración. La inspección visual de Ciudad > Servicios cubrió móvil y escritorio sin desbordes. LAN entre equipos físicos sigue pendiente.
+
+Alcance restante de fase 26: saneamiento, drenaje pluvial, recolección de residuos, gas, telecomunicaciones, reparación de fugas, redundancia y dependencia detallada de bombeo.

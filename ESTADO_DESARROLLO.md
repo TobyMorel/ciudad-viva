@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.24 · 31 de octubre de 2026
+**Entrega:** Alfa 0.25 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -17,6 +17,8 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Alfa 0.23: cursos municipales de comercio, administración y logística asignan hasta seis residentes con habilidad insuficiente y ruta al aula. Se prepagan dos ciclos mensuales; cada ciclo mejora 18 puntos, registra costo y progreso, y los cursos pueden pausarse/reanudarse/cancelarse con reintegro del saldo sin gastar. Si el centro o acceso vial falla, se pausa y conserva saldo. Online y Offline; guardado esquema 19. Esta formación es una parte de la fase 21; no hay currículos, docentes, formación prolongada ni distribución de ingresos por barrio.
 
 - Alfa 0.24: los residentes con una ruta laboral seleccionan caminar si el recorrido usa hasta tres tramos, y auto en distancias mayores. Cada viaje agrupa origen/destino, motivo, ventana horaria y minutos puerta a puerta separados en acceso, espera, recorrido y estacionamiento. Solo los autos ocupan capacidad vial; los peatones y autos se representan sobre rutas y el reporte estima vehículos y CO₂ diario. Offline usa BFS sin congestión dinámica. Migración a esquema 20. Fase 22 parcial: no hay transporte público, costo de propiedad, tarifa, tren/metro, carga ni horarios individualizados.
+
+- Alfa 0.25: se pueden abrir líneas de bus en corredores laborales existentes, comprar 1–3 colectivos de 30 plazas y elegir entre bus/auto por tiempo, espera y tarifa. Las rutas transportan pasajeros de la relación origen–destino elegida; frecuencia depende de longitud y flota. Compra $700/vehículo, tarifa $0,25, operación $140/mes por unidad; el hogar paga desde caja disponible y la recaudación cubre parte del costo. Pausa/reanudación/retiro recuperando 50%, vehículos animados en la calle. Online y Offline; guardado esquema 21. Conductores como agentes, paradas intermedias y transbordos pendientes.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -130,3 +132,10 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Python y los tres módulos JavaScript pasan sus chequeos sintácticos; se verificaron ambos modos con las mismas categorías de viaje, conteos que suman a las personas ocupadas, rutas y componentes de tiempo presentes.
 - Los recorridos de los residentes ocupados se agrupan por origen, destino y modo; ambos modos calculan por separado peatones, automovilistas, vehículos y CO₂ aproximado. Los conteos cambian con las rutas, perfiles y el estado de la ciudad. Offline usa su aproximación de ruta BFS.
 - Chromium comprobó Ciudad a 1440×950 y 390×844: modal split, emisión y empleo se leen sin solaparse ni causar desborde horizontal; el popup largo se desplaza verticalmente y no tuvo errores JavaScript. La conexión entre dos equipos físicos por LAN permanece pendiente.
+
+
+## Verificación Alfa 0.25
+
+- Python/JavaScript compilan; en Online y Offline las líneas trasladan viajeros, la suma de peatón/auto/bus coincide con viajes laborales, capacidad limita pasajeros y pausa/reanudación/retiro afectan servicio y fondos. Se verificó pago de boletos desde caja familiar disponible y pausa cuando se cierra la línea.
+- Chromium revisa la pantalla Ciudad en escritorio y móvil con panel de flota/corredores/servicios; no hay desborde horizontal, los textos se leen sin solaparse y el contenido largo se recorre con scroll vertical.
+- Los controles LAN físicos siguen pendientes de validación entre dos equipos fuera de este entorno.

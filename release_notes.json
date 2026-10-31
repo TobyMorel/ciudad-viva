@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.24",
+  "currentVersion": "0.25",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.25",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Ciudad permite inaugurar líneas de autobús sobre corredores laborales conectados y comprar de uno a tres vehículos. Cada bus tiene 30 plazas; la frecuencia depende del recorrido y del tamaño de flota.",
+        "Las personas del corredor usan el bus cuando su tiempo puerta a puerta, espera y tarifa compiten con el auto. Buses y pasajeros aparecen en las rutas; la demanda respeta la capacidad disponible.",
+        "Los hogares pagan hasta lo que pueden de la tarifa de $0,25 por viaje; ingresos reales de boletos ayudan a cubrir $140 mensuales por vehículo. Pausar detiene costo e ingresos; cancelar devuelve la mitad del valor de los vehículos. Online y Offline; guardado esquema 21."
+      ]
+    },
     {
       "version": "0.24",
       "date": "31 de octubre de 2026",
@@ -190,16 +199,16 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Transporte público",
-      "detail": "Permitir líneas de bus trazadas por el jugador, paradas, frecuencia, flota, personal, tarifas, presupuesto operativo y capacidad; medir demanda y conexión con el empleo."
+      "title": "Fase 22 · Operación y personal de transporte",
+      "detail": "Modelar conductores residentes, turnos, depósitos, mantenimiento, horarios de fin de semana, paradas intermedias y conexiones de líneas con capacidad compartida."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",
-      "detail": "Añadir infraestructura por etapas para tren/metro y centros logísticos, con capacidad, energía, señalización, mantenimiento y transbordos."
+      "detail": "Añadir trazado ferroviario, obra e inspección, trenes y energía antes de habilitar pasajeros y mercancías."
     },
     {
-      "title": "Fases 21–22 · Costos de movilidad",
-      "detail": "Incorporar propiedad y costos de vehículos, accesibilidad puerta a puerta, tiempos por corredor y emisiones calibradas."
+      "title": "Fases 21–22 · Acceso y costos",
+      "detail": "Ampliar elección de viaje para bicicleta y transporte colectivo con costos, estabilidad, transferencias y diferencias entre barrios."
     }
   ]
 }

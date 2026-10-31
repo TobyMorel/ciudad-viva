@@ -105,3 +105,14 @@
 
 
 - **Alfa 0.55 · educación pública (fase 28, parcial):** edificios `school` tienen cuatro aulas, 12 vacantes `educacion` (habilidad mínima 48) y salario $12. Cada plaza aporta hasta 18 alumnos y cada aula admite 24; capacidad final es el mínimo multiplicado por el peor servicio de energía/agua/cloacas. Los estudiantes de 5–17 años se asignan al establecimiento alcanzable más cercano por calle (≤40 minutos); una sola escuela puede registrar el exceso como espera. Operación $820/mes, insumos $0,35 por alumno/mes. En cada cierre mensual, estudiantes asistidos progresan; luego de 12 meses mejoran dos puntos en cada perfil laboral. No se mueven trabajadores a la categoría infantil para conservar el estado laboral existente; edad escolar se simula sobre residentes no elegibles para el mercado. Esquema 40. Capacidad educativa y nómina en ambos modos; compras y entregas de materiales pendientes en Offline.
+
+
+## Bomberos y respuesta a incendios · Alfa 0.56
+
+- El esquema pasa a 41, con migración aditiva `fireService`; ciudades antiguas inician contadores e historial vacíos. La mecánica se resuelve en el anfitrión Online y en la simulación Offline.
+- El control mensual determinista aplica riesgo base 12%, más 2 puntos porcentuales por cada inmueble elegible y aumentos por calor/sequía; tope 82%. Hash estable selecciona el inmueble, con un máximo de un incidente en curso.
+- La estación se construye como obra pública de $11.200 y 74 días base; Online usa el flujo de materiales existente. Offline no simula compra/entrega de materiales, limitación declarada en sus detalles de proyecto.
+- Doce puestos requieren perfil Bomberos ≥48. Cuatro personas conforman una dotación, hasta tres por cuartel. Solo personal y ruta vial conectada habilitan respuesta; se escoge la opción más rápida y se calcula el tiempo como 5 min + 2,5 min por tramo. Cada salida bloquea el edificio por dos días.
+- Daño por respuesta rápida: redondeo de tiempo/5, entre 1 y 18 puntos de condición. Sin respuesta el edificio pierde 2 puntos/día; al quinto día, servicios −2 y aprobación −1. Los hogares/negocios absorben pérdida de caja privada; no se simulan lesiones ni fallecimientos.
+- Los controles de Ciudad muestran cobertura vial (hasta 14 tramos), disponibilidad de dotación y últimas llamadas. El camión 3D recorre la ruta un día de juego después del despacho; un incendio activo tiene marcador visual. Estas representaciones derivan del estado de incidentes y no alteran sus resultados.
+- El costo operativo es $950/mes al habilitar el edificio; la nómina es un gasto público normal. No se factura combustible ni se simulan tipos de vehículo/equipo por separado todavía.

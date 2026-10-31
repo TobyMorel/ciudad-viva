@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.55
+# Auditoría del roadmap · Alfa 0.56
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -15,7 +15,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
-| 28 | Parcial: atención primaria/urgente, cualificaciones, agua diferida y listas por barrio; escuela con docentes, aulas, viajes, espera y desarrollo laboral | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
+| 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -132,3 +132,10 @@ Chromium verificó Ciudad > Salud en móvil (390×844) y escritorio (1440×900):
 Una escuela es una obra pública cotizada a $9.600 y 68 días base, con trabajadores, etapas y contratista; Online consume materiales. Offline conserva contrato y plazo, pero no compra/entrega insumos. Al habilitarse abre cuatro aulas (96 plazas), 12 puestos docentes y mantenimiento mensual de $820. Niños y adolescentes simulados (5–17) viajan por rutas reales, hasta 40 minutos; la cantidad atendida queda limitada por aulas, docentes con habilidad Educación ≥48 y servicios de energía, agua y cloacas. Esperas, falta de acceso y costo por estudiante aparecen en Ciudad > Educación. Cada alumno atendido cuesta $0,35/mes en insumos; 12 ciclos de asistencia suman habilidad laboral. Un curso de Educación municipal forma candidatos docentes. Online/Offline, esquema 40. No incluye educación inicial, niveles separados, transporte escolar ni ampliación de aulas.
 
 Chromium comprobó Ciudad > Educación a 390×844 y 1440×900. El contenido puede desplazarse verticalmente; botones y tarjetas quedan dentro del panel, sin desbordes horizontales ni errores de JavaScript. No se verificó LAN física ni Vercel.
+
+
+## Alfa 0.56 · bomberos y emergencias urbanas (fase 28, parcial)
+
+El cuartel se licita por $11.200 y 74 días base. Al habilitarlo, suma 12 empleos cualificados (Bomberos ≥48), hasta tres grupos de cuatro y $950/mes de mantenimiento; hay nómina municipal por cada puesto ocupado. Una revisión el día 10 de cada mes usa un hash estable para determinar si la ciudad presenta un incendio: la presión aumenta según inmuebles habitables, ola de calor y sequía; solo existe un incidente en curso. El inmueble afectado se escoge de manera reproducible. Las estaciones con cuatro empleados, dotación libre y ruta conectada compiten por tiempo de llegada (5 min + 2,5 min por tramo); se elige la más rápida y queda ocupada dos días. El tiempo de llegada modifica el daño (1–18 puntos de condición), que también reduce caja privada en hogares/comercios. Sin acceso o personal, el edificio empeora 2 puntos diarios; tras cinco días el incidente termina sin respuesta y servicios/apoyo caen. Ciudad > Bomberos informa cobertura por calle, dotaciones, gastos e historial; modelo 3D de cuartel, marcador activo y camión en recorrido. Online y Offline; migración 41.
+
+Las regresiones confirmaron despacho en ambas modalidades: 35 minutos y siete puntos de daño con personal; cinco días sin equipo deterioran el inmueble y apoyo. También se verificó el contrato Offline, los puestos y el gasto. Chromium revisó Ciudad > Bomberos a 390×844 y 1440×900: contenido legible, scroll vertical, sin desborde horizontal ni errores JS. No se verificó red LAN física ni Vercel. Offline aún no compra ni entrega materiales. Fase parcial: no hay ambulancias ni hospitalización, equipos por especialidad, múltiples niveles educativos, policía o programas de protección social.

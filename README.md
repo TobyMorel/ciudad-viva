@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.55
+# Ciudad Viva · Alfa 0.56
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -51,7 +51,7 @@ La migración mensual se limita por plazas de vivienda vacantes y capacidad de e
 
 La alfa incluye vista 3D generada localmente, localidad inicial con 22 edificios, cámara giratoria, tráfico ambiental, calendario, presupuesto, vivienda, calles, zonificación, licitaciones, constructoras, depósitos logísticos, pedidos logísticos, inventarios, trabajadores por contrato, servicios municipales, guardado y sincronización LAN por HTTP.
 
-Pendientes: educación y capacitación laboral, contratos y horarios, habilidades avanzadas, demanda diferenciada, personas como agentes urbanos, completar redes de saneamiento/drenaje/residuos/gas/telecomunicaciones, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
+Pendientes: niveles educativos, hospitalización y ambulancias, seguridad pública y programas sociales, hacienda plurianual, contratos y horarios, habilidades avanzadas, demanda diferenciada, agentes ciudadanos, redes completas de saneamiento/drenaje/residuos/gas/telecomunicaciones, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación individual ya filtra por habilidades básicas y salario esperado; los recorridos aún se muestran agrupados por hogar y destino.
 
 ## Publicación en Vercel
 
@@ -67,6 +67,10 @@ Los **transbordos** necesitan una parada construida accesible a dos líneas. Cad
 
 El **billete integrado** de un transbordo cuesta $0,35 por viaje con tarifa base: $0,25 para la primera línea y $0,10 para la segunda. Ambas líneas registran su parte del cobro mensual y el hogar paga el total.
 
+
+## Bomberos y emergencias · Alfa 0.56
+
+Los cuarteles se licitan como obra pública por $11.200 y 74 días base; el modo Online compra y entrega materiales. Una estación suma 12 vacantes que requieren perfil Bomberos (48 puntos), $950 de operación mensual y hasta tres dotaciones de cuatro. La formación municipal puede desarrollar esa habilidad. El riesgo urbano se revisa cada mes y aumenta con la cantidad de inmuebles, el calor y la sequía. Los despachos eligen la estación accesible más cercana; el viaje por calle determina daño y la dotación queda ocupada dos días. Sin personal o ruta, el fuego deteriora el inmueble y, si arde cinco días, reduce servicios y apoyo. La pantalla Ciudad > Bomberos informa cobertura, dotaciones, tiempo y daños; el cuartel, las llamas y el camión de respuesta tienen representación 3D. Online/Offline comparten la mecánica. Offline aún no compra ni entrega materiales de obra. La fase 28 continúa parcial; faltan ambulancias, hospitalización, seguridad pública y protección social.
 
 ## Turismo y hoteles · Alfa 0.40
 

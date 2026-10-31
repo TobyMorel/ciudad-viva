@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.55 · 31 de octubre de 2026
+**Entrega:** Alfa 0.56 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.56 · Fase 28 (parcial): cuarteles de bomberos por obra pública ($11.200, 74 días, 12 puestos y $950/mes). Bomberos cualificados (perfil ≥48) forman hasta tres dotaciones de cuatro; la Ciudad puede financiar cursos de formación. Cada revisión mensual tiene riesgo determinista según cantidad de inmuebles, calor y sequía, y como máximo un incidente activo. El despacho escoge la estación libre con menor tiempo por rutas reales; registra respuesta, ocupa la dotación dos días y el tiempo calcula el daño. Sin dotación o acceso, el inmueble pierde 2 puntos de condición al día; al quinto día se cierra el incendio con daño persistente y disminuyen servicios y apoyo. Ciudad > Bomberos muestra cobertura, personal, dotaciones, despachos, tiempos e historial; cuartel, llamas y camión de respuesta se ven en 3D. Online/Offline, guardados al esquema 41. Verificación: despacho Online con 35 minutos y daño de siete puntos; cinco días sin equipo reducen apoyo; Offline completó contrato/habilitación y despacho con 12 trabajadores, más guardado. Chromium a 390×844 y 1440×900 sin overflow horizontal ni errores JS, scroll vertical dentro del panel. LAN física y Vercel sin probar; compra/entrega de materiales Offline pendiente. Fase 28 parcial: aún faltan ambulancias, hospitalización, seguridad y protección social.
 
 - Alfa 0.55 · Fase 28 (parcial): sumé escuelas municipales como obras con licitación, cuadrilla, anticipo e inspección (68 días base, $9.600; Online usa materiales, Offline aún no maneja su compra/entrega). La escuela entrega 4 aulas y 12 vacantes docentes; un máximo de 96 plazas físicas depende de docentes cualificados, acceso a calles ≤40 minutos y servicios operativos. La demanda usa residentes simulados de 5–17 años; registra alumnos atendidos, en espera y sin ruta. Costos: $820 de operación y $0,35 mensual por estudiante. Con asistencia sostenida durante 12 meses, suben habilidades laborales; un curso municipal de Educación forma candidatos a docentes. Online/Offline, esquema 40. Verificación: Online: construcción/entrega con materiales y capacidad/espera; Offline: contrato y asistencia; compras/entregas siguen pendientes en modo local; Chromium a 390×844 y 1440×900 sin solapamiento, desbordes horizontales ni errores JavaScript. Continúa parcial: sin educación inicial, niveles diferenciados, expansión de aulas o análisis por grupo etario/distrito.
 

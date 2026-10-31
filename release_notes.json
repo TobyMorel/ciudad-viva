@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.55",
+  "currentVersion": "0.56",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.56",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 28 (parcial): cuarteles de bomberos por obra municipal (74 días base, $11.200), dotaciones de cuatro y hasta tres equipos por estación; vacantes exigen perfil Bomberos ≥48. Cobertura y despacho usan rutas viales y distancia; cada salida ocupa la dotación dos días. Incendios urbanos aparecen en controles mensuales: ciudad y clima elevan el riesgo, la respuesta rápida reduce daño y la falta de personal/acceso degrada edificios, servicios y apoyo ciudadano. Operación $950/mes más nómina. Online y Offline; guardados migran al esquema 41. La escena 3D distingue cuarteles, fuego activo y camión de respuesta.",
+        "Ciudad > Bomberos muestra cobertura, estaciones, plantillas, dotaciones, emergencias y tiempos. Se revisó en Chromium a 390×844 y 1440×900 con desplazamiento vertical y sin desborde horizontal ni errores JS. LAN física y Vercel siguen sin validación; los materiales de obra en Offline continúan sin compra/entrega. La fase 28 sigue parcial: faltan ambulancias y hospitalización, niveles educativos adicionales, seguridad y programas sociales."
+      ]
+    },
     {
       "version": "0.55",
       "date": "2026-10-31",
@@ -472,12 +480,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 28 · Bomberos y despacho de emergencias",
-      "detail": "Construir estación con personal por turno, vehículos y cobertura por rutas. Un incendio consume disponibilidad y el tiempo de llegada determina daños y respuesta; presupuesto y personal limitan cuántos incidentes se atienden."
+      "title": "Fase 28 · seguridad y protección social",
+      "detail": "Añadir patrullaje y alumbrado con personal, rutas y cobertura territorial, más asistencia municipal a hogares vulnerables con cupos, costo y resultados medibles."
     },
     {
-      "title": "Fase 28 · Seguridad y protección social",
-      "detail": "Incorporar patrullaje e iluminación con cobertura y tiempos de respuesta, más programas municipales de asistencia con cupo, gasto y resultados para hogares desplazados o vulnerables."
+      "title": "Fase 29 · hacienda plurianual",
+      "detail": "Distinguir caja, ingresos cobrados, contratos comprometidos, mantenimiento y deuda; dar previsión de flujo y escenarios para nuevas obras."
     }
   ]
 }

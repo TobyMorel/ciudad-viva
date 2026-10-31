@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.36
+# Ciudad Viva · Alfa 0.37
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -14,6 +14,10 @@ Al abrir la página se puede elegir **Offline** u **Online · red local**. Onlin
 
 Además de los viajes al empleo, hogares con acceso vial generan recorridos de compras hacia comercios abiertos. La elección prioriza cercanía y actividad comercial reciente, alterna entre destinos accesibles, estima peatones o autos según distancia y acceso familiar, y registra el regreso, emisiones y presencia animada en la escena. El resumen de Ciudad los muestra por separado. Es una primera capa de demanda no laboral: todavía no compra productos de nuevo ni contempla ocio, salud, educación, bicicletas o transporte público para esos viajes.
 
+## Viajes cotidianos · Alfa 0.37
+
+Además de las visitas a comercios, los hogares accesibles generan viajes a centros cívicos habilitados. El motivo se informa por separado, estima pasajeros y modo a pie/auto, suma emisiones y aparece como recorridos animados. No añade un cobro de entrada. El ocio y destinos recreativos todavía no existen como edificios funcionales.
+
 ## Iniciar
 
 Requiere Python 3.9 o posterior y un navegador moderno con WebGL.
@@ -25,7 +29,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo y Formación. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.36 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo y Formación. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.37 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 

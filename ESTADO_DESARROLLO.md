@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.36 · 31 de octubre de 2026
+**Entrega:** Alfa 0.37 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -238,6 +238,7 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 
 - Online y Offline generan visitas de hogares a comercios abiertos con acceso por calle. La selección ordena destinos por distancia y actividad reciente y rota de forma estable entre alternativas cercanas. Cada hogar produce una pequeña cantidad agregada de visitantes; el acceso familiar y la distancia determinan si el grupo camina o va en auto.
 - El viaje de ida y vuelta entra en la movilidad diaria y en emisiones aproximadas; los autos suman flujo vial. La escena 3D anima hasta seis trayectos comerciales y el Resumen de Ciudad los separa de los viajes laborales. No se vuelve a debitar una compra: la economía comercial existente sigue siendo responsable de ventas y gastos.
+- La UI Ciudad abre la vista general aun cuando el usuario dejó una parcela seleccionada. Los indicadores laborales se agrupan en Empleo para que no queden cortados al final del Resumen móvil.
 
 ### Verificación Alfa 0.36
 
@@ -245,3 +246,16 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Smoke Online en la ciudad inicial: 6 comercios abiertos produjeron 15 rutas comerciales agregadas, 45 pasajeros, 12 viajes en auto de ida y vuelta y 20,52 kg de CO₂ estimado; la respuesta pública expuso esos datos.
 - Chromium Offline revisó el resumen de movilidad en escritorio 1440×960 y móvil 390×844; el panel conserva scroll y no presenta texto oculto, solapamiento ni desborde horizontal. La escena se inspeccionó con WebGL activo para la animación.
 - El número de visitas es una demanda diaria agregada inicial, no un reloj individual; todavía no modifica las compras ya liquidadas. LAN entre dos máquinas y una simulación larga siguen pendientes.
+
+
+## Alfa 0.37 · viajes a centros cívicos
+
+- Online y Offline agregan desplazamientos cotidianos desde los hogares a centros cívicos habilitados, separados de las compras y del viaje laboral. La cantidad estimada es el 5% de los ocupantes del hogar (mínimo uno, máximo dos); el centro más cercano rota entre alternativas accesibles. La distancia y el acceso familiar determinan caminata o auto.
+- Los recorridos redondos suman emisiones y carga vial en Online. El mapa anima una muestra de viajes cotidianos con apariencia distinta para compras y servicios. Ciudad muestra pasajeros, recorridos y autos por motivo. No se cobra entrada ni se cambia la economía de los centros.
+
+### Verificación Alfa 0.37
+
+- `python3 -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, validación JSON y `git diff --check` pasan.
+- Smoke Online en la ciudad inicial: 15 recorridos de compras/45 pasajeros y 15 recorridos cívicos/21 pasajeros; los servicios generaron 2 autos por ida y vuelta y 2,52 kg de CO₂ estimado. `public_state` expone los contadores.
+- Chromium Offline a 1440×960 y 390×844 mostró el resumen con ambas clases de viajes. El panel cabe dentro del viewport, conserva scroll vertical, no desborda horizontalmente y no produjo errores JS. La selección de una parcela seguida por el botón Ciudad abrió “Una ciudad en marcha”, sin conservar el panel de parcela; la pestaña Empleo contiene ahora los cinco indicadores laborales apartados del Resumen.
+- Sigue siendo demanda diaria agregada y no simula horarios, espera, entrada, uso de colectivos ni ocio; LAN física y simulación larga pendientes.

@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.36",
+  "currentVersion": "0.37",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.37",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los viajes cotidianos ahora incluyen centros cívicos habilitados además de los comercios: hogares accesibles generan recorridos a pie o en auto según distancia y acceso familiar.",
+        "La movilidad separa pasajeros, recorridos, autos y emisiones estimadas de compras y visitas a servicios. Los peatones y autos de ambos motivos tienen representación visible en el mapa 3D.",
+        "Online y Offline usan la misma regla agregada; visitar un servicio no cobra una tarifa nueva. Se revisó la pantalla Ciudad en escritorio y móvil sin texto cortado ni desbordes.",
+        "El botón Ciudad abre siempre la vista general aunque haya una parcela seleccionada. Los indicadores de empleo pasan a la subcategoría Empleo para mantener legible el resumen móvil."
+      ]
+    },
     {
       "version": "0.36",
       "date": "31 de octubre de 2026",

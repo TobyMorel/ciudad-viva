@@ -629,6 +629,33 @@ def nonwork_shopping_trips(homes, shops, roads):
         trips.append(trip)
     return trips
 
+def nonwork_service_trips(homes, centers, roads):
+    """Desplazamientos básicos a equipamiento cívico, separados de las compras."""
+    grouped={}
+    for home in homes:
+        choices=[]
+        for center in centers:
+            route=route_between((home["x"],home["y"]),(center["x"],center["y"]))
+            if not route:continue
+            distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
+            if distance:choices.append((distance,center,route))
+        if not choices:continue
+        choices.sort(key=lambda row:(row[0],row[1]["x"],row[1]["y"]))
+        distance,center,route=choices[(home["x"]+home["y"]+state.get("day",1))%min(2,len(choices))]
+        visitors=min(2,max(1,round(home.get("occupants",0)*.05)))
+        residents=home.get("residents",[]);car_share=sum(bool(p.get("carAccess")) for p in residents)/max(1,len(residents))
+        mode="auto" if distance>3 and car_share>=.35 else "walk"
+        key=(home["x"],home["y"],center["x"],center["y"],mode)
+        grouped.setdefault(key,{"from":[home["x"],home["y"]],"to":[center["x"],center["y"]],"route":route,"mode":mode,"distance":distance,"workers":0,"reason":"servicios","destinationName":center.get("name","Servicio cívico")})["workers"]+=visitors
+    trips=[]
+    for trip in grouped.values():
+        vehicles=math.ceil(trip["workers"]/1.4) if trip["mode"]=="auto" else 0
+        factor=traffic_factor(trip["route"]) if vehicles else 1
+        ride=round(trip["distance"]*(2.5 if vehicles else 4)*factor)
+        trip.update({"vehicles":vehicles,"dailyEmissionsKg":round(vehicles*trip["distance"]*.18*2,2),"walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":ride,"parkingMinutes":2 if vehicles else 0,"estimatedMinutes":ride+2,"trafficFactor":round(factor,2),"attendance":1,"roundTrip":True})
+        trips.append(trip)
+    return trips
+
 def commute_model():
     """Asigna residentes identificables a una vacante y una ruta laboral cada uno."""
     global _commute_cache_key,_commute_cache
@@ -875,7 +902,8 @@ def commute_model():
     model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
-    for trip in shopping:
+    services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
+    for trip in shopping+services:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
         model["vehicles"]+=trip["vehicles"]
@@ -886,6 +914,10 @@ def commute_model():
     model["shoppingPassengers"]=sum(t["workers"] for t in shopping)
     model["shoppingVehicles"]=sum(t["vehicles"]*2 for t in shopping)
     model["shoppingEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in shopping),2)
+    model["serviceTrips"]=len(services)
+    model["serviceVisitors"]=sum(t["workers"] for t in services)
+    model["serviceVehicles"]=sum(t["vehicles"]*2 for t in services)
+    model["serviceEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in services),2)
     model["dailyTrips"] = sum(t["workers"] for t in commutes)
     model["routes"]=commutes
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
@@ -1429,7 +1461,7 @@ def public_state(player_id=None):
         order_views.append({**order,**extra})
     view["supply"]={**state["supply"],"orders":order_views}
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","dailyTrips")}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)

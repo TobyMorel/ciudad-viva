@@ -196,3 +196,9 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Motor LAN: un intercambio entre Las Moreras y Mercado Central llevó siete pasajeros en dos líneas, con ingresos de $77 por línea y débito doméstico total de $154. Sin parada no hubo transferencias. Al reducir aforo a tres plazas por línea, ambas respetaron el límite.
 - Offline: un trabajador asignado al Mercado Central cambió de línea en Intercambiador del Canal (+6 min, $0,50 por viaje). Al cierre mensual ambas líneas cobraron $11 al hogar. Se corrigió el cobro de pasajeros que no residen en el origen de la línea y el motivo de desempleo antiguo en trabajadores conservados.
 - Chromium revisó el panel de transbordos abierto a 1440×960 y 390×844: sin error JS ni desborde horizontal. Para medir la interfaz se aisló WebGL. Falta probar LAN entre dos computadoras físicas, regreso vespertino separado y rendimiento con muchas líneas.
+
+## Alfa 0.33 · billete integrado
+
+- El segundo tramo cuesta 40% de su tarifa; con líneas de $0,25 se pagan $0,25 + $0,10 por viaje. Cada línea reconoce solo su parte y el hogar se debita por separado. El costo menor influye en la elección de itinerario. El informe expone tarifas por tramo y total.
+- Motor LAN: un escenario de dos líneas con parada compartida asignó tres pasajeros con transbordo. La previsión fue $33 para el primer tramo y $12 para el segundo; el cobro real sumó $45, igual al débito doméstico. Otro escenario sin caja doméstica cobró $0 y conservó ese valor después de refrescar el estado, corrigiendo una previsión que antes reemplazaba el cobro.
+- Offline: un viajero pagó $11 a la primera línea y $4 a la segunda en el cierre mensual; su itinerario publicado mostró $0,35 por viaje. Chromium revisó los importes y el panel abierto a 1440×960 y 390×844, sin desborde horizontal, texto oculto ni errores JS. Para medir la interfaz se aisló WebGL. La conexión LAN entre dos computadoras físicas continúa pendiente.

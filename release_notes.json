@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.32",
+  "currentVersion": "0.33",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.33",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "El transbordo usa un billete integrado: primer tramo $0,25 y segundo $0,10, para un total de $0,35 por viaje. El descuento modifica la elección del viaje y el costo del hogar.",
+        "Cada línea reserva aforo y recibe únicamente su parte de la tarifa. Las previsiones mensuales suman importes por pasajero; en LAN el cierre conserva la recaudación real aunque se refresque el estado. Offline cobra el mismo importe por residente y tramo.",
+        "Movilidad detalla los dos importes y el total en un panel desplegable; se revisó a 1440×960 y 390×844 sin desborde horizontal ni errores JavaScript."
+      ]
+    },
     {
       "version": "0.32",
       "date": "31 de octubre de 2026",
@@ -262,8 +271,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Horarios y billetes",
-      "detail": "Modelar el regreso vespertino como recorrido propio, esperas por franja y una tarifa integrada entre líneas."
+      "title": "Fase 22 · Regreso vespertino",
+      "detail": "Simular la vuelta del trabajo al hogar como recorrido separado, con capacidad y espera del turno de tarde."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",

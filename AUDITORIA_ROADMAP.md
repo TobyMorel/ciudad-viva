@@ -75,3 +75,8 @@ La fase 26 sigue parcial: contenedores, turnos y recorridos de recolección deta
 ## Alfa 0.45 · recuperación de residuos (fase 26, parcial)
 
 Se puede licitar una planta de reciclaje de $14.800 y 88 días base, con 16 puestos, demanda de electricidad/agua, capacidad de 1,25 t/día y recuperación de hasta 35% de la recolección. El material recuperado genera ingreso municipal por ventas y reduce el ingreso al relleno. Online y Offline comparten la mecánica y esquema 30. Faltan tipos de materiales recuperados, separación doméstica, contenedores, centros de transferencia y empresas privadas de reciclaje.
+
+
+## Alfa 0.46 · redes de gas y telecomunicaciones (fase 26, parcial)
+
+Implementado: trazados de gas y fibra con conectividad física por calle, demanda diferenciada por tipo de edificio, capacidad incremental por tramo, mantenimiento, actividad productiva condicionada por suministros, panel de balance y capas 3D. Compatible con guardados anteriores y ambos modos de partida. Pendiente dentro de fase 26: cortes y reparación, redundancia, fuentes de red construibles, contenedores y transferencia de residuos, mercados privados de reciclaje y modelado más detallado de operadores.

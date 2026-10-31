@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.45",
+  "currentVersion": "0.46",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.46",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): redes físicas de gas y telecomunicaciones conectadas por tramos de calle, con demanda, capacidad, edificios servidos y mantenimiento mensual.",
+        "Los cortes o edificios sin conexión reducen el factor productivo de comercios y hoteles; el tablero de Servicios informa cobertura y permite construir tuberías de gas y fibra óptica.",
+        "Disponible en Online y Offline, con migración de ciudades guardadas al esquema 31 y visualización 3D de las capas."
+      ]
+    },
     {
       "version": "0.45",
       "date": "2026-10-31",

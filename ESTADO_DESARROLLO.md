@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.45 · 31 de octubre de 2026
+**Entrega:** Alfa 0.46 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -356,3 +356,12 @@ La planta de reciclaje es un contrato público por etapas de $14.800 y 88 días 
 ### Verificación Alfa 0.45
 
 Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulación Online/Offline de capacidad de reciclaje, volumen dispuesto, ingresos y costos. Chromium verificó Servicios en 390×844 y 1440×900: el panel permite desplazarse por todo el contenido, no hay desborde horizontal ni etiquetas cortadas. La herramienta Planta de reciclaje queda visible en el menú Construir móvil; sin errores JavaScript.
+
+
+## Alfa 0.46 · redes de gas y telecomunicaciones (fase 26, parcial)
+
+- Gas y fibra óptica son redes físicas independientes sobre calles. Solo cuentan tramos contiguos al suministro inicial; los edificios necesitan contacto con un tramo conectado.
+- Gas tiene demanda en hogares, comercios, hoteles y nodos de transporte; fibra sirve hogares, comercios y servicios. Capacidad aumenta por segmento conectado y se factura mantenimiento mensual.
+- La falta de cualquiera de estas redes reduce el factor de actividad comercial/hotelera. Online y Offline comparten el balance y la acción de construcción. Guardados migran a esquema 31.
+- Ciudad > Servicios incluye demanda, capacidad, entrega, conexiones, faltantes y costo. Dos nuevas capas 3D y herramientas permiten construir cada tendido.
+- Verificado: compilación/sintaxis de Python y JavaScript, balance de inicio, migración y edición de tramos. Pruebas de interfaz en móvil y escritorio documentadas al cerrar entrega. LAN física pendiente.

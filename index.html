@@ -6,7 +6,7 @@
 </head>
 <body>
 <div id="app">
-  <header class="topbar"><div class="brand"><span class="mark">CV</span><div><b>CIUDAD VIVA</b><small>SIMULADOR MUNICIPAL · ALFA 0.45</small></div></div><div class="city-title"><strong id="cityName">Puerto Claro</strong><span id="dateLabel">Año 1 · Enero</span></div><div class="network"><i></i><span id="netLabel">Partida local</span><button id="copyInvite" title="Copiar dirección de invitación">INVITAR</button></div></header>
+  <header class="topbar"><div class="brand"><span class="mark">CV</span><div><b>CIUDAD VIVA</b><small>SIMULADOR MUNICIPAL · ALFA 0.46</small></div></div><div class="city-title"><strong id="cityName">Puerto Claro</strong><span id="dateLabel">Año 1 · Enero</span></div><div class="network"><i></i><span id="netLabel">Partida local</span><button id="copyInvite" title="Copiar dirección de invitación">INVITAR</button></div></header>
   <section class="metrics">
     <div class="metric"><span>TESORERÍA</span><b id="money">$ 0</b><small id="budgetFlow">Balance mensual</small></div>
     <div class="metric"><span>POBLACIÓN</span><b id="population">0</b><small id="jobs">Puestos cubiertos 0 / 0</small></div>
@@ -36,6 +36,8 @@
         <button class="tool" data-tool="wastewaterPlant"><span class="tool-icon civic-icon">♻</span><span><b>Planta depuradora</b><small>+260 m³/día · $ 16.600</small></span><kbd>V</kbd></button>
         <button class="tool" data-tool="sewerLine"><span class="tool-icon civic-icon">〰</span><span><b>Colector cloacal</b><small>Sobre calle · $ 145 por tramo</small></span><kbd>X</kbd></button>
         <button class="tool" data-tool="drainLine"><span class="tool-icon civic-icon">🌧</span><span><b>Colector pluvial</b><small>Drenaje de lluvia · $ 155 por tramo</small></span><kbd>G</kbd></button>
+        <button class="tool" data-tool="gasLine"><span class="tool-icon civic-icon">🔥</span><span><b>Tubería de gas</b><small>Calefacción y producción · $ 120/tramo</small></span><kbd>H</kbd></button>
+        <button class="tool" data-tool="telecomLine"><span class="tool-icon civic-icon">📡</span><span><b>Fibra óptica</b><small>Conectividad digital · $ 105/tramo</small></span><kbd>T</kbd></button>
       </div>
       <div class="divider"></div><div class="panel-head"><span>TIEMPO</span><span id="speedLabel" class="eyebrow">EN MARCHA</span></div>
       <div class="time-controls"><button id="pauseBtn" title="Pausar">Ⅱ</button><button data-speed="1" class="speed selected">×1</button><button data-speed="2" class="speed">×2</button><button data-speed="4" class="speed">×4</button></div>

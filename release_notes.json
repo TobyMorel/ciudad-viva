@@ -398,12 +398,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 26 · transferencia y redes faltantes",
-      "detail": "Añadir contenedores y centros de transferencia conectados con rutas, separar materiales recuperados e integrar su venta; después incorporar gas, telecomunicaciones, reparación y respaldo de redes."
+      "title": "Fase 26 · residuos y resiliencia de redes",
+      "detail": "Añadir contenedores, estaciones de transferencia y logística de reciclables. Incorporar fallas operativas, reparación y redundancia para energía, agua, saneamiento, gas y telecomunicaciones."
     },
     {
       "title": "Fase 27 · clima y resiliencia urbana",
-      "detail": "Extender lluvia, inundaciones y eventos con alcance, preparación, daños a infraestructura, respuesta de servicios y recuperación municipal."
+      "detail": "Ampliar lluvia, inundaciones y otros riesgos con preparación, daños a infraestructura, respuesta de servicios y recuperación municipal."
     }
   ]
 }

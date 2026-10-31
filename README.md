@@ -92,13 +92,13 @@ Construí colectores cloacales sobre calles terminadas. La planta depuradora se 
 La fase 26 suma lluvia y escorrentía superficial como circuito físico aparte de las cloacas. La lluvia vuelve cada 24 días: 5 mm en los días 7 y 8, y una tormenta de 18 mm en el día 18. Calles, edificios y terreno determinan el escurrimiento. Los tramos conectados captan hasta 3.300 m³/día de base más capacidad por segmento; la parcela sin drenaje o el exceso de capacidad puede anegarse. Los impactos de tormenta dañan estructuras y calles, consumen caja privada/pública y afectan servicios y aprobación si el evento alcanza escala suficiente. El panel Servicios detalla el balance y la capa azul muestra la red y los anegamientos. Online y Offline usan reglas equivalentes.
 
 
-## Residuos y reciclaje municipal · Alfa 0.46
+## Residuos y reciclaje municipal · Alfa 0.45
 
 La fase 26 incorpora generación diaria por hogares, empleo privado y público, y huéspedes. El servicio inicial recoge hasta 1,15 toneladas por día; un depósito municipal conectado aporta un camión y 0,75 t/día adicionales. La disposición regional comienza con un cupo finito de 900 toneladas. Un relleno sanitario se licita por $9.800, tarda 72 días base, necesita 12 trabajadores y amplía el cupo en 1.800 toneladas.
 
 Cuando la flota no alcanza o se llena la disposición final, los residuos quedan pendientes y aparecen en parcelas viales. Si el retraso supera 3,5% de la población en toneladas (con mínimo de 8 t), los servicios pierden un punto por mes; al superar 12% (mínimo 30 t) cae además la aprobación. La ampliación recupera capacidad de recolección de la basura pendiente. El costo mensual incluye flota, toneladas recibidas y rellenos activos. Ciudad > Servicios muestra las fuentes, carga, capacidad, relleno, camiones y operación. Las instalaciones y los camiones aparecen en el mapa 3D.
 
-Alfa 0.46 añade una planta municipal de reciclaje como obra pública de $14.800 y 88 días base, con 16 puestos. Si tiene acceso vial y conexión a electricidad y agua, procesa hasta 1,25 t/día, recupera hasta 35% de la recolección, reduce el ingreso al relleno y vende el material por $18/t. La operación cuesta $650/mes. Online y Offline comparten el balance. Aún faltan separación doméstica, categorías de materiales, contenedores, estaciones de transferencia y firmas privadas de reciclaje.
+Alfa 0.45 añade una planta municipal de reciclaje como obra pública de $14.800 y 88 días base, con 16 puestos. Si tiene acceso vial y conexión a electricidad y agua, procesa hasta 1,25 t/día, recupera hasta 35% de la recolección, reduce el ingreso al relleno y vende el material por $18/t. La operación cuesta $650/mes. Online y Offline comparten el balance. Aún faltan separación doméstica, categorías de materiales, contenedores, estaciones de transferencia y firmas privadas de reciclaje.
 
 
 ## Redes de gas y telecomunicaciones · Alfa 0.46

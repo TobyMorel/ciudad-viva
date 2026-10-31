@@ -8,9 +8,9 @@ La fase 26 cubre parcialmente energía, agua potable, cloacas, drenaje pluvial, 
 
 ## Próximo sistema
 
-Continuar fase 26 con contenedores y transferencia logística de reciclables, gas y telecomunicaciones, más reparación y respaldo de redes. Luego iniciar fase 27 con clima y riesgos urbanos más amplios. Mantener el foco en mecánicas nuevas y completar los sistemas esenciales antes de una pasada de detalle.
+Siguiente: completar fase 26 con contenedores, transferencia logística de reciclables, reparación y redundancia de redes. Después avanzar fase 27 con riesgos climáticos y respuesta municipal. Retomar más adelante los eventos y atractivos turísticos pendientes de fase 25. Mantener el foco en mecánicas nuevas y cerrar cada circuito esencial antes de una pasada de detalle.
 
-Continuar fase 25 en una pasada posterior con eventos temporales, estacionalidad, llegadas por puerto/ferrocarril, atractivos patrimoniales/naturales y costos/efectos urbanos. Mantener visitantes separados de población residente.
+
 
 ## Verificación pendiente
 

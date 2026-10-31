@@ -586,18 +586,20 @@ def commute_model():
                 if person.get("status")!="buscando" or person["skills"].get("logistica",0)<42 or person.get("expectedMonthlyWage",0)>10:continue
                 path=route_between((home["x"],home["y"]),tuple(line["from"]))
                 if path:candidates_for_line.append((0 if person["id"] in previous else 1,len(path),str(person["id"]),person))
-            for _,_,_,person in sorted(candidates_for_line)[:line.get("buses",1)]:
+            selected=sorted(candidates_for_line)[:line.get("buses",1)*2]
+            # Una unidad presta servicio completo solo si cubre ambos turnos.
+            for index,(_,_,_,person) in enumerate(selected[:len(selected)//2*2]):
                 person.update({"status":"empleado","employerId":f"bus-{line['id']}","employerName":f"Colectivo · {line.get('originName','Línea')}","monthlyWage":10,"attendance":1,"commuteMode":"walk","busLineId":None,"unemployedSinceDay":None,"unemploymentReason":None})
                 line["driverIds"].append(person["id"])
-                line["driverShifts"].append({"personId":person["id"],"window":"07:00–09:00 / 17:00–19:00"})
-        line["effectiveBuses"]=len(line["driverIds"])
+                line["driverShifts"].append({"personId":person["id"],"busIndex":index//2+1,"shift":"mañana" if index%2==0 else "tarde","window":"07:00–09:00" if index%2==0 else "17:00–19:00"})
+        line["effectiveBuses"]=len(line["driverIds"])//2
         line["operational"]=line.get("status")=="active" and len(line.get("route",[]))>1 and line["effectiveBuses"]>0
-        line["pauseReason"]=("Sin conductor con acceso vial y perfil de logística" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexión vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
+        line["pauseReason"]=("Faltan dos conductores compatibles por colectivo para cubrir mañana y tarde" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexión vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
         line["capacity"]=line["effectiveBuses"]*BUS_SEATS
         line["headwayMinutes"]=max(6,math.ceil((max(1,len(line.get("route",[]))-1)*3.6)/max(1,line["effectiveBuses"])))
         line["monthlyOperatingCost"]=line["effectiveBuses"]*BUS_MONTHLY_OPERATING_COST if line["operational"] else 0
         if not line["operational"]:line["monthlyFareRevenue"]=0
-        driver_count+=line["effectiveBuses"]
+        driver_count+=len(line["driverIds"])
     garages=sorted((b for b in state["buildings"] if b.get("kind")=="busGarage" and b.get("status") in ("habilitado","operativo")),key=lambda b:(b["x"],b["y"]))
     free_bays={f"garage-{g['x']}-{g['y']}":g.get("busBayCapacity",4) for g in garages}
     for line in sorted(state["busRoutes"],key=lambda b:str(b.get("id"))):
@@ -706,7 +708,7 @@ def commute_model():
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
     for line in state["busRoutes"]:
         if line.get("status")=="cancelled":continue
-        workplaces.append({"name":f"Colectivo · {line.get('originName','Línea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0),"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"Logística","minimumSkill":42,"offeredWage":10})
+        workplaces.append({"name":f"Colectivo · {line.get('originName','Línea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0)*2,"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"Logística","minimumSkill":42,"offeredWage":10})
     model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":round((staffed+driver_count)/max(1,state["population"]*.42)*100)})
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
     jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
@@ -1253,7 +1255,7 @@ def public_state(player_id=None):
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])
     view["busGarages"]=[{"id":f"garage-{g['x']}-{g['y']}","x":g["x"],"y":g["y"],"name":g.get("name","Cochera municipal"),"capacity":g.get("busBayCapacity",4),"occupied":sum(a["buses"] for line in state["busRoutes"] for a in line.get("garageAssignments",[]) if a["garageId"]==f"garage-{g['x']}-{g['y']}")} for g in state["buildings"] if g.get("kind")=="busGarage" and g.get("status") in ("habilitado","operativo")]
-    view["jobs"]=state["jobs"]+sum(line.get("buses",0) for line in state["busRoutes"] if line.get("status")=="active")
+    view["jobs"]=state["jobs"]+sum(line.get("buses",0)*2 for line in state["busRoutes"] if line.get("status")=="active")
     view["busStopSites"]={line["id"]:bus_stop_sites(line) for line in state.get("busRoutes",[]) if line.get("status") in ("active","paused")}
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
@@ -1295,7 +1297,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.30"
+    server_version="CiudadViva/0.31"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

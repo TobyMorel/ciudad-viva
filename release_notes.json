@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.30",
+  "currentVersion": "0.31",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.31",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Cada colectivo necesita dos residentes diferentes con logística, salario aceptable y acceso vial: uno cubre la mañana 07:00–09:00 y otro la tarde 17:00–19:00. Las personas mantienen un solo empleo y cobran en su hogar.",
+        "La flota, plazas de cochera, capacidad, frecuencia, costo, emisiones y vehículos 3D responden solo a unidades con ambos turnos cubiertos. Si falta una pareja, el vehículo no circula y la línea explica la causa.",
+        "Movilidad muestra los conductores separados por vehículo y turno. Se verificaron recálculos, pausa, reanudación y recarga offline, además de la presentación en escritorio y móvil."
+      ]
+    },
     {
       "version": "0.30",
       "date": "31 de octubre de 2026",
@@ -244,8 +253,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 22 · Relevos y transbordos",
-      "detail": "Crear jornadas diferenciadas de conducción y permitir viajes entre dos líneas con espera, capacidad y tarifa trazables."
+      "title": "Fase 22 · Transbordos",
+      "detail": "Permitir viajes entre dos líneas con una parada de intercambio, tiempos de espera, aforo y tarifa calculados para cada tramo."
     },
     {
       "title": "Fase 22 · Ferrocarril y carga",

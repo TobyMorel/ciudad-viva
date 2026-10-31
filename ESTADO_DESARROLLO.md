@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.42 · 31 de octubre de 2026
+**Entrega:** Alfa 0.43 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -328,4 +328,13 @@ La planta depuradora se licita como obra municipal de cinco etapas, 90 días bas
 
 Se verificaron balances iniciales, carga que excede la capacidad, edificios sin conexión cloacal, falta de suministro de agua, efecto sanitario, licitación y rechazo de tendidos aislados en Online y Offline. Se revisó Servicios y el panel de construcción en móvil y escritorio para confirmar visibilidad y desplazamiento sin solapamiento. LAN entre equipos físicos sigue pendiente.
 
-La fase 26 continúa parcial: drenaje pluvial, residuos, gas, telecomunicaciones, reparación, redundancia y respaldo siguen pendientes.
+Al cerrar Alfa 0.42, la fase 26 continuaba parcial: drenaje pluvial, residuos, gas, telecomunicaciones, reparación, redundancia y respaldo seguían pendientes.
+
+
+## Alfa 0.43 · drenaje pluvial (fase 26, parcial)
+
+Guardados previos migran al esquema 28 y obtienen colectores pluviales siguiendo la red cloacal existente. Los nuevos tramos se colocan sobre calles conectadas desde la salida regional por $155, con $0,70/mes de mantenimiento. Capacidad base: 3.300 m³/día, más 18 m³/día por tramo conectado. El clima cíclico produce 5 mm de lluvia en los días 7 y 8 de cada ciclo de 24 días y 18 mm el día 18. La escorrentía de las parcelas edificadas y calles se pondera por tipo de suelo generado reproduciblemente. Agua no conectada y excedentes causan anegamiento, daños por tormenta y reparaciones; las consecuencias recaen en propietarios, empresas y municipio según quién tenga el activo.
+
+### Verificación Alfa 0.43
+
+Python/JavaScript y JSON pasan validación sintáctica. El servidor confirmó tiempo seco y tormenta, escorrentía y captación por capacidad, daños idempotentes en el día de tormenta y anegamiento al desconectar el drenaje. Offline avanzó al día de tormenta, aplicó el impacto una sola vez y cobró correctamente $155 por un nuevo tramo conectado. Chromium móvil (390×844) mostró Ciudad > Servicios sin desbordamiento horizontal; el contenido excedente queda dentro del área desplazable. No se verificó esta versión en escritorio ni LAN entre equipos físicos.

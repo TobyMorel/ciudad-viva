@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.42
+# Ciudad Viva · Alfa 0.43
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -37,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.42 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.43 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -84,4 +84,9 @@ Las licitaciones permiten construir una central eléctrica de 900 kW y una plant
 
 El agua potable consumida genera aguas residuales. Los edificios conectados a colectores aportan ese caudal a una capacidad de depuración limitada; el resto se registra como descarga sin tratar. La falta de tratamiento reduce cobertura sanitaria y puede bajar servicios y aprobación. El panel Ciudad > Servicios informa caudal, capacidad, tratamiento, descarga y edificios conectados.
 
-Construí colectores cloacales sobre calles terminadas. La planta depuradora se licita por etapas, necesita operarios y debe conectarse a electricidad, agua y cloacas para sumar hasta 260 m³/día. Las redes de cloaca, agua potable y pluvial son sistemas distintos. Drenaje, residuos, gas y telecomunicaciones aún quedan pendientes de la fase 26.
+Construí colectores cloacales sobre calles terminadas. La planta depuradora se licita por etapas, necesita operarios y debe conectarse a electricidad, agua y cloacas para sumar hasta 260 m³/día. Las redes de cloaca, agua potable y pluvial son sistemas distintos. En esa entrega seguían pendientes el drenaje, residuos, gas y telecomunicaciones; el drenaje pluvial se incorporó en Alfa 0.43.
+
+
+## Drenaje pluvial · Alfa 0.43
+
+La fase 26 suma lluvia y escorrentía superficial como circuito físico aparte de las cloacas. La lluvia vuelve cada 24 días: 5 mm en los días 7 y 8, y una tormenta de 18 mm en el día 18. Calles, edificios y terreno determinan el escurrimiento. Los tramos conectados captan hasta 3.300 m³/día de base más capacidad por segmento; la parcela sin drenaje o el exceso de capacidad puede anegarse. Los impactos de tormenta dañan estructuras y calles, consumen caja privada/pública y afectan servicios y aprobación si el evento alcanza escala suficiente. El panel Servicios detalla el balance y la capa azul muestra la red y los anegamientos. Online y Offline usan reglas equivalentes.

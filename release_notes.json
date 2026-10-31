@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.42",
+  "currentVersion": "0.43",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.43",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Fase 26 (parcial): se incorpora drenaje pluvial como red independiente de agua potable y cloacas, con tendido conectado por calles y mantenimiento propio.",
+        "Lluvia determinista y escorrentía de techos/calles se combinan con elevación aproximada y capacidad de colectores; la red captura el caudal conectado y los excedentes forman anegamientos localizados.",
+        "Las tormentas pueden dañar edificios y calles, generar costos de reparación y reducir servicios/aprobación bajo condiciones justificadas. El panel Servicios muestra lluvia, caudal, capacidad, cobertura, parcelas afectadas y costos.",
+        "Online y Offline comparten el circuito; se agregó una capa pluvial azul en el mapa 3D y se migran los guardados al esquema 28."
+      ]
+    },
     {
       "version": "0.42",
       "date": "31 de octubre de 2026",

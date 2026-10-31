@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.42
+# Auditoría del roadmap · Alfa 0.43
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -55,4 +55,11 @@ Alfa 0.40 incorpora el primer circuito de hotelería: una firma privada construy
 Alfa 0.41 inicia fase 26 en Online y Offline. Cables y tuberías se extienden sobre calles conectadas; el suministro asigna capacidad limitada a usos con prioridad, contempla pérdidas/fugas y estacionalidad, y registra costos de mantenimiento. Las plantas agregan capacidad al conectarse a ambas redes. Cobertura insuficiente afecta servicios, aprobación y producción privada; el aeropuerto/hotel requiere niveles mínimos. La fase continúa parcial según las brechas tabuladas.
 
 
-Alfa 0.42 extiende la fase 26 con colectores cloacales independientes, caudal proporcional al agua servida, capacidad de tratamiento limitada y descarga sin tratar medible. Los cortes sanitarios afectan servicios, aprobación y actividad privada; la planta depuradora es una obra de 90 días con empleo, costo operativo y dependencias físicas. Online y Offline comparten la regla. La fase sigue parcial según las brechas de la tabla.
+Alfa 0.43 extiende la fase 26 con colectores cloacales independientes, caudal proporcional al agua servida, capacidad de tratamiento limitada y descarga sin tratar medible. Los cortes sanitarios afectan servicios, aprobación y actividad privada; la planta depuradora es una obra de 90 días con empleo, costo operativo y dependencias físicas. Online y Offline comparten la regla. La fase sigue parcial según las brechas de la tabla.
+
+
+## Alfa 0.43 · drenaje pluvial (fase 26, parcial)
+
+Se añadió un sistema de escorrentía que distingue lluvia, superficie impermeable de calles y edificios, conexión pluvial y elevación aproximada. Los colectores tienen capacidad de base y por tramo; la lluvia no conectada y los excedentes generan agua acumulada en parcelas. Tormentas severas pueden deteriorar edificios y caminos, descontar costos de caja, bajar servicios y afectar aprobación si comprometen servicios cívicos o a una parte relevante de hogares. El panel Servicios incluye caudal, capacidad, cobertura, conexiones, anegamientos y reparación estimada. La capa azul del mapa identifica red y parcelas anegadas.
+
+La fase 26 sigue parcial: residuos, gas, telecomunicaciones, reparación efectiva, redundancia y bombeo avanzado están pendientes.

@@ -199,7 +199,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":27,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"utilities":{"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":28,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"utilities":{"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -284,7 +284,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(27,state.get("version",1))
+    state["version"]=max(28,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     state.setdefault("busRoutes",[])
@@ -466,6 +466,8 @@ def ensure_utility_state():
     utilities.setdefault("waterPipes",roads.copy())
     utilities.setdefault("sewerLines",[list(point) for point in utilities.get("waterPipes",roads)])
     utilities.setdefault("baseWastewaterTreatmentM3Day",180)
+    utilities.setdefault("drainLines",[list(point) for point in utilities.get("sewerLines",roads)])
+    utilities.setdefault("baseDrainageCapacityM3Day",3300)
     utilities.setdefault("basePowerCapacityKw",1200)
     utilities.setdefault("baseWaterCapacityM3Day",180)
     utilities.setdefault("powerLossRate",.06)
@@ -473,7 +475,7 @@ def ensure_utility_state():
     return utilities
 
 def energized_utility_tiles(network):
-    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines"}.get(network,"waterPipes")
+    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines"}.get(network,"waterPipes")
     lines={tuple(point) for point in utilities.get(key,[])};source=(4,10)
     if source not in lines:return set()
     connected={source};queue=[source]
@@ -547,6 +549,40 @@ def calculate_utility_balance(apply_effects=False):
     untreated=max(0,generated-treated)
     sewer_coverage=round(treated/max(1,generated)*100) if generated else 100
     coverage=round((power_delivered/max(1,power_total)+water_delivered/max(1,water_total)+sewer_coverage/100)/3*100)
+    drain_tiles=energized_utility_tiles("drainage")
+    day_cycle=(state.get("day",1)-1)%24
+    rainfall=18 if day_cycle==17 else 5 if day_cycle in (6,7) else 0
+    def terrain_runoff(x,y):
+        value=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
+        if value<-.48:return .96,"bajo"
+        if value>.48:return .90,"compacto"
+        return .78,"firme"
+    runoff_sources=[]
+    for x,y in state.get("roads",[]):
+        runoff_sources.append({"x":x,"y":y,"kind":"road","area":1.0,"coefficient":.97,"height":terrain_runoff(x,y)[1]})
+    for building in buildings:
+        area=2.2 if building.get("kind")=="airport" else 1.8 if building.get("kind") in ("port","hotel") else 1.2
+        coefficient,height=terrain_runoff(building["x"],building["y"])
+        runoff_sources.append({"x":building["x"],"y":building["y"],"kind":"building","buildingKind":building.get("kind"),"name":building.get("name",building.get("kind","edificio")),"area":area,"coefficient":coefficient,"height":height})
+    for source_row in runoff_sources:
+        x,y=source_row["x"],source_row["y"]
+        source_row["runoffM3"]=round(rainfall*5*source_row["area"]*source_row["coefficient"],1)
+        source_row["connected"]=(x,y) in drain_tiles or any((x+dx,y+dy) in drain_tiles for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
+    total_runoff=sum(row["runoffM3"] for row in runoff_sources)
+    connected_runoff=sum(row["runoffM3"] for row in runoff_sources if row["connected"])
+    unconnected_runoff=max(0,total_runoff-connected_runoff)
+    drainage_capacity=utilities["baseDrainageCapacityM3Day"]+len(drain_tiles)*18
+    captured=min(connected_runoff,drainage_capacity)
+    overflow=max(0,connected_runoff-captured)
+    standing_water=unconnected_runoff+overflow
+    flood_rows=[row for row in runoff_sources if row["runoffM3"]>0 and not row["connected"]]
+    overflow_left=overflow
+    for row in sorted((r for r in runoff_sources if r["runoffM3"]>0 and r["connected"]),key=lambda r:(0 if r["height"]=="bajo" else 1 if r["height"]=="firme" else 2,r["y"],r["x"])):
+        if overflow_left<=0:break
+        flood_rows.append(row);overflow_left=max(0,overflow_left-row["runoffM3"])
+    flooded_tiles=sorted({(row["x"],row["y"]) for row in flood_rows},key=lambda xy:(xy[1],xy[0]))
+    flooded_buildings=[{"x":row["x"],"y":row["y"],"kind":row.get("buildingKind"),"name":row.get("name"),"terrain":row["height"],"runoffM3":round(row["runoffM3"]),"repairCost":round(55+row["runoffM3"]*.035)} for row in flood_rows if row["kind"]=="building"]
+    drainage_coverage=round(captured/max(1,total_runoff)*100) if total_runoff else 100
     for building in buildings:
         access=building["utilityAccess"]
         factor=min(access["powerServedPct"],access["waterServedPct"],access["wastewaterTreatedPct"])/100
@@ -557,8 +593,9 @@ def calculate_utility_balance(apply_effects=False):
         "power":{"installedKw":round(power_capacity),"usableKw":round(power_usable),"demandKw":round(power_total),"connectedDemandKw":round(power_connected),"servedKw":round(power_delivered),"shortageKw":round(max(0,power_total-power_delivered)),"lossPct":round(utilities["powerLossRate"]*100),"connectedSegments":len(power_tiles),"connectedBuildings":sum(b["utilityAccess"]["powerConnected"] for b in buildings)},
         "water":{"installedM3Day":round(water_capacity),"usableM3Day":round(water_usable),"demandM3Day":round(water_total),"connectedDemandM3Day":round(water_connected),"servedM3Day":round(water_delivered),"shortageM3Day":round(max(0,water_total-water_delivered)),"leakPct":round(utilities["waterLeakRate"]*100),"connectedSegments":len(water_tiles),"connectedBuildings":sum(b["utilityAccess"]["waterConnected"] for b in buildings)},
         "wastewater":{"treatmentCapacityM3Day":round(wastewater_capacity),"generatedM3Day":round(generated),"connectedM3Day":round(sewer_flow),"treatedM3Day":round(treated),"untreatedM3Day":round(untreated),"coveragePct":sewer_coverage,"connectedSegments":len(sewer_tiles),"connectedBuildings":sum(b["utilityAccess"]["sewerConnected"] for b in buildings),"plants":sum(b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")) for b in buildings)},
+        "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings))},
         "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
-        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9)}
+        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7)}
     utilities["report"]=report
     if apply_effects:
         if coverage<85:
@@ -574,6 +611,31 @@ def calculate_utility_balance(apply_effects=False):
             ev("Déficit en redes de servicios",f"La cobertura efectiva es {coverage}%. Faltan {report['power']['shortageKw']} kW y {report['water']['shortageM3Day']} m³/día; las pérdidas incluyen cables y fugas.")
             utilities["lastShortageNoticeDay"]=state.get("day",0)
     return report
+
+def apply_drainage_impacts():
+    utilities=ensure_utility_state();report=utilities.get("report",{}).get("drainage",{});day=state.get("day",0)
+    if report.get("rainfallMm",0)<12 or report.get("standingWaterM3Day",0)<=0 or utilities.get("lastDrainageImpactDay")==day:return
+    homes_affected=0;critical_flood=False;public_cost=0;private_cost=0
+    for row in report.get("floodedBuildings",[]):
+        building=next((b for b in state.get("buildings",[]) if b.get("x")==row["x"] and b.get("y")==row["y"]),None)
+        if not building:continue
+        cost=int(row["repairCost"]);building["floodEvents"]=building.get("floodEvents",0)+1;building["lastFloodDay"]=day;building["floodRepairCost"]=building.get("floodRepairCost",0)+cost;building["quality"]=max(35,int(building.get("quality",75))-2)
+        if building.get("kind")=="home":
+            homes_affected+=max(0,int(building.get("occupants",0)));building["householdCash"]=max(0,building.get("householdCash",0)-cost)
+        elif building.get("business"):
+            firm=building["business"];firm["cash"]=firm.get("cash",0)-cost;firm["lastFloodRepairCost"]=firm.get("lastFloodRepairCost",0)+cost;private_cost+=cost
+        else:
+            public_cost+=cost;critical_flood|=building.get("kind")=="civic"
+    road_tiles={tuple(xy) for xy in report.get("floodedTiles",[])}
+    for asset in state.get("roadAssets",[]):
+        if (asset.get("x"),asset.get("y")) in road_tiles:
+            asset["quality"]=max(30,int(asset.get("quality",75))-4);asset["monthlyCost"]=asset.get("monthlyCost",0)+2;state["monthlyExpenses"]+=2;public_cost+=45
+    state["money"]=max(0,state.get("money",0)-public_cost)
+    affected_count=len(report.get("floodedBuildings",[]))
+    if affected_count:state["services"]=max(0,state.get("services",0)-min(3,max(1,math.ceil(affected_count/4))))
+    if critical_flood or homes_affected>=max(25,round(state.get("population",0)*.08)):state["approval"]=max(0,state.get("approval",0)-1)
+    utilities["lastDrainageImpactDay"]=day
+    ev("Anegamiento por tormenta",f"La lluvia de {report['rainfallMm']} mm dejó {len(road_tiles)} parcelas anegadas. {affected_count} edificios recibieron daños; reparaciones estimadas $ {report.get('repairCostEstimate',0)+public_cost:,} y servicios -{min(3,max(1,math.ceil(affected_count/4)) if affected_count else 0)} puntos. Cloacas y pluviales son redes independientes.".replace(",","."))
 
 def bus_line_route(line):
     base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
@@ -1568,6 +1630,7 @@ def tick_one_day():
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    calculate_utility_balance();apply_drainage_impacts()
     month=(day-1)//30
     if month>state["lastMonth"]:
         for home in state["buildings"]:
@@ -1987,15 +2050,15 @@ class Handler(BaseHTTPRequestHandler):
                     ev("Pedido de materiales",f"{project['contractor']} compró {detail} a {supplier} por $ {cost:,}; entrega estimada en {eta} días por {distance} tramos (con congestión estimada). Prioridad de descarga: {priority}.".replace(",","."))
                 elif action=="utilityLine":
                     network=data.get("network");x=int(data.get("x",-1));y=int(data.get("y",-1))
-                    if network not in ("power","water","sewer") or [x,y] not in state["roads"]:self._send(409,{"error":"El tendido necesita un tramo de calle terminado y una red válida."});return
-                    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines"}[network];cost={"power":165,"water":130,"sewer":145}[network]
+                    if network not in ("power","water","sewer","drainage") or [x,y] not in state["roads"]:self._send(409,{"error":"El tendido necesita un tramo de calle terminado y una red válida."});return
+                    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines"}[network];cost={"power":165,"water":130,"sewer":145,"drainage":155}[network]
                     if [x,y] in utilities[key]:self._send(409,{"error":"Este tramo ya está conectado a esa red."});return
                     connected=energized_utility_tiles(network)
                     if not any((x+dx,y+dy) in connected for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):self._send(409,{"error":"El nuevo tramo debe prolongar una red conectada al sistema."});return
                     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
                     if available<cost:self._send(409,{"error":f"Quedan $ {available}; el tendido cuesta $ {cost} además de los contratos."});return
-                    state["money"]-=cost;utilities[key].append([x,y]);network_name={"power":"eléctrica","water":"de agua","sewer":"cloacal"}[network]
-                    maintenance={"power":1.2,"water":.8,"sewer":.9}[network]
+                    state["money"]-=cost;utilities[key].append([x,y]);network_name={"power":"eléctrica","water":"de agua","sewer":"cloacal","drainage":"pluvial"}[network]
+                    maintenance={"power":1.2,"water":.8,"sewer":.9,"drainage":.7}[network]
                     ev("Red de servicios ampliada",f"Se conectó un tramo {network_name} sobre la calle {x+1},{y+1}; mantenimiento aproximado $ {maintenance:.1f}/mes.")
                 elif action=="zone":
                     x=int(data.get("x",-1)); y=int(data.get("y",-1)); kind=data.get("kind")

@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.25",
+  "currentVersion": "0.26",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.26",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Las líneas de autobús incorporan paradas automáticas junto a hogares y empleos que están al paso del recorrido.",
+        "Una flota ahora puede recoger pasajeros de varios barrios y llevarlos a distintos puestos; la elección compara acceso a pie, espera, tramo en bus y tarifa.",
+        "Las paradas y usuarios compartidos se recalculan al reconectar o cambiar calles. Online y Offline guardan las rutas con compatibilidad para líneas de Alfa 0.25."
+      ]
+    },
     {
       "version": "0.25",
       "date": "31 de octubre de 2026",

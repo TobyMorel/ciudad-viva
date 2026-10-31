@@ -443,6 +443,7 @@ def commute_model():
     for line in state["busRoutes"]:
         path=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
         line["route"]=path or []
+        line["stops"]=bus_line_stops(line["route"])
         line["operational"]=bool(line.get("status")=="active" and path)
         line["pauseReason"]="Sin conexión vial entre las paradas" if line.get("status")=="active" and not path else line.get("pauseReason")
         line["ridersThisPass"]=0
@@ -536,20 +537,34 @@ def commute_model():
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
-        line=next((b for b in state.get("busRoutes",[]) if b.get("operational") and b.get("ridersThisPass",0)<b.get("capacity",0) and b.get("from")==[emp["home"]["x"],emp["home"]["y"]] and b.get("to")==[emp["site"]["x"],emp["site"]["y"]]),None)
+        line=None;bus_access=0;bus_distance=emp["distance"]
+        for candidate in state.get("busRoutes",[]):
+            if not candidate.get("operational") or candidate.get("ridersThisPass",0)>=candidate.get("capacity",0):continue
+            path=candidate.get("route",[])
+            if len(path)<2:continue
+            def nearest_access(point):
+                choices=[(abs(point[0]-node[0])+abs(point[1]-node[1]),index) for index,node in enumerate(path)]
+                return min(choices)
+            access_from,index_from=nearest_access((emp["home"]["x"],emp["home"]["y"]))
+            access_to,index_to=nearest_access((emp["site"]["x"],emp["site"]["y"]))
+            access=access_from+access_to
+            if access>2 or index_from==index_to:continue
+            ride_distance=max(1,abs(index_to-index_from)-1)
+            bus_time=access*4+candidate["headwayMinutes"]/2+ride_distance*1.8+candidate.get("fare",BUS_FARE)*6
+            alternative_time=2+emp["distance"]*4 if emp["mode"]=="walk" else 7+emp["distance"]*2.5*1.25
+            if bus_time<alternative_time:
+                line=candidate;bus_access=access;bus_distance=ride_distance;break
         if line:
-            distance=emp["distance"];bus_time=2+line["headwayMinutes"]/2+distance*1.8+line.get("fare",BUS_FARE)*6;auto_time=7+distance*2.5*1.25
-            if bus_time<auto_time:line["ridersThisPass"]+=1;emp["mode"]="bus";emp["busLineId"]=line["id"];emp["busLine"]=line
-            else:line=None
-        if not line:emp["busLineId"]=None
-        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"])
+            line["ridersThisPass"]+=1;emp["mode"]="bus";emp["busLineId"]=line["id"];emp["busLine"]=line;emp["busAccessSegments"]=bus_access;emp["busDistance"]=bus_distance;emp["person"].update({"commuteMode":"bus","busLineId":line["id"]})
+        if not line:emp["busLineId"]=None;emp["person"].update({"commuteMode":emp["mode"],"busLineId":None})
+        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"],emp.get("busLineId"))
         grouped.setdefault(group,[]).append(emp)
         distance_total+=emp["distance"]
     walking=auto_commuters=bus_commuters=vehicles=0;emissions=0.0
-    for (hx,hy,sx,sy,mode),items in grouped.items():
-        route=items[0]["route"];distance=items[0]["distance"];factor=1.0
+    for (hx,hy,sx,sy,mode,line_id),items in grouped.items():
+        route=items[0]["route"];distance=items[0].get("busDistance",items[0]["distance"]);factor=1.0
         line=items[0].get("busLine") if mode=="bus" else None
-        walk_access=2;wait=0 if mode=="walk" else round(line.get("headwayMinutes",60)/2) if line else 3;ride=round(distance*(4 if mode=="walk" else 1.8 if line else 2.5)*factor);parking=0 if mode in ("walk","bus") else 2
+        walk_access=items[0].get("busAccessSegments",0)*4 if line else 2;wait=0 if mode=="walk" else round(line.get("headwayMinutes",60)/2) if line else 3;ride=round(distance*(4 if mode=="walk" else 1.8 if line else 2.5)*factor);parking=0 if mode in ("walk","bus") else 2
         minutes=walk_access+wait+ride+parking;attendance=max(.25,1-max(0,minutes-15)/240)
         trip_vehicles=math.ceil(len(items)/1.4) if mode=="auto" else 0
         trip_emissions=round(2*trip_vehicles*distance*.18,2)
@@ -581,14 +596,15 @@ def commute_model():
     # Now that segment flows are cached, congestion can include both commuters and trucks.
     minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
     for trip in commutes:
-        factor=1.0 if trip["mode"]=="walk" else traffic_factor(trip["route"])
+        bus_line=next((b for b in state.get("busRoutes",[]) if b.get("id")==trip.get("busLineId")),None) if trip["mode"]=="bus" else None
+        factor=1.0 if trip["mode"]=="walk" else traffic_factor(bus_line["route"] if bus_line else trip["route"])
         ride_rate=4 if trip["mode"]=="walk" else 1.8 if trip["mode"]=="bus" else 2.5
         minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]
         trip["rideMinutes"]=round(trip["distance"]*ride_rate*factor)
         trip["estimatedMinutes"]=minutes
         attendance=max(.25,1-max(0,minutes-15)/240)
         trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
-        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"])
+        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"],trip.get("busLineId"))
         for emp in grouped.get(group,[]):
             emp["attendance"]=attendance
             emp["earnedWage"]=round(emp["wage"]*attendance)
@@ -625,6 +641,19 @@ def commute_model():
         "completedSearches30Days":sum(1 for item in state.get("laborHistory",[]) if state.get("day",1)-30<item.get("day",0)<=state.get("day",1))}
     return model
 
+def bus_line_stops(path):
+    if not path:return []
+    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot") and b.get("status","operativo") in ("operativo","habilitado") and (b.get("kind")!="shop" or b.get("business",{}).get("status")=="abierto")]
+    stops=[]
+    for building in buildings:
+        access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(path))
+        if access>1:continue
+        stops.append({"index":index,"at":path[index],"name":building.get("name",building.get("kind","Parada")),"kind":building["kind"],"accessSegments":access})
+    unique={}
+    for stop in sorted(stops,key=lambda x:(x["index"],x["accessSegments"],x["name"])):
+        unique.setdefault((stop["index"],tuple(stop["at"])),stop)
+    return list(unique.values())
+
 def bus_route_catalog(commute=None):
     commute=commute or commute_model();grouped={}
     for trip in commute["routes"]:
@@ -638,7 +667,7 @@ def bus_route_catalog(commute=None):
         origin=next((b.get("name","Barrio residencial") for b in state["buildings"] if b.get("kind")=="home" and [b["x"],b["y"]]==row["from"]),"Barrio residencial")
         destination=next((b.get("name",b.get("kind","Destino")) for b in state["buildings"] if [b["x"],b["y"]]==row["to"]),"Centro de empleo")
         existing=next((b for b in state.get("busRoutes",[]) if b.get("from")==row["from"] and b.get("to")==row["to"] and b.get("status")!="cancelled"),None)
-        result.append({**row,"id":line_id,"originName":origin,"destinationName":destination,"buses":1,"purchaseCost":BUS_PURCHASE_COST,"canStart":not existing and available>=BUS_PURCHASE_COST,"reason":"Ya existe una línea para este corredor" if existing else "Fondos municipales comprometidos" if available<BUS_PURCHASE_COST else ""})
+        result.append({**row,"id":line_id,"originName":origin,"destinationName":destination,"stops":bus_line_stops(row["route"]),"buses":1,"purchaseCost":BUS_PURCHASE_COST,"canStart":not existing and available>=BUS_PURCHASE_COST,"reason":"Ya existe una línea para este corredor" if existing else "Fondos municipales comprometidos" if available<BUS_PURCHASE_COST else ""})
     return result[:8]
 
 def traffic_factor(route, exclude_order=None):
@@ -1185,8 +1214,8 @@ class Handler(BaseHTTPRequestHandler):
                         self._send(409,{"error":"Ya existe una línea para ese corredor."});return
                     cost=buses*BUS_PURCHASE_COST;reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
                     if available<cost:self._send(409,{"error":f"La flota cuesta $ {cost:,} y quedan $ {available:,} después de contratos.".replace(",",".")});return
-                    line={"id":uuid.uuid4().hex,"from":offer["from"],"to":offer["to"],"route":offer["route"],"originName":offer["originName"],"destinationName":offer["destinationName"],"buses":buses,"capacity":buses*BUS_SEATS,"headwayMinutes":max(6,math.ceil((offer["distance"]*3.6)/buses)),"fare":BUS_FARE,"status":"active","operational":True,"dailyRiders":0,"monthlyFareRevenue":0,"monthlyOperatingCost":buses*BUS_MONTHLY_OPERATING_COST,"purchaseCost":cost,"createdDay":state["day"]}
-                    state["money"]-=cost;state["busRoutes"].append(line);ev("Línea de autobús inaugurada",f"{line['originName']} – {line['destinationName']} · {buses} colectivo(s) · frecuencia cada {line['headwayMinutes']} min · inversión $ {cost:,}. Operación $ {line['monthlyOperatingCost']:,}/mes.".replace(",","."))
+                    line={"id":uuid.uuid4().hex,"from":offer["from"],"to":offer["to"],"route":offer["route"],"stops":offer["stops"],"originName":offer["originName"],"destinationName":offer["destinationName"],"buses":buses,"capacity":buses*BUS_SEATS,"headwayMinutes":max(6,math.ceil((offer["distance"]*3.6)/buses)),"fare":BUS_FARE,"status":"active","operational":True,"dailyRiders":0,"monthlyFareRevenue":0,"monthlyOperatingCost":buses*BUS_MONTHLY_OPERATING_COST,"purchaseCost":cost,"createdDay":state["day"]}
+                    state["money"]-=cost;state["busRoutes"].append(line);ev("Línea de autobús inaugurada",f"{line['originName']} – {line['destinationName']} · {buses} colectivo(s) · {len(line['stops'])} paradas · frecuencia cada {line['headwayMinutes']} min · inversión $ {cost:,}. Operación $ {line['monthlyOperatingCost']:,}/mes.".replace(",","."))
                 elif action in ("pauseBusRoute","resumeBusRoute","cancelBusRoute"):
                     line=next((b for b in state.setdefault("busRoutes",[]) if b.get("id")==str(data.get("id"))),None)
                     if not line:self._send(404,{"error":"La línea ya no existe."});return

@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.74",
+  "currentVersion": "0.75",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.75",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 33 (parcial): la demanda regional finita puede dar lugar a una propuesta para abrir un comercio en una parcela comercial conectada. La oferta exige ventas sin cubrir, capital privado, reserva operativa, permiso pagable y cuadrilla disponible; aceptar inicia la obra existente por etapas, con materiales, inspección y contratación antes de abrir.",
+        "Las ofertas tienen vencimiento y rechazar una no reserva terreno ni gasta dinero. La propuesta se conserva en Online y Offline; guardados migran al esquema 59. La fase 33 sube de 25% a 30% según el criterio por fase ya documentado.",
+        "Al inspeccionar una vivienda se muestra su padrón con situación laboral, empleador, ingresos y transporte. Peatones y vehículos seleccionables muestran ruta, motivo de viaje y pasajeros cuando existen perfiles vinculados.",
+        "Las categorías de Ciudad ahora se desplazan horizontalmente con ratón, rueda y gesto táctil y conservan la categoría activa. La guía CONTINUIDAD_IA.md registra arquitectura, parámetros, verificaciones y punto de relevo."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.74",
       "date": "2026-10-31",
@@ -646,7 +657,7 @@
   "upcoming": [
     {
       "title": "Fase 33 · inversiones y ciclo económico de largo plazo",
-      "detail": "Vincular inversión regional y apertura de empresas a los mercados finitos ya agregados; ensayar supervivencia, cierres y obras entre mandatos en trayectorias de décadas."
+      "detail": "Probar trayectorias reproducibles de 30 años: encadenar mercados finitos, propuestas de inversión, permisos, obras, cierres y supervivencia empresarial con elecciones y envejecimiento; cubrir los escenarios pequeños, metropolitanos, portuarios y turísticos."
     },
     {
       "title": "Fases abiertas · cerrar circuitos causales",
@@ -958,13 +969,12 @@
     {
       "phase": 33,
       "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
-      "progress": 25,
-      "summary": "Edades y jubilación anual, nacimientos con capacidad/caja familiar, deterioro privado, renovación contratada, resumen barrial por década y reparto finito de exportaciones entre comercios según acceso y competitividad.",
+      "progress": 30,
+      "summary": "Edades y rehabilitación, mercado regional finito e inversión privada condicionada con obras comerciales por etapas",
       "pending": [
-        "Verificar escenario continuo de 30 años sin crecimiento imposible ni duplicación de recursos.",
-        "Conectar transformaciones con ciclos económicos, inversión, nuevos negocios y evolución inmobiliaria.",
-        "Probar trayectorias pequeña, metropolitana, portuaria y turística bajo reglas comunes.",
-        "Evaluar cómo inversiones de largo plazo continúan entre mandatos y afectan caja, empleo, materiales y mantenimiento."
+        "Ensayar partidas de 30 años y ciclos económicos entre mandatos",
+        "Completar cierres y aperturas empresariales bajo demanda, capital e insumos",
+        "Validar escenarios pequeños, metropolitanos, portuarios y turísticos"
       ]
     }
   ]

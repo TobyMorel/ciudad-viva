@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.74 · 31 de octubre de 2026
+**Entrega:** Alfa 0.75 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -461,3 +461,20 @@ Ciudad > Puerto presenta volumen potencial, presupuesto, destinos competidores, 
 - Motor Offline en Chromium: guardado de esquema 57 migró a 58, avanzó del día 29 al cierre mensual con salida conectada y seis comercios; se asignaron y vendieron 116 de 116 unidades, con $1.624 de $2.826 de presupuesto capturado. No hubo errores JavaScript.
 - Interfaz Puerto: Chromium a 390×844 y 1440×900 comprobó texto, panel completo desplazable y ausencia de desborde horizontal o de popup. La inspección visual móvil mostró encabezados, navegación, informe y embarques legibles. Se corrigió puntuación redundante en la guía de acceso.
 - LAN entre dos equipos físicos, Vercel y aceptación de fase 33 a 30 años quedan pendientes.
+
+
+## Alfa 0.75 · inversión privada y selección de habitantes (fase 33, parcial)
+
+El mercado regional finito puede generar una propuesta para un comercio cuando quedan al menos 12 ventas mensuales sin cubrir, hay una parcela comercial libre conectada al corredor de salida, la caja privada cubre construcción más reserva operativa, una empresa constructora tiene capacidad y siete trabajadores, y el municipio puede pagar el permiso. La oferta expira en 90 días; rechazar no consume dinero ni terreno y abre un enfriamiento de 90 días. Aceptarla verifica el identificador vigente y crea un proyecto privado real: permiso a la tesorería, capital al circuito de obra, constructor, cuadrilla, materiales/etapas e inspección previa a apertura. Disponible Online y Offline, esquema 59.
+
+Al seleccionar una vivienda, el panel muestra su padrón con edad, estado laboral, empleador, salario y transporte disponible. Peatones y vehículos con ruta simulada son seleccionables en el mapa y muestran actividad, ruta y perfiles de pasajeros cuando existen. Los vehículos ambientales sin perfil siguen siendo decorativos. La navegación de categorías de Ciudad se desplaza horizontalmente con rueda y gesto táctil; al cambiar de categoría la pestaña activa permanece visible.
+
+Avance fase 33: 30% orientativo bajo el criterio fijo por fase. Falta comprobar trayectorias de 30 años, supervivencia empresarial y ciclos entre mandatos, junto con escenarios pequeños, metropolitanos, portuarios y turísticos. El progreso global permanece sin estimar: faltan pesos globales estables basados en criterios de aceptación verificables para todas las fases.
+
+### Verificación Alfa 0.75
+
+- `python -m py_compile server.py`, `node --check` en `offline.js`, `game.js` y `world3d.js`, y análisis JSON del historial: correctos. Guardados Online/Offline actualizan esquema 59.
+- Online: API creó una propuesta con ventas regionales sin atender; aceptación exacta inició contrato privado con siete trabajadores, cobró el permiso y registró el costo privado; el segundo intento de aceptar la misma oferta fue rechazado como duplicado.
+- Offline: Chromium acelerado cruzó el cierre mensual, generó oferta en parcela conectada (día 31, 35 unidades potenciales pendientes en el informe; una oferta vigente y vencimiento 90 días), y aceptó esa inversión. La obra quedó privada con siete trabajadores; tesorería pasó de $49.704 a $49.272 (permiso $432) y capital privado de $26.000 a $22.832 (costo contractual $3.168). La prueba usó un guardado controlado y no simula 30 años.
+- Chromium 390×844 y 1440×900: el panel Ciudad cabe sin overflow horizontal del documento; la tira de categorías supera el ancho disponible, sus etiquetas no se recortan y puede desplazarse. Captura móvil revisada. El contenido de roster y actores está vinculado a perfiles en el código; aún falta una pasada manual de inspección sobre hogares y actores en un mapa renderizado con la escena final.
+- No se probó LAN entre dos equipos físicos ni Vercel. Esas comprobaciones siguen pendientes.

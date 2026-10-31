@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.74
+# Auditoría del roadmap · Alfa 0.75
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -253,3 +253,8 @@ Continuar la fase 33: ejecutar escenarios reproducibles de 30 años y conectar l
 
 
 Alfa 0.74 agrega mercados de exportación mensuales finitos en Online y Offline. El reparto por comercio pondera personal, precio, condición, servicios y ruta a salida vial/puerto; volumen y presupuesto comprador limitan ventas e ingresos. Persistencia en esquema 58; fase 33 pasa de 20% a 25% orientativo. Verificación de esta entrega documentada en ESTADO_DESARROLLO.md.
+
+
+### Fase 33 · Alfa 0.75: inversión privada condicionada (parcial, 30%)
+
+A la demanda externa finita se suma una oferta para abrir un comercio si hay ventas regionales sin cubrir, parcela zonificada conectada, presupuesto privado y reserva, permiso municipal y cuadrilla libre. Aprobar crea una obra con contratista, siete trabajadores, costo y plazo; el comercio solo abre tras el flujo de materiales, construcción e inspección existente. La oferta expira o puede rechazarse sin gasto. Implementado en Online y Offline, esquema 59. Sigue sin verificar el ciclo de 30 años y escenarios de la fase. Verificaciones específicas de código e interfaz se anotan en `ESTADO_DESARROLLO.md`.

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.74
+# Ciudad Viva · Alfa 0.75
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -197,3 +197,10 @@ Verificación de la entrega: compilación, prueba del ciclo de edad y renovació
 ## Mercado regional finito · Alfa 0.74
 
 Los comercios asignan sus exportaciones entre tres mercados regionales con volúmenes y presupuestos mensuales finitos. Su participación depende de personal, precio, estado, servicios y acceso a la salida vial o al puerto. Las ventas exportadas consumen esa asignación; el ingreso no supera el presupuesto comprador, de modo que el mercado externo no crea demanda ni dinero ilimitados. La vista Ciudad > Puerto muestra destinos, participación y resultado del último mes. Implementado en Online y Offline, con persistencia en el esquema 58.
+
+
+## Alfa 0.75 · inversión privada y habitantes seleccionables
+
+La demanda regional no atendida puede atraer una propuesta de comercio, sujeta a parcela comercial y vial, capital privado, reserva, permiso y cuadrilla. Aceptarla inicia la obra por etapas con contratista, recursos, plazo e inspección; no aparece una empresa terminada instantáneamente. En hogares se consulta su padrón y en peatones/vehículos simulados se consultan actividad, ruta y pasajeros disponibles. Las categorías de Ciudad se desplazan en horizontal con rueda y gesto táctil. Implementado en ambos modos; guardados migran al esquema 59. La fase 33 sigue parcial y falta demostrar décadas de simulación y escenarios de aceptación.
+
+Para retomar el desarrollo en otra sesión o con otra IA, consulta [CONTINUIDAD_IA.md](CONTINUIDAD_IA.md).

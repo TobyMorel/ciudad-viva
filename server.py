@@ -203,7 +203,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":37,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":38,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -290,7 +290,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(37,state.get("version",1))
+    state["version"]=max(38,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
@@ -656,15 +656,79 @@ def ensure_climate_state():
     climate.setdefault("region","Costa templada de Puerto Claro")
     climate.setdefault("forecast",None)
     climate.setdefault("preparedForDay",None)
+    climate.setdefault("heatForecast",None)
+    climate.setdefault("droughtForecast",None)
+    climate.setdefault("coolingPreparedForDay",None)
+    climate.setdefault("waterRestrictionsTarget",None)
+    climate.setdefault("waterRestrictions",False)
     return climate
+
+def climate_year_targets(day):
+    year_start=((max(1,int(day))-1)//360)*360+1
+    heat_day=year_start+24
+    drought_day=year_start+45
+    if day>=heat_day+5:heat_day+=360
+    if day>=drought_day+30:drought_day+=360
+    return heat_day,drought_day
+
+def heat_exposure(x,y):
+    roads={tuple(p) for p in state.get("roads",[])}
+    occupied=roads|{(b.get("x"),b.get("y")) for b in state.get("buildings",[])}|{(p.get("x"),p.get("y")) for p in state.get("projects",[])}
+    shade=0
+    for tx in range(max(1,x-1),min(22,x+1)+1):
+        for ty in range(max(1,y-1),min(18,y+1)+1):
+            if (tx,ty) in occupied or tx>=24 or (ty<3 and tx>18):continue
+            value=math.sin((tx*97+ty*53)*127.1+78.233)*43758.5453
+            if value-math.floor(value)<=.27:shade+=1
+    terrain=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
+    exposure=max(.65,min(1.5,1.35-min(5,shade)*.1+(0.12 if terrain<-.48 else 0)))
+    return round(exposure,2),shade
+
+def apply_climate_impacts():
+    climate=ensure_climate_state();day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
+    forecast=climate.get("heatForecast")
+    if forecast and day==forecast.get("targetDay") and forecast.get("status")=="pronosticada":
+        expected=max(0,int(forecast.get("expectedHealthCases",0)));centers=[]
+        try:workplaces=commute_model().get("workplaces",[])
+        except Exception:workplaces=[]
+        for building in state.get("buildings",[]):
+            if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
+            workplace=next((w for w in workplaces if w.get("x")==building.get("x") and w.get("y")==building.get("y") and w.get("staffedJobs",0)>=2),None)
+            if workplace and building.get("utilityAccess",{}).get("powerServedPct",0)>=75 and route_between((4,10),(building["x"],building["y"])):centers.append({"name":building.get("name","Centro municipal"),"x":building["x"],"y":building["y"],"capacity":min(100,max(40,workplace["staffedJobs"]*2))})
+        cooling_active=climate.get("coolingPreparedForDay")==day
+        shelter_capacity=sum(c["capacity"] for c in centers) if cooling_active else 0
+        sheltered=min(expected,shelter_capacity)
+        actual=max(0,expected-round(sheltered*.72))
+        forecast.update({"status":"ocurrida","actualHealthCases":actual,"shelteredResidents":sheltered,"shelterCapacity":shelter_capacity,"coolingCenters":centers if cooling_active else []})
+        if actual:
+            if actual>=max(8,round(state.get("population",0)*.012)):state["services"]=max(0,state.get("services",0)-1)
+            if actual>=max(25,round(state.get("population",0)*.05)):state["approval"]=max(0,state.get("approval",0)-1)
+        ev("Ola de calor · balance sanitario",f"El episodio dejó {actual} consultas estimadas por estrés térmico; {sheltered} residentes tuvieron refugio con electricidad y personal. Exposición prevista: {forecast.get('exposedPopulation',0)} personas en {len(forecast.get('exposedHomes',[]))} sectores.")
+    drought=climate.get("droughtForecast")
+    if drought and day==drought.get("targetDay") and drought.get("status")=="pronosticada":
+        drought.update({"status":"activa","endDay":day+30})
+        ev("Sequía regional · fuente reducida",f"La estación seca reduce 45% la captación de agua durante 30 días. Capacidad útil prevista: {drought.get('effectiveCapacityM3Day',0)} m³/día frente a demanda de {drought.get('expectedDemandM3Day',0)} m³/día. La restricción comercial o los camiones cisterna pueden aliviar la red.")
+    if drought and drought.get("status")=="activa" and day>=drought.get("endDay",day):
+        drought["status"]="finalizada";ev("Fin de la sequía regional","La captación de agua recuperó su capacidad estacional normal.")
+    if drought and drought.get("status")=="activa" and day-climate.get("lastDroughtImpactDay",-99)>=10:
+        exposed=sum(b.get("occupants",0)*(1-b.get("utilityAccess",{}).get("waterServedPct",0)/100) for b in state.get("buildings",[]) if b.get("kind")=="home")
+        drought["residentsWithoutFullWaterService"]=round(exposed)
+        if exposed>=max(20,state.get("population",0)*.08):
+            state["services"]=max(0,state.get("services",0)-1)
+            if exposed>=max(50,state.get("population",0)*.2):state["approval"]=max(0,state.get("approval",0)-1)
+            ev("Estrés de agua en hogares",f"La sequía dejó a {round(exposed)} residentes con cobertura incompleta. La capacidad de captación y las restricciones determinan cuánto dura el déficit.")
+        climate["lastDroughtImpactDay"]=day
 
 def calculate_utility_balance(apply_effects=False):
     utilities=ensure_utility_state();climate=ensure_climate_state()
     buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     month=((state.get("day",1)-1)//30)%12
     summer=month in (11,0,1)
-    seasonal_power=1.1 if summer else 1.0
-    seasonal_water=1.12 if summer else 1.0
+    day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
+    heat_active=heat_day<=day<heat_day+5;drought_active=drought_day<=day<drought_day+30
+    restrictions_active=bool(climate.get("waterRestrictions") and climate.get("waterRestrictionsTarget")==drought_day)
+    seasonal_power=(1.1 if summer else 1.0)*(1.22 if heat_active else 1.0)
+    seasonal_water=(1.12 if summer else 1.0)*(1.18 if heat_active else 1.0)
     def demand(building):
         kind=building.get("kind");occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
         workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
@@ -684,6 +748,7 @@ def calculate_utility_balance(apply_effects=False):
     for building in buildings:
         kw,m3=demand(building)
         kind=building.get("kind")
+        if restrictions_active and kind in ("shop","hotel","port","airport"):m3*=.65
         occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
         workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
         gas=occupants*.025 if kind=="home" else workers*.08 if kind=="shop" else 4 if kind in ("hotel","airport","port") else 1
@@ -695,7 +760,9 @@ def calculate_utility_balance(apply_effects=False):
     potable=sum(b.get("treatmentM3Day",220) for b in buildings if b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
     wastewater=sum(b.get("treatmentM3Day",260) for b in buildings if b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")))
     power_capacity=utilities["basePowerCapacityKw"]+generation
-    water_capacity=utilities["baseWaterCapacityM3Day"]+potable
+    source_water_capacity=utilities["baseWaterCapacityM3Day"]+potable
+    tanker_capacity=30 if climate.get("waterTankerStart",day+1)<=day<climate.get("waterTankerUntil",0) else 0
+    water_capacity=source_water_capacity*(.55 if drought_active else 1.0)+tanker_capacity
     power_usable=power_capacity*(1-utilities["powerLossRate"])
     water_usable=water_capacity*(1-utilities["waterLeakRate"])
     def allocate(network,usable,key,pct_key):
@@ -801,22 +868,40 @@ def calculate_utility_balance(apply_effects=False):
         climate["forecast"]=forecast
         sample_names=", ".join(r.get("name") or f"parcela {r['x']+1},{r['y']+1}" for r in expected_buildings[:3]) or "sin edificios en riesgo calculado"
         ev("Alerta meteorológica · tormenta prevista",f"La región {climate['region']} prevé 18 mm de lluvia para el día {forecast['targetDay']} (riesgo {level}). Se estiman {len(expected_tiles)} parcelas anegables y {len(expected_buildings)} edificios expuestos; drenaje actual {round(permanent_drainage_capacity)} m³/día. Zonas expuestas: {sample_names}.")
+    if day<heat_day<=day+5 and (climate.get("heatForecast") or {}).get("targetDay")!=heat_day:
+        homes=sorted((b for b in buildings if b.get("kind")=="home"),key=lambda b:heat_exposure(b["x"],b["y"])[0]*b.get("occupants",0),reverse=True)
+        exposed=[{"name":b.get("name",f"Barrio {b['x']+1},{b['y']+1}"),"x":b["x"],"y":b["y"],"population":b.get("occupants",0),"exposure":heat_exposure(b["x"],b["y"])[0]} for b in homes if heat_exposure(b["x"],b["y"])[0]>=1.0]
+        risk_population=sum(x["population"] for x in exposed);cases=round(sum(x["population"]*.055*x["exposure"] for x in exposed))
+        climate["heatForecast"]={"issuedDay":day,"targetDay":heat_day,"durationDays":5,"status":"pronosticada","warningLevel":"alto" if cases>=max(25,state.get("population",0)*.04) else "moderado","exposedPopulation":risk_population,"expectedHealthCases":cases,"exposedHomes":exposed[:6]}
+        ev("Alerta de calor · refugios y consumo",f"Ola de calor prevista para el día {heat_day}, durante cinco días. Se estiman {cases} consultas por estrés térmico en {len(exposed)} sectores; la demanda eléctrica y de agua aumentará.")
+    if day<drought_day<=day+5 and (climate.get("droughtForecast") or {}).get("targetDay")!=drought_day:
+        effective=round(source_water_capacity*.55*(1-utilities["waterLeakRate"]))
+        climate["droughtForecast"]={"issuedDay":day,"targetDay":drought_day,"durationDays":30,"status":"pronosticada","warningLevel":"alto" if effective<water_total*.95 else "moderado","capacityLossPct":45,"effectiveCapacityM3Day":effective,"expectedDemandM3Day":round(water_total),"waterRestrictions":restrictions_active}
+        ev("Alerta de sequía · captación en riesgo",f"La estación seca comenzará el día {drought_day} y durará 30 días. La fuente bajará 45%: capacidad útil estimada {effective} m³/día frente a demanda actual de {round(water_total)} m³/día.")
+    if climate.get("heatForecast") and climate["heatForecast"].get("targetDay")==heat_day:climate["heatForecast"]["active"]=heat_active
+    if climate.get("droughtForecast") and climate["droughtForecast"].get("targetDay")==drought_day:
+        climate["droughtForecast"].update({"active":drought_active,"waterRestrictions":restrictions_active})
     if forecast and climate.get("preparedForDay")==forecast.get("targetDay"):forecast["prepared"]=True
     elif forecast:forecast["prepared"]=False
     for building in buildings:
         access=building["utilityAccess"]
         factor=min(access["powerServedPct"],access["waterServedPct"],access["wastewaterTreatedPct"],access["gasServedPct"],access["telecomServedPct"])/100
-        if building.get("kind") in ("shop","hotel") and building.get("business") is not None:building["business"]["utilityFactor"]=round(factor,3)
+        if restrictions_active and building.get("kind") in ("shop","hotel"):factor*=.88
+        if building.get("kind") in ("shop","hotel") and building.get("business") is not None:
+            building["business"]["utilityFactor"]=round(factor,3)
+            if restrictions_active:building["business"]["waterRestrictionFactor"]=.88
+            else:building["business"].pop("waterRestrictionFactor",None)
         if building.get("kind")=="hotel":
             building["utilityShortage"]="energía" if access["powerServedPct"]<100 else "agua" if access["waterServedPct"]<100 else "cloacas" if access["wastewaterTreatedPct"]<100 else "gas" if access["gasServedPct"]<100 else "telecomunicaciones" if access["telecomServedPct"]<100 else None
     report={"day":state.get("day",1),"season":"Verano" if summer else "Templada","serviceCoveragePct":coverage,
         "power":{"installedKw":round(power_capacity),"usableKw":round(power_usable),"demandKw":round(power_total),"connectedDemandKw":round(power_connected),"servedKw":round(power_delivered),"gridServedKw":round(power_delivered_grid),"backupServedKw":round(backup_served),"backupGenerators":sum(b.get("backupCapacityKw",0)>0 for b in critical_backup),"backupStoredKwh":round(sum(b.get("backupFuelKwh",0) for b in critical_backup)),"backupCapacityKwh":round(sum(b.get("backupCapacityKwh",0) for b in critical_backup)),"shortageKw":round(max(0,power_total-power_delivered)),"lossPct":round(utilities["powerLossRate"]*100),"connectedSegments":len(power_tiles),"connectedBuildings":sum(b["utilityAccess"]["powerConnected"] for b in buildings)},
-        "water":{"installedM3Day":round(water_capacity),"usableM3Day":round(water_usable),"demandM3Day":round(water_total),"connectedDemandM3Day":round(water_connected),"servedM3Day":round(water_delivered),"shortageM3Day":round(max(0,water_total-water_delivered)),"leakPct":round(utilities["waterLeakRate"]*100),"connectedSegments":len(water_tiles),"connectedBuildings":sum(b["utilityAccess"]["waterConnected"] for b in buildings)},
+        "water":{"installedM3Day":round(water_capacity),"sourceCapacityM3Day":round(source_water_capacity),"emergencyTankerM3Day":tanker_capacity,"droughtReductionPct":45 if drought_active else 0,"usableM3Day":round(water_usable),"demandM3Day":round(water_total),"connectedDemandM3Day":round(water_connected),"servedM3Day":round(water_delivered),"shortageM3Day":round(max(0,water_total-water_delivered)),"leakPct":round(utilities["waterLeakRate"]*100),"connectedSegments":len(water_tiles),"connectedBuildings":sum(b["utilityAccess"]["waterConnected"] for b in buildings)},
         "wastewater":{"treatmentCapacityM3Day":round(wastewater_capacity),"generatedM3Day":round(generated),"connectedM3Day":round(sewer_flow),"treatedM3Day":round(treated),"untreatedM3Day":round(untreated),"coveragePct":sewer_coverage,"connectedSegments":len(sewer_tiles),"connectedBuildings":sum(b["utilityAccess"]["sewerConnected"] for b in buildings),"plants":sum(b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")) for b in buildings)},
         "gas":{"capacityM3Day":round(gas_capacity),"demandM3Day":round(gas_total,2),"servedM3Day":round(gas_delivered,2),"shortageM3Day":round(max(0,gas_total-gas_delivered),2),"connectedSegments":len(gas_tiles),"connectedBuildings":sum(b["utilityAccess"]["gasConnected"] for b in buildings)},
         "telecommunications":{"capacityMbps":round(telecom_capacity),"demandMbps":round(telecom_total,2),"servedMbps":round(telecom_delivered,2),"shortageMbps":round(max(0,telecom_total-telecom_delivered),2),"connectedSegments":len(telecom_tiles),"connectedBuildings":sum(b["utilityAccess"]["telecomConnected"] for b in buildings)},
         "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"permanentCapacityM3Day":round(permanent_drainage_capacity),"emergencyCapacityM3Day":emergency_capacity,"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings)),"forecast":forecast},
         "sources":{"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
+        "climate":{"heatwave":{"active":heat_active,"targetDay":heat_day,"durationDays":5,"powerDemandMultiplier":1.22 if heat_active else 1.0,"waterDemandMultiplier":1.18 if heat_active else 1.0,"coolingPrepared":climate.get("coolingPreparedForDay")==heat_day,"healthCases":(climate.get("heatForecast") or {}).get("actualHealthCases",0)},"drought":{"active":drought_active,"targetDay":drought_day,"durationDays":30,"sourceReductionPct":45 if drought_active else 0,"waterRestrictions":restrictions_active,"waterCapacityM3Day":round(water_capacity),"emergencyTankerM3Day":tanker_capacity,"demandM3Day":round(water_total),"shortageM3Day":round(max(0,water_total-water_delivered))}},
         "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
         "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
     utilities["report"]=report
@@ -1954,7 +2039,7 @@ def tick_one_day():
     state["day"] += 1
     day=state["day"]
     advance_utility_repairs()
-    calculate_utility_balance();advance_utility_backup_fuel();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True)
+    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
         for home in state["buildings"]:
@@ -2180,7 +2265,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.52"
+    server_version="CiudadViva/0.53"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -2420,6 +2505,32 @@ class Handler(BaseHTTPRequestHandler):
                     duration=max(2,round(4*CONTRACTORS[contractor]["days"]/30));contract={"id":uuid.uuid4().hex,"needId":need["id"],"targetType":need["targetType"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"cost":cost,"paid":cost,"duration":duration,"remainingDays":duration,"workers":4,"startDay":state["day"],"status":"en obra","stage":"Desagote y retiro de materiales dañados"}
                     state["money"]-=cost;state.setdefault("recoveryContracts",[]).append(contract);need["status"]="en reparación";need["contractId"]=contract["id"]
                     ev("Contrato de recuperación adjudicado",f"{contractor} reparará {need['name']} por $ {cost:,} en {duration} días; 4 trabajadores quedan asignados. El pago sale de la tesorería al iniciar.".replace(",","."))
+                elif action=="prepareHeatwave":
+                    climate=ensure_climate_state();forecast=climate.get("heatForecast") or {};target=int(data.get("targetDay",-1))
+                    if forecast.get("targetDay")!=target or forecast.get("status")!="pronosticada" or target<=state["day"]:self._send(409,{"error":"No hay una ola de calor futura disponible para preparar."});return
+                    if climate.get("coolingPreparedForDay")==target:self._send(409,{"error":"Ya hay centros de enfriamiento preparados para este episodio."});return
+                    try:workplaces=commute_model().get("workplaces",[])
+                    except Exception:workplaces=[]
+                    centers=[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status") not in ("cerrado","abandonado") and next((w for w in workplaces if w.get("x")==b.get("x") and w.get("y")==b.get("y") and w.get("staffedJobs",0)>=2),None) and b.get("utilityAccess",{}).get("powerServedPct",0)>=75 and route_between((4,10),(b["x"],b["y"]))]
+                    if not centers:self._send(409,{"error":"No hay centros municipales con personal, electricidad y acceso vial para abrir refugios."});return
+                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
+                    if available<650:self._send(409,{"error":f"Quedan $ {available}; habilitar refugios y turnos de emergencia cuesta $ 650."});return
+                    state["money"]-=650;climate["coolingPreparedForDay"]=target
+                    ev("Refugios de calor preparados",f"Se habilitarán hasta {len(centers)} centros municipales para el día {target}; capacidad conjunta de {sum(min(100,max(40,next(w['staffedJobs'] for w in workplaces if w.get('x')==b['x'] and w.get('y')==b['y'])*2)) for b in centers)} residentes. Personal, agua y electricidad son requisitos operativos. Costo $ 650.")
+                elif action=="toggleWaterRestrictions":
+                    climate=ensure_climate_state();forecast=climate.get("droughtForecast") or {};target=int(forecast.get("targetDay",-1))
+                    if target<state["day"] or target>state["day"]+30:self._send(409,{"error":"Las restricciones solo pueden activarse ante una sequía prevista o en curso."});return
+                    climate["waterRestrictionsTarget"]=target;climate["waterRestrictions"]=not climate.get("waterRestrictions",False)
+                    if climate["waterRestrictions"]:ev("Restricción de agua no esencial",f"Comercios, hoteles, puerto y aeropuerto reducen 35% su demanda hídrica durante la sequía. Sus operaciones pueden producir menos; los hogares y servicios esenciales conservan prioridad.")
+                    else:ev("Restricción de agua levantada","Se restablece el consumo comercial normal; la sequía puede volver a causar faltantes en la red.")
+                elif action=="deployWaterTankers":
+                    climate=ensure_climate_state();forecast=climate.get("droughtForecast") or {};target=int(forecast.get("targetDay",-1))
+                    if target<state["day"] or target>state["day"]+30:self._send(409,{"error":"Los camiones cisterna solo se despliegan ante una sequía prevista o en curso."});return
+                    if climate.get("waterTankerForDay")==target:self._send(409,{"error":"Ya se contrató el refuerzo de cisternas para esta sequía."});return
+                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved);cost=1200
+                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el despliegue de cisternas cuesta $ {cost}."});return
+                    state["money"]-=cost;climate.update({"waterTankerForDay":target,"waterTankerStart":max(state["day"],target),"waterTankerUntil":target+10})
+                    ev("Cisternas contratadas",f"El refuerzo entregará hasta 30 m³/día durante diez días desde el día {target}. Costo total $ 1.200.")
                 elif action=="prepareStorm":
                     climate=ensure_climate_state();forecast=climate.get("forecast");target=int(data.get("targetDay",-1))
                     if not forecast or forecast.get("targetDay")!=target or forecast.get("warningLevel")=="bajo" or target<=state["day"]:self._send(409,{"error":"No hay una alerta futura de riesgo que necesite despliegue."});return

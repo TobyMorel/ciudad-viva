@@ -110,3 +110,10 @@ En la costa templada del mapa, una tormenta de 18 mm se pronostica cinco días a
 ## Alfa 0.52 · inspección y contratos de recuperación (fase 27, parcial)
 
 Las inundaciones que afectan calles y activos municipales generan expedientes distintos. La inspección cuesta $150 y demora un día de juego; el informe abre tres ofertas de constructoras con costos y plazos propios. La adjudicación paga el trabajo, ocupa una cuadrilla de cuatro empleados, reserva capacidad empresarial y restaura la condición al terminar tras 3–5 días. Los casos y contratos persisten en guardados y funcionan Online/Offline. La cobertura no incluye seguros privados, reconstrucción total ni ola de calor/sequía.
+
+
+## Alfa 0.53 · olas de calor y sequía (fase 27, parcial)
+
+La región ahora tiene dos episodios anuales programados. El calor aumenta el consumo de electricidad/agua y proyecta enfermedad por exposición; refugios cívicos con personal, electricidad y acceso vial reducen los casos. La sequía reduce 45% la fuente por 30 días; protocolos comerciales y cisternas modifican el balance hídrico con costos y consecuencias. En las pruebas del mapa inicial, la preparación de refugios redujo los casos de 45 a 13; consumo térmico subió de 535 a 653 kW y de 100 a 117 m³/día. Restricciones redujeron el consumo medido de agua; cisternas restituyeron 30 m³/día. Online/Offline, esquema 38. La fase 27 sigue parcial: falta variabilidad geográfica de amenazas, inundaciones prolongadas, incendios y reconstrucción integral.
+
+La pantalla Ciudad > Clima se verificó en Chromium a 390×844 y 1440×900. Conserva scroll vertical dentro del panel, botones dentro de sus límites y no produce overflow horizontal ni errores JavaScript. No se validó conexión LAN física ni despliegue en Vercel.

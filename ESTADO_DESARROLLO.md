@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.52 · 31 de octubre de 2026
+**Entrega:** Alfa 0.53 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.53 · Fase 27 (parcial): el calendario de 360 días anticipa una ola de calor cinco días antes; la demanda de electricidad sube 22% y la de agua 18% durante cinco días. Sombra/terreno delimitan hogares expuestos y consultas estimadas. Por $650 se preparan refugios en centros cívicos con personal y acceso; con energía operativa protegen a residentes y reducen los casos sanitarios. Una sequía de 30 días reduce 45% la fuente de agua; se aplican restricciones comerciales (35% menos uso no esencial y 12% de penalización al factor de actividad) o cisternas (+30 m³/día, 10 días, $1.200). La cobertura insuficiente en hogares afecta servicios y aprobación. Online/Offline; pantalla Ciudad > Clima; guardados migran al esquema 38. Pruebas: Online y Offline midieron calor, restricciones, escasez, preparación y cisternas; refugios bajaron casos estimados de 45 a 13. Chromium móvil/escritorio revisado sin desborde horizontal ni errores JavaScript. No se probó LAN física.
 
 - Alfa 0.52 · Fase 27 (parcial): los daños de tormenta en calles y edificios municipales abren expedientes de recuperación. La inspección municipal cuesta $150 y requiere un día de juego. Tras el informe, se puede adjudicar la reparación a una de tres constructoras con distinto precio y plazo; el contrato paga al iniciar, asigna cuatro trabajadores y completa por días. La reparación restaura la condición del activo y cierra el expediente. Se integra con presupuesto compartido, capacidad laboral y registro urbano en Online/Offline; guardados migran al esquema 37. No incluye contratación de obras privadas, seguros ni reconstrucción por destrucción total.
 

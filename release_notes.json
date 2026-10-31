@@ -1,7 +1,15 @@
 {
-  "currentVersion": "0.52",
+  "currentVersion": "0.53",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.53",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 27 (parcial): el calendario estacional pronostica olas de calor cinco días antes. La exposición depende de sombra y terreno; durante cinco días aumenta 22% la demanda eléctrica y 18% la de agua. Se estiman consultas sanitarias y los centros cívicos con personal, electricidad y acceso vial pueden operar como refugios por $650. La protección reduce casos reales y atenúa pérdidas de servicios y apoyo.",
+        "La sequía regional dura 30 días y reduce 45% la capacidad de captación; el déficit se asigna a los edificios conectados y puede dejar hogares con agua incompleta. Las restricciones comerciales ahorran hasta 35% del uso no esencial con menor actividad económica; cisternas contratadas por $1.200 agregan 30 m³/día durante diez días. Modos Online/Offline, pantalla Ciudad > Clima y guardados migrados al esquema 38."
+      ]
+    },
     {
       "version": "0.52",
       "date": "2026-10-31",

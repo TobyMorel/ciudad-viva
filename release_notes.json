@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.44",
+  "currentVersion": "0.45",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.45",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): nueva planta municipal de reciclaje, licitada por etapas, con acceso vial, 16 empleos y demanda física de electricidad y agua.",
+        "La planta recupera hasta 35% de los residuos recolectados, limitada a 1,25 t/día. El material recuperado se vende y suma ingresos municipales; el resto ocupa el relleno sanitario.",
+        "Ciudad > Servicios informa capacidad de reciclaje, toneladas recuperadas, ingreso estimado y operación. Online y Offline migran al esquema 30."
+      ]
+    },
     {
       "version": "0.44",
       "date": "31 de octubre de 2026",
@@ -380,12 +389,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 26 · redes de servicios conectadas",
-      "detail": "Empezar por capacidad, conexiones y consumo de electricidad y agua por edificios; después sumar saneamiento y residuos, evitando radios mágicos."
+      "title": "Fase 26 · transferencia y redes faltantes",
+      "detail": "Añadir contenedores y centros de transferencia conectados con rutas, separar materiales recuperados e integrar su venta; después incorporar gas, telecomunicaciones, reparación y respaldo de redes."
     },
     {
-      "title": "Fases 25–28 · completar turismo y resiliencia",
-      "detail": "Eventos con costos y demanda temporal; estacionalidad y atractivos. Redes de servicios, clima, inundaciones y dependencias entre infraestructura."
+      "title": "Fase 27 · clima y resiliencia urbana",
+      "detail": "Extender lluvia, inundaciones y eventos con alcance, preparación, daños a infraestructura, respuesta de servicios y recuperación municipal."
     }
   ]
 }

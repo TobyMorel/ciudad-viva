@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.44 · 31 de octubre de 2026
+**Entrega:** Alfa 0.45 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -347,3 +347,12 @@ Guardados previos migran al esquema 29. La producción diaria responde a poblaci
 ### Verificación Alfa 0.44
 
 El servidor produjo 0,72 t/día ante 1,15 t/día de recolección, almacenó residuos sin crear basura pendiente y actualizó el costo. Con un relleno lleno, la flota dejó basura en calles; un depósito elevó la capacidad de 1,15 a 1,90 t/día y una obra habilitada amplió la disposición total de 900 a 2.700 t. Con 50 t pendientes, el cierre mensual redujo servicios. Online y Offline adjudicaron el relleno por etapas con 12 trabajadores y finalizaron una entrega acelerada de prueba con los 1.800 t y puestos esperados. Chromium comprobó la interfaz de Servicios y la herramienta en móvil (390×844) y escritorio (1440×900): no hubo desbordamiento horizontal ni etiquetas cortadas, y el panel desplazable expone todo el contenido. LAN entre equipos físicos continúa pendiente.
+
+
+## Alfa 0.45 · recuperación de residuos (fase 26, parcial)
+
+La planta de reciclaje es un contrato público por etapas de $14.800 y 88 días base. Al habilitarse agrega 16 vacantes, requiere calle conectada y demanda 32 kW y 6 m³/día dentro del balance de redes. Procesa hasta 1,25 t/día y separa como máximo 35% de los residuos recogidos. El tonelaje recuperado evita disposición final y genera $18/t de ingreso para la ciudad; su operación cuesta $650/mes. El flujo restante sigue ocupando capacidad del relleno.
+
+### Verificación Alfa 0.45
+
+Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulación Online/Offline de capacidad de reciclaje, volumen dispuesto, ingresos y costos. Chromium verificó Servicios en 390×844 y 1440×900: el panel permite desplazarse por todo el contenido, no hay desborde horizontal ni etiquetas cortadas. La herramienta Planta de reciclaje queda visible en el menú Construir móvil; sin errores JavaScript.

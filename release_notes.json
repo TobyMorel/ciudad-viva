@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.68",
+  "currentVersion": "0.69",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.69",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 30 (parcial): locales comerciales cerrados pueden reconvertirse en vivienda privada si están libres de deuda y no están protegidos como patrimonio. El permiso suma $200 a la ciudad; el inversor aporta $4.200 al contratista y reserva cuatro trabajadores durante 20–30 días por etapas de refuerzo, instalaciones y habitabilidad.",
+        "Al finalizar, el inmueble obtiene 24 plazas de vivienda. Migraciones sujetas a vacantes, empleo y aprobación las ocupan; el alquiler inicial de $24 por residente empieza tras el primer mes y las deudas impagas afectan la aprobación. Los edificios catalogados conservan su uso.",
+        "Online/Offline y guardados al esquema 53. Verificada una reconversión completa en ambos motores, ingresos de permiso, gasto privado, nueva capacidad y migración; interfaz comprobada a 390×844 y 1440×900 sin overflow horizontal ni errores JS."
+      ]
+    },
     {
       "version": "0.68",
       "date": "2026-10-31",
@@ -581,12 +590,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 30 · reconversión de inmuebles y vivienda",
-      "detail": "Adaptar edificios productivos a nuevos usos mediante permisos, inversión y obra; conectar cambios de empleo, alquileres, oferta de vivienda y desplazamiento de hogares."
+      "title": "Gobierno municipal y elecciones",
+      "detail": "Abrir fase 32 con mandatos, evaluación causal de gestión y derrota compartida, después continuar evolución barrial y protección ante desplazamiento."
     },
     {
-      "title": "Fase 31 · mantenimiento de activos privados",
-      "detail": "Llevar desgaste y reinversión a viviendas y negocios, con cierres, ocupación y costos a cargo de sus propietarios."
+      "title": "Ciclo de vida para propietarios privados",
+      "detail": "Extender diagnóstico, inspección y rehabilitación a viviendas y comercios, manteniendo sus responsabilidades financieras."
     }
   ]
 }

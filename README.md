@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.68
+# Ciudad Viva · Alfa 0.69
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -165,3 +165,8 @@ La condición de centrales eléctricas, plantas potabilizadoras y depuradoras af
 ## Alfa 0.68 · inspecciones preventivas de plantas
 
 Centrales eléctricas, plantas potabilizadoras y depuradoras requieren una revisión preventiva cada 180 días. Al vencer el plazo, el cierre mensual crea un expediente. La inspección cuesta $150 y demora un día: puede aprobar la planta sin obra o habilitar constructoras si el desgaste redujo su capacidad. La rehabilitación restaura 82% y reinicia el calendario. Disponible Online y Offline; guardados migran al esquema 52.
+
+
+## Alfa 0.69 · reconversión a vivienda
+
+Los comercios que cierran pueden volver a usarse como vivienda si no tienen deudas pendientes y no son inmuebles protegidos. El inversor paga $4.200 a una constructora, la ciudad recibe $200 por permiso y cuatro trabajadores realizan una obra de 20–30 días. La inspección de agua, saneamiento y seguridad habilita 24 plazas. La migración depende de viviendas libres, empleo y aprobación; cada residente comienza a pagar alquiler tras 30 días en esa vivienda. La mora acumulada puede reducir la aprobación. Funciona Online y Offline; guardados al esquema 53.

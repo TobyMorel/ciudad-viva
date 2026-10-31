@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.68
+# Auditoría del roadmap · Alfa 0.69
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -17,7 +17,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
-| 30 | Parcial: catálogo de inmuebles históricos, año/uso/estilo/conservación, niveles de protección y rehabilitación con materiales, constructora, cuadrilla, plazo y efecto en identidad | Evolución arquitectónica por épocas, reconversión y sustitución condicionadas, protección de alquileres y desplazamiento social |
+| 30 | Parcial: patrimonio y rehabilitación; locales cerrados sin deudas pueden convertirse en vivienda privada con permiso, inversión, cuadrilla, etapas, inspección, alquiler y migración condicionada | Evolución arquitectónica por épocas, protección de alquileres y desplazamiento social medido |
 | 31 | Parcial: calles, edificios públicos y redes técnicas con condición, mantenimiento, averías y contratos; calles críticas cierran rutas; tres clases de planta pierden capacidad por desgaste y reciben inspecciones programadas cada 180 días | Calendario preventivo para otras clases de activos, restricciones de planta durante obra, puentes, activos privados, rehabilitación mayor y reemplazo |
 | 32–33 | Pendientes como sistemas completos | Gobierno plurianual/electoral y simulación de décadas |
 
@@ -205,3 +205,10 @@ La condición vial bajo 25% cierra el tramo a enrutamiento. Viajes laborales, ve
 Alfa 0.67 integra la condición de las tres clases de planta a los balances de capacidad: al 82% entregan su salida de diseño, y al deteriorarse aportan menos electricidad, agua potable o tratamiento cloacal. Mantenimiento expone capacidad efectiva. Online/Offline, esquema 51; las inspecciones siguen siendo reactivas y la fase 31 continúa parcial.
 
 Alfa 0.68 incorpora inspección preventiva de centrales, potabilizadoras y depuradoras. Vencido el ciclo de 180 días, un expediente se abre en el cierre mensual; inspección pagada de $150/1 día aprueba operación sin obra o habilita contrato si la capacidad bajó. Online/Offline, esquema 52. Chromium 390×844 y 1440×900 verificó los paneles y acción visible sin desbordes ni errores JS.
+
+
+## Alfa 0.69 · reconversión de locales a vivienda (fase 30, parcial)
+
+Un local comercial cerrado conserva la parcela y solo puede reconvertirse si se pagaron sus deudas y no está catalogado como patrimonio. El promotor aporta $4.200, la ciudad cobra permiso de $200 y una constructora asigna cuatro trabajadores durante 20–30 días. Desmontaje, refuerzo, instalación de servicios e inspección habilitan 24 plazas residenciales. La migración existente llena plazas según vacantes, empleo y aprobación; cada residente paga alquiler después de 30 días en la vivienda y los impagos acumulados pueden bajar el apoyo ciudadano. Online/Offline, esquema 53. UI plegable comprobada a 390×844 y 1440×900.
+
+Fase 30 queda parcial: no hay protección de inquilinos, desplazamientos, reconversión de vivienda a comercio ni cambios de arquitectura por década. El siguiente sistema prioritario es fase 32, elecciones y derrota cooperativa.

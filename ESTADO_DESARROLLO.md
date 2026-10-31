@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.68 · 31 de octubre de 2026
+**Entrega:** Alfa 0.69 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.69 · Fase 30 (parcial): un comercio cerrado puede reconvertirse a vivienda privada tras resolver deuda y patrimonio protegido. El permiso ingresa $200 a tesorería; inversor privado paga $4.200 al contratista, ocupa cuatro trabajadores y completa refuerzo, instalaciones y habilitación en 20–30 días. La casa recibe 24 plazas; migración mensual responde a vacantes, empleo y aprobación. Cada mudanza registra una fecha individual; el alquiler de $24 por residente empieza después de 30 días, consume caja doméstica, acumula mora y puede reducir aprobación. Online/Offline, esquema 53. Verificado ciclo de permiso, inversión, obra y conversión en ambos motores; la simulación Offline también completó migración de hogares. Chromium 390×844 y 1440×900: sin overflow horizontal ni errores JS, panel plegable conserva su estado entre actualizaciones y permite scroll vertical. Quedan fuera hogares desplazados, protección de inquilinos, aumentos de alquiler y reconversión inversa a comercio.
 
 - Alfa 0.68 · Fase 31 (parcial): centrales, plantas de agua y depuradoras reciben inspección preventiva cada 180 días; si el vencimiento ocurre entre cierres, se abre en el siguiente cierre mensual. El expediente informa condición/costo, la revisión cuesta $150 y demora un día. Si la salida sigue en capacidad base, se aprueba sin contrato y reinicia el plazo; si hay desgaste, se licita por el flujo de recuperación existente y la rehabilitación restaura capacidad a 82%. Online/Offline, esquema 52. Online comprobó generación del expediente, inspección aprobada y nueva fecha al día 361; una planta con desgaste conservó licitación. Offline Chromium simuló el cierre día 181, cobro de $150, inspección de un día y cierre aprobado al día 189 con próxima revisión al 369. Interfaz móvil 390×844 y escritorio 1440×900: subpestañas de Mantenimiento/Recuperación activas, acción visible, sin overflow horizontal, scroll vertical ni errores JS. Calendario aún limitado a las tres clases de plantas.
 

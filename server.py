@@ -192,7 +192,8 @@ def ensure_heritage_state():
         else:
             building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
         building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state["version"]=max(52,int(state.get("version",1)))
+    state.setdefault("adaptiveReuseWorks",[]);state.setdefault("adaptiveReuseHistory",[])
+    state["version"]=max(53,int(state.get("version",1)))
 
 def ensure_critical_inspection_schedule(building):
     if building.get("kind") not in ("powerPlant","waterPlant","wastewaterPlant"):return
@@ -257,7 +258,37 @@ def heritage_report():
     listed=[b for b in state.get("buildings",[]) if b.get("heritageEligible")]
     protected=[b for b in listed if b.get("heritageLevel") in ("protección parcial","protección integral")]
     score=sum(b.get("heritageSignificance",1)*b.get("conservation",0)/100 for b in protected)
-    return {"year":2026+(max(0,int(state.get("day",1))-1)//360),"listed":len(listed),"protected":len(protected),"restored":sum(bool(b.get("renovations")) for b in listed),"identity":round(min(100,score*9)),"works":[dict(w) for w in state.get("heritageWorks",[])],"sites":[{k:b.get(k) for k in ("x","y","name","kind","yearBuilt","architecturalEra","architecturalStyle","originalUse","renovations","conservation","heritageSignificance","heritageLevel","occupants")} for b in listed]}
+    candidates=[]
+    active={(w.get("x"),w.get("y")) for w in state.get("adaptiveReuseWorks",[])}
+    for b in state.get("buildings",[]):
+        if b.get("kind")!="shop" or b.get("business",{}).get("status")!="cerrado":continue
+        firm=b.get("business",{});arrears=state.get("taxes",{}).get("arrearsByAsset",{}).get(firm.get("id",f"shop-{b['x']}-{b['y']}"),0)
+        heritage_locked=b.get("heritageLevel") in ("protección parcial","protección integral")
+        reason="En reconversión" if (b.get("x"),b.get("y")) in active else "Protección patrimonial" if heritage_locked else "Deuda empresarial pendiente" if firm.get("creditDebt",0)>0 or arrears>0 else "Disponible para vivienda"
+        candidates.append({"x":b["x"],"y":b["y"],"name":b.get("name","Local cerrado"),"reason":reason,"eligible":reason=="Disponible para vivienda"})
+    return {"year":2026+(max(0,int(state.get("day",1))-1)//360),"listed":len(listed),"protected":len(protected),"restored":sum(bool(b.get("renovations")) for b in listed),"identity":round(min(100,score*9)),"works":[dict(w) for w in state.get("heritageWorks",[])],"sites":[{k:b.get(k) for k in ("x","y","name","kind","yearBuilt","architecturalEra","architecturalStyle","originalUse","renovations","conservation","heritageSignificance","heritageLevel","occupants")} for b in listed],"reuseWorks":[dict(w) for w in state.get("adaptiveReuseWorks",[])],"reuseHistory":state.get("adaptiveReuseHistory",[])[-8:],"reuseCandidates":candidates,"reuseHomes":sum(1 for b in state.get("buildings",[]) if b.get("adaptiveReuseDay"))}
+
+def advance_adaptive_reuse():
+    for work in list(state.get("adaptiveReuseWorks",[])):
+        work["elapsedDays"]=work.get("elapsedDays",0)+1
+        work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]))
+        work["stage"]=("Desmontaje y diagnóstico" if work["progress"]<.2 else "Refuerzo y nuevas divisiones" if work["progress"]<.55 else "Agua, saneamiento y electricidad" if work["progress"]<.85 else "Inspección de habitabilidad")
+        if work["progress"]<1:continue
+        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
+        if building:
+            old_name=building.get("name","Local recuperado")
+            building.pop("business",None);building["kind"]="home";building["name"]=f"Viviendas · {old_name}";building["status"]="habilitado";building["capacity"]=24;building["occupants"]=0;building["quality"]=work["quality"];building["householdCash"]=0;building["monthlyWageIncome"]=0;building["residents"]=[];building["adaptiveReuseDay"]=state["day"];building["rentalLeaseDays"]=[];building["rentalPricePerResident"]=work["rent"]
+            building.setdefault("renovations",[]).append({"year":2026+(max(0,state["day"]-1)//360),"day":state["day"],"contractor":work["contractor"],"cost":work["investment"],"scope":"Reconversión de local a vivienda con redes y habitabilidad"})
+        state.setdefault("adaptiveReuseHistory",[]).append({**work,"status":"completada","completedDay":state["day"]});del state["adaptiveReuseHistory"][:-40];state["adaptiveReuseWorks"].remove(work)
+        ev("Viviendas reconvertidas",f"{work['name']} aprobó agua, saneamiento y seguridad: 24 plazas nuevas. Alquiler inicial ${work['rent']} por residente/mes; siguiente mudanza sujeta a empleo y aprobación ciudadana.")
+
+def collect_adaptive_rents():
+    paid_total=arrears=0
+    for home in (b for b in state.get("buildings",[]) if b.get("adaptiveReuseDay") and b.get("occupants",0)>0 and state.get("day",1)-b.get("leaseStartDay",b.get("adaptiveReuseDay",1))>=30):
+        lease_days=home.setdefault("rentalLeaseDays",[home.get("adaptiveReuseDay",1)]*home.get("occupants",0));due=max(0,int(home.get("rentalPricePerResident",24)*sum(1 for started in lease_days if state.get("day",1)-started>=30)));paid=min(due,max(0,int(home.get("householdCash",0))))
+        home["householdCash"]-=paid;home["rentalOwnerCash"]=home.get("rentalOwnerCash",0)+paid;home["rentArrears"]=home.get("rentArrears",0)+due-paid;paid_total+=paid;arrears+=due-paid
+    if paid_total:ev("Alquileres de viviendas reconvertidas",f"Propietarios cobraron ${paid_total} por {sum(1 for b in state['buildings'] if b.get('adaptiveReuseDay') and b.get('occupants',0)>0)} inmuebles; deuda de alquiler pendiente ${arrears}.")
+    if arrears>=600:state["approval"]=max(0,state.get("approval",0)-1);ev("Presión por alquileres",f"Quedaron ${arrears} de alquiler sin pagar en inmuebles reconvertidos; los hogares pierden margen y baja la aprobación.")
 
 def advance_heritage_works():
     day=int(state.get("day",1))
@@ -401,7 +432,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":52,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":53,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -2212,6 +2243,7 @@ def move_households():
             if not available: break
             home=min(available,key=lambda b:b["occupants"]/max(1,b["capacity"]))
             home["occupants"]+=1
+            if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
         if arrivals:
             state["population"]+=arrivals
             state["monthlyIncome"]+=arrivals*3
@@ -2227,6 +2259,7 @@ def move_households():
             if not occupied: break
             home=min(occupied,key=lambda b:b.get("quality",70))
             home["occupants"]-=1
+            if home.get("adaptiveReuseDay") and home.get("rentalLeaseDays"):home["rentalLeaseDays"].pop()
         state["population"]=max(0,state["population"]-departures)
         state["monthlyIncome"]=max(0,state["monthlyIncome"]-departures*3)
         if departures: ev("Salida de residentes",f"{departures} personas dejaron viviendas de la ciudad; se reducen los ingresos tributarios en $ {departures*3}/mes.")
@@ -2326,6 +2359,7 @@ def tick_one_day():
     state["day"] += 1
     day=state["day"]
     advance_heritage_works()
+    advance_adaptive_reuse()
     advance_utility_repairs()
     calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
     month=(day-1)//30
@@ -2401,6 +2435,7 @@ def tick_one_day():
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
         move_households()
+        collect_adaptive_rents()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
     process_market_orders()
     process_supply_orders()
@@ -2820,6 +2855,20 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                if action=="startAdaptiveReuse":
+                    ensure_supply_state();x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""))
+                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)
+                    if not building or building.get("kind")!="shop" or building.get("business",{}).get("status")!="cerrado":self._send(409,{"error":"Solo se pueden reconvertir locales comerciales cerrados."});return
+                    firm=building.get("business",{});arrears=state.get("taxes",{}).get("arrearsByAsset",{}).get(firm.get("id",f"shop-{x}-{y}"),0)
+                    if building.get("heritageEligible"):self._send(409,{"error":"El inmueble catalogado debe conservar su uso patrimonial."});return
+                    if firm.get("creditDebt",0)>0 or arrears>0:self._send(409,{"error":"El inmueble mantiene deuda empresarial o tributaria pendiente."});return
+                    if any(w.get("x")==x and w.get("y")==y for w in state.get("adaptiveReuseWorks",[])):self._send(409,{"error":"La reconversión ya está en marcha."});return
+                    if contractor not in CONTRACTORS:self._send(409,{"error":"Seleccioná una constructora habilitada."});return
+                    spec=CONTRACTORS[contractor];active=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")];heritage=[w for w in state.get("heritageWorks",[]) if w.get("contractor")==contractor];reuse=[w for w in state.get("adaptiveReuseWorks",[]) if w.get("contractor")==contractor];used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in active)+sum(w.get("workers",4) for w in heritage+reuse)
+                    if len(active)+len(heritage)+len(reuse)>=spec["capacity"] or used+4>spec["workers"]:self._send(409,{"error":f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores."});return
+                    investment=4200;permit=200
+                    if state.get("privateCapital",0)<investment:self._send(409,{"error":f"El proyecto privado requiere $ {investment:,} de capital disponible.".replace(",",".")});return
+                    state["privateCapital"]-=investment;state["money"]+=permit;state["supply"]["contractorCash"][contractor]+=investment;duration=max(20,round(24*spec["days"]/30));work={"id":f"reuse-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name","Local cerrado"),"contractor":contractor,"investment":investment,"permitFee":permit,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"Desmontaje y diagnóstico","rent":24,"quality":round(spec["quality"]*100),"startDay":state["day"],"status":"en obra"};state.setdefault("adaptiveReuseWorks",[]).append(work);ev("Permiso de reconversión aprobado",f"{work['name']} pasa de local cerrado a vivienda: inversión privada $ {investment:,}, permiso municipal $ {permit}, cuatro trabajadores y {duration} días. Se requiere inspección de agua, saneamiento y seguridad.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="heritageProtect":
                     ensure_heritage_state()
                     x=int(data.get("x",-1));y=int(data.get("y",-1));level=str(data.get("level",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible")),None)

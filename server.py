@@ -86,7 +86,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":16,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":17,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -153,14 +153,21 @@ def ensure_resident_roster():
         while len(members)<max(0,home.get("occupants",0)):
             eligible=eligible_now<eligible_target
             person={"id":uuid.uuid4().hex,"workerEligible":eligible,"status":"buscando" if eligible else "inactivo",
-                    "employerId":None,"employerName":None,"monthlyWage":0,"attendance":0}
+                    "employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,
+                    "unemployedSinceDay":state.get("day",1) if eligible else None,"unemploymentReason":"primer empleo" if eligible else None}
             members.append(person)
             if eligible:eligible_now+=1
         if len(members)>home.get("occupants",0):del members[home["occupants"]:]
+        for person in members:
+            person.setdefault("previousEmployer",None);person.setdefault("previousEmployerId",None)
+            person.setdefault("lastUnemploymentDurationDays",None);person.setdefault("unemploymentEpisodes",0)
+            if person.get("workerEligible"):
+                person.setdefault("unemployedSinceDay",state.get("day",1) if person.get("status")!="empleado" else None)
+                person.setdefault("unemploymentReason","búsqueda general" if person.get("status")!="empleado" else None)
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(16,state.get("version",1))
+    state["version"]=max(17,state.get("version",1))
     state.setdefault("roadAssets",[])
     for building in state["buildings"]:
         if building["kind"]=="home":
@@ -362,14 +369,16 @@ def commute_model():
     target=min(round(len(residents)*max(0,min(100,state["employment"]))/100),round(sum(caps)))
     remaining={si:int(math.floor(cap)) for si,cap in enumerate(caps)}
     # Priorizar residentes sin empleo; rutas cortas primero. Cada residente recibe un solo empleador.
-    candidates=[]
+    candidates=[];seeking_without_route=[]
     for hi,home,person in residents:
+        prior_status=person.get("status");prior_employer=person.get("employerName");prior_employer_id=person.get("employerId")
         person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
         choices=sorted((distances[hi,si],si) for si in range(len(sites)) if (hi,si) in routes)
-        if choices:candidates.append((choices[0][0],hi,home,person,choices))
+        if choices:candidates.append((choices[0][0],hi,home,person,choices,prior_status,prior_employer,prior_employer_id))
+        else:seeking_without_route.append((home,person,prior_status,prior_employer,prior_employer_id))
     candidates.sort(key=lambda row:(row[0],row[1],row[3]["id"]))
     employees=[]; site_people={si:[] for si in range(len(sites))}
-    for _,hi,home,person,choices in candidates:
+    for _,hi,home,person,choices,prior_status,prior_employer,prior_employer_id in candidates:
         if len(employees)>=target:break
         si=next((candidate for _,candidate in choices if remaining[candidate]>0),None)
         if si is None:continue
@@ -377,9 +386,34 @@ def commute_model():
         wage=max(1,int(firm.get("wage",10) if site["kind"]=="shop" else 8))
         employer_id=firm.get("id",f"public-{site['kind']}-{site['x']}-{site['y']}")
         person.update({"status":"empleado","employerId":employer_id,"employerName":site.get("name",site["kind"]),"monthlyWage":wage})
+        search_start=person.get("unemployedSinceDay")
+        if prior_status!="empleado" and search_start is not None:
+            search_days=max(0,state.get("day",1)-int(search_start));person["lastUnemploymentDurationDays"]=search_days
+            person["unemploymentEpisodes"]=person.get("unemploymentEpisodes",0)+1
+            person["lastHireDay"]=state.get("day",1)
+            person["lastEmployerBeforeHire"]=prior_employer or person.get("previousEmployer")
+            if search_days>0 or prior_employer:
+                history=state.setdefault("laborHistory",[])
+                history.append({"day":state.get("day",1),"personId":person.get("id"),"fromEmployer":prior_employer or person.get("previousEmployer"),"toEmployer":site.get("name",site["kind"]),"searchDays":search_days})
+                del history[:-500]
+            person["unemployedSinceDay"]=None;person["unemploymentReason"]=None
         remaining[si]-=1
         item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distances[hi,si]}
         employees.append(item);site_people[si].append(item)
+    employed_ids={emp["person"].get("id") for emp in employees}
+    for home,person,prior_status,prior_employer,prior_employer_id in seeking_without_route:
+        person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
+        if person.get("unemployedSinceDay") is None:person["unemployedSinceDay"]=state.get("day",1)
+        person["unemploymentReason"]="sin acceso vial"
+        if prior_status=="empleado":
+            person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
+    for _,_,_,person,_,prior_status,prior_employer,prior_employer_id in candidates:
+        if person.get("id") in employed_ids:continue
+        person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
+        if person.get("unemployedSinceDay") is None:person["unemployedSinceDay"]=state.get("day",1)
+        person["unemploymentReason"]="sin vacante alcanzable"
+        if prior_status=="empleado":
+            person["previousEmployer"]=prior_employer;person["previousEmployerId"]=prior_employer_id
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
@@ -431,6 +465,18 @@ def commute_model():
         staffed+=effective
         if workplace["kind"]=="shop":private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
+    eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
+    jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
+    search_days=[max(0,state.get("day",1)-int(person.get("unemployedSinceDay",state.get("day",1)))) for person in jobseekers]
+    jobseeker_rows=[(hi,home,person) for hi,home,person in residents if person.get("status")=="buscando"]
+    reachable_sites={si for hi,_,_ in jobseeker_rows for si in range(len(sites)) if (hi,si) in routes}
+    model["laborMarket"]={"workingAge":len(eligible_people),"employed":sum(1 for person in eligible_people if person.get("status")=="empleado"),
+        "jobSeekers":len(jobseekers),"outsideLaborForce":sum(1 for person in eligible_people if person.get("status")=="inactivo"),
+        "reachableVacancies":sum(max(0,round(workplaces[si].get("jobSlots",0))-workplaces[si].get("workersAssigned",0)) for si in reachable_sites),
+        "openVacancies":sum(max(0,round(w.get("jobSlots",0))-w.get("workersAssigned",0)) for w in workplaces),
+        "averageSearchDays":round(sum(search_days)/max(1,len(search_days)),1),"longestSearchDays":max(search_days,default=0),
+        "previouslyEmployed":sum(1 for person in jobseekers if person.get("previousEmployer")),
+        "completedSearches30Days":sum(1 for item in state.get("laborHistory",[]) if state.get("day",1)-30<item.get("day",0)<=state.get("day",1))}
     return model
 
 def traffic_factor(route, exclude_order=None):
@@ -493,7 +539,7 @@ def close_business(shop, workforce, reason):
     for home in (b for b in state["buildings"] if b.get("kind")=="home"):
         for person in home.get("residents",[]):
             if person.get("employerId")!=firm.get("id"):continue
-            person["previousEmployer"]=firm.get("name",shop.get("name","Comercio"));person["unemployedSinceDay"]=state["day"]
+            person["previousEmployer"]=firm.get("name",shop.get("name","Comercio"));person["previousEmployerId"]=firm.get("id");person["unemployedSinceDay"]=state["day"];person["unemploymentReason"]="cierre por insolvencia"
             person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
             dismissed+=1
     state.setdefault("unemploymentEvents",[]).append({"day":state["day"],"employerId":firm.get("id"),"employerName":firm.get("name"),"workers":dismissed,"cause":reason})
@@ -897,6 +943,7 @@ def public_state(player_id=None):
     view["traffic"]={k:commute[k] for k in ("commuters","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
     view["commutes"]=commute["routes"]
     view["workplaces"]=commute["workplaces"]
+    view["laborMarket"]=commute["laborMarket"]
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
@@ -906,7 +953,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.20"
+    server_version="CiudadViva/0.21"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

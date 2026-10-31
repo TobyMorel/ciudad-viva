@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.20 · 31 de octubre de 2026
+**Entrega:** Alfa 0.21 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Implementado
@@ -82,3 +82,16 @@
 - Historial de veinte versiones dividido en cuatro páginas de cinco: página 1 contiene Alfa 0.20–0.16 y la última termina en Alfa 0.1. Las versiones 0.1–0.9 se identifican claramente como notas no conservadas.
 - En viewport móvil 390×844, el dock cabe sin desplazamiento horizontal y el popup se mantiene dentro de 370 px. En escritorio 1440×900, el mapa conserva el área de juego principal.
 - Chromium inició la modalidad Online como anfitrión LAN sin errores JavaScript. La prueba entre dos equipos físicos continúa pendiente.
+
+## Verificación Alfa 0.21
+
+- `python -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, validación JSON de semilla e historial y `git diff --check` pasan.
+- Simulación LAN: el estado inicial conserva 260 trabajadores activos, con 203 ocupados y 57 buscando. Un trabajador despedido y recontratado 15 días después incrementa su episodio y genera el registro individual de búsqueda esperado.
+- Migración desde esquema 16 agrega los campos de historial laboral y actualiza el guardado a esquema 17.
+- Chromium headless en Offline avanzó de día 30 a 41 sin errores JavaScript; se mantuvieron 203 empleados frente al objetivo del 78% y 57 personas buscando, sin contrataciones excedentes.
+- El informe Ciudad se revisó en Chromium a 1440×900 y 390×844. La ventana queda dentro del viewport, no genera desplazamiento horizontal y su contenido largo puede recorrerse verticalmente hasta el final. Se corrigió la concordancia de «día/días».
+- La conexión LAN entre dos equipos físicos continúa pendiente; esta entrega no altera la capa de red.
+
+## Criterio de estimación global
+
+- No se publica un porcentaje de avance hasta definir criterios de aceptación verificables y pesos estables para las 34 fases. La lista de fases del roadmap es un alcance descriptivo, no una base ponderada; contar funciones o pruebas produciría una cifra engañosa. Mantener este estado hasta documentar una matriz de alcance, criterios y pesos.

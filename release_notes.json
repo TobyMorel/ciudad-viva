@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.20",
+  "currentVersion": "0.21",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.21",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Trabajadores despedidos conservan anterior empleador, motivo, día de inicio de búsqueda y duración hasta su siguiente contratación.",
+        "Informe laboral muestra personas empleadas, personas buscando, vacantes alcanzables y días medios de búsqueda; registra las recontrataciones recientes.",
+        "El modo Offline también lleva la duración de búsqueda y reasigna a trabajadores cuando se abren vacantes. Guardados migran al esquema 17."
+      ]
+    },
     {
       "version": "0.20",
       "date": "31 de octubre de 2026",
@@ -154,16 +163,16 @@
   ],
   "upcoming": [
     {
-      "title": "Mercado laboral trazable",
-      "detail": "Persistencia del desempleo, búsqueda por distancia y selección de vacantes con salarios y condiciones visibles."
+      "title": "Mercado laboral cualificado",
+      "detail": "Salarios diferenciados, habilidades y puestos que pueden seguir vacantes cuando faltan trabajadores adecuados."
+    },
+    {
+      "title": "Hogares y mercado de vivienda",
+      "detail": "Mudanzas trazables, costos de vivienda y decisiones de permanencia según empleo, ingresos y servicios."
     },
     {
       "title": "Redes urbanas",
       "detail": "Agua, energía, cloacas y residuos como infraestructuras físicas con capacidad, costos y fallas."
-    },
-    {
-      "title": "Ciudad ampliable y gobierno",
-      "detail": "Extensión del mapa por sectores y fases de apoyo ciudadano, responsabilidades y elecciones."
     }
   ]
 }

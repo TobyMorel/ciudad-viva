@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.27 · 31 de octubre de 2026
+**Entrega:** Alfa 0.28 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -23,6 +23,8 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Alfa 0.26: los corredores enumeran paradas en edificios situados junto a su recorrido. Una línea puede conectar hogares y empleos diferentes a sus extremos originales si están a distancia caminable, comparten la ruta en el sentido de marcha y el bus mejora el modo usado previamente (a pie o auto). El tiempo suma acceso caminando, espera, viaje en línea y tarifa; el aforo se comparte entre todos los pares servidos. Los puntos de parada se recalculan con el mapa y siguen la ruta al guardar/cargar, tanto Online como Offline. No son edificios construibles y no simulan conductores; estos, horarios por turno y transbordos siguen pendientes.
 
 - Alfa 0.27: las paradas de bus son edificios públicos construibles desde una línea activa y una parcela libre adyacente al recorrido. Se licitan como obra con cuatro trabajadores, cinco etapas, plazo base de 18 días (ajustado por constructora) y materiales online (10 áridos, 5 madera, 2 componentes). Tras inspección se agrega un refugio 3D, el bus incorpora la estación a su ruta y el municipio paga $25/mes. La selección de parcela y asociación de línea se valida en Online y Offline; Offline replica costo/plazo/etapas, pero mantiene su modelo de materiales simplificado. Guardado/carga usa los proyectos y edificios existentes; sin migración de esquema.
+
+- Alfa 0.28: menú LAN con creación local, unión por dirección/código y lista de salas anunciadas por UDP entre servidores de la red; el anfitrión conserva autoridad de tiempo y guardado. Ciudad divide su informe en cuatro subcategorías. Se agregaron señales sonoras Web Audio con silencio persistente y un modelo de colectivo 3D distinto al auto, además de mayor resolución de render. La sala sigue necesitando un servidor Python en el anfitrión; la conexión entre dos equipos físicos queda pendiente de prueba.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -159,3 +161,10 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Offline: el adaptador creó la línea y el contrato, mantuvo el proyecto al reconstruir el adaptador, completó la parada tras el plazo simulado y conservó edificio, costo mensual y recorrido al volver a cargar.
 - Chromium revisó el panel y la licitación a 1440×960 y 390×844. Se detectó y corrigió el orden de capas del modal; ahora aparece sobre Ciudad. En móvil los tres presupuestos y la adjudicación quedan accesibles con scroll interno, sin desborde horizontal ni errores JavaScript.
 - La conexión LAN entre dos equipos físicos y la publicación en Vercel no son verificables desde esta prueba local.
+
+
+## Verificación Alfa 0.28
+
+- API local: antes de crear sala, `/api/state` responde 409; crear sala en el anfitrión responde 200, código incorrecto responde 403 y un invitado con código válido recibe el estado sin privilegios de anfitrión. `/api/rooms` lista la sala y recibe un anuncio UDP de prueba. Una zonificación hecha por un invitado aparece en el estado leído por otro.
+- Chromium: creación de sala en escritorio (1440×960), búsqueda/unión de invitado y menú LAN en móvil (390×844), modo Offline y cuatro subcategorías de Ciudad; sin desborde horizontal ni errores JS en estas pantallas.
+- Las mecánicas históricas no se consideran todas cerradas: la auditoría por fase está en `AUDITORIA_ROADMAP.md`. Falta una prueba LAN entre dos equipos físicos y una revisión integral de décadas de simulación.

@@ -7,6 +7,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SAVE = ROOT / "ciudad_guardada.json"
 LOCK = threading.RLock()
+ROOM_OPEN = False
+ROOM_CODE = uuid.uuid4().hex[:6].upper()
+DISCOVERED_ROOMS = {}
+DISCOVERY_PORT = 8766
 PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
 MATERIAL_NAMES = {"aggregate":"áridos","steel":"acero","timber":"madera","components":"componentes"}
 INITIAL_CONTRACTOR_STOCK = {"aggregate":20,"steel":6,"timber":6,"components":3}
@@ -1206,8 +1210,32 @@ def public_state(player_id=None):
     business_income=round(commute["privateStaffedJobs"]*2)
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income+transit_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
+def discovery_loop():
+    """Anuncia y descubre salas en la subred; no usa servicios externos."""
+    sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        sock.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1)
+        sock.bind(("0.0.0.0",DISCOVERY_PORT));sock.settimeout(1)
+        last=0
+        while True:
+            now=time.time()
+            if ROOM_OPEN and now-last>=3:
+                packet=json.dumps({"tag":"CiudadVivaLAN","name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"port":PORT}).encode()
+                try:sock.sendto(packet,("255.255.255.255",DISCOVERY_PORT))
+                except OSError:pass
+                last=now
+            try:data,address=sock.recvfrom(512)
+            except socket.timeout:continue
+            except OSError:continue
+            try:room=json.loads(data)
+            except (ValueError,UnicodeDecodeError):continue
+            if room.get("tag")!="CiudadVivaLAN" or address[0] in local_ips():continue
+            with LOCK:DISCOVERED_ROOMS[(address[0],room.get("port"))]={"name":str(room.get("name","Ciudad Viva"))[:40],"code":str(room.get("code",""))[:8],"address":f"http://{address[0]}:{room.get('port')}/","seen":now}
+    finally:sock.close()
+
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.27"
+    server_version="CiudadViva/0.28"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -1218,13 +1246,18 @@ class Handler(BaseHTTPRequestHandler):
         if path=="/api/state":
             pid=self.headers.get("X-Player-Id","jugador-local")
             with LOCK:
-                if not state.get("host"): state["host"]=pid
+                if not ROOM_OPEN:self._send(409,{"error":"La sala todavía no fue creada por el anfitrión."});return
                 state["players"][pid]=time.time()
                 for key,last in list(state["players"].items()):
                     if last<time.time()-25: del state["players"][key]
                 self._send(200,public_state(pid))
             return
-        if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT}); return
+        if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None}); return
+        if path=="/api/rooms":
+            with LOCK:
+                now=time.time();rooms=[{"name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"address":f"http://{ip}:{PORT}/","host":True} for ip in local_ips()[:1]] if ROOM_OPEN else []
+                rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
+            self._send(200,{"rooms":rooms});return
         rel="index.html" if path=="/" else path.lstrip("/")
         if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
             self._send(404,{"error":"No encontrado"}); return
@@ -1240,7 +1273,21 @@ class Handler(BaseHTTPRequestHandler):
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
         with LOCK:
+            global ROOM_OPEN
+            if path=="/api/room/create":
+                if self.client_address[0] not in ("127.0.0.1","::1"):
+                    self._send(403,{"error":"La sala solo puede crearla el anfitrión desde su equipo."});return
+                if ROOM_OPEN and state.get("host")!=pid:
+                    self._send(409,{"error":"Ya hay una sala creada en este equipo."});return
+                ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
+                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{local_ips()[0]}:{PORT}/"});return
+            if path=="/api/room/join":
+                if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
+                if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
+                    self._send(403,{"error":"Código de sala incorrecto."});return
+                state["players"][pid]=time.time();self._send(200,public_state(pid));return
             if path=="/api/action":
+                if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
                 if action in ("speed","pause","new") and pid!=state.get("host"):
                     self._send(403,{"error":"Esta acción está reservada al anfitrión de la sala."}); return
@@ -1475,6 +1522,7 @@ def main():
         except Exception: pass
     srv=ThreadingHTTPServer(("0.0.0.0",PORT),Handler)
     threading.Thread(target=simulation_loop,daemon=True).start()
+    threading.Thread(target=discovery_loop,daemon=True).start()
     url=f"http://127.0.0.1:{PORT}/"
     if "--no-browser" not in sys.argv: threading.Timer(.8,lambda:webbrowser.open(url)).start()
     print("Ciudad Viva está lista:",url)

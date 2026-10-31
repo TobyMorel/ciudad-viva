@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.27",
+  "currentVersion": "0.28",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.28",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "El inicio Online muestra Crear sala, Unirse a sala y Ver salas públicas de la red local. Crear sala exige el iniciador en el equipo anfitrión; el servidor anuncia las salas por UDP en la LAN y valida el código opcional al entrar.",
+        "Ciudad ahora separa Resumen, Movilidad, Empleo y Formación en subcategorías. El dock suma un control de sonido; clics, contratos y nuevas líneas tienen señales breves generadas localmente.",
+        "Los colectivos usan un modelo 3D propio con ventanillas, ruedas, faros y señal, y el corredor activo queda marcado sobre el pavimento. Se aumentó la definición del render dentro de límites de rendimiento y se amplió la lectura de las tarjetas de movilidad."
+      ]
+    },
     {
       "version": "0.27",
       "date": "31 de octubre de 2026",
@@ -217,6 +226,10 @@
   ],
   "upcoming": [
     {
+      "title": "Conductores, turnos y demanda",
+      "detail": "Asignar residentes a flotas y simular frecuencia por personal disponible. Comprobar conexión LAN entre dos equipos físicos."
+    },
+    {
       "title": "Conductores y turnos municipales",
       "detail": "Asignar personal y horarios a las flotas, reflejar disponibilidad por turno y dar el siguiente paso de la fase 22."
     },
@@ -227,10 +240,6 @@
     {
       "title": "Fase 22 · Ferrocarril y carga",
       "detail": "Añadir trazado ferroviario, obra e inspección, trenes y energía antes de habilitar pasajeros y mercancías."
-    },
-    {
-      "title": "Fases 21–22 · Acceso y costos",
-      "detail": "Ampliar elección de viaje para bicicleta y transporte colectivo con costos, estabilidad, transferencias y diferencias entre barrios."
     }
   ]
 }

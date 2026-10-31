@@ -11,7 +11,7 @@ function seeded(n){let x=Math.sin(n*127.1+78.233)*43758.5453;return x-Math.floor
 export function createWorld(canvas){
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
   const smallScreen=window.innerWidth<650;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,smallScreen?1:1.25));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,smallScreen?1.2:1.55));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.08;
@@ -20,7 +20,7 @@ export function createWorld(canvas){
   const scene=new THREE.Scene();scene.background=new THREE.Color('#b9dacf');scene.fog=new THREE.Fog('#b9dacf',130,225);
   const camera=new THREE.OrthographicCamera(-40,40,30,-30,.1,350);
   const hemi=new THREE.HemisphereLight('#f5faf1','#597965',1.35);scene.add(hemi);
-  const sun=new THREE.DirectionalLight('#fff0ce',2.55);sun.position.set(12,38,9);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;sun.shadow.camera.near=1;sun.shadow.camera.far=100;sun.shadow.bias=-.0003;scene.add(sun);sun.target.position.set(28,0,20);scene.add(sun.target);
+  const sun=new THREE.DirectionalLight('#fff0ce',2.55);sun.position.set(12,38,9);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;sun.shadow.camera.near=1;sun.shadow.camera.far=100;sun.shadow.bias=-.0003;scene.add(sun);sun.target.position.set(28,0,20);scene.add(sun.target);
   const staticRoot=new THREE.Group(),dynamicRoot=new THREE.Group(),trafficRoot=new THREE.Group();scene.add(staticRoot,dynamicRoot,trafficRoot);
   const materials=new Map();
   function mat(color,opts={}){const id=color+JSON.stringify(opts);if(!materials.has(id))materials.set(id,new THREE.MeshStandardMaterial({color,roughness:.87,metalness:0,...opts}));return materials.get(id)}
@@ -87,12 +87,17 @@ export function createWorld(canvas){
   function shortestPath(roads,start){const queue=[start],seen=new Map([[start,null]]);for(let i=0;i<queue.length;i++){const k=queue[i],p=k.split(',').map(Number);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const next=key(p[0]+dx,p[1]+dy);if(roads.has(next)&&!seen.has(next)){seen.set(next,k);queue.push(next)}}}return {last:queue.at(-1),seen}}
   function buildRoute(roads){const keys=[...roads];if(keys.length<2)return [];const first=shortestPath(roads,keys[0]).last,{last,seen}=shortestPath(roads,first),out=[];for(let k=last;k!=null;k=seen.get(k)){const [x,y]=k.split(',').map(Number);out.push(tilePos(x,y))}return out.reverse()}
   function makeVehicle(color){const g=new THREE.Group();box(g,.35,.18,.62,color,0,.21,0);box(g,.29,.17,.34,'#c9e4e3',0,.38,-.03);for(const x of [-.2,.2])for(const z of [-.2,.2])box(g,.075,.11,.13,'#303f43',x,.13,z);trafficRoot.add(g);return g}
-  function makeBus(color='#56a99b'){const g=makeVehicle(color);g.scale.set(1.45,1.18,1.9);return g}
+  function makeBus(color='#e7a958'){
+    const g=new THREE.Group();box(g,.62,.41,1.12,color,0,.36,0,{cast:true});box(g,.59,.08,1.02,'#f3ddac',0,.61,0);box(g,.62,.09,.16,'#295767',0,.55,.39);box(g,.47,.26,.035,'#69aabd',0,.44,.57);for(const x of [-.321,.321]){for(const z of [-.33,-.08,.17])box(g,.024,.19,.19,'#70afc0',x,.43,z);box(g,.045,.38,.035,'#ece2be',x,.39,.42);for(const z of [-.38,.37]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.055,10),mat('#304144'));wheel.rotation.z=Math.PI/2;wheel.position.set(x*1.09,.13,z);g.add(wheel)}}box(g,.47,.075,.1,'#214c55',0,.67,.42);box(g,.3,.052,.015,'#f5d178',0,.67,.477);for(const x of [-.24,.24]){box(g,.1,.065,.03,'#fff2c7',x,.28,.58);box(g,.1,.065,.03,'#b9574d',x,.28,-.58)}trafficRoot.add(g);return g}
   function makeCargo(color){const g=new THREE.Group();box(g,.28,.2,.28,color,0,.19,0);box(g,.31,.035,.31,'#e2cfaa',0,.3,0);trafficRoot.add(g);return g}
   function makeForklift(){const g=new THREE.Group();box(g,.38,.2,.48,'#dfaa4f',0,.27,0);box(g,.27,.42,.3,'#e9ba60',0,.57,-.05);box(g,.22,.22,.22,'#6e9897',0,.67,.09);box(g,.06,.75,.07,'#6d6354',-.18,.52,.29);box(g,.06,.75,.07,'#6d6354',.18,.52,.29);box(g,.035,.065,.42,'#ddd2ad',-.12,.08,.53);box(g,.035,.065,.42,'#ddd2ad',.12,.08,.53);for(const x of [-.23,.23])for(const z of [-.15,.18])box(g,.09,.12,.1,'#35434a',x,.14,z);trafficRoot.add(g);return g}
   function makeWalker(color){const g=new THREE.Group();box(g,.09,.26,.09,color,0,.3,0);sphere(g,.085,'#efc9a4',0,.51,0,1);trafficRoot.add(g);return g}
   function sync(state,chosen,nextView){view=nextView;updateCamera();const signature=JSON.stringify([state.roads,state.buildings,state.projects,state.abandoned,state.zones,state.jobs,state.population,state.supply?.orders,state.commutes,state.busRoutes,chosen?.x,chosen?.y]);if(signature===visualSignature){renderer.render(scene,camera);return}visualSignature=signature;clear(dynamicRoot);clear(trafficRoot);routeActors.length=0;const roads=new Set(state.roads.map(r=>key(r[0],r[1]))),occupied=new Set([...roads,...state.buildings.map(b=>key(b.x,b.y)),...state.projects.map(p=>key(p.x,p.y)),...(state.abandoned||[]).map(a=>key(a.x,a.y))]);for(const t of treeSpots)t.mesh.visible=!occupied.has(key(t.x,t.y));
     for(const [x,y] of state.roads)addRoad(dynamicRoot,x,y,roads);
+    for(const busLine of (state.busRoutes||[]).filter(r=>r.operational&&r.route?.length>1))for(let i=1;i<busLine.route.length;i++){
+      const [ax,ay]=busLine.route[i-1],[bx,by]=busLine.route[i];if(!roads.has(key(ax,ay))||!roads.has(key(bx,by))||Math.abs(ax-bx)+Math.abs(ay-by)!==1)continue;
+      const [px,pz]=tilePos((ax+bx)/2,(ay+by)/2);box(dynamicRoot,ax!==bx?1.7:.085,.009,ay!==by?1.7:.085,'#67d3b8',px,.089,pz,{cast:false});
+    }
     for(const z of state.zones||[])addZone(dynamicRoot,z);
     for(const b of state.buildings)addBuilding(dynamicRoot,b,roads);
     for(const a of state.abandoned||[])addSite(dynamicRoot,a,true);

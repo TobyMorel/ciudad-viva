@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.59",
+  "currentVersion": "0.60",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.60",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 29 (parcial): Hacienda incorpora un fondo municipal reservado para cuotas de deuda. Los aportes de $500, $1.000 o $2.500 salen de caja no comprometida; los retiros devuelven fondos a caja libre. El fondo se guarda y conserva un historial acotado.",
+        "Al cierre mensual, si caja e ingresos cubren los gastos operativos pero no todo el servicio de deuda, el fondo cubre el faltante de las cuotas; si no alcanza para completar el servicio, no se debita parcialmente. La pantalla informa caja, fondo, deuda y proyecciones que incluyen el saldo reservado. Disponible Online/Offline; guardados migran al esquema 44.",
+        "Verificado: aporte y retiro conservan el total de fondos, los compromisos de obras protegen su caja, y una cuota con faltante se paga usando la reserva. Chromium a 390×844 y 1440×900: controles visibles sin overflow horizontal ni solapamientos; scroll vertical disponible. LAN física y Vercel siguen sin validación."
+      ]
+    },
     {
       "version": "0.59",
       "date": "2026-10-31",

@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.59
+# Auditoría del roadmap · Alfa 0.60
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -16,7 +16,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
-| 29 | Parcial: créditos municipales, amortización, proyección base, impuestos inmobiliarios/comerciales y mora sobre caja real | Reservas, programas, compromisos de obra, escenarios y refinanciación |
+| 29 | Parcial: créditos, amortización, proyección, impuestos efectivos con mora y fondo de servicio de deuda que cubre cuotas desde caja reservada | Presupuestos por programa, escenarios, compromisos plurianuales y refinanciación |
 | 30–33 | Pendiente como sistemas completos | Patrimonio, mantenimiento plurianual, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -153,4 +153,11 @@ Verificado en servidor Online y adaptador Offline: $5.000 acreditados, cuota men
 
 Se pueden ajustar impuestos inmobiliarios (0,20–1,40% anual) y comerciales sobre ventas (0–5%). La base inmobiliaria simulada es $2.400 por residente; el tributo comercial usa ventas registradas por cada negocio abierto. Al cierre mensual, los hogares y las empresas pagan desde su caja actual; el monto impago permanece como deuda tributaria del activo. La recaudación efectiva, no la facturada, aumenta la caja municipal. Menor efectivo doméstico limita compras; menor caja comercial limita insumos y operación. La confianza baja un punto cuando la mora alcanza al menos 35% de hogares ocupados. Hacienda informa tasas, base, cargos, pagos y mora. Online/Offline y guardados esquema 43.
 
-Regresiones: diez residentes facturan $12; pagaron $12 desde el efectivo del hogar. Una tienda con $1.000 de ventas facturó $20; con $5 de caja pagó $5 y dejó $15 de mora. Repetir la liquidación del mes no vuelve a cobrar. El adaptador Offline cerró el ciclo y debitó $17 combinando vivienda y comercio. Chromium revisó Hacienda en 390×844 y 1440×900, sin errores JavaScript ni desbordes horizontales; el contenido largo mantiene scroll vertical. Fase 29 pendiente: fondo de reserva, presupuestos por programa, escenarios de 12/48 meses, contratos futuros y refinanciación. LAN física/Vercel sin validar.
+Regresiones: diez residentes facturan $12; pagaron $12 desde el efectivo del hogar. Una tienda con $1.000 de ventas facturó $20; con $5 de caja pagó $5 y dejó $15 de mora. Repetir la liquidación del mes no vuelve a cobrar. El adaptador Offline cerró el ciclo y debitó $17 combinando vivienda y comercio. Chromium revisó Hacienda en 390×844 y 1440×900, sin errores JavaScript ni desbordes horizontales; el contenido largo mantiene scroll vertical. Fase 29 aún requiere presupuestos por programa, escenarios variables, compromisos plurianuales y refinanciación. LAN física/Vercel sin validar.
+
+
+## Alfa 0.60 · reserva para servicio de deuda (fase 29, parcial)
+
+Hacienda permite apartar o retirar $500, $1.000 o $2.500 desde la tesorería. Los aportes solo salen de caja libre después de contratos en curso; la reserva se conserva separada y el registro mantiene hasta 24 movimientos. Al cierre, si ingresos y caja libre no alcanzan para gastos más cuotas, el fondo de deuda puede cubrir la diferencia completa del servicio mensual. No realiza pagos parciales de cuotas: si falta dinero incluso con el fondo, se conserva el impago y se aplican las consecuencias de caja existentes.
+
+La vista de Hacienda distingue caja libre y saldo protegido, e incluye la reserva al proyectar el patrimonio de tesorería a 12/48 meses. Online y Offline migran al esquema 44. Prueba de integración: aportar y retirar no crea dinero, un contrato vigente impide apartar su saldo, y un fondo suficiente cubre el faltante exacto de las cuotas sin generar mora. Chromium en 390×844 y 1440×900: controles visibles dentro del panel, sin overflow horizontal; el contenido largo usa scroll vertical y no se observaron solapamientos. LAN física y Vercel no se validaron.

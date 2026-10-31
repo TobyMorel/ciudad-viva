@@ -167,7 +167,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[]}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[]}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -208,7 +208,8 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     expenses=max(0,round(monthly_expenses if monthly_expenses is not None else state.get("monthlyExpenses",0)))
     net=income-expenses-service
     # Proyección de referencia; mantiene las bases actuales y los pagos contratados constantes.
-    return {"cash":round(state.get("money",0)),"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+net*12),"forecast48":round(state.get("money",0)+net*48),"loans":loans}
+    debt_reserve=max(0,round(finance.get("debtReserve",0)))
+    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+debt_reserve+net*12),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"loans":loans}
 
 def municipal_debt_payment():
     finance=state.setdefault("finance",new_finance());total=0
@@ -259,7 +260,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":43,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":44,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -323,6 +324,8 @@ def ensure_business_state():
 def ensure_finance_state():
     state.setdefault("finance",new_finance())
     state["finance"].setdefault("municipalLoans",[])
+    state["finance"].setdefault("debtReserve",0)
+    state["finance"].setdefault("debtReserveHistory",[])
     bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
     for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
 
@@ -349,7 +352,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(43,state.get("version",1))
+    state["version"]=max(44,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
@@ -2147,17 +2150,25 @@ def tick_one_day():
             state["money"]=available-due
             if debt_due:municipal_debt_payment()
         else:
-            # No sobregiro implícito: se agota la caja y cae la capacidad de servicio financiada.
-            shortfall=due-available
-            state["money"]=0
-            loss=max(1,min(8,round(shortfall/900)))
-            state["services"]=max(5,state["services"]-loss)
-            state["approval"]=max(5,state["approval"]-max(1,loss//2))
-            for loan in state.get("finance",{}).get("municipalLoans",[]):
-                if loan.get("status")=="active":
-                    loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1
-                    if loan["delinquentMonths"]>=2:state["services"]=max(5,state["services"]-1)
-            ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
+            # El fondo de deuda cubre faltantes de servicio; no cuenta como caja de libre disposición.
+            finance=state.setdefault("finance",new_finance());reserve=max(0,int(finance.get("debtReserve",0)))
+            reserve_used=min(debt_due,max(0,due-available),reserve)
+            if reserve_used and available+reserve_used>=due:
+                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-due+reserve_used
+                municipal_debt_payment();finance.setdefault("debtReserveHistory",[]).append({"day":day,"amount":-reserve_used,"reason":"Servicio mensual de deuda"});del finance["debtReserveHistory"][:-24]
+                ev("Reserva de deuda aplicada",f"El fondo de deuda aportó $ {reserve_used:,} para completar las cuotas municipales. Saldo protegido: $ {finance['debtReserve']:,}.".replace(",","."))
+            else:
+                # No sobregiro implícito: se agota la caja y cae la capacidad de servicio financiada.
+                shortfall=due-available
+                state["money"]=0
+                loss=max(1,min(8,round(shortfall/900)))
+                state["services"]=max(5,state["services"]-loss)
+                state["approval"]=max(5,state["approval"]-max(1,loss//2))
+                for loan in state.get("finance",{}).get("municipalLoans",[]):
+                    if loan.get("status")=="active":
+                        loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1
+                        if loan["delinquentMonths"]>=2:state["services"]=max(5,state["services"]-1)
+                ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} (actividad $ {business_income:,} · boletos $ {transit_income:,}) · gastos base $ {state['monthlyExpenses']:,} + nóminas $ {public_payroll:,} + autobuses $ {transit_cost:,} · balance neto $ {net:,}.".replace(",","."))
@@ -2589,6 +2600,19 @@ class Handler(BaseHTTPRequestHandler):
                     if new==old:self._send(409,{"error":"La alícuota ya está en su límite."});return
                     taxes[key]=new;ev("Política tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
                     self._send(200,public_state(pid));return
+                if action=="municipalDebtReserve":
+                    ensure_finance_state();finance=state["finance"];direction=str(data.get("direction",""));amount=int(data.get("amount",0))
+                    if direction not in ("deposit","withdraw") or amount not in (500,1000,2500):self._send(409,{"error":"Elegí un movimiento válido de $500, $1.000 o $2.500."});return
+                    reserve=max(0,int(finance.get("debtReserve",0)))
+                    if direction=="deposit":
+                        reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));free=max(0,int(state.get("money",0))-reserved)
+                        if free<amount:self._send(409,{"error":f"Quedan $ {free:,} libres después de compromisos; no alcanza para apartar $ {amount:,}.".replace(",",".")});return
+                        state["money"]-=amount;finance["debtReserve"]=reserve+amount;label="apartados para deuda"
+                    else:
+                        if reserve<amount:self._send(409,{"error":f"El fondo de deuda solo tiene $ {reserve:,}.".replace(",",".")});return
+                        finance["debtReserve"]=reserve-amount;state["money"]+=amount;label="devueltos a caja"
+                    finance.setdefault("debtReserveHistory",[]).append({"day":state.get("day",1),"amount":amount if direction=="deposit" else -amount,"reason":"Aporte al fondo de deuda" if direction=="deposit" else "Retiro del fondo de deuda"});del finance["debtReserveHistory"][:-24]
+                    ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="municipalLoan":
                     ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
                     if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return

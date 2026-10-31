@@ -126,3 +126,5 @@ El préstamo municipal usa amortización fija con interés del 1% mensual y plaz
 ## Alfa 0.59 · recaudación por caja
 
 El impuesto inmobiliario anual usa una base de diseño de $2.400 por residente y se divide en doce vencimientos; el gravamen comercial aplica al porcentaje de ventas del mes, separado del impuesto turístico hotelero existente. Las facturas se cobran después de pagar salarios y realizar actividad mensual, desde el efectivo remanente. Pago parcial reduce la caja solo por lo cobrado y conserva el resto en `taxes.arrearsByAsset`; solo cobros entran al flujo municipal. La liquidación registra el mes procesado para impedir duplicación. Los topes de tasa permiten probar carga fiscal sin tasas arbitrarias sin límite.
+
+- **Fondo municipal de deuda (Alfa 0.60):** caja reservada queda fuera de la caja libre y de los fondos disponibles para contratar; aportes solo toman efectivo no comprometido. Al cierre mensual se usa únicamente para completar el servicio contractual completo, sin crear pagos parciales. La mora y los fondos no gastados se conservan. Migración de guardados al esquema 44.

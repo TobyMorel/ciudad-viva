@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.15 · 31 de octubre de 2026  
+**Entrega:** Alfa 0.16 · 31 de octubre de 2026  
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Implementado
@@ -19,9 +19,11 @@
 - Cada pedido elige destino: patio de constructoras o depósito identificado. El camión viaja hasta ese edificio y entrega allí el inventario separado por constructora. Las obras solo consumen ese stock si tienen ruta vial hasta el depósito; el retiro usa primero el inventario alcanzable más cercano. El pedido puede marcar prioridad normal o alta. Al llegar, espera si faltan operarios o autoelevador; la prioridad alta se antepone a la cola de descarga. La descarga reserva equipo y cuadrilla, dura según volumen/capacidad del contratista y anima la carga hasta liberar el stock.
 - Inventarios, saldos de contratistas, ofertas y estado de cada pedido visibles en la interfaz y persistentes en el guardado. La cola de descarga ordena pedidos por prioridad manual, material que desbloquea una etapa detenida, días de espera y exposición contractual calculada. La exposición se informa en la interfaz y no se cobra. El guardado usa esquema 14 y migra automáticamente las ciudades Alfa anteriores; los flujos laborales y sus tiempos se derivan al cargar el estado, no se guardan duplicados.
 
+- La asistencia individual derivada del tiempo de viaje determina el salario cobrado. La nómina efectiva de cada empleador coincide con el dinero acreditado en los hogares; el inspector muestra asistencia y trabajadores con jornada reducida por tráfico.
+
 ## Verificaciones ejecutadas
 
-- Alfa 0.15: se asignaron 203 residentes a un empleador único (169 privados y 34 públicos). La nómina privada de prueba fue $1.690 y la pública $272; los hogares recibieron salarios y las compras locales redujeron sus cajas. El ciclo mensual debitó salarios públicos, recaudó impuestos comerciales y terminó con tesorería $49.566. Sin calles quedaron cero trabajadores con empleo. Una migración desde esquema 13 creó 620 residentes con identidades estables y elevó el esquema a 14. Ocho camiones en la ruta más usada elevaron el viaje medio de 7 a 11 minutos y redujeron la cobertura privada. Chromium WebGL cargó la interfaz Alfa 0.15 a 1440×900 sin errores JavaScript; se guardó captura de la ciudad.
+- Alfa 0.16: en la ciudad inicial se asignaron 203 residentes; nómina privada $1.690 y pública $272, con créditos idénticos en hogares y empresas/municipio. Ocho camiones elevaron el viaje medio de 7 a 11 minutos y redujeron nómina total de $1.962 a $1.943 (privada $1.690 a $1.671). Sin calles, asignación y salarios fueron cero. Chromium WebGL mostró la interfaz 0.16 sin errores JavaScript. Migración desde esquema 13 conserva identidades; esquema guardado sigue en 14.
 
 - Alfa 0.13: ocho camiones sobre un corredor de alta demanda elevaron el acceso laboral medio de 12 a 29 minutos, redujeron puestos cubiertos de 202 a 188 y el empleo efectivo de 78% a 72%. El ingreso fiscal de actividad bajó de $404 a $376/mes. Una red desconectada dejó los puestos sin dotación y eliminó ese ingreso. Chromium mostró cobertura por edificio y trabajador efectivo sin excepciones.
 

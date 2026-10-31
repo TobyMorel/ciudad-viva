@@ -382,6 +382,11 @@ def commute_model():
         factor=traffic_factor(trip["route"]);minutes=round(trip["distance"]*2.5*factor)
         attendance=max(.25,1-max(0,minutes-15)/240)
         trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
+        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1])
+        for emp in grouped.get(group,[]):
+            emp["attendance"]=attendance
+            emp["earnedWage"]=round(emp["wage"]*attendance)
+            emp["person"]["attendance"]=round(attendance,2)
         minutes_sum+=trip["workers"]*minutes
         si=next((i for i,site in enumerate(sites) if site["x"]==trip["to"][0] and site["y"]==trip["to"][1]),None)
         if si is not None:
@@ -393,6 +398,7 @@ def commute_model():
         effective=min(workplace["jobSlots"],effective_by_site.get(si,0));workplace["staffedJobs"]=round(effective)
         workplace["attendance"]=round(effective/max(1,workplace["workersAssigned"]),2)
         workplace["meanMinutes"]=round(minutes_by_site[si]/workers_by_site[si]) if workers_by_site.get(si) else None
+        workplace["payroll"]=sum(emp.get("earnedWage",emp["wage"]) for emp in site_people[si])
         staffed+=effective
         if workplace["kind"]=="shop":private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
@@ -431,7 +437,7 @@ def pay_public_wages(workforce):
     payroll=0
     for emp in workforce.get("employees",[]):
         if emp["site"].get("kind") not in ("civic","depot"):continue
-        wage=emp["wage"];home=emp["home"]
+        wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
         home["householdCash"]=round(home.get("householdCash",0)+wage)
         home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         payroll+=wage
@@ -443,7 +449,8 @@ def simulate_business_month(workforce):
     demand={(b["x"],b["y"]):0.0 for b in shops};roads={tuple(r) for r in state["roads"]}
     for emp in workforce.get("employees",[]):
         if emp["site"].get("kind")=="shop":
-            home=emp["home"];home["householdCash"]=round(home.get("householdCash",0)+emp["wage"]);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+emp["wage"]
+            wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
+            home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
     reachable_by_home={}
     for home in homes:
         reachable=[]
@@ -467,7 +474,7 @@ def simulate_business_month(workforce):
         market=demand.get(key,0);regional=max(0,round(firm.get("jobSlots",0)*.35));total_demand=market+regional;inventory=max(0,int(firm.get("inventory",0)))
         production=min(max(0,200-inventory),max(0,math.ceil(total_demand-inventory)),max(0,round(staffed*firm.get("productivity",.06)*30)))
         sales=min(inventory+production,max(0,math.floor(total_demand)));local_sales=min(sales,max(0,round(market)))
-        revenue=sales*firm.get("price",18);inputs=production*firm.get("inputCost",5);payroll=headcount*firm.get("wage",10);overhead=firm.get("fixedCost",40)
+        revenue=sales*firm.get("price",18);inputs=production*firm.get("inputCost",5);payroll=max(0,int(site.get("payroll",headcount*firm.get("wage",10))));overhead=firm.get("fixedCost",40)
         local_left=local_sales
         buyers=sorted(homes,key=lambda h:sum(w for sh,w in reachable_by_home[id(h)] if sh is shop),reverse=True)
         for home in buyers:
@@ -724,7 +731,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.15"
+    server_version="CiudadViva/0.16"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

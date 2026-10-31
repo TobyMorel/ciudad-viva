@@ -13,7 +13,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
-| 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; consumo, pérdidas, capacidad de depuración, lluvia, escorrentía, anegamientos, daños y consecuencias | Residuos, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
+| 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y consecuencias | Transferencia, contenedores, reciclaje, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27–28 | Pendiente | Clima, inundaciones, desastres y riesgos profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
@@ -63,3 +63,10 @@ Alfa 0.42 extiende la fase 26 con colectores cloacales independientes, caudal pr
 Se añadió un sistema de escorrentía que distingue lluvia, superficie impermeable de calles y edificios, conexión pluvial y elevación aproximada. Los colectores tienen capacidad de base y por tramo; la lluvia no conectada y los excedentes generan agua acumulada en parcelas. Tormentas severas pueden deteriorar edificios y caminos, descontar costos de caja, bajar servicios y afectar aprobación si comprometen servicios cívicos o a una parte relevante de hogares. El panel Servicios incluye caudal, capacidad, cobertura, conexiones, anegamientos y reparación estimada. La capa azul del mapa identifica red y parcelas anegadas.
 
 La fase 26 sigue parcial: residuos, gas, telecomunicaciones, reparación efectiva, redundancia y bombeo avanzado están pendientes.
+
+
+## Alfa 0.44 · residuos (fase 26, parcial)
+
+La recolección ahora depende del tonelaje generado y de camiones/capacidad diarios. El relleno tiene cupo finito, y se puede construir una nueva celda sanitaria con cinco etapas. Si se agota el cupo o no alcanza la flota, queda basura acumulada y se vuelve visible sobre las calles; umbrales proporcionales y un mínimo absoluto causan pérdidas mensuales de servicios y, en crisis más grandes, aprobación. La ciudad paga operación y tarifas según el tonelaje recogido. La capacidad ampliada permite recuperar el retraso. Online y Offline comparten la mecánica.
+
+La fase 26 sigue parcial: contenedores, turnos y recorridos de recolección detallados, transferencia, reciclaje, gas, telecomunicaciones, reparación, redundancia, respaldo e interrupciones de servicios permanecen pendientes.

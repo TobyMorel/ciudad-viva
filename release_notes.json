@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.43",
+  "currentVersion": "0.44",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.44",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Fase 26 (parcial): hogares, comercios, actividad pública y visitantes generan residuos; la recolección queda limitada por la flota y el almacenamiento final tiene capacidad física finita.",
+        "La partida comienza con un servicio base de 1,15 t/día y un relleno regional de 900 t. Cada depósito municipal conectado suma un camión y 0,75 t/día de capacidad de recolección; cuando el relleno se completa, la basura no retirada se acumula en calles y reduce servicios/aprobación al superar umbrales explícitos.",
+        "Se puede licitar un relleno sanitario de cinco etapas por $9.800 y 72 días base; suma 1.800 t de disposición y 12 puestos. La generación, recolección, costos, capacidad agotada y recuperación de residuos tras ampliar el relleno se simulan en Online y Offline.",
+        "Camiones recolectores recorren las calles y las pilas aparecen en el mapa cuando crece el retraso. Ciudad > Servicios ahora incluye balance de residuos y costos; guardados previos migran al esquema 29."
+      ]
+    },
     {
       "version": "0.43",
       "date": "31 de octubre de 2026",

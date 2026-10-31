@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.43 · 31 de octubre de 2026
+**Entrega:** Alfa 0.44 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -338,3 +338,12 @@ Guardados previos migran al esquema 28 y obtienen colectores pluviales siguiendo
 ### Verificación Alfa 0.43
 
 Python/JavaScript y JSON pasan validación sintáctica. El servidor confirmó tiempo seco y tormenta, escorrentía y captación por capacidad, daños idempotentes en el día de tormenta y anegamiento al desconectar el drenaje. Offline avanzó al día de tormenta, aplicó el impacto una sola vez y cobró correctamente $155 por un nuevo tramo conectado. Chromium móvil (390×844) mostró Ciudad > Servicios sin desbordamiento horizontal; el contenido excedente queda dentro del área desplazable. No se verificó esta versión en escritorio ni LAN entre equipos físicos.
+
+
+## Alfa 0.44 · recolección y disposición de residuos (fase 26, parcial)
+
+Guardados previos migran al esquema 29. La producción diaria responde a población residente, empleo por actividad y huéspedes; el municipio tiene una flota inicial de 1,15 t/día. Los depósitos conectados aportan camiones/capacidad. El relleno de disposición regional tiene 900 t finitas; una obra nueva añade 1.800 t y tarda 72 días base. Su licitación cuesta $9.800, requiere 12 trabajadores y materiales de obra; la operación de cada relleno cuesta $420/mes. La flota, la disposición por tonelada y el mantenimiento entran en el balance municipal. Cuando queda basura pendiente, se acumula en parcelas del mapa; al cruzar umbrales documentados, afecta servicios y apoyo ciudadano. Los residuos vuelven a recogerse cuando aumenta la capacidad de disposición. El mapa muestra camiones municipales y pilas si hay retraso.
+
+### Verificación Alfa 0.44
+
+El servidor produjo 0,72 t/día ante 1,15 t/día de recolección, almacenó residuos sin crear basura pendiente y actualizó el costo. Con un relleno lleno, la flota dejó basura en calles; un depósito elevó la capacidad de 1,15 a 1,90 t/día y una obra habilitada amplió la disposición total de 900 a 2.700 t. Con 50 t pendientes, el cierre mensual redujo servicios. Online y Offline adjudicaron el relleno por etapas con 12 trabajadores y finalizaron una entrega acelerada de prueba con los 1.800 t y puestos esperados. Chromium comprobó la interfaz de Servicios y la herramienta en móvil (390×844) y escritorio (1440×900): no hubo desbordamiento horizontal ni etiquetas cortadas, y el panel desplazable expone todo el contenido. LAN entre equipos físicos continúa pendiente.

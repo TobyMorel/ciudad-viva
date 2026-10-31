@@ -2,15 +2,17 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.63
+## Estado al cerrar Alfa 0.64
 
-La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. La fase aún no representa transformaciones arquitectónicas por décadas, cambios de uso industriales/residenciales ni impactos de alquileres y desplazamiento. Alfa 0.63 inicia fase 31 con condición por tramo vial, desgaste mensual por carga urbana y plan preventivo financiado dentro de Redes y residuos. La subfinanciación deja mora y menos trabajo; una proporción alta de tramos deteriorados reduce los servicios. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
+La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. La fase aún no representa transformaciones arquitectónicas por décadas, cambios de uso industriales/residenciales ni impactos de alquileres y desplazamiento. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
 ## Próximo sistema
 
-Extender fase 31 a mantenimiento preventivo y correctivo de redes/edificios municipales, inspecciones de activos críticos y restricciones durante obras; después retomar fase 30 para reconversión de usos y efectos de alquiler/desplazamiento.
+Extender fase 31 a condición y fallos individuales de redes, puentes y plantas, con cortes temporales y trabajos programados; después abrir fase 30 con reconversión de uso productivo, vivienda y efectos de alquiler/desplazamiento.
 
 ## Verificación
+
+Online y Offline completaron la degradación de la Municipalidad por debajo de 60%, diagnóstico, inspección ($150/1 día), adjudicación a Sur Obras ($900/4 trabajadores/5 días) y rehabilitación final a 82%. Móvil/escritorio: subpestañas de inventario sin desborde horizontal y scroll vertical.
 
 La simulación Online y Offline calcula los mismos costos y reglas de mantenimiento. El cierre mensual usa el factor efectivamente pagado por el programa Redes; revisar también la condición inicial y el primer cierre en el navegador antes de ampliar activos.
 

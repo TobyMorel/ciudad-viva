@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.63
+# Auditoría del roadmap · Alfa 0.64
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -18,7 +18,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
 | 30 | Parcial: catálogo de inmuebles históricos, año/uso/estilo/conservación, niveles de protección y rehabilitación con materiales, constructora, cuadrilla, plazo y efecto en identidad | Evolución arquitectónica por épocas, reconversión y sustitución condicionadas, protección de alquileres y desplazamiento social |
-| 31 | Parcial: condición vial, desgaste ligado a carga urbana, plan preventivo incluido en el presupuesto de redes y pérdida de servicio ante deterioro extendido | Inspecciones, cierres programados, edificios/redes, rehabilitación mayor y reemplazo |
+| 31 | Parcial: calles y edificios públicos con condición/deterioro ligado a carga, mantenimiento financiado por Redes y residuos, diagnóstico bajo 45%/60%, inspección de un día y contrato de rehabilitación con cuatro trabajadores | Redes técnicas/puentes, cierres temporales por seguridad, inspección preventiva de activos críticos, rehabilitación mayor y reemplazo |
 | 32–33 | Pendientes como sistemas completos | Gobierno plurianual/electoral y simulación de décadas |
 
 ## Evidencia de esta revisión
@@ -184,3 +184,10 @@ Verificado: proteger y rehabilitar Mercado Central en Online y Offline; consumi�
 Los tramos viales guardan condición y carga estimada a partir de edificios adyacentes y conectividad. Un plan ajustable de 0–200% define el gasto preventivo mensual; el costo se incorpora al programa Redes y residuos y la ejecución depende del presupuesto realmente pagado y de la caja disponible. Al cierre, el uso produce desgaste diferenciado y la financiación recupera parte de la condición. Si 35% de la red queda por debajo de 45%, cae un punto el nivel de servicios municipales. Ciudad > Mantenimiento expone condición, tramos prioritarios, costo y ejecución. Online/Offline y esquema 47.
 
 Fase 31 sigue parcial: no hay inspección de puentes/edificios, cierre por seguridad, programación de obras, activos privados ni reemplazo. La fase 30 sigue pendiente en reconversión y desplazamiento.
+
+
+## Alfa 0.64 · mantenimiento y rehabilitación correctiva (fase 31, parcial)
+
+El plan de mantenimiento de Alfa 0.63 ahora cubre centros cívicos, escuelas, bomberos, depósitos, plantas de servicios, puertos y aeropuertos, con condición mensual según puestos y ocupación. El gasto preventivo se incorpora a Redes y residuos y el factor realmente liquidado determina cuánto se evita el desgaste. Una calle bajo 45% o un edificio público bajo 60% crea un expediente con causa, condición y costo estimado. La inspección cuesta $150 y espera un día; después se adjudica una constructora, se pagan los fondos, se ocupa cuadrilla de cuatro trabajadores y la reparación restaura a 82%. Ambos tipos de necesidad usan el mismo flujo que los daños de tormenta, sin duplicar bienes ni fondos. Online y Offline, esquema 48.
+
+Prueba de ciclo completo en Online y Offline: Municipalidad a 60,1% con política sin financiación, caída a 59,8%, expediente de desgaste, inspección completada, oferta de Sur Obras de $900, cinco días, cuatro trabajadores y condición final 82%. Chromium 390×844 y 1440×900: subpestañas de calle/edificios dentro del modal, scroll vertical, sin overflow horizontal, textos solapados ni errores JavaScript. Fase 31 permanece parcial: no hay deterioro individual de redes técnicas/puentes ni cierres temporales.

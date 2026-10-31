@@ -192,14 +192,14 @@ def ensure_heritage_state():
         else:
             building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
         building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state["version"]=max(47,int(state.get("version",1)))
+    state["version"]=max(48,int(state.get("version",1)))
 
 def road_maintenance_report(funding_factor=None,advance=False):
     roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
     for x,y in roads:
         if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15})
     policy=max(0,min(200,int(state.get("roadMaintenancePct",100))))
-    road_set={tuple(r) for r in roads};loads=[];required=0
+    road_set={tuple(r) for r in roads};road_rows=[];required=0
     for asset in assets:
         x,y=asset["x"],asset["y"];adjacent=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
         degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
@@ -209,9 +209,29 @@ def road_maintenance_report(funding_factor=None,advance=False):
             quality=max(0,quality-(.22+load*.12))
             if funding_factor is not None:quality=min(100,quality+(.72*policy/100*max(0,min(1,float(funding_factor)))))
             asset["quality"]=round(quality,1);asset["useLoad"]=round(load,2)
-        loads.append({"x":x,"y":y,"quality":round(quality,1),"useLoad":round(load,2),"maintenanceCost":round(base*policy/100)})
-    vals=[r["quality"] for r in loads]
-    report={"policyPct":policy,"segments":len(loads),"averageCondition":round(sum(vals)/max(1,len(vals))*10)/10,"poorSegments":sum(v<45 for v in vals),"criticalSegments":sum(v<25 for v in vals),"monthlyRequired":required,"monthlyFunded":round(required*max(0,min(1,float(funding_factor if funding_factor is not None else state.get("utilities",{}).get("maintenanceFundingFactor",1))))),"assets":loads[:80]}
+            if quality<45 and not any(n.get("targetType")=="road" and n.get("x")==x and n.get("y")==y and n.get("status")!="reparada" for n in state.setdefault("recoveryNeeds",[])):
+                estimate=max(850,round(850+(45-quality)*28))
+                state["recoveryNeeds"].append({"id":f"maintenance-road-{x}-{y}-{state.get('day',1)}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":state.get("day",1),"condition":round(quality),"estimate":estimate,"cause":"desgaste por uso y antigüedad","inspectionStatus":"pendiente","status":"abierta"})
+                ev("Inspección vial requerida",f"La calle {x+1},{y+1} bajó de 45% de condición. Solicitá diagnóstico y reparación antes de que el tramo pierda seguridad.")
+        road_rows.append({"x":x,"y":y,"quality":round(quality,1),"useLoad":round(load,2),"maintenanceCost":round(base*policy/100)})
+    public_kinds={"civic","school","fireStation","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
+    facilities=[]
+    for b in state.get("buildings",[]):
+        if b.get("kind") not in public_kinds or b.get("status") in ("cerrado","abandonado"):continue
+        quality=max(0,min(100,float(b.get("quality",82))));load=1+min(2,(b.get("jobSlots",0)*.012+b.get("occupants",0)*.002))
+        base=round(18+load*5);cost=round(base*policy/100);required+=cost
+        if advance:
+            quality=max(0,quality-(.18+load*.1))
+            if funding_factor is not None:quality=min(100,quality+(.52*policy/100*max(0,min(1,float(funding_factor)))))
+            b["quality"]=round(quality,1);b["maintenanceLoad"]=round(load,2)
+            if quality<60 and not any(n.get("targetType")=="building" and n.get("x")==b["x"] and n.get("y")==b["y"] and n.get("status")!="reparada" for n in state.setdefault("recoveryNeeds",[])):
+                estimate=max(900,round(850+(60-quality)*38))
+                state["recoveryNeeds"].append({"id":f"maintenance-building-{b['x']}-{b['y']}-{state.get('day',1)}","targetType":"building","x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"day":state.get("day",1),"condition":round(quality),"estimate":estimate,"cause":"desgaste por uso y antigüedad","inspectionStatus":"pendiente","status":"abierta"})
+                ev("Inspección de mantenimiento requerida",f"{b.get('name',b['kind'])} bajó de 60% de condición. Solicitá una inspección y compará ofertas de rehabilitación antes de que pierda capacidad.")
+        facilities.append({"x":b["x"],"y":b["y"],"name":b.get("name",b["kind"]),"kind":b["kind"],"quality":round(quality,1),"useLoad":round(load,2),"maintenanceCost":cost})
+    values=[r["quality"] for r in road_rows];building_values=[b["quality"] for b in facilities]
+    funded=max(0,min(1,float(funding_factor if funding_factor is not None else state.get("utilities",{}).get("maintenanceFundingFactor",1))))
+    report={"policyPct":policy,"segments":len(road_rows),"averageCondition":round(sum(values)/max(1,len(values))*10)/10,"poorSegments":sum(v<45 for v in values),"criticalSegments":sum(v<25 for v in values),"facilityCount":len(facilities),"averageFacilityCondition":round(sum(building_values)/max(1,len(building_values))*10)/10,"wornFacilities":sum(v<60 for v in building_values),"monthlyRequired":required,"roadMonthlyRequired":sum(r["maintenanceCost"] for r in road_rows),"facilityMonthlyRequired":sum(b["maintenanceCost"] for b in facilities),"monthlyFunded":round(required*funded),"assets":road_rows[:80],"facilities":facilities[:40]}
     state["roadMaintenanceReport"]=report
     return report
 
@@ -363,7 +383,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":47,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":48,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -459,7 +479,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(47,state.get("version",1))
+    state["version"]=max(48,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("roadMaintenancePct",100)
@@ -1111,7 +1131,7 @@ def register_recovery_needs(report,day):
         if asset is None:
             asset={"x":x,"y":y,"quality":72,"monthlyCost":15};state["roadAssets"].append(asset)
         cost=850+max(0,82-int(asset.get("quality",72)))*22
-        needs.append({"id":f"recovery-road-{x}-{y}-{day}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":day,"condition":int(asset.get("quality",72)),"estimate":cost,"inspectionStatus":"pendiente","status":"abierta"})
+        needs.append({"id":f"recovery-road-{x}-{y}-{day}","targetType":"road","x":x,"y":y,"name":f"Calle {x+1}, {y+1}","day":day,"condition":int(asset.get("quality",72)),"estimate":cost,"cause":"daño por tormenta","inspectionStatus":"pendiente","status":"abierta"})
     public_kinds={"civic","school","fireStation","depot","landfill","recyclingPlant","powerPlant","waterPlant","wastewaterPlant","port","airport"}
     for row in report.get("floodedBuildings",[]):
         if row.get("kind") not in public_kinds:continue
@@ -1119,7 +1139,7 @@ def register_recovery_needs(report,day):
         if any(n.get("targetType")=="building" and n.get("x")==x and n.get("y")==y and n.get("status")!="reparada" for n in needs):continue
         building=next((b for b in state["buildings"] if b.get("x")==x and b.get("y")==y),None)
         if not building:continue
-        needs.append({"id":f"recovery-building-{x}-{y}-{day}","targetType":"building","x":x,"y":y,"name":building.get("name",row.get("name","Servicio municipal")),"day":day,"condition":int(building.get("quality",72)),"estimate":max(1100,round(row.get("repairCost",0)*3)),"inspectionStatus":"pendiente","status":"abierta"})
+        needs.append({"id":f"recovery-building-{x}-{y}-{day}","targetType":"building","x":x,"y":y,"name":building.get("name",row.get("name","Servicio municipal")),"day":day,"condition":int(building.get("quality",72)),"estimate":max(1100,round(row.get("repairCost",0)*3)),"cause":"daño por tormenta","inspectionStatus":"pendiente","status":"abierta"})
 
 def advance_recovery_contracts():
     for need in state.setdefault("recoveryNeeds",[]):
@@ -1127,7 +1147,7 @@ def advance_recovery_contracts():
             need["inspectionRemainingDays"]=max(0,int(need.get("inspectionRemainingDays",1))-1)
             if need["inspectionRemainingDays"]==0:
                 need["inspectionStatus"]="inspeccionada";need["inspectedDay"]=state.get("day",0)
-                ev("Inspección de emergencia completada",f"{need['name']}: daños y presupuesto de reparación confirmados en $ {need['estimate']:,}. La obra puede licitarse.".replace(",","."))
+                ev("Inspección municipal completada",f"{need['name']}: diagnóstico y presupuesto confirmados en $ {need['estimate']:,}. La obra puede licitarse.".replace(",","."))
     for contract in state.setdefault("recoveryContracts",[]):
         if contract.get("status")!="en obra":continue
         contract["remainingDays"]=max(0,int(contract.get("remainingDays",1))-1)
@@ -1136,15 +1156,15 @@ def advance_recovery_contracts():
         if need:
             if need["targetType"]=="road":
                 asset=next((a for a in state["roadAssets"] if a.get("x")==need["x"] and a.get("y")==need["y"]),None)
-                if asset:asset["quality"]=min(82,int(asset.get("quality",need.get("condition",60)))+max(12,82-int(need.get("condition",60))))
+                if asset:asset["quality"]=82
             else:
                 building=next((b for b in state["buildings"] if b.get("x")==need["x"] and b.get("y")==need["y"]),None)
                 if building:
-                    building["quality"]=min(82,int(building.get("quality",need.get("condition",60)))+max(12,82-int(need.get("condition",60))))
+                    building["quality"]=82
                     building["floodRepairCost"]=0
             need.update({"status":"reparada","completedDay":state["day"]})
         contract.update({"status":"completada","completedDay":state["day"],"stage":"Inspección final aprobada"})
-        ev("Reparación de emergencia terminada",f"{contract['name']}: {contract['contractor']} restauró el activo tras {contract['duration']} días. Se recupera su condición y acceso urbano.")
+        ev("Rehabilitación municipal terminada",f"{contract['name']}: {contract['contractor']} restauró el activo tras {contract['duration']} días. La condición vuelve a 82% y el registro de necesidad se cierra.")
 
 def apply_drainage_impacts():
     utilities=ensure_utility_state();report=utilities.get("report",{}).get("drainage",{});day=state.get("day",0)
@@ -2267,8 +2287,9 @@ def tick_one_day():
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
         road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
         road_report=state.get("roadMaintenanceReport",{});poor=road_report.get("poorSegments",0);total=road_report.get("segments",0)
-        if total and poor/max(1,total)>=.35:
-            state["services"]=max(5,state["services"]-1);ev("Calles con mantenimiento diferido",f"{poor} de {total} tramos están por debajo de 45% de condición; el nivel de servicios municipales baja hasta financiar reparaciones.")
+        facilities=road_report.get("facilityCount",0);worn=road_report.get("wornFacilities",0)
+        if (total and poor/max(1,total)>=.35) or (facilities and worn/max(1,facilities)>=.25):
+            state["services"]=max(5,state["services"]-1);ev("Calles con mantenimiento diferido",f"Calles deterioradas: {poor}/{total}; edificios públicos bajo 60%: {worn}/{facilities}. El nivel de servicios municipales baja hasta financiar reparaciones.")
         due=full_operating_cost+debt_due
         net=monthly_income-due
         if available>=debt_due:
@@ -2774,7 +2795,7 @@ class Handler(BaseHTTPRequestHandler):
                 if action=="adjustRoadMaintenance":
                     delta=int(data.get("delta",0));old=max(0,min(200,int(state.get("roadMaintenancePct",100))));new=max(0,min(200,old+delta))
                     if delta not in (-25,25) or new==old:self._send(409,{"error":"El plan cambia en pasos de 25%, entre 0% y 200%."});return
-                    state["roadMaintenancePct"]=new;ev("Plan vial actualizado",f"Mantenimiento preventivo de calles: {new}% de la necesidad mensual estimada. El presupuesto de redes determina cuánto trabajo se ejecuta y la condición cambia por uso.")
+                    state["roadMaintenancePct"]=new;ev("Plan municipal de mantenimiento actualizado",f"Mantenimiento preventivo de calles y edificios públicos: {new}% de la necesidad mensual estimada. El presupuesto de redes determina cuánto trabajo se ejecuta y la condición cambia por uso.")
                     self._send(200,public_state(pid));return
                 if action=="adjustProgramBudget":
                     ensure_finance_state();budgets=state["finance"]["programBudgets"];program=str(data.get("program",""));delta=int(data.get("delta",0))
@@ -2976,9 +2997,9 @@ class Handler(BaseHTTPRequestHandler):
                     if contractor_free_workers(contractor)<4:self._send(409,{"error":f"{contractor} no tiene los cuatro trabajadores libres para esta reparación."});return
                     cost=round(need["estimate"]*CONTRACTORS[contractor]["price"]);reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
                     if available<cost:self._send(409,{"error":f"Quedan $ {available}; el contrato cuesta $ {cost} además de las obras comprometidas."});return
-                    duration=max(2,round(4*CONTRACTORS[contractor]["days"]/30));contract={"id":uuid.uuid4().hex,"needId":need["id"],"targetType":need["targetType"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"cost":cost,"paid":cost,"duration":duration,"remainingDays":duration,"workers":4,"startDay":state["day"],"status":"en obra","stage":"Desagote y retiro de materiales dañados"}
+                    duration=max(2,round(4*CONTRACTORS[contractor]["days"]/30));contract={"id":uuid.uuid4().hex,"needId":need["id"],"targetType":need["targetType"],"x":need["x"],"y":need["y"],"name":need["name"],"contractor":contractor,"cost":cost,"paid":cost,"duration":duration,"remainingDays":duration,"workers":4,"startDay":state["day"],"status":"en obra","stage":"Refuerzo estructural y renovación de instalaciones" if need.get("cause")=="desgaste por uso y antigüedad" else "Desagote y retiro de materiales dañados"}
                     state["money"]-=cost;state.setdefault("recoveryContracts",[]).append(contract);need["status"]="en reparación";need["contractId"]=contract["id"]
-                    ev("Contrato de recuperación adjudicado",f"{contractor} reparará {need['name']} por $ {cost:,} en {duration} días; 4 trabajadores quedan asignados. El pago sale de la tesorería al iniciar.".replace(",","."))
+                    ev("Contrato municipal adjudicado",f"{contractor} rehabilitará {need['name']} por $ {cost:,} en {duration} días; cuatro trabajadores quedan asignados. El pago sale de la tesorería al iniciar.".replace(",","."))
                 elif action=="prepareHeatwave":
                     climate=ensure_climate_state();forecast=climate.get("heatForecast") or {};target=int(data.get("targetDay",-1))
                     if forecast.get("targetDay")!=target or forecast.get("status")!="pronosticada" or target<=state["day"]:self._send(409,{"error":"No hay una ola de calor futura disponible para preparar."});return

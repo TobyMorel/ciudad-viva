@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.63",
+  "currentVersion": "0.64",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.64",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): el plan preventivo ya mantiene calles y edificios municipales. El desgaste de edificios públicos escala según personal/ocupación, se liquida en Redes y residuos y la condición baja abre un diagnóstico de mantenimiento al cruzar 60%.",
+        "Inspeccionar cuesta $150 y demora un día; luego compiten tres constructoras. Adjudicar paga el contrato, ocupa cuatro trabajadores durante 5 días base y devuelve la estructura a 82%. Funciona con el ciclo de recuperación existente en Online/Offline, guardados esquema 48.",
+        "Ciudad > Mantenimiento separa Calles y Edificios públicos en subpestañas; Recuperación reúne diagnóstico, inspección y rehabilitación. Verificado el ciclo completo en ambos motores. Chromium 390×844 y 1440×900: categorías/subpestañas dentro del modal, scroll vertical y sin overflow horizontal, solapamientos ni errores JavaScript."
+      ]
+    },
     {
       "version": "0.63",
       "date": "2026-10-31",
@@ -536,12 +545,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 31 · vida útil de activos",
-      "detail": "Extender el inventario y mantenimiento a redes y edificios públicos; inspecciones, rehabilitación mayor y restricciones temporales por seguridad."
+      "title": "Fase 31 · redes y operación segura",
+      "detail": "Dar condición individual a tuberías, cables, plantas y puentes; generar fallos ligados al desgaste y programar reparaciones con cortes temporales."
     },
     {
-      "title": "Fase 30 · transformación gradual de barrios",
-      "detail": "Añadir cambios arquitectónicos por época y reconversión de inmuebles con inversión, empleo, adaptación, alquileres y desplazamiento social."
+      "title": "Fase 30 · reconversión y vivienda",
+      "detail": "Cambiar usos de inmuebles productivos con adaptación, inversión y empleo, y registrar efectos sobre alquileres y desplazamiento."
     }
   ]
 }

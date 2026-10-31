@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.80
+# Auditoría del roadmap · Alfa 0.81
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -284,8 +284,15 @@ La aprobación de una obra guarda el mandato de origen. El panel de Gobierno pre
 **Pendiente:** paridad de consumo de materiales en Offline, contratación automática comercial Offline sin política de delegación, prueba de interfaz en dispositivos, entrada de hogares tras terminación y comprobación LAN/Vercel. Las fases 1/4/5/16/17/18/20 pasan a 70/55/65/20/55/50/50%; no son porcentaje global.
 
 
-## Alfa 0.80 · zonificación, promotores y producción local
+## Alfa 0.81 · zonificación, promotores y producción local
 
 El circuito de fase 4 combina permisos pintados con demanda: el uso residencial acumula candidatos, el uso comercial habilita una inversión condicionada por ventas no atendidas y el uso industrial permite que una empresa fabrique bienes que las tiendas compran. La fábrica necesita ruta, personal y servicios; produce al límite de capacidad y stock, paga nómina y costo operativo, cobra ventas locales y cierra si no puede financiar costos. La migración no reduce presión residencial hasta asignarse a una vivienda.
 
 La fase 17 subraya las empresas y empleos de la nueva fábrica; fase 18 la cadena inicial proveedor local→tiendas; fase 20 el promotor de vivienda sobre parcela permitida. No se elevan porcentajes respecto del Alfa 0.79 porque las cadenas todavía son parciales: no hay materias primas industriales, cartera de promotores ni mercado de alquiler integrado.
+
+## Alfa 0.81 · activación de promotores y permisos cooperativos abiertos
+
+- Fases 4, 5, 17, 18 y 20 avanzan con demanda doméstica de comercio, inicio autónomo de obra en suelo permitido y fábrica privada activada cuando el comercio registra ventas o compra de insumos. Una parcela pintada no hace aparecer inmediatamente una construcción: crea permiso; el promotor espera demanda, acceso, fondos, personal y capacidad.
+- La interfaz de parcela expone los tres usos con códigos de color y explica qué inicia el crecimiento. Las viviendas no generan residentes hasta que una mudanza ocurra. Comercios y fábricas se vuelven edificios visibles tras terminar las obras por etapas.
+- La cooperación presenta referentes voluntarios y deja todas las herramientas y controles de juego disponibles a los invitados, incluidos velocidad, pausa, nueva partida, guardado y carga. El proceso servidor permanece autoritativo.
+- Verificado en Online y Offline: vivienda ante demanda; sin vivienda con demanda cero; fábrica al existir actividad comercial; tienda al quedar compras domésticas sin atender; permisos, contratista y capital aplicados. API de sala: invitado pudo hacer gestión, tiempo, nueva partida y guardado/carga. Chromium móvil/escritorio sin errores ni overflow horizontal. No se probó LAN física. Global no estimable por falta de ponderación entre las 34 fases.

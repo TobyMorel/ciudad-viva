@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.80 · 31 de octubre de 2026
+**Entrega:** Alfa 0.81 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -533,3 +533,20 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 - Chromium a 390×844 y 1440×900: Ciudad > Suelo sin overflow horizontal de página, controles de categoría desplazables, texto visible y sin errores JavaScript.
 - Guardado esquema 60, con migración aditiva de `housingDemand` y `localIndustry`. La construcción general Offline aún no descuenta inventario de materiales. Materias primas industriales, competencia entre fábricas y LAN entre equipos físicos siguen pendientes; Vercel no se probó.
 - El progreso global sigue sin estimación: no existe una ponderación verificable de las 34 fases. Se conservan los avances por fase en múltiplos de 5 con el método publicado.
+
+## Alfa 0.81 · crecimiento privado autónomo y cooperación abierta
+
+- Pintar una parcela verde, azul o amarilla concede el permiso de uso. El jugador no necesita iniciar vivienda, comercio ni fábrica: los promotores usan la demanda y el empleo observados para proponer y contratar automáticamente obras privadas por etapas cuando hay acceso, caja municipal para permisos, capital, contratista y recursos.
+- Las viviendas requieren demanda persistente ligada a aprobación y empleo potencial; la demanda solo se consume al mudarse personas reales. Los comercios nuevos responden tanto a compras locales que quedan sin atender como a pedidos regionales. Las fábricas aparecen si existen ventas o compras de insumos en comercios activos y parcelas industriales; conservan los requisitos económicos y de contratista.
+- La pantalla de parcela ahora explica el crecimiento autónomo y muestra usos residenciales, comerciales e industriales con los colores del sistema. La construcción manual ya no es necesaria para esos tres tipos; servicios públicos e infraestructura siguen siendo decisiones municipales.
+- Los referentes municipales del modo cooperativo son optativos y organizativos. Cualquier anfitrión o invitado conserva todas las acciones, herramientas y controles, incluida velocidad/pausa y guardado/carga; el servidor no valida por cartera. Cada jugador puede reasignar referentes activos.
+- Límites: Offline ya tenía una simulación de obra simplificada que no descuenta materiales; este hito no afirma paridad material con Online. La sincronización LAN física y la prueba de despliegue Vercel no se realizaron.
+
+### Verificación Alfa 0.81
+
+- `python -m py_compile server.py`, `node --check game.js`, `node --check offline.js` y `git diff --check`: correctos.
+- Verificado en el servidor Online: parcela verde inicia vivienda ante demanda acumulada, parcela amarilla inicia fábrica tras actividad de ventas o compras de insumos del comercio, y demanda de hogares no atendida inicia local en zona azul. También se comprobó que el crecimiento automático absorbe propuestas manuales disponibles de guardados anteriores.
+- Verificado en Offline por navegador: en un cierre mensual se iniciaron vivienda, fábrica y comercio por demanda local con capital, caja, zona y contratistas disponibles. No se inició vivienda cuando el backlog quedó en cero.
+- API LAN de dos participantes simulados: el invitado reasignó una cartera, zonificó, cambió velocidad y pausa, guardó, inició otra ciudad y cargó; las siete acciones respondieron correctamente y el anfitrión autoritativo se conservó. No equivale a prueba física entre dos equipos.
+- Chromium 390×844 y 1440×900: menús y mapa sin overflow horizontal ni errores JavaScript; la ficha de parcelas y peatones abrió sin desbordar el viewport. Los mandos de zona se dispusieron en grilla adaptable.
+- Fases actualizadas a 5 puntos por el método publicado: 4=60%, 5=70%, 17=60%, 18=55%, 20=55%. No se calcula porcentaje global porque las fases no tienen pesos comunes definidos.

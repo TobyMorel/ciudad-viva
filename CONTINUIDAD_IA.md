@@ -81,10 +81,18 @@ Continuar la fase 33 con simulación reproducible de varias décadas. Hacer prue
 **Siguiente punto exacto:** validar construcción Online hasta inspección y llegada posterior de residente; auditar el agotamiento/margen de fábrica con múltiples cierres mensuales; completar consumo de materiales de obra en Offline y probar comercio/fábrica bajo escasez y competencia; luego retomar los escenarios de 30 años de fase 33.
 
 
-### Alfa 0.80 · zonificación y crecimiento privado (actual)
+### Alfa 0.81 · crecimiento privado autónomo (actual)
 
 - Se conserva el sistema de permisos verde residencial, azul comercial y amarillo industrial. El arrastre aplica el permiso a una franja de parcelas; parcelas vacías nuevas siguen sin zonificar y cambiar el color revoca el uso anterior.
 - La demanda residencial queda acumulada mientras haya candidatos sin vivienda. Cada casa privada se construye en una parcela residencial conectada por calle, consume capital/permiso/materiales, usa contratista y cuadrilla, y solo descuenta demanda al llegar un hogar real.
 - Fábricas privadas visibles requieren permiso industrial, cuadrilla, capital, materiales, empleo y servicios. Producen insumos con trabajadores y servicios disponibles; los comercios priorizan el proveedor local por precio y ruta, lo que reduce la compra externa. La cadena de materias primas y el agotamiento de insumos aún no están simulados.
 - Disponible en Online y Offline; guardado esquema 60. La limitación Offline de consumo de materiales en obras generales sigue abierta.
 - **Siguiente punto exacto:** probar la secuencia Online hasta inspección y llegada de residente y los ciclos mensuales de fábrica con competencia/escasez; cerrar consumo de materiales en obras Offline; después retomar pruebas de 30 años de fase 33.
+
+### Alfa 0.81 · promotores autónomos y equipo abierto (actual)
+
+- El usuario pidió que no tenga que construir viviendas, mercados o fábricas manualmente. Las parcelas pintadas habilitan a promotores privados; sus obras comienzan automáticamente cuando hay demanda, empleo o escasez comercial y se encuentran permisos, capital privado, contratista, cuadrilla, acceso y recursos. La pintura no produce edificios instantáneos. Los servicios públicos e infraestructura siguen en manos de jugadores.
+- Se agregó activación de nuevas tiendas por demanda doméstica local además de ventas regionales; la industria puede iniciar automáticamente cuando comercios activos ya venden o compran insumos. Offline mantiene su limitación conocida de no consumir materiales en obras.
+- La instrucción explícita del usuario es que todos los jugadores invitados puedan hacer todo. Las carteras municipales son rótulos voluntarios, se pueden reasignar y no autorizan ni bloquean acciones.
+- Revisar y ejecutar escenarios para verificar inicio residencial/comercial/industrial en ambos motores, condiciones de capital/cuadrillas y demanda. La UI de parcela requiere comprobación responsive.
+- El progreso global no puede estimarse con rigor: el roadmap no asigna pesos entre sus 34 fases. Avances por fase estables: 1=70, 4=60, 5=70, 16=20, 17=60, 18=55, 20=55, redondeados a múltiplos de 5.

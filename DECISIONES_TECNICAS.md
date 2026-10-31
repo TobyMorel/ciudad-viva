@@ -243,10 +243,17 @@ La fábrica vende bienes básicos al mercado de insumos con coordenada de origen
 La versión de guardado sube de 59 a 60 para agregar campos inicializados automáticamente `housingDemand` y `localIndustry`. La semilla Offline histórica se mantiene sin modificar y el adaptador migra el estado al abrirlo.
 
 
-## Alfa 0.80 · permisos pintados y producción local
+## Alfa 0.81 · crecimiento pintado y equipo sin bloqueos
 
 La zonificación es permiso de uso sobre una parcela vacía, no propiedad ni obra. Los tres valores son `home`, `shop` y `factory`, representados en verde, azul y amarillo; los permisos nuevos se crean por acción explícita y requieren acceso vial. Una solicitud de lote es atómica para evitar pintar solo parte si alguna parcela no es elegible.
 
 La demanda residencial persiste en `housingDemand.unmet`; empleos/aprobación producen candidatos, pero su llegada exige plaza vacante y capacidad laboral. Un hogar solo descuenta el backlog al mudarse. El promotor consume caja privada, permiso municipal, stock real de materiales, capacidad de constructor y tiempo contractual; el inicio mensual se limita para evitar colocar una fábrica o varias viviendas sin capacidad económica.
 
 La fábrica usa plantilla y acceso simultáneo a energía, agua y tratamiento cloacal para determinar producción. Su proveedor local tiene stock finito, precio y coordenada vial; el mecanismo de compra existente compara costo entregado y disponibilidad y registra pedido desde el origen de la fábrica. Los pagos devuelven ingresos al capital fabril. Materias primas, insumos industriales y contratos offline con materiales siguen como pendientes explícitos. Guardado continúa en esquema 60.
+
+## Alfa 0.81 · inversión privada automática y equipo sin restricciones por cartera
+
+- La zonificación es permiso de uso, no un comando de colocación. Una pasada mensual evalúa demanda residencial, compras domésticas sin cubrir y comercios existentes antes de contratar viviendas, locales y fábricas con presupuestos privados y permisos municipales.
+- Las oportunidades de tiendas ahora pueden originarse en escasez local de hogares, además de demanda regional. Los inversores eligen parcelas conectadas; si faltan fondos, cuadrillas o materiales, se aplaza el crecimiento en vez de inventar edificios o recursos.
+- Offline reproduce la activación automática residencial, comercial e industrial sobre su motor existente. Su construcción simplificada aún no consume materiales; se mantiene como limitación explícita.
+- Las carteras del equipo cooperativo son etiquetas voluntarias para coordinarse. No hay permisos por rol ni acciones de gestión reservadas al usuario anfitrión: cualquier jugador puede hacer todo, usar herramientas, gestionar tiempo, guardar/cargar o iniciar otra ciudad. Las carteras solo organizan la conversación. La identidad anfitriona marca el proceso servidor y se conserva al reiniciar/cargar para no transferir autoridad técnica.

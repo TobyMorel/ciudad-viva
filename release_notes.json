@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.80",
+  "currentVersion": "0.81",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.81",
+      "date": "2026-10-31",
+      "changes": [
+        "Fases 4, 5, 17, 18 y 20: las zonas verdes, azules y amarillas habilitan promotores privados. Ya no hace falta colocar manualmente viviendas, comercios ni fábricas: el crecimiento inicia obras por etapas al existir demanda real, empleo, acceso, permiso, capital, constructoras y recursos disponibles.",
+        "La demanda comercial detecta compras locales de hogares que las tiendas no cubren, además del mercado regional. La industria privada inicia si el comercio existente ya vende o compra insumos y hay parcelas industriales; sus fábricas visibles aportan puestos, insumos y costos. Online y Offline. Offline conserva su limitación existente de consumo de materiales en obras.",
+        "Equipo cooperativo: los referentes son voluntarios. Todos los jugadores pueden usar todas las herramientas, controlar velocidad/pausa, guardar, cargar y comenzar otra ciudad; el equipo puede cambiar de referente. El anfitrión conserva la autoridad técnica del servidor."
+      ],
+      "roadmapPhase": 4,
+      "phaseProgress": 60,
+      "overallProgress": null
+    },
     {
       "version": "0.80",
       "date": "2026-10-31",
@@ -763,8 +775,8 @@
     {
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
-      "progress": 55,
-      "summary": "Permisos residenciales, comerciales e industriales; vivienda automática desde demanda y comercio desde demanda regional.",
+      "progress": 60,
+      "summary": "Promotores residenciales, comerciales e industriales inician obras automáticamente según demanda, empleo, acceso y recursos.",
       "pending": [
         "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas."
       ]
@@ -772,8 +784,8 @@
     {
       "phase": 5,
       "title": "Población, hogares, necesidades y migración",
-      "progress": 65,
-      "summary": "Demanda migratoria persistente que se consume solo al recibir residentes; empleo limita la llegada.",
+      "progress": 70,
+      "summary": "Demanda migratoria persistente ligada a aprobación y empleo; hogares entran solo a viviendas reales.",
       "pending": [
         "Necesidades individuales completas, migración multidimensional y desigualdad."
       ]
@@ -880,8 +892,8 @@
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 55,
-      "summary": "Negocios minoristas y fábrica privada con empleos; compras locales y capital operativo.",
+      "progress": 60,
+      "summary": "Hogares compran a comercios; la demanda local/regional activa inversión y fábricas locales autónomas.",
       "pending": [
         "Competencia empresarial completa, expansión y quiebra industrial; costes de producción extensos."
       ]
@@ -889,8 +901,8 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 50,
-      "summary": "Mercado de insumos minoristas recibe producción industrial local según plantilla y servicios; comercios compran por ruta y costo.",
+      "progress": 55,
+      "summary": "Fábricas zonificadas aportan producción local automática; comercios compran según stock, precio y ruta vial.",
       "pending": [
         "Cadenas de materias primas y transformación detalladas; logística regional completa."
       ]
@@ -907,8 +919,8 @@
     {
       "phase": 20,
       "title": "Mercado de vivienda, alquileres, desarrolladores y abandono",
-      "progress": 50,
-      "summary": "Promotor residencial construye sobre demanda acumulada y parcela permitida; las viviendas reciben migrantes después de inspección.",
+      "progress": 55,
+      "summary": "Vivienda privada aparece automáticamente ante demanda residencial acumulada en parcelas verdes.",
       "pending": [
         "Promotores con cartera de proyectos y mercado de alquiler con protección de inquilinos."
       ]

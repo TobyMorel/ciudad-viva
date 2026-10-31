@@ -94,6 +94,11 @@ BUS_MONTHLY_OPERATING_COST=140
 BUS_FARE=0.25
 BUS_TRANSFER_DISCOUNT=0.4
 BUS_SEATS=30
+MUNICIPAL_ROLES={
+    "urbanismo":{"label":"Urbanismo","summary":"Parcelas, obras, permisos y materiales"},
+    "hacienda":{"label":"Hacienda","summary":"Impuestos, créditos, presupuestos e inversiones"},
+    "servicios":{"label":"Servicios","summary":"Salud, educación, redes, residuos y emergencias"},
+    "movilidad":{"label":"Movilidad","summary":"Colectivos y operación del transporte"}}
 BUS_WINDOW_DEPARTURES=(
     ("early","05:00–07:00",1.5),("morningPeak","07:00–09:00",1.0),("dayMorning","09:00–11:00",1.75),("dayNoon","11:00–13:00",1.75),
     ("midday","13:00–15:00",1.5),("afternoon","15:00–17:00",1.5),
@@ -330,7 +335,19 @@ def ensure_government_state():
     government.setdefault("complaints",[])
     government.setdefault("complaintSequence",0)
     government.setdefault("agreements",[])
+    government.setdefault("responsibilities",{})
     if "plan" not in government:government["plan"]=new_mandate_plan()
+
+def municipal_team_report(player_id=None):
+    government=state.setdefault("government",{})
+    responsibilities=government.setdefault("responsibilities",{})
+    cutoff=time.time()-25
+    active=[(member,last) for member,last in state.get("players",{}).items() if last>cutoff]
+    active.sort(key=lambda item:(item[0]!=state.get("host"),item[0]))
+    labels={member:("Alcaldía · anfitrión" if member==state.get("host") else f"Jugador {member[-6:]}") for member,_ in active}
+    members=[{"id":member,"label":labels[member],"isHost":member==state.get("host"),"role":next((role for role,owner in responsibilities.items() if owner==member),"compartido")} for member,_ in active]
+    roles=[{"id":role,"label":meta["label"],"summary":meta["summary"],"playerId":responsibilities.get(role),"playerLabel":labels.get(responsibilities.get(role),"Titular desconectado · área compartida")} for role,meta in MUNICIPAL_ROLES.items()]
+    return {"isHost":player_id is not None and player_id==state.get("host"),"myRole":next((role for role,owner in responsibilities.items() if owner==player_id),"compartido"),"members":members,"roles":roles,"online":len(active)}
 
 def government_districts():
     districts=[{"id":"oeste","name":"Oeste","homes":[]},{"id":"centro","name":"Centro","homes":[]},{"id":"puerto","name":"Puerto","homes":[]}]
@@ -2330,7 +2347,7 @@ def allocate_regional_export_demand(shops,workforce):
     storage["lastReport"]=report;state["regionalMarketReport"]=report
     return demand,report
 
-def refresh_private_investment_opportunity(report):
+def refresh_private_investment_opportunity(report,local_unmet=0):
     """Create one reviewable private shop proposal from persistently unserved demand."""
     book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1),"reason":"Esperando condiciones de inversión."})
     book.setdefault("history",[]);book.setdefault("nextOfferDay",state.get("day",1));book.setdefault("delegation",{"enabled":False,"maxPermit":500})
@@ -2342,16 +2359,23 @@ def refresh_private_investment_opportunity(report):
             current["status"]="vencida" if state.get("day",1)>current.get("expiresDay",0) else "parcela ocupada"
             book["history"].append(dict(current));book["history"]=book["history"][-24:];book["proposal"]=None;book["nextOfferDay"]=state.get("day",1)+45
         else:
-            book["reason"]="Un inversor mantiene una oferta pendiente.";return
+            # Las parcelas zonificadas pasan al circuito automático también en guardados antiguos.
+            current["status"]="absorbida por promotores automáticos"
+            book["history"].append(dict(current));book["history"]=book["history"][-24:];book["proposal"]=None
     book["reason"]=""
     if state.get("day",1)<book["nextOfferDay"]:return
-    if not report.get("networkAccess") or report.get("unmetOffer",0)<12:
-        book["reason"]="Se necesitan al menos 12 ventas regionales mensuales sin cubrir para justificar otro local.";return
+    regional_unmet=max(0,int(report.get("unmetOffer",0)))
+    local_unmet=max(0,int(local_unmet))
+    report["localUnmet"]=local_unmet
+    if regional_unmet<12 and local_unmet<12:
+        book["reason"]="El promotor espera ventas regionales pendientes o compras de hogares que las tiendas actuales no logran cubrir.";return
     candidates=[];reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
     for z in state.get("zones",[]):
         if z.get("kind")!="shop" or z.get("status") not in (None,"disponible") or (z.get("x"),z.get("y")) in reserved:continue
         if not any(abs(rx-z["x"])+abs(ry-z["y"])==1 for rx,ry in state.get("roads",[])):continue
-        route=route_between((z["x"],z["y"]),(23,10))
+        regional_route=route_between((z["x"],z["y"]),(23,10))
+        local_route=route_between((z["x"],z["y"]),(4,10)) if local_unmet>=12 else None
+        route=regional_route or local_route
         if route:candidates.append((len(route),z["y"],z["x"],z))
     if not candidates:
         book["reason"]="Zonificá una parcela comercial libre junto a una calle conectada para que un inversor pueda evaluarla.";return
@@ -2364,26 +2388,27 @@ def refresh_private_investment_opportunity(report):
     if not choices:
         book["reason"]="Falta capital privado, presupuesto para permisos o una cuadrilla libre de siete trabajadores.";return
     _,duration,contractor,private_cost,company=min(choices,key=lambda row:(row[0],row[1],row[2]));_,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
-    proposal={"id":uuid.uuid4().hex,"status":"disponible","x":zone["x"],"y":zone["y"],"district":"Puerto" if zone["x"]>=18 else "Centro" if zone["x"]>=10 else "Oeste","contractor":contractor,"createdDay":state.get("day",1),"expiresDay":state.get("day",1)+90,"unmetUnits":int(report.get("unmetOffer",0)),"jobs":12,"privateCost":private_cost,"operatingReserve":1200,"municipalPermit":permit,"durationDays":duration,"companyProfile":company["profile"]}
-    book["proposal"]=proposal;book["reason"]="La demanda regional sin cubrir justifica evaluar un nuevo comercio.";ev("Propuesta privada de comercio",f"Un inversor propone abrir un local en parcela {proposal['x']+1},{proposal['y']+1}: {proposal['unmetUnits']} ventas regionales quedaron sin atender. Requiere $ {private_cost:,} privados, permiso $ {permit}, siete trabajadores de obra y {duration} días estimados.".replace(",","."))
+    demand_kind="regional" if regional_unmet>=12 else "local"
+    unmet_units=max(regional_unmet,local_unmet)
+    proposal={"id":uuid.uuid4().hex,"status":"disponible","x":zone["x"],"y":zone["y"],"district":"Puerto" if zone["x"]>=18 else "Centro" if zone["x"]>=10 else "Oeste","contractor":contractor,"createdDay":state.get("day",1),"expiresDay":state.get("day",1)+90,"unmetUnits":unmet_units,"demandSource":demand_kind,"jobs":12,"privateCost":private_cost,"operatingReserve":1200,"municipalPermit":permit,"durationDays":duration,"companyProfile":company["profile"]}
+    book["proposal"]=proposal;book["reason"]="La demanda de hogares o de mercados regionales justifica evaluar un nuevo comercio.";ev("Propuesta privada de comercio",f"Un inversor propone abrir un local en parcela {proposal['x']+1},{proposal['y']+1}: {unmet_units} ventas quedaron sin cubrir por demanda {demand_kind}. Requiere $ {private_cost:,} privados, permiso $ {permit}, siete trabajadores de obra y {duration} días estimados.".replace(",","."))
     policy=book.get("delegation",{})
-    if (policy.get("enabled") and permit<=int(policy.get("maxPermit",0))) or zone.get("autoDeveloperPermit",False):
-        # Delegación municipal: contratación ordinaria, con los mismos pagos y cuadrilla que una aprobación manual.
-        project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES};materials=material_plan("shop");purchases=[];bill=0;feasible=True
-        for material,amount in materials.items():
-            shortage=max(0,amount-state["supply"]["contractors"][contractor].get(material,0))
-            if shortage:
-                suppliers=sorted((SUPPLIERS[name]["price"],name) for name in SUPPLIERS if state["supply"]["suppliers"].get(name,{}).get(material,0)>=shortage)
-                if not suppliers:feasible=False;break
-                factor,name=suppliers[0];cost=round(shortage*MATERIAL_PRICE[material]*factor);purchases.append((name,material,shortage,cost));bill+=cost
-        if feasible and state["privateCapital"]>=private_cost+bill+1200:
-            project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":materials,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True,"zonedDevelopment":bool(zone.get("autoDeveloperPermit"))}
-            for supplier,material,amount,cost in purchases:
-                state["supply"]["suppliers"][supplier][material]-=amount;state["supply"]["contractors"][contractor][material]+=amount;state["supply"].setdefault("supplierCash",{}).setdefault(supplier,0);state["supply"]["supplierCash"][supplier]+=cost
-            state["money"]-=permit;state["privateCapital"]-=private_cost+bill;state["supply"]["contractorCash"][contractor]+=advance;state["projects"].append(project)
-            proposal.update({"status":"aceptada","decisionDay":state.get("day",1),"projectId":project_id,"delegated":True,"zonedDevelopment":bool(zone.get("autoDeveloperPermit"))});zone["status"]="en obra";book["history"].append(dict(proposal));book["history"]=book["history"][-24:];book["nextOfferDay"]=state.get("day",1)+90;book["reason"]="La inversión privada quedó contratada con materiales pagados y cuadrilla asignada.";ev("Promotor contrata comercio",f"Permiso $ {permit}; inversión privada $ {private_cost}; materiales $ {bill}; anticipo $ {advance}; siete trabajadores asignados. La obra conserva etapas e inspección.".replace(",","."))
-        else:
-            book["reason"]="La propuesta espera capital privado o materiales disponibles; no se reserva la parcela."
+    # Delegación municipal: contratación ordinaria, con los mismos pagos y cuadrilla que una aprobación manual.
+    project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES};materials=material_plan("shop");purchases=[];bill=0;feasible=True
+    for material,amount in materials.items():
+        shortage=max(0,amount-state["supply"]["contractors"][contractor].get(material,0))
+        if shortage:
+            suppliers=sorted((SUPPLIERS[name]["price"],name) for name in SUPPLIERS if state["supply"]["suppliers"].get(name,{}).get(material,0)>=shortage)
+            if not suppliers:feasible=False;break
+            factor,name=suppliers[0];cost=round(shortage*MATERIAL_PRICE[material]*factor);purchases.append((name,material,shortage,cost));bill+=cost
+    if feasible and state["privateCapital"]>=private_cost+bill+1200:
+        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":materials,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True,"zonedDevelopment":True}
+        for supplier,material,amount,cost in purchases:
+            state["supply"]["suppliers"][supplier][material]-=amount;state["supply"]["contractors"][contractor][material]+=amount;state["supply"].setdefault("supplierCash",{}).setdefault(supplier,0);state["supply"]["supplierCash"][supplier]+=cost
+        state["money"]-=permit;state["privateCapital"]-=private_cost+bill;state["supply"]["contractorCash"][contractor]+=advance;state["projects"].append(project)
+        proposal.update({"status":"aceptada","decisionDay":state.get("day",1),"projectId":project_id,"delegated":True,"zonedDevelopment":True});zone["status"]="en obra";book["history"].append(dict(proposal));book["history"]=book["history"][-24:];book["nextOfferDay"]=state.get("day",1)+90;book["reason"]="La inversión privada quedó contratada con materiales pagados y cuadrilla asignada.";ev("Promotor contrata comercio",f"Permiso $ {permit}; inversión privada $ {private_cost}; materiales $ {bill}; anticipo $ {advance}; siete trabajadores asignados. La obra conserva etapas e inspección.".replace(",","."))
+    else:
+        book["reason"]="La propuesta espera capital privado o materiales disponibles; no se reserva la parcela."
 
 def simulate_business_month(workforce):
     shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
@@ -2569,7 +2594,8 @@ def simulate_business_month(workforce):
             close_business(shop,workforce,"incumplió dos vencimientos de intereses" if firm.get("creditDelinquencyMonths",0)>=2 else "caja negativa y crédito agotado");closed+=1
     regional_sold=sum(max(0,int(b.get("business",{}).get("lastRegionalSales",0))) for b in shops if b.get("business",{}).get("status")=="abierto")
     regional_revenue=sum(max(0,int(b.get("business",{}).get("lastRegionalSales",0)))*max(1,round(max(1,int(b.get("business",{}).get("price",18)))*.78)) for b in shops if b.get("business",{}).get("status")=="abierto")
-    regional_report.update({"capturedUnits":regional_sold,"revenue":regional_revenue,"unmetOffer":max(0,regional_report["cityOffer"]-regional_sold)});state["regionalMarketReport"]=regional_report;state["regionalMarket"]["lastReport"]=regional_report;state["regionalMarket"]["history"].append({k:regional_report[k] for k in ("month","regionalDemand","cityOffer","capturedUnits","capturePct","revenue")});state["regionalMarket"]["history"]=state["regionalMarket"]["history"][-24:];refresh_private_investment_opportunity(regional_report)
+    local_unmet=sum(max(0,int(shop.get("business",{}).get("lastLocalDemand",0))-int(shop.get("business",{}).get("lastLocalSales",0))) for shop in shops if shop.get("business",{}).get("status")=="abierto")
+    regional_report.update({"capturedUnits":regional_sold,"revenue":regional_revenue,"unmetOffer":max(0,regional_report["cityOffer"]-regional_sold),"localUnmet":local_unmet});state["regionalMarketReport"]=regional_report;state["regionalMarket"]["lastReport"]=regional_report;state["regionalMarket"]["history"].append({k:regional_report[k] for k in ("month","regionalDemand","cityOffer","capturedUnits","capturePct","revenue")});state["regionalMarket"]["history"]=state["regionalMarket"]["history"][-24:];refresh_private_investment_opportunity(regional_report,local_unmet)
     return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed,"regionalUnits":regional_sold,"regionalRevenue":regional_revenue}
 
 def route_to_project(project):return route_between((4,10),(project["x"],project["y"]))
@@ -2675,7 +2701,7 @@ def advance_zoned_development():
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
     for kind,threshold in (("home",12),("factory",0)):
         if kind=="home" and int(demand.get("unmet",0))<threshold:continue
-        if kind=="factory" and sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto")<1:continue
+        if kind=="factory" and not any(b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0) for b in state.get("buildings",[])):continue
         candidates=[]
         for z in state.get("zones",[]):
             if z.get("kind")!=kind or z.get("status") not in (None,"disponible") or (z.get("x"),z.get("y")) in reserved:continue
@@ -2711,7 +2737,6 @@ def advance_zoned_development():
         zone["status"]="en obra"
         if kind=="factory":project["operatingReserve"]=reserve
         ev("Promotor inicia obra",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. Permiso municipal $ {permit}, inversión privada $ {private_cost:,}, materiales $ {material_bill:,}, cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
-        if kind=="home":break
 
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
@@ -3235,6 +3260,7 @@ def public_state(player_id=None):
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
     view["governmentReport"]=government_report()
+    view["municipalTeam"]=municipal_team_report(player_id)
     view["municipalFinance"]=municipal_finance_report()
     view["heritageReport"]=heritage_report()
     view["urbanEvolutionReport"]=urban_evolution_report()
@@ -3368,6 +3394,22 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action=="assignMunicipalRole":
+                    role=str(data.get("role",""));target=str(data.get("playerId",""))
+                    if role not in MUNICIPAL_ROLES:
+                        self._send(400,{"error":"Elegí una cartera municipal válida."});return
+                    if target and target not in state.get("players",{}):
+                        self._send(409,{"error":"Ese jugador ya no está conectado. Pedile que vuelva a entrar e intentá otra vez."});return
+                    if target and state["players"].get(target,0)<time.time()-25:
+                        self._send(409,{"error":"Elegí a un integrante conectado para coordinar esta área."});return
+                    responsibilities=state["government"].setdefault("responsibilities",{})
+                    for area,owner in list(responsibilities.items()):
+                        if area==role or (target and owner==target):responsibilities.pop(area,None)
+                    if target:responsibilities[role]=target
+                    assigned=next((item for item in municipal_team_report(pid)["members"] if item["id"]==target),None)
+                    label=MUNICIPAL_ROLES[role]["label"]
+                    ev("Referente municipal actualizado",f"{label}: {assigned['label'] if assigned else 'decisiones compartidas'}. El equipo comparte todas las decisiones.")
+                    self._send(200,public_state(pid));return
                 if action=="recordGovernmentAgreement":
                     try:record_government_agreement(data.get("complaintId"),pid)
                     except ValueError as error:self._send(409,{"error":str(error)});return
@@ -3478,8 +3520,6 @@ class Handler(BaseHTTPRequestHandler):
                     if monthly+existing>gross*.35:self._send(409,{"error":"La cuota superaría el 35% de los ingresos mensuales de referencia."});return
                     loan={"id":f"mun-{uuid.uuid4().hex[:10]}","label":"Crédito de inversión municipal","principal":amount,"balance":amount,"annualRate":.12,"monthlyRate":rate,"termMonths":term,"monthsRemaining":term,"payment":round(monthly),"createdDay":state["day"],"status":"active","delinquentMonths":0,"totalScheduled":round(monthly*term)}
                     state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
-                if action in ("speed","pause","new") and pid!=state.get("host"):
-                    self._send(403,{"error":"Esta acción está reservada al anfitrión de la sala."}); return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
                 elif action=="startBusRoute":
@@ -3791,16 +3831,17 @@ class Handler(BaseHTTPRequestHandler):
                         p["paid"]=round(total*.2);state["money"]-=p["paid"];state["supply"]["contractorCash"][contractor]+=p["paid"]
                     state["abandoned"].remove(abandoned);state["projects"].append(p)
                     ev("Rescate de obra adjudicado",f"{abandoned['label']} continúa desde {round(initial*100)}% con {contractor}; contrato nuevo $ {total:,} y plazo estimado {duration} días.".replace(",","."))
-                elif action=="new": state=initial_state(); state["host"]=pid; state["players"][pid]=time.time(); ev("Nueva partida","Puerto Claro comenzó una nueva gestión municipal.")
+                elif action=="new":
+                    room_host=state.get("host",pid);active_players=state.get("players",{})
+                    state=initial_state();state["host"]=room_host;state["players"]=active_players
+                    ev("Nueva partida","Puerto Claro comenzó una nueva gestión municipal.")
                 else: self._send(400,{"error":"Acción desconocida"}); return
                 self._send(200,public_state(pid)); return
             if path=="/api/save":
-                if pid!=state.get("host"): self._send(403,{"error":"Solo el anfitrión puede guardar la ciudad."}); return
                 SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","host")},ensure_ascii=False,indent=2),encoding="utf-8"); self._send(200,{"ok":True,"file":SAVE.name}); return
             if path=="/api/load":
-                if pid!=state.get("host"): self._send(403,{"error":"Solo el anfitrión puede cargar la ciudad."}); return
                 if not SAVE.exists(): self._send(404,{"error":"No hay ciudad guardada todavía"}); return
-                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("players",{}); loaded["host"]=pid; state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
+                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
         self._send(404,{"error":"No encontrado"})
 
 def simulation_loop():

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.80
+# Ciudad Viva · Alfa 0.81
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -216,10 +216,14 @@ Las mudanzas ahora crean y retiran personas identificables en Online y Offline. 
 En Ciudad > Puerto podés delegar la aprobación automática de comercios hasta un tope de permiso configurable. La contratación solo ocurre si las cuentas, el capital inversor y la constructora pueden cubrirla; conserva construcción por etapas e inspección. Las propuestas que exceden el límite requieren decisión manual. Funciona en Online y Offline.
 
 
-## Alfa 0.80 · zonificación y crecimiento privado
+## Alfa 0.81 · crecimiento privado autónomo y sala cooperativa abierta
 
-Las herramientas residencial (verde), comercial (azul) e industrial (amarillo) pintan permisos por parcela con arrastre. La demanda de hogares se mantiene pendiente hasta recibir residentes. Promotores pueden iniciar vivienda y comercio bajo demanda si hay suelo conectado, capital, cuadrilla y materiales. La fábrica privada aporta 20 empleos y vende producción al inventario de proveedores locales que utilizan los comercios. Ciudad > Suelo muestra demanda, permisos, obras e inventario industrial.
+Las herramientas residencial (verde), comercial (azul) e industrial (amarillo) pintan permisos por parcela con arrastre. La demanda de hogares se mantiene pendiente hasta recibir residentes. Promotores pueden iniciar vivienda, comercio y fábricas bajo demanda si hay suelo conectado, capital, cuadrilla y los recursos requeridos. La fábrica privada aporta 20 empleos y vende producción al inventario de proveedores locales que utilizan los comercios. Ciudad > Suelo muestra demanda, permisos, obras e inventario industrial.
 
 ## Alfa 0.78 · obras que cruzan mandatos
 
 Cada contrato estándar conserva el mandato en que se aprobó. La pantalla Gobierno muestra las obras activas/heredadas, etapas, cuadrilla y saldos municipal y privado. El acta electoral guarda la cartera y, si el gobierno gana, los contratos siguen con sus pagos y avances.
+
+## Alfa 0.81 · crecimiento de ciudad autónomo
+
+Pintá suelo residencial, comercial o industrial para permitir inversión. Las casas, tiendas y fábricas se inician por promotores según la demanda real de hogares, empleo, compras no cubiertas y disponibilidad de capital, permisos, constructoras y acceso; no hace falta colocarlas manualmente. En salas cooperativas, los referentes de cada cartera son voluntarios: todos los jugadores conservan todas las acciones, controles de partida y guardado/carga.

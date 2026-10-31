@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.80
+## Estado al cerrar Alfa 0.81
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -137,3 +137,7 @@ Los proyectos estándar llevan origen de mandato y se muestran como obligaciones
 ## Punto exacto tras Alfa 0.80
 
 Probar varios cierres mensuales con hogares que llegan después de que la vivienda termina, y con fábrica que enfrenta escasez de trabajadores, cortes de servicio, costes y competencia. Corregir consumo de materiales en la construcción Offline y comparar inventarios/ventas locales en ambos motores. Mantener los porcentajes por fase salvo que nuevos criterios aceptados cambien cobertura; después retomar corridas reproducibles de 30 años de la fase 33. La prueba LAN física y la publicación Vercel siguen pendientes.
+
+## Alfa 0.81 · punto de continuación
+
+La prioridad inmediata es ejecutar escenarios de crecimiento autónomo en los dos motores: demanda residencial sin zona vs. con zona verde; tiendas por escasez local/regional en zona azul; fábrica tras actividad comercial con parcela amarilla. Confirmar que cada obra cobra permiso, reserva capital, necesita contratista y respeta disponibilidad de recursos; comprobar que hogares solo entran tras inspección y empleo potencial. Revisar la ficha de parcela en móvil y escritorio. Luego profundizar fases 17/18 con materias primas y competencia, y continuar capacidades cooperativas sin restringir acciones de invitados.

@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.33
+# Auditoría del roadmap · Alfa 0.36
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -9,7 +9,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 11–15 | Parcial: estado compartido LAN y UI; aprobación básica | Elecciones, destitución, roles municipales, crisis y metas equilibradas |
 | 16–20 | Parcial en empresas y cadenas de comercio; resto pendiente | Derecho de suelo, industria, licitaciones complejas y alquileres |
 | 21 | Parcial: salarios, habilidades, búsqueda y cursos | Desigualdad territorial, carga habitacional, movilidad social y educación formal |
-| 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Viajes no laborales, trenes, metro, carga, accidentes y capacidad vial detallada |
+| 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Viajes de ocio/servicios, integración multimodal, trenes, metro, carga, accidentes y capacidad vial detallada |
 | 23–28 | Pendiente como sistemas completos | Puertos, aeropuertos, turismo, redes completas, clima y servicios profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
@@ -31,4 +31,7 @@ Alfa 0.33 incorpora tarifa integrada de dos tramos con liquidación por línea. 
 Alfa 0.34 agrega el regreso laboral de 17:00–19:00 como trayecto diferenciado, con reserva separada por línea, cobro integrado en ambos sentidos, emisiones y animación de flota. La fase 22 sigue parcial; faltan franjas horarias completas, tren/metro, carga, accidentes, detalle de capacidad vial y prueba en LAN físico.
 
 
-Alfa 0.35 distribuye los viajes de empleo en turnos estables y aplica horarios, frecuencia, espera, capacidad y costo por nueve franjas entre 05:00 y 23:00. La fase 22 sigue parcial: no hay viajes no laborales, trenes, metro, carga, accidentes ni capacidad vial detallada; LAN física y ciudades largas siguen sin validar.
+Alfa 0.35 distribuye viajes laborales en nueve franjas. Alfa 0.36 agrega viajes de compras a pie o en auto hacia comercios abiertos. La fase 22 sigue parcial: faltan destinos de ocio/servicios, bicicletas, movilidad multimodal, capacidad vial detallada, carga, accidentes y LAN física.
+
+
+Alfa 0.36 inicia viajes no laborales hacia tiendas abiertas con selección por distancia/actividad, modo a pie o auto, ida y vuelta, emisiones y representación visual. No se cobra otra compra. Esta es una cobertura inicial; faltan destinos de ocio/servicios, bicicletas, uso de colectivo y elección por presupuesto/propiedad de vehículos.

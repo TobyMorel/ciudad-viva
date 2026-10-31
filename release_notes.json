@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.35",
+  "currentVersion": "0.36",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.36",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "La ciudad ya calcula salidas cotidianas desde hogares a comercios abiertos mediante rutas viales y elige tiendas accesibles según distancia y actividad comercial reciente.",
+        "Los viajes registran pasajeros, caminata o auto, recorrido de ida y vuelta y emisiones aproximadas; se animan en el mapa y se separan de los trayectos laborales.",
+        "El resumen de Ciudad distingue viajeros, comercios visitados, autos de ida y vuelta y emisiones del nuevo circuito. Online y Offline usan la misma regla inicial."
+      ]
+    },
     {
       "version": "0.35",
       "date": "31 de octubre de 2026",

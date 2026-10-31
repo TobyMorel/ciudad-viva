@@ -598,6 +598,37 @@ def add_return_commutes(employees,commutes):
         if line.get("operational") and line.get("fareCollectedDay")!=state["day"]:line["monthlyFareRevenue"]=fare_due.get(line_id,0)
     return {"returnCommuters":len(employees),"returnBusCommuters":counts["bus"],"returnAutoCommuters":counts["auto"],"returnWalkingCommuters":counts["walk"],"returnTransferCommuters":sum(t["workers"] for t in return_trips if len(t["busLineIds"])==2),"returnMeanMinutes":round(minutes_total/max(1,len(employees))) if employees else 0,"returnVehicles":auto_vehicles+sum(line.get("effectiveBuses",0) for line in lines.values() if line.get("operational")),"returnEmissionsKg":round(auto_emissions+sum(line.get("effectiveBuses",0)*max(0,len(line.get("route",[]))-1)*.55 for line in lines.values() if line.get("operational")),2)}
 
+def nonwork_shopping_trips(homes, shops, roads):
+    """Capa inicial de viajes cotidianos: visitas a comercios abiertos, sin alterar compras ya liquidadas."""
+    grouped={}
+    if not shops:return []
+    for home in homes:
+        candidates=[]
+        for shop in shops:
+            route=route_between((home["x"],home["y"]),(shop["x"],shop["y"]))
+            if not route:continue
+            distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
+            if distance:candidates.append((distance,shop.get("business",{}).get("lastLocalSales",0),shop,route))
+        if not candidates:continue
+        candidates.sort(key=lambda row:(row[0],-row[1],row[2]["x"],row[2]["y"]))
+        # El destino rota de manera reproducible entre las tres alternativas accesibles más convenientes.
+        slot=(home["x"]*73856093+home["y"]*19349663+state.get("day",1))%min(3,len(candidates))
+        distance,_,shop,route=candidates[slot]
+        visitors=min(3,max(1,round(home.get("occupants",0)*.12)))
+        residents=home.get("residents",[])
+        car_share=sum(bool(p.get("carAccess")) for p in residents)/max(1,len(residents))
+        mode="auto" if distance>3 and car_share>=.35 else "walk"
+        key=(home["x"],home["y"],shop["x"],shop["y"],mode)
+        grouped.setdefault(key,{"from":[home["x"],home["y"]],"to":[shop["x"],shop["y"]],"route":route,"mode":mode,"distance":distance,"workers":0,"reason":"compras","destinationName":shop.get("name","Comercio local")})["workers"]+=visitors
+    trips=[]
+    for trip in grouped.values():
+        count=trip["workers"];vehicles=math.ceil(count/1.4) if trip["mode"]=="auto" else 0
+        factor=traffic_factor(trip["route"]) if trip["mode"]=="auto" else 1
+        ride=round(trip["distance"]*(2.5 if vehicles else 4)*factor)
+        trip.update({"vehicles":vehicles,"dailyEmissionsKg":round(vehicles*trip["distance"]*.18*2,2),"walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":ride,"parkingMinutes":2 if vehicles else 0,"estimatedMinutes":ride+(2 if vehicles else 2),"trafficFactor":round(factor,2),"attendance":1,"roundTrip":True})
+        trips.append(trip)
+    return trips
+
 def commute_model():
     """Asigna residentes identificables a una vacante y una ruta laboral cada uno."""
     global _commute_cache_key,_commute_cache
@@ -843,6 +874,20 @@ def commute_model():
     returning=add_return_commutes(employees,commutes)
     model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
+    shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
+    for trip in shopping:
+        commutes.append(trip)
+        model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
+        model["vehicles"]+=trip["vehicles"]
+        for a,b in zip(trip["route"],trip["route"][1:]):
+            edge=tuple(sorted((tuple(a),tuple(b))))
+            segment_flow[edge]=segment_flow.get(edge,0)+trip["vehicles"]*2
+    model["shoppingTrips"]=len(shopping)
+    model["shoppingPassengers"]=sum(t["workers"] for t in shopping)
+    model["shoppingVehicles"]=sum(t["vehicles"]*2 for t in shopping)
+    model["shoppingEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in shopping),2)
+    model["dailyTrips"] = sum(t["workers"] for t in commutes)
+    model["routes"]=commutes
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
     jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
     search_days=[max(0,state.get("day",1)-int(person.get("unemployedSinceDay",state.get("day",1)))) for person in jobseekers]
@@ -1384,7 +1429,7 @@ def public_state(player_id=None):
         order_views.append({**order,**extra})
     view["supply"]={**state["supply"],"orders":order_views}
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","dailyTrips")}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)

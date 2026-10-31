@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.35 · 31 de octubre de 2026
+**Entrega:** Alfa 0.36 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -232,3 +232,16 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Se verificó que el tiempo de espera refleje la frecuencia de la franja y que los pasajeros no superen su aforo específico. Los conductores cubren dos turnos y las horas de baja frecuencia elevan el gasto operativo por salidas adicionales.
 - Chromium, con WebGL aislado para medir la interfaz, abrió Horario diario en escritorio 1440×960 y móvil 390×844. Las nueve franjas se leen dentro del popup, el contenido largo mantiene scroll vertical y no hay desborde horizontal, texto cortado ni errores JavaScript.
 - LAN en dos dispositivos físicos y una simulación urbana de larga duración siguen pendientes. La selección modal y horarios cubren desplazamientos laborales; la demanda no laboral, trenes, metro y carga aún faltan.
+
+
+## Alfa 0.36 · viajes cotidianos a comercios
+
+- Online y Offline generan visitas de hogares a comercios abiertos con acceso por calle. La selección ordena destinos por distancia y actividad reciente y rota de forma estable entre alternativas cercanas. Cada hogar produce una pequeña cantidad agregada de visitantes; el acceso familiar y la distancia determinan si el grupo camina o va en auto.
+- El viaje de ida y vuelta entra en la movilidad diaria y en emisiones aproximadas; los autos suman flujo vial. La escena 3D anima hasta seis trayectos comerciales y el Resumen de Ciudad los separa de los viajes laborales. No se vuelve a debitar una compra: la economía comercial existente sigue siendo responsable de ventas y gastos.
+
+### Verificación Alfa 0.36
+
+- `python3 -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, validación JSON y `git diff --check` pasan.
+- Smoke Online en la ciudad inicial: 6 comercios abiertos produjeron 15 rutas comerciales agregadas, 45 pasajeros, 12 viajes en auto de ida y vuelta y 20,52 kg de CO₂ estimado; la respuesta pública expuso esos datos.
+- Chromium Offline revisó el resumen de movilidad en escritorio 1440×960 y móvil 390×844; el panel conserva scroll y no presenta texto oculto, solapamiento ni desborde horizontal. La escena se inspeccionó con WebGL activo para la animación.
+- El número de visitas es una demanda diaria agregada inicial, no un reloj individual; todavía no modifica las compras ya liquidadas. LAN entre dos máquinas y una simulación larga siguen pendientes.

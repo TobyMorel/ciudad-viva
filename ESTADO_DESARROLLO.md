@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.23 · 31 de octubre de 2026
+**Entrega:** Alfa 0.24 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -15,6 +15,8 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Alfa 0.22: perfiles estables de comercio, administración y logística y salario mínimo esperado por residente. Los centros laborales publican salario y requisito; las vacantes solo aceptan candidatos cualificados, con salario aceptable y ruta. El informe cuenta a quienes buscan por falta de cualificación, salario o acceso. Offline usa el mismo filtrado con distancia aproximada. Guardado esquema 18. Esto implementa una primera capa de la fase 21, no educación formal ni desigualdad territorial.
 
 - Alfa 0.23: cursos municipales de comercio, administración y logística asignan hasta seis residentes con habilidad insuficiente y ruta al aula. Se prepagan dos ciclos mensuales; cada ciclo mejora 18 puntos, registra costo y progreso, y los cursos pueden pausarse/reanudarse/cancelarse con reintegro del saldo sin gastar. Si el centro o acceso vial falla, se pausa y conserva saldo. Online y Offline; guardado esquema 19. Esta formación es una parte de la fase 21; no hay currículos, docentes, formación prolongada ni distribución de ingresos por barrio.
+
+- Alfa 0.24: los residentes con una ruta laboral seleccionan caminar si el recorrido usa hasta tres tramos, y auto en distancias mayores. Cada viaje agrupa origen/destino, motivo, ventana horaria y minutos puerta a puerta separados en acceso, espera, recorrido y estacionamiento. Solo los autos ocupan capacidad vial; los peatones y autos se representan sobre rutas y el reporte estima vehículos y CO₂ diario. Offline usa BFS sin congestión dinámica. Migración a esquema 20. Fase 22 parcial: no hay transporte público, costo de propiedad, tarifa, tren/metro, carga ni horarios individualizados.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -121,3 +123,10 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Revisiones sintácticas de Python y JavaScript, validación de JSON y `git diff --check` completadas antes de publicar.
 - Playwright con Chromium comprobó creación de cursos Offline y Online, descuento del presupuesto, cohorte de seis personas, dos cierres mensuales y estado completado. Una prueba del adaptador Offline verificó +36 habilidad por participante y saldo final cero. Las acciones de pausa, reanudación y cancelación se verificaron con el adaptador local. En 1440×950 y 390×844 el popup de Ciudad conserva texto y botones legibles, no presenta desborde horizontal y desplaza su contenido verticalmente; no se detectaron errores JavaScript.
 - Transferencia Online entre dos equipos físicos por Wi-Fi continúa pendiente; esta sesión no dispone de una red LAN externa para certificarla.
+
+
+## Verificación Alfa 0.24
+
+- Python y los tres módulos JavaScript pasan sus chequeos sintácticos; se verificaron ambos modos con las mismas categorías de viaje, conteos que suman a las personas ocupadas, rutas y componentes de tiempo presentes.
+- Los recorridos de los residentes ocupados se agrupan por origen, destino y modo; ambos modos calculan por separado peatones, automovilistas, vehículos y CO₂ aproximado. Los conteos cambian con las rutas, perfiles y el estado de la ciudad. Offline usa su aproximación de ruta BFS.
+- Chromium comprobó Ciudad a 1440×950 y 390×844: modal split, emisión y empleo se leen sin solaparse ni causar desborde horizontal; el popup largo se desplaza verticalmente y no tuvo errores JavaScript. La conexión entre dos equipos físicos por LAN permanece pendiente.

@@ -170,7 +170,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":19,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":20,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -252,7 +252,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(19,state.get("version",1))
+    state["version"]=max(20,state.get("version",1))
     state.setdefault("roadAssets",[])
     state.setdefault("trainingPrograms",[])
     for building in state["buildings"]:
@@ -490,7 +490,9 @@ def commute_model():
                 del history[:-500]
             person["unemployedSinceDay"]=None;person["unemploymentReason"]=None
         remaining[si]-=1
-        item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distances[hi,si]}
+        distance=distances[hi,si];mode="walk" if distance<=3 else "auto"
+        person["commuteMode"]=mode
+        item={"home":home,"person":person,"site":site,"siteIndex":si,"wage":wage,"route":routes[hi,si],"distance":distance,"mode":mode}
         employees.append(item);site_people[si].append(item)
     employed_ids={emp["person"].get("id") for emp in employees}
     for home,person,prior_status,prior_employer,prior_employer_id in seeking_without_route:
@@ -516,19 +518,24 @@ def commute_model():
     segment_flow={}; commutes=[]; site_effective={si:0 for si in range(len(sites))}; site_minutes={si:0 for si in range(len(sites))}; weighted_minutes=0; distance_total=0
     grouped={}
     for emp in employees:
-        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"])
+        group=(emp["home"]["x"],emp["home"]["y"],emp["site"]["x"],emp["site"]["y"],emp["mode"])
         grouped.setdefault(group,[]).append(emp)
         distance_total+=emp["distance"]
-    for (hx,hy,sx,sy),items in grouped.items():
+    walking=auto_commuters=vehicles=0;emissions=0.0
+    for (hx,hy,sx,sy,mode),items in grouped.items():
         route=items[0]["route"];distance=items[0]["distance"];factor=1.0
-        minutes=round(distance*2.5*factor);attendance=max(.25,1-max(0,minutes-15)/240)
-        commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
+        walk_access=2;wait=0 if mode=="walk" else 3;ride=round(distance*(4 if mode=="walk" else 2.5)*factor);parking=0 if mode=="walk" else 2
+        minutes=walk_access+wait+ride+parking;attendance=max(.25,1-max(0,minutes-15)/240)
+        trip_vehicles=0 if mode=="walk" else math.ceil(len(items)/1.4)
+        trip_emissions=round(2*trip_vehicles*distance*.18,2)
+        walking+=len(items) if mode=="walk" else 0;auto_commuters+=len(items) if mode=="auto" else 0;vehicles+=trip_vehicles;emissions+=trip_emissions
+        commutes.append({"from":[hx,hy],"to":[sx,sy],"workers":len(items),"distance":distance,"route":route,"mode":mode,"reason":"trabajo","departureWindow":"07:00–09:00","walkAccessMinutes":walk_access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":0,"estimatedMinutes":minutes,"vehicles":trip_vehicles,"dailyEmissionsKg":trip_emissions,"trafficFactor":round(factor,2),"attendance":round(attendance,2)})
         weighted_minutes+=len(items)*minutes
         si=items[0]["siteIndex"];site_effective[si]+=len(items)*attendance;site_minutes[si]+=len(items)*minutes
         for aa,bb in zip(route,route[1:]):
             aa=tuple(aa);bb=tuple(bb)
-            if aa in roads and bb in roads:
-                edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+len(items)/75
+            if aa in roads and bb in roads and mode=="auto":
+                edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+trip_vehicles/75
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
@@ -537,15 +544,18 @@ def commute_model():
         category,label,minimum,job_wage=workplace_profile(site)
         workplaces.append({"name":site.get("name",site["kind"].title()),"kind":site["kind"],"x":site["x"],"y":site["y"],"jobSlots":round(slots),"workersAssigned":len(people),"staffedJobs":round(effective),"payroll":sum(x["wage"] for x in people),"attendance":round(effective/max(1,len(people)),2),"meanMinutes":round(site_minutes[si]/len(people)) if people else None,"jobCategory":category,"jobCategoryLabel":label,"minimumSkill":minimum,"offeredWage":job_wage})
     total_eligible=len(residents);without_access=sum(1 for _,home,person in residents if person.get("status")!="empleado" and not any((hi,si) in routes for si in range(len(sites)) for hi,h in enumerate(homes) if h is home))
-    model={"commuters":len(employees),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
+    model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
     _commute_cache_key=key;_commute_cache=model
     # Now that segment flows are cached, congestion can include both commuters and trucks.
     minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
     for trip in commutes:
-        factor=traffic_factor(trip["route"]);minutes=round(trip["distance"]*2.5*factor)
+        factor=1.0 if trip["mode"]=="walk" else traffic_factor(trip["route"])
+        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*(4 if trip["mode"]=="walk" else 2.5)*factor)+trip["parkingMinutes"]
+        trip["rideMinutes"]=round(trip["distance"]*(4 if trip["mode"]=="walk" else 2.5)*factor)
+        trip["estimatedMinutes"]=minutes
         attendance=max(.25,1-max(0,minutes-15)/240)
         trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
-        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1])
+        group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"])
         for emp in grouped.get(group,[]):
             emp["attendance"]=attendance
             emp["earnedWage"]=round(emp["wage"]*attendance)
@@ -1044,7 +1054,7 @@ def public_state(player_id=None):
         order_views.append({**order,**extra})
     view["supply"]={**state["supply"],"orders":order_views}
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
     view["commutes"]=commute["routes"]
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
@@ -1058,7 +1068,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.22"
+    server_version="CiudadViva/0.24"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

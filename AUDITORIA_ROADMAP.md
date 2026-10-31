@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.41
+# Auditoría del roadmap · Alfa 0.42
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -13,7 +13,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
-| 26 | Parcial: redes de electricidad y agua, demanda por uso, pérdidas/fugas, suministro limitado, plantas construibles y consecuencias en servicios, comercios, hoteles y aeropuerto | Saneamiento, drenaje, residuos, gas, telecomunicaciones, reparación y redundancia |
+| 26 | Parcial: electricidad, agua y cloacas físicas; demanda por uso, pérdidas/fugas, capacidad de depuración, planta por etapas y descarga sanitaria con consecuencias | Drenaje pluvial, residuos, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27–28 | Pendiente | Clima, inundaciones, desastres y riesgos profundos |
 | 29–33 | Pendiente como sistemas completos | Hacienda plurianual, patrimonio, mantenimiento, gobierno y décadas de simulación |
 
@@ -53,3 +53,6 @@ Alfa 0.40 incorpora el primer circuito de hotelería: una firma privada construy
 
 
 Alfa 0.41 inicia fase 26 en Online y Offline. Cables y tuberías se extienden sobre calles conectadas; el suministro asigna capacidad limitada a usos con prioridad, contempla pérdidas/fugas y estacionalidad, y registra costos de mantenimiento. Las plantas agregan capacidad al conectarse a ambas redes. Cobertura insuficiente afecta servicios, aprobación y producción privada; el aeropuerto/hotel requiere niveles mínimos. La fase continúa parcial según las brechas tabuladas.
+
+
+Alfa 0.42 extiende la fase 26 con colectores cloacales independientes, caudal proporcional al agua servida, capacidad de tratamiento limitada y descarga sin tratar medible. Los cortes sanitarios afectan servicios, aprobación y actividad privada; la planta depuradora es una obra de 90 días con empleo, costo operativo y dependencias físicas. Online y Offline comparten la regla. La fase sigue parcial según las brechas de la tabla.

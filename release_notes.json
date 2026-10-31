@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.41",
+  "currentVersion": "0.42",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.42",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Fase 26 (parcial): se suma una red cloacal separada de agua potable, energía y drenaje. Los edificios generan aguas residuales según el agua efectivamente recibida.",
+        "La capacidad de colectores y tratamiento limita el caudal depurado. El volumen sin tratar aparece en Ciudad > Servicios y reduce cobertura sanitaria, servicios y aprobación bajo umbrales críticos.",
+        "La planta depuradora requiere obra pública por etapas, 14 trabajadores y conexión a energía, agua y colectores; aporta hasta 260 m³/día.",
+        "Cloacas tienen herramienta de tendido, costo y mantenimiento propios, capa visual y simulación equivalente en Online y Offline. Se amplió la revisión del tablero Servicios para celular y escritorio.",
+        "Siguen pendientes drenaje pluvial, residuos, gas, telecomunicaciones, reparación de redes y respaldo; estas redes se mantienen separadas según la especificación."
+      ]
+    },
     {
       "version": "0.41",
       "date": "31 de octubre de 2026",

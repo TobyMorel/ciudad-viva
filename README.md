@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.41
+# Ciudad Viva · Alfa 0.42
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -37,7 +37,7 @@ El iniciador abre el servidor local y el navegador. El servidor se necesita para
 
 ## Cambios y próximas entregas
 
-La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.41 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
+La barra compacta sobre el mapa abre paneles emergentes y un interruptor de sonido local. Ciudad se divide en Resumen, Movilidad, Empleo, Formación, Puerto, Aeropuerto, Turismo y Servicios. La barra compacta abre paneles emergentes para construir, consultar la ciudad, revisar economía, obras, acontecimientos y cambios. El historial **Cambios** cubre Alfa 0.1–0.42 con cinco versiones por página. Las notas 0.1–0.9 se señalan como no conservadas porque esos registros no están en la historia disponible. El contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -78,3 +78,10 @@ Construí un hotel privado junto a una calle conectada. La empresa financia la o
 La red inicial aporta 1.200 kW y 180 m³/día antes de pérdidas. Construí líneas eléctricas y tuberías sobre calles terminadas, conectándolas desde la red existente; los edificios aislados no reciben servicio. La demanda aumenta con hogares, camas, comercios, terminales y servicios públicos, con mayor consumo estacional. Las pérdidas eléctricas y fugas reducen lo entregado; los déficits afectan servicios, comercios, hoteles y operación aeroportuaria.
 
 Las licitaciones permiten construir una central eléctrica de 900 kW y una planta potabilizadora de 220 m³/día. Cada fuente debe estar conectada a ambas redes para aportar capacidad. El panel Ciudad > Servicios presenta demanda, suministro, cobertura, pérdidas, conexiones y mantenimiento. Esta primera parte de la fase 26 todavía no modela saneamiento, drenaje, residuos, gas, telecomunicaciones, reparación ni redundancia.
+
+
+## Cloacas y depuración · Alfa 0.42
+
+El agua potable consumida genera aguas residuales. Los edificios conectados a colectores aportan ese caudal a una capacidad de depuración limitada; el resto se registra como descarga sin tratar. La falta de tratamiento reduce cobertura sanitaria y puede bajar servicios y aprobación. El panel Ciudad > Servicios informa caudal, capacidad, tratamiento, descarga y edificios conectados.
+
+Construí colectores cloacales sobre calles terminadas. La planta depuradora se licita por etapas, necesita operarios y debe conectarse a electricidad, agua y cloacas para sumar hasta 260 m³/día. Las redes de cloaca, agua potable y pluvial son sistemas distintos. Drenaje, residuos, gas y telecomunicaciones aún quedan pendientes de la fase 26.

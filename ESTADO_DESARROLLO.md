@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.41 · 31 de octubre de 2026
+**Entrega:** Alfa 0.42 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -316,3 +316,16 @@ El jugador puede licitar una central (900 kW, 18 empleos, $460/mes) y una planta
 Verificada sintaxis Python/JavaScript, migración de guardados a esquema 26, balance inicial de los dos servicios, tendido conectado y desconectado, costo de mantenimiento, déficits y efectos en actividad. Se comprobó en servidor el alta de un contrato de central eléctrica con sus cinco etapas y plazo de 96 días; las capacidades de ambos tipos de fuente se verificaron por balance. No se esperó en esta entrega el plazo completo hasta su inauguración. La inspección visual de Ciudad > Servicios cubrió móvil y escritorio sin desbordes. LAN entre equipos físicos sigue pendiente.
 
 Alcance restante de fase 26: saneamiento, drenaje pluvial, recolección de residuos, gas, telecomunicaciones, reparación de fugas, redundancia y dependencia detallada de bombeo.
+
+
+## Alfa 0.42 · red cloacal y depuración (fase 26, parcial)
+
+Se incorporó una tercera red física, separada de energía y agua potable, que utiliza colectores colocados sobre calles conectadas. La demanda de cloacas deriva del 80% del agua potable realmente suministrada. La capacidad de tratamiento base es 180 m³/día; el flujo que no conecta o supera esa capacidad se informa como descarga sin tratar. La falta de tratamiento reduce cobertura de servicios y, en niveles severos, aprobación; también afecta el factor de actividad de comercios, hoteles y aeropuerto.
+
+La planta depuradora se licita como obra municipal de cinco etapas, 90 días base, 14 trabajadores, $16.600 y operación de $380/mes. Aporta hasta 260 m³/día únicamente con conexión a electricidad, agua potable y colector cloacal. Los tendidos tienen costo y mantenimiento separados. Ciudad > Servicios muestra generación, tratamiento, desborde, conexiones y fuentes. Online y Offline replican el balance.
+
+### Verificación Alfa 0.42
+
+Se verificaron balances iniciales, carga que excede la capacidad, edificios sin conexión cloacal, falta de suministro de agua, efecto sanitario, licitación y rechazo de tendidos aislados en Online y Offline. Se revisó Servicios y el panel de construcción en móvil y escritorio para confirmar visibilidad y desplazamiento sin solapamiento. LAN entre equipos físicos sigue pendiente.
+
+La fase 26 continúa parcial: drenaje pluvial, residuos, gas, telecomunicaciones, reparación, redundancia y respaldo siguen pendientes.

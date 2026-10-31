@@ -123,6 +123,12 @@
 El préstamo municipal usa amortización fija con interés del 1% mensual y plazos cerrados de 24 o 48 meses. Los montos se ofrecen en tres tramos; la solvencia limita la deuda total a $40.000 o ocho meses de ingresos de referencia (el menor) y el servicio mensual combinado no puede exceder 35% del ingreso. La proyección a 12/48 meses congela el flujo operativo actual y pagos mensuales; es una referencia, no pronóstico con crecimiento/inflación. Las obligaciones se comparten en el estado autoritativo Online y se persisten en el guardado Offline. Si la caja mensual no cubre gastos y deuda, la cuota se difiere y se marca mora; no se crea sobregiro.
 
 
+## Alfa 0.61 · presupuestos operativos municipales
+
+- Tres programas presupuestarios agrupan gastos existentes: servicios (operación cívica, nómina e insumos sanitarios/escolares), redes y residuos (mantenimiento de redes y operación de residuos), y movilidad (operación de colectivos). Cada uno guarda asignación de 0–200%, mora y un historial limitado de cierres.
+- El pago mensual se limita por asignación y caja libre; la mora no crea deuda bancaria ni se acredita como gasto pagado. El excedente sobre el costo corriente reduce mora previa. La reserva de deuda introducida en Alfa 0.60 liquida su cuota después de los programas para preservar compromisos programados.
+- Los efectos funcionales se expresan como factores de servicio/capacidad aplicados a redes, residuos, salud/educación y buses. Las vistas Online y Offline aplican el mismo orden de liquidación y valores por defecto; migración de guardados al esquema 45.
+
 ## Alfa 0.59 · recaudación por caja
 
 El impuesto inmobiliario anual usa una base de diseño de $2.400 por residente y se divide en doce vencimientos; el gravamen comercial aplica al porcentaje de ventas del mes, separado del impuesto turístico hotelero existente. Las facturas se cobran después de pagar salarios y realizar actividad mensual, desde el efectivo remanente. Pago parcial reduce la caja solo por lo cobrado y conserva el resto en `taxes.arrearsByAsset`; solo cobros entran al flujo municipal. La liquidación registra el mes procesado para impedir duplicación. Los topes de tasa permiten probar carga fiscal sin tasas arbitrarias sin límite.

@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.60 · 31 de octubre de 2026
+**Entrega:** Alfa 0.61 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.61 · Fase 29 (parcial): presupuestos municipales para Servicios, Redes y residuos, y Transporte, con asignación 0–200% en pasos de 10%. El cierre mensual liquida hasta el tope y caja disponible; el impago queda como mora por programa y una asignación mayor puede amortizarla. El subfinanciamiento reduce capacidad de salud/educación, redes/recogida de residuos o frecuencia efectiva de buses. Hacienda presenta costos, pagos, porcentajes y obligaciones en una sección plegable. Online/Offline, esquema 45. Verificado: pago del 50%, mora de $500 sobre costo de $1.000, reducción de servicios, y reserva que completa una cuota después del pago de programas. Chromium móvil 390×844 y escritorio 1440×900: sin errores JS, recorte horizontal ni solapamientos; scroll vertical disponible. LAN física y Vercel pendientes.
 
 - Alfa 0.60 · Fase 29 (parcial): Hacienda permite apartar o retirar $500/$1.000/$2.500 de caja no comprometida a un fondo dedicado al servicio de deuda. Si caja e ingresos cubren gastos operativos pero falta dinero para completar las cuotas, la reserva paga esa diferencia; pagos parciales no se aplican y la mora preexistente se conserva. Muestra caja libre, fondo protegido y patrimonio proyectado. Online/Offline, esquema 44; movimientos limitados a 24 registros. Validación funcional: transacciones neutrales, contrato impide apartar fondos comprometidos y reserva financia cuota faltante sin duplicar efectivo. Chromium móvil y escritorio: reserva y botones visibles, sin overflow horizontal; el panel conserva scroll vertical y no muestra solapamientos. LAN/Vercel físicos pendientes.
 

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.60
+# Ciudad Viva · Alfa 0.61
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -119,6 +119,10 @@ Las tormentas pueden anegar calles donde pasan tendidos conectados y averiar un 
 
 En **Economía y suministros** se pueden solicitar créditos municipales de inversión con tasa y cuotas visibles. El capital se acredita a caja; la amortización reduce la tesorería en cada cierre mensual. La vista muestra deuda, servicio y proyecciones de 12/48 meses con bases constantes. Online y Offline comparten los montos, límites de solvencia y plazos.
 
+
+## Alfa 0.61 · presupuestos municipales por programa
+
+En **Economía y suministros → Hacienda**, asigná hasta 200% del costo mensual a Servicios públicos, Redes y residuos o Transporte, con controles de 10 puntos. Cada cierre paga según asignación y caja; la parte impaga queda como obligación del programa. Los recortes reducen servicios sanitarios y educativos, capacidad de redes y recolección, o la capacidad/frecuencia efectiva de colectivos. Presupuestar por encima del costo ayuda a saldar obligaciones anteriores. Funciona en Offline y Online; el panel incluye un resumen mensual plegable.
 
 ## Alfa 0.60 · fondo de deuda municipal
 

@@ -167,7 +167,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[]}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"lastReport":{},"history":[]}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -209,7 +209,11 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     net=income-expenses-service
     # Proyección de referencia; mantiene las bases actuales y los pagos contratados constantes.
     debt_reserve=max(0,round(finance.get("debtReserve",0)))
-    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+debt_reserve+net*12),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"loans":loans}
+    budgets=finance.setdefault("programBudgets",new_finance()["programBudgets"])
+    for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
+    for name in ("services","mobility","networks"):
+        budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
+    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+debt_reserve+net*12),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"loans":loans}
 
 def municipal_debt_payment():
     finance=state.setdefault("finance",new_finance());total=0
@@ -221,6 +225,34 @@ def municipal_debt_payment():
         loan["balance"]=max(0,round(balance-loan["lastPrincipal"]));loan["monthsRemaining"]=max(0,loan.get("monthsRemaining",0)-1);loan["delinquentMonths"]=0;total+=round(payment)
         if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan.update({"balance":0,"status":"paid","paidDay":state.get("day",1)});ev("Crédito municipal cancelado",f"El municipio terminó de pagar {loan.get('label','el préstamo')}.")
     return total
+
+def settle_municipal_program_budgets(costs,available):
+    """Paga primero servicios, redes y movilidad según apropiaciones; lo pendiente queda en mora fiscal."""
+    finance=state.setdefault("finance",new_finance());ensure_finance_state();budgets=finance["programBudgets"]
+    names={"services":"Servicios públicos","networks":"Redes y residuos","mobility":"Transporte"};remaining=max(0,round(available));rows={}
+    for key in ("services","networks","mobility"):
+        current=max(0,round(costs.get(key,0)));old=max(0,round(budgets["arrears"].get(key,0)))
+        rate=max(0,min(200,int(budgets.get(f"{key}Pct",100))));ceiling=round(current*rate/100)
+        due=old+current;scheduled=min(due,ceiling);paid=min(scheduled,remaining);remaining-=paid
+        new_arrears=max(0,due-paid);unpaid_current=min(current,max(0,new_arrears-old));factor=1-unpaid_current/max(1,current) if current else 1
+        budgets["arrears"][key]=new_arrears
+        budgets["underfundedMonths"][key]=budgets["underfundedMonths"].get(key,0)+1 if unpaid_current else 0
+        row={"program":key,"label":names[key],"monthlyCost":current,"budgetPct":rate,"scheduled":scheduled,"paid":paid,"arrears":new_arrears,"fundingPct":round(factor*100)}
+        rows[key]=row
+        if key=="services":
+            budgets["servicesFundingFactor"]=factor
+            if unpaid_current:
+                loss=max(1,math.ceil((1-factor)*4));state["services"]=max(5,state.get("services",0)-loss)
+                if budgets["underfundedMonths"][key]>=2:state["approval"]=max(5,state.get("approval",0)-1)
+        elif key=="mobility":budgets["mobilityFundingFactor"]=factor
+        elif key=="networks":
+            state.setdefault("utilities",{})["maintenanceFundingFactor"]=factor
+            state.setdefault("waste",{})["fundingFactor"]=factor
+    report={"month":(state.get("day",1)-1)//30,"programs":rows,"scheduled":sum(x["scheduled"] for x in rows.values()),"paid":sum(x["paid"] for x in rows.values()),"arrears":sum(x["arrears"] for x in rows.values()),"cashRemaining":remaining}
+    budgets["lastReport"]=report;budgets.setdefault("history",[]).append(report.copy());del budgets["history"][:-24]
+    if report["arrears"]:
+        ev("Presupuesto municipal insuficiente",f"Programas pendientes: " + " · ".join(f"{r['label']} $ {r['arrears']:,}".replace(",",".") for r in rows.values() if r["arrears"]))
+    return report
 
 def new_supply():
     return {"regional":INITIAL_REGIONAL_STOCK.copy(),
@@ -260,7 +292,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":44,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":45,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -326,6 +358,10 @@ def ensure_finance_state():
     state["finance"].setdefault("municipalLoans",[])
     state["finance"].setdefault("debtReserve",0)
     state["finance"].setdefault("debtReserveHistory",[])
+    budgets=state["finance"].setdefault("programBudgets",new_finance()["programBudgets"])
+    for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
+    for name in ("services","mobility","networks"):
+        budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
     bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
     for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
 
@@ -352,7 +388,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(44,state.get("version",1))
+    state["version"]=max(45,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
@@ -594,6 +630,7 @@ def ensure_utility_state():
     utilities.setdefault("baseWaterCapacityM3Day",180)
     utilities.setdefault("powerLossRate",.06)
     utilities.setdefault("waterLeakRate",.08)
+    utilities.setdefault("maintenanceFundingFactor",1)
     return utilities
 
 def energized_utility_tiles(network):
@@ -623,6 +660,7 @@ def ensure_waste_state():
     waste.setdefault("transferStoredTons",0)
     waste.setdefault("containers",[])
     waste.setdefault("routes",[])
+    waste.setdefault("fundingFactor",1)
     return waste
 
 def calculate_waste_balance(advance=False,apply_effects=False):
@@ -640,11 +678,13 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     containers=waste.setdefault("containers",[])
     facilities=[b for b in buildings if b.get("kind") in ("landfill","recyclingPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     routes=build_waste_collection_routes(containers,active_depot_buildings,facilities)
+    collection_factor=max(0,min(1,float(waste.get("fundingFactor",1))))
+    for route in routes:route["payloadTons"]*=collection_factor
     waste["routes"]=routes
     routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
     routed_bin_ids=set(routed_by_id)
     for container in containers:container["routeId"]=routed_by_id.get(container.get("id",f"bin-{container['x']}-{container['y']}"),{}).get("id")
-    collection_capacity=waste["baseCollectionTonsDay"]+active_depots*.75+len(routed_bin_ids)*.15
+    collection_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75+len(routed_bin_ids)*.15)*collection_factor
     transfer_capacity=active_depots*12
     transfer_dispatch=active_depots*1.5
     landfills=[b for b in buildings if b.get("kind")=="landfill" and b.get("status","habilitado") not in ("cerrado","abandonado")]
@@ -674,7 +714,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
             container["lastPickedTons"]=round(picked,3);container["routeId"]=route["id"] if route else None
             bin_picked+=picked;bin_overflow+=overflow
         curb_generated=max(0,generated-bin_generation)
-        curb_capacity=waste["baseCollectionTonsDay"]+active_depots*.75
+        curb_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75)*collection_factor
         curb_picked=min(backlog+curb_generated,curb_capacity)
         picked=curb_picked+bin_picked
         accepted=min(picked,max(0,transfer_capacity-transfer_stored)) if active_depots else picked
@@ -827,8 +867,9 @@ def calculate_utility_balance(apply_effects=False):
     generation=sum(b.get("generationKw",900) for b in buildings if b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
     potable=sum(b.get("treatmentM3Day",220) for b in buildings if b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
     wastewater=sum(b.get("treatmentM3Day",260) for b in buildings if b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")))
-    power_capacity=utilities["basePowerCapacityKw"]+generation
-    source_water_capacity=utilities["baseWaterCapacityM3Day"]+potable
+    maintenance_factor=max(0,min(1,float(utilities.get("maintenanceFundingFactor",1))))
+    power_capacity=(utilities["basePowerCapacityKw"]+generation)*maintenance_factor
+    source_water_capacity=(utilities["baseWaterCapacityM3Day"]+potable)*maintenance_factor
     tanker_capacity=30 if climate.get("waterTankerStart",day+1)<=day<climate.get("waterTankerUntil",0) else 0
     water_capacity=source_water_capacity*(.55 if drought_active else 1.0)+tanker_capacity
     power_usable=power_capacity*(1-utilities["powerLossRate"])
@@ -1147,7 +1188,7 @@ def work_shift_for(person_id):
 
 def bus_service_schedule(line):
     route_minutes=max(1,(len(line.get("route",[]))-1)*3.6+6)
-    base=max(6,math.ceil(route_minutes/max(1,line.get("effectiveBuses",0))))
+    base=max(6,math.ceil(route_minutes/max(.25,line.get("effectiveBuses",0))))
     active=bool(line.get("operational") and line.get("effectiveBuses",0)>0)
     windows=[];headways={};capacities={};departures={}
     for key,label,multiplier in BUS_WINDOW_DEPARTURES:
@@ -1448,7 +1489,9 @@ def commute_model():
                 person.update({"status":"empleado","employerId":f"bus-{line['id']}","employerName":f"Colectivo · {line.get('originName','Línea')}","monthlyWage":10,"attendance":1,"commuteMode":"walk","busLineId":None,"unemployedSinceDay":None,"unemploymentReason":None})
                 line["driverIds"].append(person["id"])
                 line["driverShifts"].append({"personId":person["id"],"busIndex":index//2+1,"shift":"mañana" if index%2==0 else "tarde","window":"05:00–14:00" if index%2==0 else "14:00–23:00"})
-        line["effectiveBuses"]=len(line["driverIds"])//2
+        line["driverCapacityBuses"]=len(line["driverIds"])//2
+        factor=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("mobilityFundingFactor",1))))
+        line["effectiveBuses"]=round(min(line.get("buses",1),line["driverCapacityBuses"])*factor,2)
         line["operational"]=line.get("status")=="active" and len(line.get("route",[]))>1 and line["effectiveBuses"]>0
         line["pauseReason"]=("Faltan dos conductores compatibles por colectivo para cubrir mañana y tarde" if line.get("status")=="active" and len(line.get("route",[]))>1 and not line["operational"] else "Sin conexión vial entre las paradas" if line.get("status")=="active" and len(line.get("route",[]))<=1 else None)
         line.update(bus_service_schedule(line))
@@ -2142,24 +2185,27 @@ def tick_one_day():
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        debt_due=municipal_finance_report(monthly_income,state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost)["monthlyDebtService"]
-        due=state["monthlyExpenses"]+public_payroll+transit_cost+utility_maintenance+waste_cost+health_cost+education_cost+debt_due
+        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost}
+        full_operating_cost=sum(operating_costs.values())
+        debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
         available=state["money"]+monthly_income
+        budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
+        due=full_operating_cost+debt_due
         net=monthly_income-due
-        if available>=due:
-            state["money"]=available-due
+        if available>=debt_due:
+            state["money"]=available-debt_due
             if debt_due:municipal_debt_payment()
         else:
             # El fondo de deuda cubre faltantes de servicio; no cuenta como caja de libre disposición.
             finance=state.setdefault("finance",new_finance());reserve=max(0,int(finance.get("debtReserve",0)))
-            reserve_used=min(debt_due,max(0,due-available),reserve)
-            if reserve_used and available+reserve_used>=due:
-                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-due+reserve_used
+            reserve_used=min(debt_due,max(0,debt_due-available),reserve)
+            if reserve_used and available+reserve_used>=debt_due:
+                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-debt_due+reserve_used
                 municipal_debt_payment();finance.setdefault("debtReserveHistory",[]).append({"day":day,"amount":-reserve_used,"reason":"Servicio mensual de deuda"});del finance["debtReserveHistory"][:-24]
                 ev("Reserva de deuda aplicada",f"El fondo de deuda aportó $ {reserve_used:,} para completar las cuotas municipales. Saldo protegido: $ {finance['debtReserve']:,}.".replace(",","."))
             else:
                 # No sobregiro implícito: se agota la caja y cae la capacidad de servicio financiada.
-                shortfall=due-available
+                shortfall=debt_due-available
                 state["money"]=0
                 loss=max(1,min(8,round(shortfall/900)))
                 state["services"]=max(5,state["services"]-loss)
@@ -2171,7 +2217,7 @@ def tick_one_day():
                 ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
-        ev("Balance mensual",f"Ingresos $ {monthly_income:,} (actividad $ {business_income:,} · boletos $ {transit_income:,}) · gastos base $ {state['monthlyExpenses']:,} + nóminas $ {public_payroll:,} + autobuses $ {transit_cost:,} · balance neto $ {net:,}.".replace(",","."))
+        ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
         move_households()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
     process_market_orders()
@@ -2306,7 +2352,7 @@ def health_service_report(workplaces=None,advance=False):
     for building in state.get("buildings",[]):
         if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
         workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0)))
-        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100
+        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
         clinics.append({"building":building,"name":building.get("name","Centro de salud"),"staff":people,"utility":utility,
             "primaryCapacity":people*2.2*utility,"urgentCapacity":people*.35*utility,"primaryRemaining":people*2.2*utility,"urgentRemaining":people*.35*utility,
             "served":0,"urgentServed":0,"patients":0,"travelMinutes":[]})
@@ -2366,7 +2412,7 @@ def education_service_report(workplaces=None,advance=False):
     schools=[]
     for building in (b for b in state["buildings"] if b.get("kind")=="school" and b.get("status") in ("habilitado","operativo")):
         work=next((w for w in workplaces if w.get("kind")=="school" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
-        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100
+        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
         schools.append({"building":building,"teachers":max(0,work.get("staffedJobs",0)),"utility":utility,"seats":max(0,int(building.get("classrooms",4))*24),"assigned":[]})
     for home,person in pupils:
         options=[]
@@ -2613,6 +2659,15 @@ class Handler(BaseHTTPRequestHandler):
                         finance["debtReserve"]=reserve-amount;state["money"]+=amount;label="devueltos a caja"
                     finance.setdefault("debtReserveHistory",[]).append({"day":state.get("day",1),"amount":amount if direction=="deposit" else -amount,"reason":"Aporte al fondo de deuda" if direction=="deposit" else "Retiro del fondo de deuda"});del finance["debtReserveHistory"][:-24]
                     ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid));return
+                if action=="adjustProgramBudget":
+                    ensure_finance_state();budgets=state["finance"]["programBudgets"];program=str(data.get("program",""));delta=int(data.get("delta",0))
+                    keys={"services":"servicesPct","mobility":"mobilityPct","networks":"networksPct"}
+                    if program not in keys or delta not in (-10,10):self._send(409,{"error":"Programa o ajuste de presupuesto inválido."});return
+                    key=keys[program];old=int(budgets.get(key,100));new=max(0,min(200,old+delta))
+                    if new==old:self._send(409,{"error":"El presupuesto ya está en su límite."});return
+                    budgets[key]=new;label={"services":"servicios públicos","mobility":"transporte","networks":"redes y residuos"}[program]
+                    ev("Presupuesto municipal actualizado",f"Asignación mensual de {label}: {new}% del costo vigente. Se liquida al próximo cierre; lo que no alcance queda como obligación del programa.")
+                    self._send(200,public_state(pid));return
                 if action=="municipalLoan":
                     ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
                     if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return

@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.60",
+  "currentVersion": "0.61",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.61",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 29 (parcial): Hacienda incorpora presupuestos operativos para Servicios públicos, Redes y residuos, y Transporte. Cada área permite asignar entre 0% y 200% de su costo mensual en pasos de 10 puntos.",
+        "El cierre paga hasta el tope presupuestario y la caja disponible; lo no pagado queda como obligación persistente del programa. Una asignación superior al gasto del mes puede reducir obligaciones anteriores. La reserva de deuda conserva prioridad para completar cuotas después de liquidar los programas.",
+        "Las partidas afectan la operación: servicios reducen capacidad de salud/educación, redes afectan suministro, residuos limita recolección y movilidad escala capacidad de colectivos. Online/Offline, migración al esquema 45.",
+        "Verificado: mora y pago parcial, efecto de subfinanciación, integración con reserva de deuda y reportes en ambos motores. Chromium 390×844 y 1440×900: sin overflow horizontal ni solapamientos; el panel largo mantiene scroll vertical. LAN física y Vercel no probados."
+      ]
+    },
     {
       "version": "0.60",
       "date": "2026-10-31",
@@ -507,12 +517,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 28 · seguridad y protección social",
-      "detail": "Añadir patrullaje y alumbrado con personal, rutas y cobertura territorial, más asistencia municipal a hogares vulnerables con cupos, costo y resultados medibles."
+      "title": "Fase 29 · escenarios y compromisos de caja",
+      "detail": "Comparar flujos con ingresos cobrados, mora, presupuestos, contratos y deuda; sumar obligaciones plurianuales y refinanciación que tengan pagos y consecuencias reales."
     },
     {
-      "title": "Fase 29 · hacienda plurianual",
-      "detail": "Distinguir caja, ingresos cobrados, contratos comprometidos, mantenimiento y deuda; dar previsión de flujo y escenarios para nuevas obras."
+      "title": "Fase 30 · patrimonio y evolución urbana",
+      "detail": "Iniciar protección de edificios históricos, cambios de uso y valor patrimonial con efectos en obras, turismo y apoyo ciudadano."
     }
   ]
 }

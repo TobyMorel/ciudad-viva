@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.60
+# Auditoría del roadmap · Alfa 0.61
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -16,7 +16,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 26 | Parcial: redes físicas de electricidad, agua, cloacas y drenaje; residuos por actividad, flota, cupo finito de relleno, basura pendiente y reciclaje con venta de recuperados | Transferencia, contenedores, clasificación de materiales, mercados privados, gas, telecomunicaciones, reparación, redundancia, respaldo y fallas/cortes detallados |
 | 27 | Parcial: tormentas, recuperación, calor y sequía con respuestas operativas | Climas/regiones múltiples, incendios, inundaciones prolongadas y reconstrucción total |
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
-| 29 | Parcial: créditos, amortización, proyección, impuestos efectivos con mora y fondo de servicio de deuda que cubre cuotas desde caja reservada | Presupuestos por programa, escenarios, compromisos plurianuales y refinanciación |
+| 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
 | 30–33 | Pendiente como sistemas completos | Patrimonio, mantenimiento plurianual, gobierno y décadas de simulación |
 
 ## Evidencia de esta revisión
@@ -161,3 +161,10 @@ Regresiones: diez residentes facturan $12; pagaron $12 desde el efectivo del hog
 Hacienda permite apartar o retirar $500, $1.000 o $2.500 desde la tesorería. Los aportes solo salen de caja libre después de contratos en curso; la reserva se conserva separada y el registro mantiene hasta 24 movimientos. Al cierre, si ingresos y caja libre no alcanzan para gastos más cuotas, el fondo de deuda puede cubrir la diferencia completa del servicio mensual. No realiza pagos parciales de cuotas: si falta dinero incluso con el fondo, se conserva el impago y se aplican las consecuencias de caja existentes.
 
 La vista de Hacienda distingue caja libre y saldo protegido, e incluye la reserva al proyectar el patrimonio de tesorería a 12/48 meses. Online y Offline migran al esquema 44. Prueba de integración: aportar y retirar no crea dinero, un contrato vigente impide apartar su saldo, y un fondo suficiente cubre el faltante exacto de las cuotas sin generar mora. Chromium en 390×844 y 1440×900: controles visibles dentro del panel, sin overflow horizontal; el contenido largo usa scroll vertical y no se observaron solapamientos. LAN física y Vercel no se validaron.
+
+
+## Alfa 0.61 · presupuestos municipales por programa (fase 29, parcial)
+
+Hacienda permite asignar 0–200% del costo mensual a tres programas: servicios públicos, redes y residuos, y transporte. Las asignaciones cambian en pasos de 10 puntos porcentuales. Al cierre mensual cada programa paga hasta su tope y la caja disponible; el saldo impago queda como obligación persistente. Una asignación superior al costo puede amortizar obligaciones anteriores.
+
+Los recortes tienen efecto operativo: la cobertura de salud y educación y la confianza responden a fondos de servicios; el mantenimiento insuficiente reduce capacidad de electricidad/agua y la recolección responde a presupuesto de residuos; el transporte financiado escala la capacidad efectiva de buses. El panel Hacienda muestra asignación, costo, pago, saldo adeudado y resumen del último cierre, dentro de un desplegable para mantener compacta la vista inicial. Online/Offline y guardados esquema 45. Pruebas funcionales verificaron pago parcial, mora, efectos operativos y prioridad de la reserva para completar deuda tras liquidar programas. Chromium a 390×844 y 1440×900: sin overflow horizontal ni solapamientos; contenido vertical desplazable. La fase 29 continúa parcial. No se validó LAN física ni Vercel.

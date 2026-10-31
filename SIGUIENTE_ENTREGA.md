@@ -2,18 +2,18 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.60
+## Estado al cerrar Alfa 0.61
 
-La fase 29 ya enlaza crédito municipal, amortización, impuestos ajustables con cobro efectivo y mora, más una reserva que protege las cuotas ante faltantes temporales. Los pagos inmobiliarios reducen el efectivo doméstico disponible para compras; los gravámenes sobre ventas reducen la liquidez comercial; solo lo cobrado entra a caja municipal. La proyección de 12/48 meses todavía mantiene constantes las bases y no modela escenarios. Fase 28 conserva capas iniciales de salud, escuela y bomberos; seguridad/protección social ampliadas siguen pendientes en el árbol actualmente publicado.
+La fase 29 ya enlaza créditos municipales y amortización, impuestos ajustables con cobro efectivo y mora, reserva para cuotas y presupuestos operativos por programa. Las asignaciones limitan pagos mensuales y los impagos persisten; reducir financiación afecta servicios sanitarios/educativos, redes y recogida de residuos, o capacidad de buses. El panel Hacienda muestra topes, costos, pagos y mora. Online/Offline utilizan el mismo orden; guardados migran al esquema 45.
 
 ## Próximo sistema
 
-Continuar fase 29 con presupuesto por programa, escenarios, compromisos plurianuales y reestructuración de deuda; comprobar el panel actualizado a varias resoluciones. Después iniciar fase 30 con protección y rehabilitación financiada de edificios históricos. Mantener una mecánica nueva por entrega antes de profundizar sus detalles.
+Continuar fase 29 con escenarios de caja comparables que incluyan ingresos cobrados, mora, presupuestos, contratos, mantenimiento y deuda. Añadir compromisos plurianuales y refinanciación con pagos y consecuencias reales. Después iniciar fase 30 con patrimonio histórico, protección y rehabilitación financiada de edificios. Mantener el foco en sistemas jugables, dejando ajustes visuales para más adelante.
 
-## Verificación pendiente
+## Verificación
 
-Alfa 0.60: aporte/retiro del fondo no crea dinero; una reserva suficiente liquida el faltante de cuota y no duplica pagos, y los contratos impiden apartar su caja. UI revisada en Chromium a 390×844 y 1440×900: panel dentro de pantalla, sin overflow horizontal ni solapamientos; scroll vertical para el contenido extendido. Alfa 0.59: diez residentes facturan $12 y pagan $12 con caja doméstica; una tienda con ventas de $1.000 factura $20 y paga $5 de sus $5 disponibles, dejando $15 de mora. Repetir el cierre no duplica el cargo. El modo Offline cerró un mes y registró cobros desde los balances. La UI Hacienda se comprobó en Chromium a 390×844 y 1440×900, sin overflow horizontal ni errores JavaScript; todo el contenido conserva scroll vertical. Alfa 0.58: un crédito Online/Offline de $5.000 cobra $132/mes; el primer pago separa interés y capital. LAN física y Vercel siguen sin prueba en este entorno; Offline aún no compra ni entrega materiales de construcción.
+Se verificó el cierre de presupuesto parcial en Online y Offline, la mora de programa y sus efectos operativos. También se comprobó que el fondo reservado completa la cuota después de liquidar los programas. Chromium a 390×844 y 1440×900 confirmó panel dentro de pantalla, controles visibles, scroll vertical y ausencia de overflow horizontal o solapamientos. No se probó la conexión entre dos computadoras físicas ni el despliegue Vercel en esta entrega.
 
 ## Medición del progreso global
 
-No hay criterios y pesos estables que permitan un porcentaje verificable para las 34 fases. Mantener el avance global sin estimar hasta registrar esa base; no confundir avance de versión con avance del juego.
+El porcentaje total queda sin estimar: faltan pesos estables y criterios de finalización verificables para las 34 fases. No se convierte el número de entregas, archivos o pruebas en avance del juego.

@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.21",
+  "currentVersion": "0.22",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.22",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Los residentes tienen habilidades persistentes de comercio, administración y logística, además de un salario mínimo esperado.",
+        "Los centros laborales declaran el nivel requerido y el salario; asignar un trabajador exige cualificación, salario aceptable y acceso vial.",
+        "El informe explica parte del desempleo por falta de habilidades, salario o ruta. Online y Offline usan estas reglas; guardados migran al esquema 18."
+      ]
+    },
     {
       "version": "0.21",
       "date": "31 de octubre de 2026",
@@ -163,12 +172,12 @@
   ],
   "upcoming": [
     {
-      "title": "Mercado laboral cualificado",
-      "detail": "Salarios diferenciados, habilidades y puestos que pueden seguir vacantes cuando faltan trabajadores adecuados."
+      "title": "Formación laboral municipal",
+      "detail": "Programas con presupuesto, cupos y duración para mejorar habilidades de cohortes identificables."
     },
     {
       "title": "Hogares y mercado de vivienda",
-      "detail": "Mudanzas trazables, costos de vivienda y decisiones de permanencia según empleo, ingresos y servicios."
+      "detail": "Mudanzas trazables, costos de vivienda y decisiones según empleo, ingresos y servicios."
     },
     {
       "title": "Redes urbanas",

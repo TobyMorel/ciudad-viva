@@ -1,12 +1,14 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.21 · 31 de octubre de 2026
+**Entrega:** Alfa 0.22 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Implementado
 
 - Alfa 0.19: Banco Cooperativo con $42.000 de liquidez y crédito por empresa limitado por dotación. Las tiendas pueden usarlo para nómina, gastos e insumos; cobran interés mensual, pagan desde excedentes y devuelven capital. Dos meses seguidos sin cubrir intereses llevan al cierre y liberan vacantes; los empleados afectados pasan a búsqueda laboral con registro de su anterior empleador. Migración de esquema 15 a 16. En Offline, la misma mecánica opera desde el navegador.
 - Alfa 0.20: mapa a pantalla principal, herramientas y reportes en ventanas emergentes, dock compacto adaptativo y cronología paginada de 0.1 a 0.20. El código disponible conserva detalle desde 0.10; 0.1–0.9 aparecen con una nota explícita de archivo perdido. La ventana Cambios se actualiza desde `release_notes.json`.
+- Alfa 0.21: el desempleo conserva inicio, causa y empleador previo; al contratar se registra la duración individual. Online y Offline reportan buscadores, vacantes y esperas con guardado esquema 17.
+- Alfa 0.22: perfiles estables de comercio, administración y logística y salario mínimo esperado por residente. Los centros laborales publican salario y requisito; las vacantes solo aceptan candidatos cualificados, con salario aceptable y ruta. El informe cuenta a quienes buscan por falta de cualificación, salario o acceso. Offline usa el mismo filtrado con distancia aproximada. Guardado esquema 18. Esto implementa una primera capa de la fase 21, no educación ni formación.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -62,8 +64,8 @@
 ## Límites actuales
 
 - La ciudad interactiva sigue en un mapa fijo de 28×20 y los edificios son geometría procedural de detalle medio, no modelos artísticos finales.
-- Los residentes trabajadores ya tienen identidad y empleador, con salario mensual a la caja común de su hogar. Todavía comparten una sola caja por vivienda y no tienen horario, formación, contrato o búsqueda con preferencias. Los viajes laborales están agrupados en el mapa; los autos y peatones ambientales siguen decorativos.
-- Los empleados tienen identidad y empleador, pero no contrato, habilidades, horarios ni preferencias de búsqueda. Las empresas comerciales ya tienen caja, inventario, producción, ventas, costos y quiebra; faltan proveedores productivos identificables, competencia de precios y encadenamiento entre empresas. Los depósitos ya mantienen inventario separado y abastecen obras conectadas; la descarga visible usa trabajadores y autoelevadores finitos. Los viajes y la asistencia siguen agregados, sin horarios ni decisiones de ruta individuales; los autos no laborales y peatones son decorativos. También faltan salarios reales de cuadrillas.
+- Los residentes trabajadores ya tienen identidad, empleador y niveles básicos de habilidades; aún comparten caja por vivienda y no tienen horarios, contratos, educación, capacitación, evolución de competencias o búsqueda estratégica. El salario mínimo esperado no cambia por familia. Los viajes laborales están agrupados; los autos y peatones ambientales siguen decorativos.
+- Los perfiles laborales diferencian comercio, administración y logística, pero aún no hay ocupaciones internas, negociación ni trayectoria profesional; educación y formación no producen nuevas competencias. Las empresas comerciales ya tienen caja, inventario, producción, ventas, costos y quiebra; faltan proveedores productivos identificables y encadenamiento entre empresas. Los viajes y la asistencia siguen agregados, sin horarios ni decisiones individuales de ruta; también faltan salarios reales de cuadrillas.
 - No están implementados electricidad, agua, cloacas, residuos, transporte público funcional, elecciones, puertos, aeropuertos, turismo, clima, patrimonio o simulación por décadas.
 - Offline requiere navegador con WebGL; Online requiere Python 3.9+ en el anfitrión. Descubrimiento de salas por código, transferencia de anfitrión, autenticación y validación física de Wi-Fi siguen pendientes. Offline tiene una simulación comercial simplificada y trayectos aproximados; todavía no incluye pedidos logísticos de obra, rescate de obra ni reasignación laboral completa de edificios nuevos.
 
@@ -91,6 +93,17 @@
 - Chromium headless en Offline avanzó de día 30 a 41 sin errores JavaScript; se mantuvieron 203 empleados frente al objetivo del 78% y 57 personas buscando, sin contrataciones excedentes.
 - El informe Ciudad se revisó en Chromium a 1440×900 y 390×844. La ventana queda dentro del viewport, no genera desplazamiento horizontal y su contenido largo puede recorrerse verticalmente hasta el final. Se corrigió la concordancia de «día/días».
 - La conexión LAN entre dos equipos físicos continúa pendiente; esta entrega no altera la capa de red.
+
+## Verificación Alfa 0.22
+
+- `python -m py_compile server.py`, `node --check game.js`, `node --check offline.js`, `node --check world3d.js`, validación JSON de semilla e historial y `git diff --check` pasan.
+- El estado Online inicial conserva 260 personas en edad laboral, 203 ocupadas y 57 buscadoras; cada persona empleada supera la cualificación y el salario mínimo del puesto asignado.
+- Pruebas causales: con las tres habilidades en cero, las 260 personas quedan buscando por incompatibilidad y los 286 puestos siguen abiertos; con perfiles cualificados que esperan $11 y puestos que ofrecen $8–$10, quedan sin ocupar y las 260 personas aparecen buscando por salario.
+- Migración desde esquema 17 conserva IDs de residentes, incorpora perfiles de habilidades y salario esperado y actualiza a esquema 18.
+- Chromium Offline migró el estado, recontrató a una persona con mejores habilidades tras 30 días, dejó su empleador previo y guardó una búsqueda de 30 días. Los 208 ocupados del escenario respetaron los requisitos; sin errores JavaScript.
+- Chromium revisó el popup Ciudad en 1440×900 y 390×844: ventana dentro del viewport, sin scroll horizontal, filas de puestos sin solapamiento y texto extenso accesible mediante scroll vertical. Se distingue espacio de vivienda de vacantes laborales y trayecto aproximado Offline de falta de acceso vial.
+- Historial de 22 entradas paginado en cinco páginas; las versiones van de 0.22 a 0.1 sin desbordamiento horizontal. Dos clientes de navegador locales confirmaron anfitrión/invitado Online y estado compartido.
+- La conexión LAN entre equipos físicos por Wi-Fi sigue pendiente; no se ha probado en esta entrega.
 
 ## Criterio de estimación global
 

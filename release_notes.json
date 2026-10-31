@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.22",
+  "currentVersion": "0.23",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.23",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "La pestaña Ciudad permite iniciar cursos municipales de comercio, administración y logística para residentes con brecha de habilidad y acceso por calles.",
+        "Cada curso admite hasta seis residentes, dura dos cierres mensuales, reserva el presupuesto completo y mejora 18 puntos por ciclo; la pérdida de acceso pausa el curso.",
+        "Los cursos se pueden pausar, reanudar o cancelar con devolución del saldo no gastado. Online y Offline guardan participantes y avances; esquema 19."
+      ]
+    },
     {
       "version": "0.22",
       "date": "31 de octubre de 2026",
@@ -172,16 +181,16 @@
   ],
   "upcoming": [
     {
-      "title": "Formación laboral municipal",
-      "detail": "Programas con presupuesto, cupos y duración para mejorar habilidades de cohortes identificables."
+      "title": "Fase 21 · Formación y mercado laboral",
+      "detail": "Ampliar escuelas, educación técnica, capacidad docente, ingreso familiar y diferencias entre barrios; mantener compatibilidad entre cualificación, salarios, vacantes y accesibilidad."
     },
     {
-      "title": "Hogares y mercado de vivienda",
-      "detail": "Mudanzas trazables, costos de vivienda y decisiones según empleo, ingresos y servicios."
+      "title": "Fase 22 · Movilidad avanzada",
+      "detail": "Profundizar desplazamientos individuales y sumar transporte colectivo y carga con rutas, capacidad y efectos en el acceso al empleo."
     },
     {
-      "title": "Redes urbanas",
-      "detail": "Agua, energía, cloacas y residuos como infraestructuras físicas con capacidad, costos y fallas."
+      "title": "Revisión visual continua",
+      "detail": "Comprobar paneles, texto y controles en escritorio y móvil con cada cambio de interfaz."
     }
   ]
 }

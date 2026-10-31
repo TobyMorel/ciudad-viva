@@ -50,6 +50,12 @@ JOB_PROFILES = {
     "civic": ("administracion", "Administración", 48),
     "depot": ("logistica", "Logística", 42),
 }
+TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42)}
+TRAINING_SEATS=6
+TRAINING_MONTHS=2
+TRAINING_BASE_MONTHLY_COST=180
+TRAINING_COST_PER_STUDENT=40
+TRAINING_SKILL_GAIN=18
 
 def stable_skill(person_id, category):
     """Valor reproducible compartido con Offline, independiente del orden de carga."""
@@ -69,6 +75,59 @@ def workplace_profile(site):
     firm=site.get("business",{}) if site.get("kind")=="shop" else {}
     wage=max(1,int(firm.get("wage",10) if site.get("kind")=="shop" else 8))
     return category,label,minimum,wage
+
+def training_candidates(category,center,excluded=None):
+    if category not in TRAINING_CATEGORIES:return []
+    excluded=excluded or set();_,minimum=TRAINING_CATEGORIES[category];candidates=[]
+    for home in (b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0):
+        path=route_between((home["x"],home["y"]),(center["x"],center["y"]))
+        if not path:continue
+        for person in home.get("residents",[]):
+            if not person.get("workerEligible") or person.get("status") not in ("buscando","empleado") or person.get("id") in excluded:continue
+            ensure_person_work_profile(person);skill=person["skills"].get(category,0)
+            if skill>=minimum:continue
+            candidates.append({"person":person,"home":home,"skill":skill,"searchDays":max(0,state.get("day",1)-int(person.get("unemployedSinceDay") or state.get("day",1))),"distance":len(path)-1})
+    candidates.sort(key=lambda row:(0 if row["person"].get("status")=="buscando" else 1,-row["searchDays"],row["skill"],row["distance"],row["person"].get("id","")))
+    return candidates
+
+def training_catalog():
+    centers=[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")]
+    programs=state.setdefault("trainingPrograms",[]);occupied={p.get("centerId") for p in programs if p.get("status") in ("active","paused")}
+    active_trainees={person_id for p in programs if p.get("status") in ("active","paused") for person_id in p.get("traineeIds",[])}
+    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,state.get("money",0)-reserved)
+    result=[]
+    for category,(label,minimum) in TRAINING_CATEGORIES.items():
+        center=next((b for b in centers if b.get("id",f"civic-{b['x']}-{b['y']}") not in occupied),centers[0] if centers else None)
+        center_id=center.get("id",f"civic-{center['x']}-{center['y']}") if center else None
+        candidates=training_candidates(category,center,active_trainees) if center else []
+        seats=min(TRAINING_SEATS,len(candidates));monthly=TRAINING_BASE_MONTHLY_COST+TRAINING_COST_PER_STUDENT*seats;total=monthly*TRAINING_MONTHS
+        reason="" if center and center_id not in occupied and seats and available>=total else "Sin aula municipal" if not center else "Aula ocupada" if center_id in occupied else "Sin residentes accesibles que necesiten esta formación" if not seats else "Fondos municipales comprometidos"
+        result.append({"category":category,"label":label,"minimumSkill":minimum,"centerId":center_id,"centerName":center.get("name","Aula municipal") if center else "Sin aula","availableCandidates":len(candidates),"seats":seats,"durationMonths":TRAINING_MONTHS,"monthlyCost":monthly,"totalCost":total,"skillGainPerMonth":TRAINING_SKILL_GAIN,"canStart":not reason,"reason":reason})
+    return result
+
+def process_training_programs():
+    """Devenga una cuota prefinanciada y capacita una cohorte en cada cambio de mes."""
+    for program in state.setdefault("trainingPrograms",[]):
+        if program.get("status")!="active":continue
+        center=next((b for b in state["buildings"] if b.get("kind")=="civic" and b.get("id",f"civic-{b['x']}-{b['y']}")==program.get("centerId") and b.get("status","operativo") in ("operativo","habilitado")),None)
+        if not center:
+            program.update({"status":"paused","pauseReason":"El aula municipal no está operativa"});ev("Curso pausado",f"{program['label']}: el aula municipal dejó de estar operativa; el saldo reservado se conserva.");continue
+        homes={person.get("id"):home for home in state["buildings"] if home.get("kind")=="home" for person in home.get("residents",[])};accessible=[]
+        for person_id in program.get("traineeIds",[]):
+            home=homes.get(person_id)
+            if home and route_between((home["x"],home["y"]),(center["x"],center["y"])):
+                person=next((p for p in home.get("residents",[]) if p.get("id")==person_id),None)
+                if person:accessible.append(person)
+        if not accessible:
+            program.update({"status":"paused","pauseReason":"La cohorte perdió acceso vial al aula"});ev("Curso pausado",f"{program['label']}: la cohorte no puede llegar al aula; el saldo reservado se conserva.");continue
+        installment=min(program.get("monthlyCost",0),program.get("remainingBudget",0))
+        for person in accessible:
+            ensure_person_work_profile(person);person["skills"][program["category"]]=min(100,person["skills"].get(program["category"],0)+program.get("skillGainPerMonth",TRAINING_SKILL_GAIN))
+        program["remainingBudget"]=max(0,program.get("remainingBudget",0)-installment);program["spent"]=program.get("spent",0)+installment;program["monthsCompleted"]=program.get("monthsCompleted",0)+1;program["lastTrainingDay"]=state["day"]
+        program["traineeProgress"]={person.get("id"):person["skills"][program["category"]] for person in accessible}
+        if program["monthsCompleted"]>=program.get("durationMonths",TRAINING_MONTHS):
+            program["status"]="completed";program["completedDay"]=state["day"];ev("Curso municipal completado",f"{program['label']}: {len(accessible)} residentes terminaron tras {program['durationMonths']} ciclos; aumentaron su habilidad {program['category']}.")
+        else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
     return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24}}
@@ -111,7 +170,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":18,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":19,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"trainingPrograms":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -193,8 +252,9 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(18,state.get("version",1))
+    state["version"]=max(19,state.get("version",1))
     state.setdefault("roadAssets",[])
+    state.setdefault("trainingPrograms",[])
     for building in state["buildings"]:
         if building["kind"]=="home":
             building.setdefault("capacity",max(building.get("occupants",0),round(building.get("occupants",0)*1.15)))
@@ -882,6 +942,7 @@ def tick_one_day():
             supplier_stock["Corralón del Puerto"][key]+=round(amount*.25)
             supplier_stock["Flete Urgente"][key]+=round(amount*.15)
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
+        process_training_programs()
         economic=commute_model()
         public_payroll=pay_public_wages(economic)
         activity=simulate_business_month(economic)
@@ -987,6 +1048,7 @@ def public_state(player_id=None):
     view["commutes"]=commute["routes"]
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
+    view["trainingCatalog"]=training_catalog()
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
@@ -1035,6 +1097,37 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(403,{"error":"Esta acción está reservada al anfitrión de la sala."}); return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
+                elif action=="startTrainingProgram":
+                    category=str(data.get("category",""))
+                    if category not in TRAINING_CATEGORIES:self._send(400,{"error":"Perfil de formación inválido."});return
+                    ensure_resident_roster();catalog={x["category"]:x for x in training_catalog()};offer=catalog[category]
+                    if not offer["canStart"]:self._send(409,{"error":offer["reason"] or "El programa no está disponible."});return
+                    center=next((b for b in state["buildings"] if b.get("id",f"civic-{b['x']}-{b['y']}")==offer["centerId"]),None)
+                    programs=state.setdefault("trainingPrograms",[]);excluded={person_id for p in programs if p.get("status") in ("active","paused") for person_id in p.get("traineeIds",[])}
+                    candidates=training_candidates(category,center,excluded);cohort=candidates[:TRAINING_SEATS]
+                    if not cohort:self._send(409,{"error":"No hay residentes con esa necesidad de formación y acceso al aula."});return
+                    monthly=TRAINING_BASE_MONTHLY_COST+TRAINING_COST_PER_STUDENT*len(cohort);total=monthly*TRAINING_MONTHS
+                    reserved=sum(max(0,pending["cost"]-pending.get("paid",0)) for pending in state["projects"] if not pending.get("privatePaid"));available=max(0,state["money"]-reserved)
+                    if available<total:self._send(409,{"error":f"El curso cuesta $ {total:,} y quedan $ {available:,} disponibles después de los contratos.".replace(",",".")});return
+                    trainee_ids=[row["person"].get("id") for row in cohort];label=TRAINING_CATEGORIES[category][0]
+                    program={"id":uuid.uuid4().hex,"category":category,"label":label,"centerId":offer["centerId"],"centerName":offer["centerName"],"status":"active","createdDay":state["day"],"durationMonths":TRAINING_MONTHS,"monthsCompleted":0,"seats":len(cohort),"traineeIds":trainee_ids,"traineeProgress":{row["person"]["id"]:row["skill"] for row in cohort},"skillGainPerMonth":TRAINING_SKILL_GAIN,"monthlyCost":monthly,"cost":total,"paid":total,"spent":0,"remainingBudget":total}
+                    state["money"]-=total;programs.append(program);del programs[:-30]
+                    ev("Programa de formación adjudicado",f"Aula municipal · {label} · {len(cohort)} participantes · {TRAINING_MONTHS} ciclos · $ {total:,} prepagados. La formación empieza en el próximo cierre mensual.".replace(",","."))
+                elif action in ("pauseTrainingProgram","resumeTrainingProgram","cancelTrainingProgram"):
+                    program=next((p for p in state.setdefault("trainingPrograms",[]) if p.get("id")==str(data.get("id"))),None)
+                    if not program:self._send(404,{"error":"El curso ya no está disponible."});return
+                    if action=="pauseTrainingProgram":
+                        if program.get("status")!="active":self._send(409,{"error":"Solo se puede pausar un curso en marcha."});return
+                        program.update({"status":"paused","pauseReason":"Pausa decidida por el gobierno"});ev("Curso pausado",f"{program['label']}: el saldo de $ {program.get('remainingBudget',0):,} queda reservado.".replace(",","."))
+                    elif action=="resumeTrainingProgram":
+                        if program.get("status")!="paused":self._send(409,{"error":"El curso no está pausado."});return
+                        center=next((b for b in state["buildings"] if b.get("id",f"civic-{b['x']}-{b['y']}")==program.get("centerId") and b.get("kind")=="civic"),None)
+                        homes={p.get("id"):home for home in state["buildings"] if home.get("kind")=="home" for p in home.get("residents",[])}
+                        if not center or not any((home:=homes.get(person_id)) and route_between((home["x"],home["y"]),(center["x"],center["y"])) for person_id in program.get("traineeIds",[])):
+                            self._send(409,{"error":"La cohorte todavía no tiene acceso vial al aula."});return
+                        program.update({"status":"active","pauseReason":None});ev("Curso reanudado",f"{program['label']} retomará la formación en el próximo cierre mensual.")
+                    else:
+                        refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
                 elif action=="place":
                     kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
                     if kind not in PROJECTS or x<0 or y<0 or x>=28 or y>=20: self._send(400,{"error":"Proyecto o parcela inválidos"}); return

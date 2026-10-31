@@ -1,14 +1,20 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.22 · 31 de octubre de 2026
+**Entrega:** Alfa 0.23 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
+
+## Medición del progreso global
+
+El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
 
 - Alfa 0.19: Banco Cooperativo con $42.000 de liquidez y crédito por empresa limitado por dotación. Las tiendas pueden usarlo para nómina, gastos e insumos; cobran interés mensual, pagan desde excedentes y devuelven capital. Dos meses seguidos sin cubrir intereses llevan al cierre y liberan vacantes; los empleados afectados pasan a búsqueda laboral con registro de su anterior empleador. Migración de esquema 15 a 16. En Offline, la misma mecánica opera desde el navegador.
 - Alfa 0.20: mapa a pantalla principal, herramientas y reportes en ventanas emergentes, dock compacto adaptativo y cronología paginada de 0.1 a 0.20. El código disponible conserva detalle desde 0.10; 0.1–0.9 aparecen con una nota explícita de archivo perdido. La ventana Cambios se actualiza desde `release_notes.json`.
 - Alfa 0.21: el desempleo conserva inicio, causa y empleador previo; al contratar se registra la duración individual. Online y Offline reportan buscadores, vacantes y esperas con guardado esquema 17.
-- Alfa 0.22: perfiles estables de comercio, administración y logística y salario mínimo esperado por residente. Los centros laborales publican salario y requisito; las vacantes solo aceptan candidatos cualificados, con salario aceptable y ruta. El informe cuenta a quienes buscan por falta de cualificación, salario o acceso. Offline usa el mismo filtrado con distancia aproximada. Guardado esquema 18. Esto implementa una primera capa de la fase 21, no educación ni formación.
+- Alfa 0.22: perfiles estables de comercio, administración y logística y salario mínimo esperado por residente. Los centros laborales publican salario y requisito; las vacantes solo aceptan candidatos cualificados, con salario aceptable y ruta. El informe cuenta a quienes buscan por falta de cualificación, salario o acceso. Offline usa el mismo filtrado con distancia aproximada. Guardado esquema 18. Esto implementa una primera capa de la fase 21, no educación formal ni desigualdad territorial.
+
+- Alfa 0.23: cursos municipales de comercio, administración y logística asignan hasta seis residentes con habilidad insuficiente y ruta al aula. Se prepagan dos ciclos mensuales; cada ciclo mejora 18 puntos, registra costo y progreso, y los cursos pueden pausarse/reanudarse/cancelarse con reintegro del saldo sin gastar. Si el centro o acceso vial falla, se pausa y conserva saldo. Online y Offline; guardado esquema 19. Esta formación es una parte de la fase 21; no hay currículos, docentes, formación prolongada ni distribución de ingresos por barrio.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -108,3 +114,10 @@
 ## Criterio de estimación global
 
 - No se publica un porcentaje de avance hasta definir criterios de aceptación verificables y pesos estables para las 34 fases. La lista de fases del roadmap es un alcance descriptivo, no una base ponderada; contar funciones o pruebas produciría una cifra engañosa. Mantener este estado hasta documentar una matriz de alcance, criterios y pesos.
+
+
+## Verificación Alfa 0.23
+
+- Revisiones sintácticas de Python y JavaScript, validación de JSON y `git diff --check` completadas antes de publicar.
+- Playwright con Chromium comprobó creación de cursos Offline y Online, descuento del presupuesto, cohorte de seis personas, dos cierres mensuales y estado completado. Una prueba del adaptador Offline verificó +36 habilidad por participante y saldo final cero. Las acciones de pausa, reanudación y cancelación se verificaron con el adaptador local. En 1440×950 y 390×844 el popup de Ciudad conserva texto y botones legibles, no presenta desborde horizontal y desplaza su contenido verticalmente; no se detectaron errores JavaScript.
+- Transferencia Online entre dos equipos físicos por Wi-Fi continúa pendiente; esta sesión no dispone de una red LAN externa para certificarla.

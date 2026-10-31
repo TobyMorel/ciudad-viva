@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.47",
+  "currentVersion": "0.48",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.48",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 26 (parcial): los contenedores colocados sobre calles amplían la capacidad diaria de recolección; cuestan $350 y se ven en el mapa 3D.",
+        "Los depósitos municipales conectados también operan como estaciones de transferencia: almacenan hasta 12 t cada uno y despachan 1,5 t/día hacia reciclaje y disposición. Sin capacidad libre o salida suficiente, el residuo se acumula en la estación o en las calles.",
+        "Ciudad > Servicios informa contenedores, stock, capacidad y despacho. Online y Offline comparten el flujo; los guardados anteriores migran al esquema 33."
+      ]
+    },
     {
       "version": "0.47",
       "date": "2026-10-31",

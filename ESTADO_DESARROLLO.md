@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.47 · 31 de octubre de 2026
+**Entrega:** Alfa 0.48 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.48 · Fase 26 (parcial): contenedores municipales colocables en tramos viales por $350, con +0,15 t/día de capacidad por unidad y representación 3D. Cada depósito municipal operativo y conectado a la ruta central añade 12 t de almacenamiento de transferencia y despacho limitado a 1,5 t/día. La recolección que no cabe en las estaciones o no puede salir queda acumulada; la disposición final y el reciclaje procesan el flujo despachado según sus capacidades. Ciudad > Servicios informa capacidad, stock y despacho. Online y Offline migran al esquema 33.
 
 - Alfa 0.19: Banco Cooperativo con $42.000 de liquidez y crédito por empresa limitado por dotación. Las tiendas pueden usarlo para nómina, gastos e insumos; cobran interés mensual, pagan desde excedentes y devuelven capital. Dos meses seguidos sin cubrir intereses llevan al cierre y liberan vacantes; los empleados afectados pasan a búsqueda laboral con registro de su anterior empleador. Migración de esquema 15 a 16. En Offline, la misma mecánica opera desde el navegador.
 - Alfa 0.20: mapa a pantalla principal, herramientas y reportes en ventanas emergentes, dock compacto adaptativo y cronología paginada de 0.1 a 0.20. El código disponible conserva detalle desde 0.10; 0.1–0.9 aparecen con una nota explícita de archivo perdido. La ventana Cambios se actualiza desde `release_notes.json`.
@@ -373,3 +375,8 @@ Se comprobaron sintaxis de Python/JavaScript, migración a esquema 30 y simulaci
 - Ciudad > Servicios permite asignar una cuadrilla desde el presupuesto común. Según la red, reparar cuesta $460–720 y tarda tres días; el avance se guarda por día y el servicio se restablece al finalizar. Acciones simultáneas no duplican cuadrillas ni pagos.
 - El informe muestra averías activas y el mapa marca el segmento rojo en la capa correspondiente. Online y Offline comparten comportamiento. Migración al esquema 32.
 - Verificado: compilación/sintaxis, corte y restauración en ambos modos, acción HTTP Online, y render móvil/escritorio con estado de reparación. Pendiente: prueba LAN física; fase 26 aún necesita respaldo y redundancia.
+
+## Verificación Alfa 0.48
+
+- Contenedor instalado en calle: inversión compartida $350, capacidad de recolección +0,15 t/día, persistencia en el guardado y objeto visible en el mapa. Se rechaza sin débito si la parcela no es calle o ya tiene contenedor.
+- Depósito municipal conectado: estación con 12 t y despacho diario de 1,5 t hacia reciclaje/disposición; los cuellos de botella conservan toneladas en transferencia o calle. Panel de Servicios actualizado. Pruebas HTTP Online: contenedor instalado por $350; el duplicado devuelve 409 y conserva dinero/estado. Offline: mismas reglas, capacidad y persistencia local comprobadas. Simulación con relleno lleno confirmó buffer de transferencia limitado a 12 t y acumulación urbana en ambos motores. Chromium cargó WebGL sin errores JS en escritorio (1440×900) y móvil (390×844); el panel de Servicios y la lista de construcción no tienen desborde horizontal. La LAN física permanece sin verificar.

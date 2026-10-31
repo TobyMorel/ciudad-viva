@@ -85,3 +85,8 @@ Implementado: trazados de gas y fibra con conectividad física por calle, demand
 ## Alfa 0.47 · averías y reparación de redes (fase 26, parcial)
 
 Implementado: una inundación puede inutilizar un tramo conectado físicamente; el corte recalcula continuidad y suministro. Una cuadrilla municipal repara el segmento con costo por tipo de red y plazo de tres días. El estado persiste en guardados, el informe identifica causa y ubicación, y la vista 3D resalta la avería. Online/Offline comparten la mecánica. Pendiente: fallas por desgaste, prevención, redundancia y respaldo crítico (bombas/hospitales), contenedores, transferencia y logística de reciclables.
+
+
+## Alfa 0.48 · transferencia de residuos (fase 26, parcial)
+
+Contenedores viales y almacenamiento/expedición de residuos en depósitos municipales conectados ya están implementados en Online y Offline. Capacidad física, despacho diario y saturación afectan el volumen procesado y la basura acumulada; no son solo indicadores de UI. Quedan pendientes rutas de camiones individualizadas, clasificación separada en origen y mercado material regional para reciclables.

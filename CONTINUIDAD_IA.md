@@ -108,3 +108,8 @@ La procesadora compra grano finito a una cooperativa regional, paga con caja emp
 ### Alfa 0.83 · cumplimiento contractual con efecto real (actual)
 
 Fase 19: el riesgo de demora ya afecta calendario y avance en Online/Offline. `assess_contract_delay()` en `server.py` y `assessOfflineContractDelay()` en `offline.js` revisan ciclos de 30 días. La probabilidad depende de confiabilidad y saturación de capacidad; el resultado es reproducible por coordenadas/ciclo/empresa. La obra guarda `lastRiskReviewCycle`, `delayDays` y `lastDelayReason`; la tarjeta de obra los muestra. Mantener ambas fórmulas iguales al modificarlas y probar un caso de demora y otro sin demora. No hay multas, orden de cambio ni reclamos todavía. Siguiente: agregar pagos por hitos físicos y retenciones o la garantía técnica; evitar ampliar detalle visual aislado.
+
+
+### Alfa 0.84 · pago por certificado de etapa (actual)
+
+Fase 19 suma pagos por hitos físicos en `server.py` y `offline.js`: anticipo del 20%, 80% dividido por etapas; sin avance de caja entre hitos. `certificationHistory` guarda los hitos y `paid` el acumulado. El control de tesorería ocurre antes de consumir insumos/avanzar. Tarjeta Obras muestra hitos y pagos. Evitar duplicar certificados en guardados heredados: el hito inicial deriva del progreso anterior si falta el campo. La prueba cubrió caja insuficiente y el ciclo completo. Próximo avance de fase 19: retención final con período de garantía y reparación/reclamo atribuible a calidad; preservar presupuesto reservado y responsabilidades del contratista al diseñarlo.

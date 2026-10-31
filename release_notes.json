@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.83",
+  "currentVersion": "0.84",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.84",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 19: las obras públicas conservan el anticipo y certifican el saldo solo al completar una etapa física; cada hito registra etapa, día, avance y pago. Los materiales faltantes, riesgo de demora y falta de caja pueden impedir llegar a un nuevo hito. El agotamiento de tesorería suspende el contrato antes de consumir materiales o avanzar.",
+        "Online y Offline usan el mismo calendario de cinco etapas o las etapas propias del proyecto. Obras y contratos muestran hitos certificados y pagado frente al total; Offline guarda el importe acumulado correctamente. Retenciones, garantías y penalidades siguen pendientes. En obras rescatadas, los nuevos hitos se rebajan al trabajo pendiente, sin volver a pagar etapas ya ejecutadas."
+      ],
+      "roadmapPhase": 19,
+      "phaseProgress": 40,
+      "overallProgress": null
+    },
     {
       "version": "0.83",
       "date": "2026-10-31",
@@ -932,12 +943,12 @@
     {
       "phase": 19,
       "title": "Licitaciones avanzadas y dirección de obras complejas",
-      "progress": 35,
-      "summary": "Comparación de ofertas, capacidad y riesgos de plazo con demoras mensuales persistentes ligadas al historial de cumplimiento.",
+      "progress": 40,
+      "summary": "Ofertas y riesgos contractuales comparables, más certificados de pago por hitos físicos.",
       "pending": [
-        "Etapas conceptuales y ejecutivas con tiempos propios; tareas con dependencias; certificación por hitos y retenciones.",
-        "Órdenes de cambio, multas/reclamos, disputas, garantías y recepción provisional.",
-        "Riesgos específicos de clima, geotecnia, permisos, equipamiento y quiebra; recuperación de obras sin reiniciar."
+        "Anteproyecto/proyecto ejecutivo y tareas con dependencias específicas.",
+        "Retenciones, garantía, penalidades, reclamos, órdenes de cambio y recepción provisional.",
+        "Riesgos específicos de clima, geotecnia, permisos y quiebra; inspección de fallas y rescate."
       ]
     },
     {

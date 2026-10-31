@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.83
+## Estado al cerrar Alfa 0.84
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -151,3 +151,8 @@ Fase 18 queda en 60%: existe un circuito completo de grano regional finito→pro
 ## Alfa 0.83 · avance de fase 19
 
 La confiabilidad de la constructora y su ocupación de capacidad ya generan revisiones mensuales reproducibles. Una demora deja causa y días persistentes, consume la jornada sin trabajo y amplía el plazo antes de que se vuelvan a certificar avances. Está implementado en Online y Offline. Siguiente mecánica de fase 19: certificación por hitos verificables con retención final; después, garantías/reparación de defectos. Mantener fase 19 parcial y global no estimable.
+
+
+## Alfa 0.84 · continuación de fase 19
+
+Los certificados ahora siguen el avance de etapas; falta implementar retenciones, recepción provisional y garantía sin liberar dos veces el saldo reservado. Conectar un defecto de inspección/calidad a una reparación/reclamo pagado por el contratista y visible en el registro. Mantener 19 en 40% hasta cerrar otro criterio completo. Después continuar fase 18 (otras materias primas industriales) y fases pendientes de servicios/seguridad. El progreso global sigue sin estimarse.

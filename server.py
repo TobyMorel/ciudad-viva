@@ -793,6 +793,16 @@ def assess_contract_delay(project, contractor):
     ev("Demora contractual detectada",f"{project.get('label','La obra')} de {project.get('contractor','la constructora')} requiere {delay} días adicionales. Causa: {project['lastDelayReason']}; avance físico y certificados se ajustaron al nuevo plazo.")
     return True
 
+def project_certificate(project, elapsed):
+    stages=max(1,len(project.get("stages",[])))
+    base=max(0,min(stages,int(project.get("milestoneBase",0))))
+    remaining=max(1,stages-base)
+    progress=min(1,float(project.get("initialProgress",0))+(1-float(project.get("initialProgress",0)))*elapsed/max(1,project.get("duration",1)))
+    earned=max(0,min(remaining,int(math.floor(progress*stages+1e-9))-base))
+    certified=int(project.get("certifiedMilestones",max(0,int(math.floor(float(project.get("progress",0))*stages+1e-9))-base)))
+    target=project["cost"]*(.2+.8*earned/remaining)
+    return progress,earned,certified,target,max(0,target-project.get("paid",0)),base,remaining
+
 CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
@@ -3033,10 +3043,9 @@ def tick_one_day():
             p["cause"]="Faltan materiales: "+", ".join(MATERIAL_NAMES[key] for key in missing)
             ev("Obra demorada por insumos",f"{p['label']} en {p['x']+1},{p['y']+1}: {p['cause']}. Pedí los materiales faltantes desde la tarjeta de la obra.")
             continue
-        targetPaid=p["cost"]*(.2+.8*next_elapsed/p["duration"])
-        due=max(0,targetPaid-p["paid"])
+        next_progress,earned_milestones,certified,targetPaid,due,milestone_base,milestones_remaining=project_certificate(p,next_elapsed)
         if not p.get("privatePaid") and due>state["money"]:
-            p["status"]="suspendida"; p["cause"]="Tesorería insuficiente para el pago por avance"; continue
+            p["status"]="suspendida"; p["cause"]=f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining}"; continue
         material_cost=material_delta(p,next_elapsed)
         consume_materials(p,material_cost)
         for key,amount in material_cost.items():p["materialsUsed"][key]=p["materialsUsed"].get(key,0)+amount
@@ -3044,7 +3053,10 @@ def tick_one_day():
         if due>0: state["supply"]["contractorCash"][p["contractor"]]+=due
         p["paid"]=targetPaid
         p["elapsed"]=next_elapsed
-        p["progress"]=min(1,p.get("initialProgress",0)+(1-p.get("initialProgress",0))*next_elapsed/p["duration"])
+        p["progress"]=next_progress
+        if earned_milestones>certified:
+            p["certifiedMilestones"]=earned_milestones;p.setdefault("certificationHistory",[]).append({"milestone":milestone_base+earned_milestones,"day":day,"physicalProgress":round(next_progress,4),"amount":round(due),"cumulativePaid":round(targetPaid)})
+            if due:ev("Hito de obra certificado",f"{p['label']}: {p['stages'][min(milestone_base+earned_milestones-1,len(p['stages'])-1)]} · avance físico {round(next_progress*100)}% · certificado ${round(due):,} · total pagado ${round(targetPaid):,} de ${round(p['cost']):,}.".replace(",","."))
         stage=int(p["progress"]*len(p["stages"]))
         p["stageIndex"]=min(len(p["stages"])-1,stage)
         if p["progress"]>=1:
@@ -3846,7 +3858,7 @@ class Handler(BaseHTTPRequestHandler):
                         project["status"]="pausada"; project["workersAssigned"]=0; project["cause"]="Pausa decidida por el equipo de gobierno"; ev("Obra pausada",f"{project['label']}: se conserva el avance ({round(project['progress']*100)}%) y se liberan cuadrillas.")
                     elif action=="resumeProject":
                         if project["status"] not in ("pausada","suspendida"): self._send(409,{"error":"La obra no está pausada ni suspendida."}); return
-                        nextPayment=0 if project.get("privatePaid") else project["cost"]*.8/project["duration"]
+                        nextPayment=0 if project.get("privatePaid") else project_certificate(project,project.get("elapsed",0)+1)[4]
                         if state["money"]<nextPayment: self._send(409,{"error":f"Falta caja para el próximo certificado de $ {nextPayment:.0f}."}); return
                         if project["status"]=="pausada":
                             if not contractor_has_capacity(project["contractor"]): self._send(409,{"error":"La constructora tiene todos sus cupos ocupados. Esperá otra entrega antes de reanudar."}); return
@@ -3868,7 +3880,8 @@ class Handler(BaseHTTPRequestHandler):
                     kind=abandoned["kind"]; initial=abandoned["progress"]; spec=PROJECTS[kind]; c=CONTRACTORS[contractor]
                     if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} no tiene {LABOR_NEEDS[kind]} trabajadores libres para el rescate."}); return
                     total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    milestone_base=min(len(spec["stageNames"]),int(initial*len(spec["stageNames"])))
+                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"milestoneBase":milestone_base,"certifiedMilestones":0,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
                     private=kind in ("home","shop","hotel","factory")
                     if private:

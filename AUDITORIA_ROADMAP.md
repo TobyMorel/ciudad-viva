@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.83
+# Auditoría del roadmap · Alfa 0.84
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -308,3 +308,8 @@ La fase 18 sube a 60%. Offline comparte insumo/producción pero conserva sus dif
 ## Alfa 0.83 · segunda evidencia para fase 19
 
 El historial de confiabilidad de las constructoras deja de ser solo informativo: cada ciclo de 30 días evalúa un riesgo de demora por empresa y ocupación de capacidad. Cuando se concreta, agrega días al calendario contractual, omite avance esa jornada y conserva motivo y conteo en Online y Offline. Fase 19: 35% (ofertas/capacidad + riesgo de calendario). Pendiente: hitos, alcance, multas, disputas, garantías, inspección de defectos y rescate. No se estima el avance global sin pesos comunes.
+
+
+## Alfa 0.84 · evidencia de fase 19
+
+Las constructoras cobran un 20% de anticipo y el saldo en certificados cuando el avance físico cruza cada hito del proyecto. El certificado registra importe y avance; si el municipio no puede pagarlo, la obra queda suspendida sin avanzar ni consumir insumos. Verificado en ambos motores y mostrado en la tarjeta. Fase 19: 40%. Aún faltan retenciones y garantías, órdenes de cambio, multas/disputas, tareas dependientes y pruebas de defectos. No se estima el progreso global.

@@ -133,3 +133,4 @@ canvas#city{touch-action:none}
 
 .factory-supply-card{display:grid;gap:8px;margin:10px 0;padding:10px;border:1px solid #e5c96e;border-radius:11px;background:#fff9df;min-width:0}.factory-supply-card .detail-grid{margin:0}.factory-supply-card small{color:#746b4d;font:10px/1.5 system-ui;overflow-wrap:anywhere}
 .factory-supply-card>.eyebrow,.factory-supply-card .detail-grid div,.factory-supply-card .detail-grid span,.factory-supply-card .detail-grid b{min-width:0;overflow-wrap:anywhere}.factory-supply-card>.eyebrow{display:block;line-height:1.5}
+.certificate-note{color:#176d55;font-weight:700}

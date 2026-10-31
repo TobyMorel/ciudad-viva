@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.83 · 31 de octubre de 2026
+**Entrega:** Alfa 0.84 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -579,3 +579,16 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 - Online: `tick_one_day()` con una obra de riesgo registró +4 días, no avanzó esa jornada y guardó su ciclo; un escenario sin incidencia avanzó con normalidad y tampoco duplicó la revisión. Se probaron las tres constructoras y el rango de 2–5 días. Offline en Chromium: la misma coordenada/ciclo registró +4 días, el plazo pasó de 60 a 64 y el avance se reanudó al día siguiente; un caso sin incidencia mantuvo su calendario. La tarjeta exhibe la causa.
 - Chromium 390×844 y 1440×900: texto de demora legible en la tarjeta, sin overflow horizontal de página/tarjeta ni errores JS. LAN física y Vercel no probados.
 - Fase 19 sube de 30% a 35%: confiabilidad y capacidad ahora afectan el calendario del proyecto en ambos motores. El total global sigue sin estimarse por falta de ponderaciones verificables para las 34 fases.
+
+
+## Alfa 0.84 · certificados por hitos físicos (fase 19)
+
+- Se conserva el anticipo del 20%. El saldo restante se paga en partes iguales al completar las etapas físicas definidas por cada proyecto. El avance diario entre etapas no genera pagos. El registro guarda el número y nombre de hito, día, porcentaje físico, monto certificado y acumulado pagado.
+- Si falta caja para un certificado municipal, la obra se suspende antes de consumir materiales o avanzar; si termina, su saldo adjudicado completo habrá sido certificado. Las compras privadas permanecen financiadas al contratar y transfieren sus certificados a la constructora al completar cada etapa. En rescates, el anticipo nuevo se distribuye entre las etapas físicas pendientes, sin recertificar la estructura ya construida.
+- UI de obras: cada tarjeta muestra hitos certificados y monto pagado/total; usa los datos persistidos en ambos modos. No agrega una nueva pantalla ni toca el mapa.
+
+### Verificación Alfa 0.84
+
+- Online: sin pago en el día intermedio; a 20% físico certifica el primer 16% del contrato; los cinco hitos pagan el saldo completo y la vía se habilita al final. Con tesorería vacía se suspende antes del primer hito y conserva el avance previo.
+- Offline en Chromium: el importe `paid` y la caja de constructora se actualizan al completar un hito, y el guardado conserva la historia/cumulado. Tarjeta visible a 390×844 y 1440×900: monto y etapa legibles, sin desborde horizontal ni error JS.
+- Comprobaciones Python/JavaScript y `git diff --check`: correctas. LAN física y Vercel no probados. Fase 19 sube de 35% a 40%; global no estimable por falta de ponderación verificable de las 34 fases.

@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.75 · 31 de octubre de 2026
+**Entrega:** Alfa 0.76 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -478,3 +478,17 @@ Avance fase 33: 30% orientativo bajo el criterio fijo por fase. Falta comprobar 
 - Offline: Chromium acelerado cruzó el cierre mensual, generó oferta en parcela conectada (día 31, 35 unidades potenciales pendientes en el informe; una oferta vigente y vencimiento 90 días), y aceptó esa inversión. La obra quedó privada con siete trabajadores; tesorería pasó de $49.704 a $49.272 (permiso $432) y capital privado de $26.000 a $22.832 (costo contractual $3.168). La prueba usó un guardado controlado y no simula 30 años.
 - Chromium 390×844 y 1440×900: el panel Ciudad cabe sin overflow horizontal del documento; la tira de categorías supera el ancho disponible, sus etiquetas no se recortan y puede desplazarse. Captura móvil revisada. El contenido de roster y actores está vinculado a perfiles en el código; aún falta una pasada manual de inspección sobre hogares y actores en un mapa renderizado con la escena final.
 - No se probó LAN entre dos equipos físicos ni Vercel. Esas comprobaciones siguen pendientes.
+
+
+## Alfa 0.76 · migración con registro personal coherente
+
+Se corrigió el circuito de migración que antes alteraba ocupación/población sin crear ni retirar residentes en la misma transacción Online. Cada llegada ahora queda en el padrón con ID reproducible, edad y etapa de vida; la fracción de personas elegibles recibe habilidades y preferencias laborales existentes. Al salir, se elimina un perfil concreto, se libera la plaza laboral si estaba ocupada y se ajustan ocupación, población, alquiler individual e ingreso tributario futuro. Las llegadas siguen limitadas por aprobación, vacantes y capacidad laboral agregada. Offline ya agregaba perfiles, pero no asignaba edad; ahora la cohorte y los estados concuerdan con Online. No cambia la estructura del guardado.
+
+Avance fase 21: 60% orientativo por el criterio de cobertura; fase 33 permanece en 30% porque todavía no hay una simulación de 30 años aceptada ni escenarios comparativos. El progreso global sigue sin estimar por falta de ponderaciones globales verificables.
+
+### Verificación Alfa 0.76
+
+- Python valida llegadas de siete personas con padrón igual a ocupación, edades/etapas coherentes, perfiles laborales para elegibles y crecimiento poblacional por siete. La salida de cinco personas mantiene igual la suma de residentes y ocupantes y reduce población por cinco.
+- Offline en Chromium cruzó el cierre mensual: siete residentes llegaron con edad, etapa y perfil; población y padrón sumaron 627, ocupación total también 627.
+- Se ejecutaron compilación Python y chequeos JavaScript. No se cambió la interfaz; no se requirió revisión visual nueva.
+- Trayectoria de 30 años, LAN física y Vercel aún pendientes.

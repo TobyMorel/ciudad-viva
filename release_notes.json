@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.75",
+  "currentVersion": "0.76",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.76",
+      "date": "2026-10-31",
+      "changes": [
+        "Migración coherente en Online y Offline: cada llegada crea un perfil persistente con edad, etapa de vida, elegibilidad laboral e identidad; quienes cumplen los requisitos pueden entrar al mercado de empleo y escuela según los sistemas existentes.",
+        "Las salidas retiran residentes concretos del hogar de menor calidad, liberan su empleo y reducen la recaudación futura; la ocupación, la población y los registros personales quedan sincronizados. La tasa de llegada sigue limitada por vacantes, aprobación y puestos potenciales.",
+        "No cambié paneles ni controles. La fase 21 sube de 55% a 60% por el circuito de residentes que acompaña a la migración; fase 33 permanece en 30% porque todavía falta verificar escenarios de décadas."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.75",
       "date": "2026-10-31",
@@ -657,7 +667,7 @@
   "upcoming": [
     {
       "title": "Fase 33 · inversiones y ciclo económico de largo plazo",
-      "detail": "Probar trayectorias reproducibles de 30 años: encadenar mercados finitos, propuestas de inversión, permisos, obras, cierres y supervivencia empresarial con elecciones y envejecimiento; cubrir los escenarios pequeños, metropolitanos, portuarios y turísticos."
+      "detail": "Ejecutar escenarios reproducibles de 30 años en ambos motores. Evaluar demografía y migración, empresas, capital, contratos entre mandatos, inventario, deuda, mantenimiento, transporte y mercados finitos; corregir los desequilibrios observados. Luego probar ciudades pequeñas, metropolitanas, portuarias y turísticas."
     },
     {
       "title": "Fases abiertas · cerrar circuitos causales",
@@ -861,10 +871,10 @@
     {
       "phase": 21,
       "title": "Mercado laboral, salarios, cualificaciones y desigualdad",
-      "progress": 55,
-      "summary": "Perfiles laborales, habilidades, búsqueda, contratación y cursos",
+      "progress": 60,
+      "summary": "Perfiles de residentes, migración con edades y empleabilidad, habilidades y asignación laboral",
       "pending": [
-        "Desigualdad, movilidad social y educación enlazada a salarios a largo plazo."
+        "Desigualdad, movilidad social y educación enlazada a ingresos a largo plazo"
       ]
     },
     {
@@ -970,7 +980,7 @@
       "phase": 33,
       "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
       "progress": 30,
-      "summary": "Edades y rehabilitación, mercado regional finito e inversión privada condicionada con obras comerciales por etapas",
+      "summary": "Edades y migración con residentes persistentes, rehabilitación, mercado regional finito e inversión privada por etapas",
       "pending": [
         "Ensayar partidas de 30 años y ciclos económicos entre mandatos",
         "Completar cierres y aperturas empresariales bajo demanda, capital e insumos",

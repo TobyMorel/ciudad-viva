@@ -2606,37 +2606,47 @@ def collect_bus_fares(workforce):
             line["monthlyFareRevenue"]+=paid;line["fareCollectedDay"]=state["day"]
 
 def move_households():
-    homes=[b for b in state["buildings"] if b["kind"]=="home"]
-    desired=max(-5,min(12,round((state["approval"]-45)/8)))
+    homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
+    desired=max(-5,min(12,round((state.get("approval",0)-45)/8)))
     if desired>0:
-        vacancies=sum(max(0,b["capacity"]-b["occupants"]) for b in homes)
-        jobs_room=max(0,round(state["jobs"]/.42-state["population"]))
-        arrivals=min(desired,vacancies,jobs_room)
-        for _ in range(arrivals):
-            available=[b for b in homes if b["occupants"]<b["capacity"]]
-            if not available: break
-            home=min(available,key=lambda b:b["occupants"]/max(1,b["capacity"]))
-            home["occupants"]+=1
+        vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes)
+        jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
+        arrivals=min(desired,vacancies,jobs_room);placed=0
+        for index in range(arrivals):
+            available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0)]
+            if not available:break
+            home=min(available,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
+            home["occupants"]=home.get("occupants",0)+1
             if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
-        if arrivals:
-            state["population"]+=arrivals
-            state["monthlyIncome"]+=arrivals*3
-            ev("Nuevos hogares",f"{arrivals} residentes se mudaron a viviendas con vacantes y acceso a empleo. Ingreso tributario futuro +$ {arrivals*3}/mes.")
-        elif vacancies==0:
-            ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
-        elif jobs_room==0:
-            ev("Migración frenada por empleo","Hay viviendas disponibles, pero faltan empleos para atraer nuevos hogares.")
+            members=home.setdefault("residents",[])
+            identifier=f"migrant-{state.get('day',1)}-{home.get('x',0)}-{home.get('y',0)}-{index}"
+            eligible_now=sum(bool(person.get("workerEligible")) for person in members)
+            eligible=eligible_now<round(home["occupants"]*.42)
+            age_seed=stable_skill(identifier,"migration-cohort")
+            age=(18+stable_skill(identifier,"migration-age")%49) if eligible else ((age_seed%18) if age_seed%100<80 else 67+age_seed%18)
+            person={"id":identifier,"age":age,"birthYear":2026+(max(0,state.get("day",1)-1)//360),"lifeStage":"vida laboral" if 18<=age<67 else "infancia" if age<18 else "jubilación","workerEligible":eligible,"status":"buscando" if eligible else "inactivo" if age<18 else "jubilado","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1) if eligible else None,"unemploymentReason":"primer empleo" if eligible else None}
+            ensure_person_work_profile(person);members.append(person);placed+=1
+        if placed:
+            state["population"]=state.get("population",0)+placed;state["monthlyIncome"]=state.get("monthlyIncome",0)+placed*3
+            ev("Nuevos hogares",f"{placed} residentes llegaron a viviendas vacantes. Cada persona tiene edad, perfil laboral y elegibilidad propios; solo quienes encuentran un puesto viable se incorporan al empleo. Ingreso tributario futuro +$ {placed*3}/mes.")
+        elif not vacancies:ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
+        elif not jobs_room:ev("Migración frenada por empleo","Hay viviendas disponibles, pero faltan empleos para atraer nuevos hogares.")
     elif desired<0:
-        departures=min(-desired,sum(b["occupants"] for b in homes))
+        departures=min(-desired,sum(max(0,b.get("occupants",0)) for b in homes));left=0
         for _ in range(departures):
-            occupied=[b for b in homes if b["occupants"]>0]
-            if not occupied: break
-            home=min(occupied,key=lambda b:b.get("quality",70))
+            occupied=[b for b in homes if b.get("occupants",0)>0]
+            if not occupied:break
+            home=min(occupied,key=lambda b:(b.get("quality",70),b.get("y",0),b.get("x",0)))
+            members=home.setdefault("residents",[])
+            if len(members)<home.get("occupants",0):
+                ensure_resident_roster()
+                members=home.setdefault("residents",[])
+            if members:members.pop()
             home["occupants"]-=1
             if home.get("adaptiveReuseDay") and home.get("rentalLeaseDays"):home["rentalLeaseDays"].pop()
-        state["population"]=max(0,state["population"]-departures)
-        state["monthlyIncome"]=max(0,state["monthlyIncome"]-departures*3)
-        if departures: ev("Salida de residentes",f"{departures} personas dejaron viviendas de la ciudad; se reducen los ingresos tributarios en $ {departures*3}/mes.")
+            left+=1
+        state["population"]=max(0,state.get("population",0)-left);state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-left*3)
+        if left:ev("Salida de residentes",f"{left} residentes dejaron hogares con menor calidad; sus perfiles laborales y plazas ocupadas se liberaron y los ingresos tributarios futuros bajan $ {left*3}/mes.")
 
 def process_port_logistics():
     """Exportaciones reales de comercios: camión por calles, patio limitado y barco por demanda."""

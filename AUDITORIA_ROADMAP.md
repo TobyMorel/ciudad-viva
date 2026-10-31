@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.75
+# Auditoría del roadmap · Alfa 0.76
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -8,7 +8,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 6–10 | Parcial: servicios resumidos, comercio, empleo, finanzas y buses | Redes físicas de servicios, educación, seguridad y ambiente causal |
 | 11–15 | Parcial: estado compartido LAN y UI; aprobación básica | Elecciones, destitución, roles municipales, crisis y metas equilibradas |
 | 16–20 | Parcial en empresas y cadenas de comercio; resto pendiente | Derecho de suelo, industria, licitaciones complejas y alquileres |
-| 21 | Parcial: salarios, habilidades, búsqueda y cursos | Desigualdad territorial, carga habitacional, movilidad social y educación formal |
+| 21 | Parcial: perfiles, migración con cohorte de edad, habilidades, búsqueda y cursos | Desigualdad territorial, movilidad social e ingresos a largo plazo |
 | 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Viajes de ocio, integración multimodal, trenes, metro, carga, accidentes y capacidad vial detallada |
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
@@ -258,3 +258,8 @@ Alfa 0.74 agrega mercados de exportación mensuales finitos en Online y Offline.
 ### Fase 33 · Alfa 0.75: inversión privada condicionada (parcial, 30%)
 
 A la demanda externa finita se suma una oferta para abrir un comercio si hay ventas regionales sin cubrir, parcela zonificada conectada, presupuesto privado y reserva, permiso municipal y cuadrilla libre. Aprobar crea una obra con contratista, siete trabajadores, costo y plazo; el comercio solo abre tras el flujo de materiales, construcción e inspección existente. La oferta expira o puede rechazarse sin gasto. Implementado en Online y Offline, esquema 59. Sigue sin verificar el ciclo de 30 años y escenarios de la fase. Verificaciones específicas de código e interfaz se anotan en `ESTADO_DESARROLLO.md`.
+
+
+### Fase 21 · Alfa 0.76: migración y padrón vinculados (parcial, 60%)
+
+Llegadas limitadas por aprobación, vivienda vacante y empleo potencial añaden perfiles con identidad, edad, etapa de vida y elegibilidad laboral reproducible; salidas retiran individuos de hogares y liberan empleo. Esto mantiene vinculados ocupantes y residentes para empleo, escuela y envejecimiento en Online y Offline. Pendiente: desigualdad, movilidad social y efectos de ingreso/educación a largo plazo.

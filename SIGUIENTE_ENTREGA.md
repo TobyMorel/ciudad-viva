@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.75
+## Estado al cerrar Alfa 0.76
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -104,3 +104,12 @@ Fase 33: el mercado finito ahora puede proponer una inversión privada de comerc
 ## Próxima entrega concreta
 
 Probar una ciudad reproducible durante 30 años en modo online y offline; medir solvencia, capital privado, demanda, aperturas/cierres, materiales, empleo, envejecimiento, migración y resultados electorales. Corregir los desequilibrios que aparezcan. Luego cumplir escenarios pequeño, metropolitano, portuario y turístico. Comprobar interfaz móvil/escritorio y estado del scroll de Ciudad. `CONTINUIDAD_IA.md` contiene arquitectura y parámetros para retomar este punto.
+
+
+## Sistema agregado en Alfa 0.76
+
+Migración residencial ahora sincroniza ocupación con residentes identificables en los dos motores. Las llegadas crean cohortes etarias y perfiles laborales; las salidas liberan personas y puestos. Avance de fase 21: 60%; fase 33 se conserva en 30% hasta verificar los escenarios largos.
+
+## Próxima entrega concreta
+
+Ejecutar una simulación reproducible de 30 años Online y Offline y registrar diez años por vez: población por edad, mudanzas, empleo, caja familiar, empresas, vivienda, rehabilitaciones, mantenimiento, transporte, elecciones, deuda y recursos. Comparar varias estrategias de ciudad y corregir desequilibrios demostrados por las corridas; luego validar los escenarios pequeños, metropolitanos, portuarios y turísticos.

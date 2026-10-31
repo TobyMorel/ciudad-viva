@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.66
+## Estado al cerrar Alfa 0.67
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. La fase aún no representa transformaciones arquitectónicas por décadas, cambios de uso industriales/residenciales ni impactos de alquileres y desplazamiento. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -14,9 +14,13 @@ Los seis tendidos de servicios guardan condición por tramo. La carga local acel
 
 Una calle que cae bajo 25% de condición queda cerrada en la red de rutas. Los recorridos buscan desvíos; sin alternativa, el acceso al destino se interrumpe. La cuadrilla de rehabilitación la reabre después de recibirla a 82%. Las barreras del mapa y el inventario de Mantenimiento reflejan el cierre.
 
+## Sistema agregado en Alfa 0.67
+
+La condición estructural de centrales, plantas potabilizadoras y depuradoras determina su aporte físico a la red. A 82% entregan su capacidad base; por debajo, su producción disminuye proporcionalmente y cambia la cobertura de energía, agua y tratamiento. El panel de Mantenimiento muestra producción y porcentaje funcional, y la rehabilitación restaura el nivel base. Online y Offline.
+
 ## Próximo sistema
 
-Extender fase 31 a plantas, inspecciones periódicas y activos privados; incorporar cursos de agua con márgenes conectables para que el futuro puente prolongue rutas, transporte y servicios; después abrir fase 30 con reconversión de uso productivo, vivienda y efectos de alquiler/desplazamiento.
+Programar inspecciones preventivas por criticidad, completar pérdidas de capacidad durante reparaciones y extender mantenimiento a activos privados; incorporar cursos de agua con márgenes conectables para que el futuro puente prolongue rutas, transporte y servicios; después abrir fase 30 con reconversión de uso productivo, vivienda y efectos de alquiler/desplazamiento.
 
 ## Verificación
 

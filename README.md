@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.66
+# Ciudad Viva · Alfa 0.67
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -155,3 +155,8 @@ Los tendidos de electricidad, agua, cloacas, drenaje, gas y fibra acumulan condi
 ## Alfa 0.66 · cierres preventivos y desvíos
 
 Cuando la condición de una calle baja de 25%, se cierra por seguridad. Las rutas diarias recalculan el acceso de residentes, puestos, colectivos y camiones de residuos sin usar el tramo cerrado; si no hay alternativa, esos destinos quedan aislados hasta su rehabilitación. Las barreras aparecen en el mapa 3D y Ciudad > Mantenimiento prioriza los tramos cerrados. Una obra de recuperación aprobada restablece la calle a 82% y la reabre tras inspección. Disponible Online y Offline; guardados migran al esquema 50. El mapa actual no representa cruces fluviales ni puentes, que requieren ampliar primero la geografía conectable.
+
+
+## Alfa 0.67 · capacidad de plantas y mantenimiento
+
+La condición de centrales eléctricas, plantas potabilizadoras y depuradoras afecta ahora su producción real. Con 82% de condición entregan la capacidad de diseño; el desgaste reduce electricidad, agua o tratamiento disponibles y puede aumentar los déficits si la red está exigida. En Ciudad → Mantenimiento se ve el porcentaje funcional y la salida efectiva de cada planta. La rehabilitación existente recupera 82% y su capacidad base. Online/Offline; los guardados migran al esquema 51.

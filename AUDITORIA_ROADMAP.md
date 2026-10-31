@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.66
+# Auditoría del roadmap · Alfa 0.67
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -18,7 +18,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
 | 30 | Parcial: catálogo de inmuebles históricos, año/uso/estilo/conservación, niveles de protección y rehabilitación con materiales, constructora, cuadrilla, plazo y efecto en identidad | Evolución arquitectónica por épocas, reconversión y sustitución condicionadas, protección de alquileres y desplazamiento social |
-| 31 | Parcial: calles y edificios públicos con condición/deterioro ligado a carga, mantenimiento financiado por Redes y residuos, diagnóstico bajo 45%/60%, inspección de un día y contrato de rehabilitación con cuatro trabajadores | Redes técnicas/puentes, cierres temporales por seguridad, inspección preventiva de activos críticos, rehabilitación mayor y reemplazo |
+| 31 | Parcial: calles, edificios públicos y redes técnicas con condición, mantenimiento, averías y contratos; calles críticas cierran rutas; centrales y plantas de agua/saneamiento pierden capacidad según deterioro | Calendario preventivo por criticidad, restricciones de planta durante obra, puentes, activos privados, rehabilitación mayor y reemplazo |
 | 32–33 | Pendientes como sistemas completos | Gobierno plurianual/electoral y simulación de décadas |
 
 ## Evidencia de esta revisión
@@ -201,3 +201,5 @@ Electricidad, agua, cloacas, drenaje, gas y fibra incorporan condición persiste
 ## Alfa 0.66 · cierres y desvíos por seguridad (fase 31, parcial)
 
 La condición vial bajo 25% cierra el tramo a enrutamiento. Viajes laborales, vehículos de residuos y colectivos usan la red alternativa; si no la hay, el destino queda sin acceso. El panel prioriza cierres y el mapa 3D los marca con barreras. Tras diagnóstico y rehabilitación contractual, inspección final restablece el activo a 82% y lo abre. Online/Offline, esquema 50. Los puentes quedan pendientes de incorporar geografía de cruces de agua, inexistente hoy en el mapa.
+
+Alfa 0.67 integra la condición de las tres clases de planta a los balances de capacidad: al 82% entregan su salida de diseño, y al deteriorarse aportan menos electricidad, agua potable o tratamiento cloacal. Mantenimiento expone capacidad efectiva. Online/Offline, esquema 51; las inspecciones siguen siendo reactivas y la fase 31 continúa parcial.

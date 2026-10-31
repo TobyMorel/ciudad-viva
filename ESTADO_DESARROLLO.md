@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.66 · 31 de octubre de 2026
+**Entrega:** Alfa 0.67 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,9 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.67 · Fase 31 (parcial): la condición física de centrales eléctricas, plantas potabilizadoras y depuradoras ajusta proporcionalmente su generación/tratamiento; el 82% es el punto de capacidad base y el deterioro reduce la producción que llega al balance de la red. Mantenimiento muestra condición, porcentaje funcional y salida actual. La rehabilitación existente a 82% recupera capacidad. Online/Offline, guardados esquema 51. Verificado Online/Offline con una central de 900 kW: a 82% se agregan 900 kW a la capacidad, a 41% agrega 450 kW y a 0% no aporta generación; el déficit eléctrico y de agua aumenta cuando la demanda excede la reserva de red. La prueba Offline también verificó las tres plantas: capacidad de salida 82%→100%, 0%→0%, y guardado migrado a esquema 51. Sin errores JS. Mantenimiento revisado en Chromium móvil 390×844: salida visible, scroll vertical y sin overflow horizontal; medido a 390×844 y 1440×900 sin desborde horizontal ni errores JS; el contenido largo usa scroll vertical. Calendario preventivo por criticidad y activos privados siguen pendientes.
+
 
 - Alfa 0.66 · Fase 31 (parcial): los tramos viales bajo 25% de condición estructural se cierran y bloquean para el enrutamiento de residentes, empleo, colectivos y camiones. Si no hay desvío, los destinos quedan aislados. El mapa 3D muestra barreras; Mantenimiento prioriza el inventario cerrado. Inspección y contrato existentes rehabilitan a 82% y reabren la calle. Online/Offline, esquema 50. Verificación Online: el segmento central crítico hace imposible la ruta oeste-este y al restaurar calidad 82% vuelve a abrirse. Offline en Chromium: la calle cerrada no admite ruta, inspección de un día, adjudicación a Sur Obras, cinco días de trabajo, condición final 82% y ruta restablecida. Sin errores JS. UI de Mantenimiento revisada en 390×844 y 1440×900: sin desborde horizontal ni solapamientos; scroll vertical esperado. El puente queda pendiente porque el mapa aún no representa agua interior ni márgenes conectables.
 

@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.66",
+  "currentVersion": "0.67",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.67",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): la condición estructural de centrales eléctricas, plantas de agua y depuradoras ahora limita proporcionalmente la generación o el tratamiento; al 82% operan a capacidad base y el deterioro reduce su aporte al sistema.",
+        "La capacidad disponible se refleja en los balances de energía, agua potable y saneamiento; el panel Mantenimiento muestra el porcentaje funcional y la producción actual de cada planta. Rehabilitar a 82% recupera el rendimiento. Online/Offline, esquema 51.",
+        "La inspección sigue generándose al cruzar 60% en edificios públicos; un calendario preventivo independiente y activos privados permanecen pendientes."
+      ]
+    },
     {
       "version": "0.66",
       "date": "2026-10-31",
@@ -563,11 +572,11 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 31 · redes y operación segura",
-      "detail": "Dar condición individual a tuberías, cables, plantas y puentes; generar fallos ligados al desgaste y programar reparaciones con cortes temporales."
+      "title": "Fase 31 · inspección y mantenimiento preventivo",
+      "detail": "Programar inspecciones por criticidad y antigüedad para actuar antes del deterioro; extender costos y rehabilitación a activos privados y reparaciones con reducción temporal de capacidad."
     },
     {
-      "title": "Fase 30 · reconversión y vivienda",
+      "title": "Fase 30 · reconversión urbana",
       "detail": "Cambiar usos de inmuebles productivos con adaptación, inversión y empleo, y registrar efectos sobre alquileres y desplazamiento."
     }
   ]

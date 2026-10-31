@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.61 · 31 de octubre de 2026
+**Entrega:** Alfa 0.62 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.62 · Fase 30 (parcial): catálogo de ocho edificios patrimoniales en los barrios Centro y Estación. Guardan época, año, arquetipo, uso original, reformas, conservación, relevancia y ocupación. Protección parcial/integral afecta identidad y deterioro anual sin desplazar residentes. La rehabilitación es una obra real con oferta seleccionable de constructoras, cuatro trabajadores, costo, materiales regionales descontados de stock, demora de entrega y tres etapas de avance. Al inspeccionarse, restaura la conservación y registra la reforma. Online/Offline, esquema 46. Verificación: ciclo completo de protección y obra en ambos motores, gasto $4.937, entrega y 20 días de obra, condición final 100%. Chromium a 390×844 y 1440×900: ocho edificios visibles, sin solapamientos ni desborde horizontal; panel con scroll vertical. Fase parcial: evolución arquitectónica, reconversión de usos y medidas contra desplazamiento aún pendientes. LAN física y Vercel pendientes.
 
 - Alfa 0.61 · Fase 29 (parcial): presupuestos municipales para Servicios, Redes y residuos, y Transporte, con asignación 0–200% en pasos de 10%. El cierre mensual liquida hasta el tope y caja disponible; el impago queda como mora por programa y una asignación mayor puede amortizarla. El subfinanciamiento reduce capacidad de salud/educación, redes/recogida de residuos o frecuencia efectiva de buses. Hacienda presenta costos, pagos, porcentajes y obligaciones en una sección plegable. Online/Offline, esquema 45. Verificado: pago del 50%, mora de $500 sobre costo de $1.000, reducción de servicios, y reserva que completa una cuota después del pago de programas. Chromium móvil 390×844 y escritorio 1440×900: sin errores JS, recorte horizontal ni solapamientos; scroll vertical disponible. LAN física y Vercel pendientes.
 

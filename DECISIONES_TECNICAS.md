@@ -123,6 +123,12 @@
 El préstamo municipal usa amortización fija con interés del 1% mensual y plazos cerrados de 24 o 48 meses. Los montos se ofrecen en tres tramos; la solvencia limita la deuda total a $40.000 o ocho meses de ingresos de referencia (el menor) y el servicio mensual combinado no puede exceder 35% del ingreso. La proyección a 12/48 meses congela el flujo operativo actual y pagos mensuales; es una referencia, no pronóstico con crecimiento/inflación. Las obligaciones se comparten en el estado autoritativo Online y se persisten en el guardado Offline. Si la caja mensual no cubre gastos y deuda, la cuota se difiere y se marca mora; no se crea sobregiro.
 
 
+## Alfa 0.62 · catálogo patrimonial y rehabilitación
+
+- Ocho inmuebles iniciales con valor reconocible tienen años de fundación entre 1942 y 1968. El resto del parque recibe época y arquetipo contemporáneo; los futuros edificios toman el año actual cuando se migra el estado. El catálogo persiste uso original, reformas, condición, relevancia y ocupación.
+- Protección parcial/integral no cambia de inmediato el uso ni expulsa residentes. La integral aporta mayor peso a la identidad; ambas reducen de 3 a 2 puntos la degradación anual, que continúa si el municipio no financia obras.
+- La rehabilitación es contrato municipal pagado al adjudicar. Cuatro trabajadores y capacidad real de la constructora quedan ocupados; las cantidades de acero, madera, componentes y áridos se descuentan del stock del proveedor elegido por disponibilidad y costo. La obra espera la entrega y después avanza durante su plazo; completar deja registro, mejora conservación según calidad y libera cuadrilla. Online y Offline comparten validaciones; guardados pasan a esquema 46.
+
 ## Alfa 0.61 · presupuestos operativos municipales
 
 - Tres programas presupuestarios agrupan gastos existentes: servicios (operación cívica, nómina e insumos sanitarios/escolares), redes y residuos (mantenimiento de redes y operación de residuos), y movilidad (operación de colectivos). Cada uno guarda asignación de 0–200%, mora y un historial limitado de cierres.

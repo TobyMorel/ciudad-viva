@@ -172,6 +172,56 @@ def new_finance():
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
 
+HERITAGE_FOUNDING_YEARS={"Municipalidad":1942,"Mercado Central":1948,"Barrio Estación":1951,"Casas del Oeste":1957,"Pasaje del Molino":1959,"Café Estación":1963,"Almacén del Oeste":1965,"Galería Central":1968}
+HERITAGE_MATERIALS={"aggregate":6,"steel":3,"timber":4,"components":3}
+
+def ensure_heritage_state():
+    current_year=2026+(max(0,int(state.get("day",1))-1)//360)
+    state.setdefault("heritageWorks",[]);state.setdefault("heritageHistory",[])
+    for building in state.get("buildings",[]):
+        name=building.get("name","")
+        default_year=HERITAGE_FOUNDING_YEARS.get(name,current_year)
+        building.setdefault("yearBuilt",default_year)
+        building.setdefault("architecturalEra","Fundación urbana" if building["yearBuilt"]<1950 else "Expansión cívica" if building["yearBuilt"]<1970 else "Modernización")
+        building.setdefault("architecturalStyle","Tradicional" if building["yearBuilt"]<1970 else "Contemporáneo")
+        building.setdefault("originalUse",{"home":"Vivienda","shop":"Comercio","civic":"Servicio público"}.get(building.get("kind"),building.get("kind","Inmueble")))
+        building.setdefault("renovations",[]);building.setdefault("conservation",92 if building["yearBuilt"]<1970 else 100)
+        if name in HERITAGE_FOUNDING_YEARS:
+            building.setdefault("heritageEligible",True);building.setdefault("heritageSignificance",3 if name in ("Municipalidad","Mercado Central","Barrio Estación") else 2)
+            building.setdefault("heritageLevel","inventariado")
+        else:
+            building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
+        building["conservation"]=max(0,min(100,int(building["conservation"])))
+    state["version"]=max(46,int(state.get("version",1)))
+
+def heritage_report():
+    listed=[b for b in state.get("buildings",[]) if b.get("heritageEligible")]
+    protected=[b for b in listed if b.get("heritageLevel") in ("protección parcial","protección integral")]
+    score=sum(b.get("heritageSignificance",1)*b.get("conservation",0)/100 for b in protected)
+    return {"year":2026+(max(0,int(state.get("day",1))-1)//360),"listed":len(listed),"protected":len(protected),"restored":sum(bool(b.get("renovations")) for b in listed),"identity":round(min(100,score*9)),"works":[dict(w) for w in state.get("heritageWorks",[])],"sites":[{k:b.get(k) for k in ("x","y","name","kind","yearBuilt","architecturalEra","architecturalStyle","originalUse","renovations","conservation","heritageSignificance","heritageLevel","occupants")} for b in listed]}
+
+def advance_heritage_works():
+    day=int(state.get("day",1))
+    if day>1 and (day-1)%360==0:
+        for building in state.get("buildings",[]):
+            if building.get("heritageEligible"):
+                loss=2 if building.get("heritageLevel") in ("protección parcial","protección integral") else 3
+                building["conservation"]=max(0,building.get("conservation",100)-loss)
+                if building["conservation"]<35:ev("Riesgo de deterioro patrimonial",f"{building.get('name')} conserva {building['conservation']}% de su estado; financiar refuerzos antes de que el inmueble cierre por seguridad.")
+    for work in list(state.get("heritageWorks",[])):
+        if state["day"]<work.get("deliveryDay",state["day"]):continue
+        work["elapsedDays"]=work.get("elapsedDays",0)+1
+        work["progress"]=min(1,work["elapsedDays"]/max(1,work["durationDays"]))
+        work["stage"]=("Consolidación estructural" if work["progress"]<.4 else "Instalaciones y accesibilidad" if work["progress"]<.72 else "Restauración de fachada e inspección")
+        if work["progress"]<1:continue
+        building=next((b for b in state.get("buildings",[]) if b.get("x")==work["x"] and b.get("y")==work["y"]),None)
+        if building:
+            quality=CONTRACTORS.get(work["contractor"],{}).get("quality",.75)
+            building["conservation"]=round(94+quality*6);building.setdefault("renovations",[]).append({"year":2026+(max(0,state["day"]-1)//360),"day":state["day"],"contractor":work["contractor"],"cost":work["cost"],"scope":"Refuerzo, accesibilidad e instalaciones"})
+            building["lastRestoredDay"]=state["day"]
+        state.setdefault("heritageHistory",[]).append({**work,"status":"completada","completedDay":state["day"]});del state["heritageHistory"][:-40]
+        state["heritageWorks"].remove(work);ev("Rehabilitación patrimonial terminada",f"{work['name']} fue inspeccionado y recuperó su conservación con {work['contractor']}; inversión $ {work['cost']:,}.".replace(",","."))
+
 def ensure_tax_state():
     taxes=state.setdefault("taxes",new_tax_state())
     for key,value in new_tax_state().items():taxes.setdefault(key,value)
@@ -292,7 +342,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":45,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":46,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -388,7 +438,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(45,state.get("version",1))
+    state["version"]=max(46,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
     state.setdefault("recoveryNeeds",[])
@@ -398,6 +448,7 @@ def ensure_supply_state():
     state.setdefault("trainingPrograms",[])
     state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
     state.setdefault("busRoutes",[])
+    ensure_heritage_state()
     for building in state["buildings"]:
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
         if building.get("kind")=="school":building.setdefault("jobSlots",12);building.setdefault("classrooms",4)
@@ -2151,6 +2202,7 @@ def tick_one_day():
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    advance_heritage_works()
     advance_utility_repairs()
     calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
     month=(day-1)//30
@@ -2511,6 +2563,7 @@ def public_state(player_id=None):
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
     view["municipalFinance"]=municipal_finance_report()
+    view["heritageReport"]=heritage_report()
     order_views=[]
     for order in state["supply"]["orders"]:
         extra=order_urgency(order)
@@ -2636,6 +2689,37 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                if action=="heritageProtect":
+                    ensure_heritage_state()
+                    x=int(data.get("x",-1));y=int(data.get("y",-1));level=str(data.get("level",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible")),None)
+                    if not building or level not in ("protección parcial","protección integral"):self._send(409,{"error":"Elegí un inmueble histórico y un nivel de protección válido."});return
+                    if building.get("heritageLevel")=="protección integral":self._send(409,{"error":"El inmueble ya tiene protección integral."});return
+                    building["heritageLevel"]=level;building["protectedDay"]=state.get("day",1);ev("Inmueble histórico protegido",f"{building.get('name')}: {level}. Se conserva su uso y se habilita una rehabilitación patrimonial financiada.")
+                    self._send(200,public_state(pid));return
+                if action=="heritageRestore":
+                    ensure_supply_state()
+                    x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible") and b.get("heritageLevel") in ("protección parcial","protección integral")),None)
+                    if not building:self._send(409,{"error":"Primero inventariá y protegé el inmueble histórico."});return
+                    if building.get("conservation",100)>=94:self._send(409,{"error":"La conservación está en buen estado; no necesita esta rehabilitación."});return
+                    if contractor not in CONTRACTORS:self._send(409,{"error":"Seleccioná una constructora habilitada."});return
+                    supply=state.setdefault("supply",new_supply());busy=[p for p in state.get("projects",[]) if p.get("contractor")==contractor and p.get("status") not in ("pausada","cancelada")]
+                    works=[w for w in state.get("heritageWorks",[]) if w.get("contractor")==contractor]
+                    used=sum(p.get("workersAssigned",LABOR_NEEDS.get(p.get("kind"),4)) for p in busy)+sum(w.get("workers",4) for w in works);spec=CONTRACTORS[contractor]
+                    if len(busy)+len(works)>=spec["capacity"] or used+4>spec["workers"]:self._send(409,{"error":f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores."});return
+                    supplier_name=None
+                    for candidate in sorted(SUPPLIERS,key=lambda name:(SUPPLIERS[name]["price"],SUPPLIERS[name]["days"])):
+                        stock=supply.setdefault("suppliers",{}).setdefault(candidate,SUPPLIER_STOCK[candidate].copy())
+                        if all(stock.get(k,0)>=v for k,v in HERITAGE_MATERIALS.items()):supplier_name=candidate;break
+                    if not supplier_name:self._send(409,{"error":"Los proveedores no tienen el lote de refuerzo y terminaciones. Esperá la reposición regional."});return
+                    stock=supply["suppliers"][supplier_name];materials_cost=round(sum(HERITAGE_MATERIALS[k]*MATERIAL_PRICE[k] for k in HERITAGE_MATERIALS)*SUPPLIERS[supplier_name]["price"])
+                    labor_cost=round((2200+max(0,100-building.get("conservation",92))*24)*spec["price"]);cost=materials_cost+labor_cost
+                    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+                    if available<cost:self._send(409,{"error":f"Quedan $ {available:,} libres; restaurar {building.get('name')} cuesta $ {cost:,}.".replace(",",".")});return
+                    for key,amount in HERITAGE_MATERIALS.items():stock[key]-=amount
+                    state["money"]-=cost;supply.setdefault("contractorCash",CONTRACTOR_CASH.copy())[contractor]=supply.setdefault("contractorCash",CONTRACTOR_CASH.copy()).get(contractor,0)+labor_cost
+                    lead=SUPPLIERS[supplier_name]["days"];days=max(15,round(24*spec["days"]/30));work={"id":f"heritage-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name"),"contractor":contractor,"supplier":supplier_name,"materials":dict(HERITAGE_MATERIALS),"materialCost":materials_cost,"laborCost":labor_cost,"cost":cost,"workers":4,"deliveryDay":state["day"]+lead,"deliveryDays":lead,"durationDays":days,"elapsedDays":0,"progress":0,"stage":"Esperando materiales","startDay":state["day"],"status":"en obra"}
+                    state.setdefault("heritageWorks",[]).append(work);ev("Rehabilitación patrimonial contratada",f"{building.get('name')}: cuatro trabajadores, materiales {supplier_name} (llegan en {lead} días) y {days} días de obra. Inversión $ {cost:,}.".replace(",","."))
+                    self._send(200,public_state(pid));return
                 if action=="adjustTax":
                     taxes=ensure_tax_state();kind=str(data.get("kind",""));delta=int(data.get("delta",0))
                     if kind=="property":key="propertyRateBp";low,high,step=20,140,10

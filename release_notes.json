@@ -1,7 +1,17 @@
 {
-  "currentVersion": "0.61",
+  "currentVersion": "0.62",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.62",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 30 (parcial): ocho inmuebles antiguos reciben año, época/arquetipo, uso original, reformas, conservación, relevancia y ocupación; los guardados existentes migran al esquema 46.",
+        "Patrimonio permite protección parcial o integral. La designación conserva el uso, mejora el índice de identidad cultural y reduce el deterioro anual, sin expulsar a residentes.",
+        "La rehabilitación consume materiales de un proveedor con stock y presupuesto real. Una constructora elegida ocupa cuatro trabajadores, espera la entrega y avanza por tres etapas; la inspección final restaura el estado y registra reforma y costo. Online/Offline.",
+        "Verificado en ambos motores: Mercado Central protegido y rehabilitado por $4.937, materiales descontados, 20 días de obra y conservación final 100%. Chromium móvil/escritorio: ocho fichas, scroll vertical y sin solapamientos ni overflow horizontal. LAN física/Vercel pendientes."
+      ]
+    },
     {
       "version": "0.61",
       "date": "2026-10-31",
@@ -517,12 +527,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 29 · escenarios y compromisos de caja",
-      "detail": "Comparar flujos con ingresos cobrados, mora, presupuestos, contratos y deuda; sumar obligaciones plurianuales y refinanciación que tengan pagos y consecuencias reales."
+      "title": "Fase 30 · transformación gradual de barrios",
+      "detail": "Sumar cambios arquitectónicos por época y reconversión de un inmueble industrial a uso mixto, con inversión, empleos, adaptación y consecuencias de alquiler/desplazamiento."
     },
     {
-      "title": "Fase 30 · patrimonio y evolución urbana",
-      "detail": "Iniciar protección de edificios históricos, cambios de uso y valor patrimonial con efectos en obras, turismo y apoyo ciudadano."
+      "title": "Fase 31 · mantenimiento y vida útil",
+      "detail": "Aplicar desgaste, inspección, presupuestos de mantenimiento, rehabilitación y cierre seguro a edificios y redes municipales."
     }
   ]
 }

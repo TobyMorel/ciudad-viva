@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.62",
+  "currentVersion": "0.63",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.63",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 31 (parcial): inventario físico de calles, desgaste mensual ponderado por edificios cercanos y conectividad, y plan preventivo ajustable de 0–200%.",
+        "El costo de mantenimiento se liquida dentro del programa Redes y residuos; la mora reduce el trabajo ejecutado. Calles en condición inferior a 45% acumulan deterioro diferido y, si abarcan 35% de la red, reducen servicios municipales. Online/Offline, migración de guardados al esquema 47.",
+        "Ciudad > Mantenimiento muestra costo, financiación, condición media y activos prioritarios. Verificación funcional de acción y cierre mensual más revisión visual móvil/escritorio, sin solapamientos ni desborde horizontal."
+      ]
+    },
     {
       "version": "0.62",
       "date": "2026-10-31",
@@ -527,12 +536,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 30 · transformación gradual de barrios",
-      "detail": "Sumar cambios arquitectónicos por época y reconversión de un inmueble industrial a uso mixto, con inversión, empleos, adaptación y consecuencias de alquiler/desplazamiento."
+      "title": "Fase 31 · vida útil de activos",
+      "detail": "Extender el inventario y mantenimiento a redes y edificios públicos; inspecciones, rehabilitación mayor y restricciones temporales por seguridad."
     },
     {
-      "title": "Fase 31 · mantenimiento y vida útil",
-      "detail": "Aplicar desgaste, inspección, presupuestos de mantenimiento, rehabilitación y cierre seguro a edificios y redes municipales."
+      "title": "Fase 30 · transformación gradual de barrios",
+      "detail": "Añadir cambios arquitectónicos por época y reconversión de inmuebles con inversión, empleo, adaptación, alquileres y desplazamiento social."
     }
   ]
 }

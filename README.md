@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.62
+# Ciudad Viva · Alfa 0.63
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -135,3 +135,8 @@ Hacienda permite apartar dinero no comprometido para las cuotas municipales. Al 
 ## Alfa 0.59 · impuestos municipales
 
 En **Economía y suministros → Hacienda** podés ajustar los gravámenes sobre viviendas y ventas. La ciudad factura según población y actividad registrada; hogares y negocios pagan desde el efectivo disponible, y los faltantes quedan en mora. La tesorería suma lo efectivamente cobrado. Las tasas afectan compras de hogares y liquidez de comercios.
+
+
+## Alfa 0.63 · mantenimiento vial
+
+Las calles ahora tienen condición y desgaste ligados al uso. En Ciudad > Mantenimiento se ajusta el plan preventivo de 0% a 200%; su costo entra al presupuesto de Redes y residuos y el pago efectivo determina cuánto mejora la red. La subfinanciación acumula mora, y una red muy deteriorada reduce los servicios. Online y Offline comparten el sistema, con migración de guardados al esquema 47.

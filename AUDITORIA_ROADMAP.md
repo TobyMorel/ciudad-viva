@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.62
+# Auditoría del roadmap · Alfa 0.63
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -18,7 +18,8 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 28 | Parcial: salud primaria/urgente y agua diferida; escuela con docentes/aulas/viajes/espera; cuarteles con dotaciones cualificadas, despacho por ruta/tiempo, daños y costo, en ambos modos | Hospitalización, ambulancias, jardines y niveles educativos diferenciados, ampliaciones, seguridad y protección social |
 | 29 | Parcial: créditos, amortización, proyección base, impuestos cobrados con mora, reserva de deuda y presupuestos operativos por programa con mora y efectos sobre servicios, redes/residuos y buses | Escenarios comparables, compromisos plurianuales, refinanciación y control más detallado de gasto |
 | 30 | Parcial: catálogo de inmuebles históricos, año/uso/estilo/conservación, niveles de protección y rehabilitación con materiales, constructora, cuadrilla, plazo y efecto en identidad | Evolución arquitectónica por épocas, reconversión y sustitución condicionadas, protección de alquileres y desplazamiento social |
-| 31–33 | Pendientes como sistemas completos | Mantenimiento de activos por vida útil, gobierno plurianual/electoral y simulación de décadas |
+| 31 | Parcial: condición vial, desgaste ligado a carga urbana, plan preventivo incluido en el presupuesto de redes y pérdida de servicio ante deterioro extendido | Inspecciones, cierres programados, edificios/redes, rehabilitación mayor y reemplazo |
+| 32–33 | Pendientes como sistemas completos | Gobierno plurianual/electoral y simulación de décadas |
 
 ## Evidencia de esta revisión
 
@@ -176,3 +177,10 @@ Los recortes tienen efecto operativo: la cobertura de salud y educación y la co
 Se inventarían ocho inmuebles iniciales de los barrios Centro y Estación. Cada edificio guarda año de construcción, época/arquetipo, uso original, reformas, conservación, relevancia patrimonial y ocupación; los guardados existentes reciben estos datos al migrar al esquema 46. La protección parcial e integral conservan el uso, suman identidad cultural y reducen el deterioro anual de 3 a 2 puntos. Los edificios protegidos pueden rehabilitarse por contrato: una de tres constructoras, cuatro trabajadores, presupuesto y materiales consumidos del proveedor seleccionado por disponibilidad/costo. La entrega tarda 1–9 días y la obra 20–30 días; el progreso pasa por refuerzo, instalaciones/accesibilidad y restauración/inspección. Al finalizar, se registra la reforma y la calidad de conservación depende de la constructora. Online/Offline comparten reglas.
 
 Verificado: proteger y rehabilitar Mercado Central en Online y Offline; consumió materiales y $4.937, completó los 20 días de obra tras entrega, recuperó conservación a 100% y registró la reforma. Chromium móvil 390×844 y escritorio 1440×900: ocho fichas, controles dentro del modal, scroll vertical, sin overflow horizontal ni errores JavaScript. La fase 30 sigue parcial: faltan barrios de varias épocas, reconversión residencial/industrial, permisos de alteración, protección de alquileres y medición temporal de desplazamiento. No se validó LAN física ni Vercel.
+
+
+## Alfa 0.63 · mantenimiento vial (fase 31, parcial)
+
+Los tramos viales guardan condición y carga estimada a partir de edificios adyacentes y conectividad. Un plan ajustable de 0–200% define el gasto preventivo mensual; el costo se incorpora al programa Redes y residuos y la ejecución depende del presupuesto realmente pagado y de la caja disponible. Al cierre, el uso produce desgaste diferenciado y la financiación recupera parte de la condición. Si 35% de la red queda por debajo de 45%, cae un punto el nivel de servicios municipales. Ciudad > Mantenimiento expone condición, tramos prioritarios, costo y ejecución. Online/Offline y esquema 47.
+
+Fase 31 sigue parcial: no hay inspección de puentes/edificios, cierre por seguridad, programación de obras, activos privados ni reemplazo. La fase 30 sigue pendiente en reconversión y desplazamiento.

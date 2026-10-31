@@ -192,7 +192,28 @@ def ensure_heritage_state():
         else:
             building.setdefault("heritageEligible",False);building.setdefault("heritageSignificance",0);building.setdefault("heritageLevel","sin catalogar")
         building["conservation"]=max(0,min(100,int(building["conservation"])))
-    state["version"]=max(46,int(state.get("version",1)))
+    state["version"]=max(47,int(state.get("version",1)))
+
+def road_maintenance_report(funding_factor=None,advance=False):
+    roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
+    for x,y in roads:
+        if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15})
+    policy=max(0,min(200,int(state.get("roadMaintenancePct",100))))
+    road_set={tuple(r) for r in roads};loads=[];required=0
+    for asset in assets:
+        x,y=asset["x"],asset["y"];adjacent=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
+        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
+        load=1+min(2,adjacent*.25+degree*.08);quality=max(0,min(100,float(asset.get("quality",82))))
+        base=round(8+load*4);required+=round(base*policy/100)
+        if advance:
+            quality=max(0,quality-(.22+load*.12))
+            if funding_factor is not None:quality=min(100,quality+(.72*policy/100*max(0,min(1,float(funding_factor)))))
+            asset["quality"]=round(quality,1);asset["useLoad"]=round(load,2)
+        loads.append({"x":x,"y":y,"quality":round(quality,1),"useLoad":round(load,2),"maintenanceCost":round(base*policy/100)})
+    vals=[r["quality"] for r in loads]
+    report={"policyPct":policy,"segments":len(loads),"averageCondition":round(sum(vals)/max(1,len(vals))*10)/10,"poorSegments":sum(v<45 for v in vals),"criticalSegments":sum(v<25 for v in vals),"monthlyRequired":required,"monthlyFunded":round(required*max(0,min(1,float(funding_factor if funding_factor is not None else state.get("utilities",{}).get("maintenanceFundingFactor",1))))),"assets":loads[:80]}
+    state["roadMaintenanceReport"]=report
+    return report
 
 def heritage_report():
     listed=[b for b in state.get("buildings",[]) if b.get("heritageEligible")]
@@ -342,7 +363,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":46,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":47,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -438,9 +459,10 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(46,state.get("version",1))
+    state["version"]=max(47,state.get("version",1))
     ensure_tax_state()
     state.setdefault("roadAssets",[])
+    state.setdefault("roadMaintenancePct",100)
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
     state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
@@ -2232,16 +2254,21 @@ def tick_one_day():
         airport_income=state.get("airportMonthlyIncome",0)
         monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
+        road_maintenance=road_maintenance_report().get("monthlyRequired",0)
         waste_report=calculate_waste_balance()
         recycling_income=waste_report.get("recyclingRevenueMonth",0)
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost}
+        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
         available=state["money"]+monthly_income
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
+        road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
+        road_report=state.get("roadMaintenanceReport",{});poor=road_report.get("poorSegments",0);total=road_report.get("segments",0)
+        if total and poor/max(1,total)>=.35:
+            state["services"]=max(5,state["services"]-1);ev("Calles con mantenimiento diferido",f"{poor} de {total} tramos están por debajo de 45% de condición; el nivel de servicios municipales baja hasta financiar reparaciones.")
         due=full_operating_cost+debt_due
         net=monthly_income-due
         if available>=debt_due:
@@ -2564,6 +2591,7 @@ def public_state(player_id=None):
     view={k:v for k,v in state.items() if k not in ("players","host")}
     view["municipalFinance"]=municipal_finance_report()
     view["heritageReport"]=heritage_report()
+    view["roadMaintenanceReport"]=road_maintenance_report()
     order_views=[]
     for order in state["supply"]["orders"]:
         extra=order_urgency(order)
@@ -2599,7 +2627,7 @@ def public_state(player_id=None):
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
     transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+view["healthReport"].get("monthlySupplyCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
+    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
@@ -2743,6 +2771,11 @@ class Handler(BaseHTTPRequestHandler):
                         finance["debtReserve"]=reserve-amount;state["money"]+=amount;label="devueltos a caja"
                     finance.setdefault("debtReserveHistory",[]).append({"day":state.get("day",1),"amount":amount if direction=="deposit" else -amount,"reason":"Aporte al fondo de deuda" if direction=="deposit" else "Retiro del fondo de deuda"});del finance["debtReserveHistory"][:-24]
                     ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid));return
+                if action=="adjustRoadMaintenance":
+                    delta=int(data.get("delta",0));old=max(0,min(200,int(state.get("roadMaintenancePct",100))));new=max(0,min(200,old+delta))
+                    if delta not in (-25,25) or new==old:self._send(409,{"error":"El plan cambia en pasos de 25%, entre 0% y 200%."});return
+                    state["roadMaintenancePct"]=new;ev("Plan vial actualizado",f"Mantenimiento preventivo de calles: {new}% de la necesidad mensual estimada. El presupuesto de redes determina cuánto trabajo se ejecuta y la condición cambia por uso.")
+                    self._send(200,public_state(pid));return
                 if action=="adjustProgramBudget":
                     ensure_finance_state();budgets=state["finance"]["programBudgets"];program=str(data.get("program",""));delta=int(data.get("delta",0))
                     keys={"services":"servicesPct","mobility":"mobilityPct","networks":"networksPct"}

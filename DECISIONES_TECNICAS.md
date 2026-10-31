@@ -140,3 +140,9 @@ El préstamo municipal usa amortización fija con interés del 1% mensual y plaz
 El impuesto inmobiliario anual usa una base de diseño de $2.400 por residente y se divide en doce vencimientos; el gravamen comercial aplica al porcentaje de ventas del mes, separado del impuesto turístico hotelero existente. Las facturas se cobran después de pagar salarios y realizar actividad mensual, desde el efectivo remanente. Pago parcial reduce la caja solo por lo cobrado y conserva el resto en `taxes.arrearsByAsset`; solo cobros entran al flujo municipal. La liquidación registra el mes procesado para impedir duplicación. Los topes de tasa permiten probar carga fiscal sin tasas arbitrarias sin límite.
 
 - **Fondo municipal de deuda (Alfa 0.60):** caja reservada queda fuera de la caja libre y de los fondos disponibles para contratar; aportes solo toman efectivo no comprometido. Al cierre mensual se usa únicamente para completar el servicio contractual completo, sin crear pagos parciales. La mora y los fondos no gastados se conservan. Migración de guardados al esquema 44.
+
+## Alfa 0.63 · cartera de mantenimiento vial
+
+- Cada tramo conserva condición y recibe un factor de uso derivado de edificios adyacentes y grado de conexión. Se evita un desgaste uniforme: por mes cae entre 0,34 y 0,58 puntos según carga aproximada.
+- La política preventiva municipal usa 0–200% en incrementos de 25; el costo de referencia es $12–$20 por tramo/mes según carga. El gasto se incluye en Redes y residuos y recibe el mismo límite de asignación y caja que el resto del programa. El factor efectivamente financiado limita la recuperación de condición.
+- Una red con al menos 35% de sus tramos bajo 45% pierde un punto de servicios por cierre mensual; el mantenimiento no rescata calles afectadas por desastre, que conservan el sistema de inspección y contratos de recuperación. Es una primera capa de fase 31, aún sin suspensión temporal de calles. Online/Offline, esquema 47.

@@ -2316,7 +2316,7 @@ def allocate_regional_export_demand(shops,workforce):
 def refresh_private_investment_opportunity(report):
     """Create one reviewable private shop proposal from persistently unserved demand."""
     book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1),"reason":"Esperando condiciones de inversión."})
-    book.setdefault("history",[]);book.setdefault("nextOfferDay",state.get("day",1))
+    book.setdefault("history",[]);book.setdefault("nextOfferDay",state.get("day",1));book.setdefault("delegation",{"enabled":False,"maxPermit":500})
     current=book.get("proposal")
     if current and current.get("status")=="disponible":
         valid_zone=any(z.get("x")==current.get("x") and z.get("y")==current.get("y") and z.get("kind")=="shop" for z in state.get("zones",[]))
@@ -2349,6 +2349,13 @@ def refresh_private_investment_opportunity(report):
     _,duration,contractor,private_cost,company=min(choices,key=lambda row:(row[0],row[1],row[2]));_,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
     proposal={"id":uuid.uuid4().hex,"status":"disponible","x":zone["x"],"y":zone["y"],"district":"Puerto" if zone["x"]>=18 else "Centro" if zone["x"]>=10 else "Oeste","contractor":contractor,"createdDay":state.get("day",1),"expiresDay":state.get("day",1)+90,"unmetUnits":int(report.get("unmetOffer",0)),"jobs":12,"privateCost":private_cost,"operatingReserve":1200,"municipalPermit":permit,"durationDays":duration,"companyProfile":company["profile"]}
     book["proposal"]=proposal;book["reason"]="La demanda regional sin cubrir justifica evaluar un nuevo comercio.";ev("Propuesta privada de comercio",f"Un inversor propone abrir un local en parcela {proposal['x']+1},{proposal['y']+1}: {proposal['unmetUnits']} ventas regionales quedaron sin atender. Requiere $ {private_cost:,} privados, permiso $ {permit}, siete trabajadores de obra y {duration} días estimados.".replace(",","."))
+    policy=book.get("delegation",{})
+    if policy.get("enabled") and permit<=int(policy.get("maxPermit",0)):
+        # Delegación municipal: contratación ordinaria, con los mismos pagos y cuadrilla que una aprobación manual.
+        project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
+        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":material_plan("shop"),"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True}
+        state["money"]-=permit;state["privateCapital"]-=private_cost;state["supply"]["contractorCash"][contractor]+=advance;state["projects"].append(project)
+        proposal.update({"status":"aceptada","decisionDay":state.get("day",1),"projectId":project_id,"delegated":True});book["history"].append(dict(proposal));book["history"]=book["history"][-24:];book["nextOfferDay"]=state.get("day",1)+90;book["reason"]="Delegación: obra contratada automáticamente dentro del tope; capital, permiso y cuadrilla fueron asignados.";ev("Delegación municipal: comercio contratado",f"Permiso $ {permit}; capital privado $ {private_cost}; anticipo $ {advance}; siete trabajadores asignados. La obra conserva etapas e inspección.".replace(",","."))
 
 def simulate_business_month(workforce):
     shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
@@ -3253,6 +3260,12 @@ class Handler(BaseHTTPRequestHandler):
                     try:record_government_agreement(data.get("complaintId"),pid)
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
+                if action=="setInvestmentDelegation":
+                    book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)})
+                    enabled=bool(data.get("enabled"));cap=data.get("maxPermit",500)
+                    try:cap=max(0,min(1500,int(cap)))
+                    except (TypeError,ValueError):self._send(400,{"error":"Tope de permiso inválido."});return
+                    book["delegation"]={"enabled":enabled,"maxPermit":cap};ev("Política de inversión actualizada",("Delegación automática hasta permiso $ %s."%cap).replace(",","." ) if enabled else "Las nuevas propuestas requieren aprobación manual.");self._send(200,public_state(pid));return
                 if action=="declinePrivateInvestment":
                     book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)})
                     offer=book.get("proposal")

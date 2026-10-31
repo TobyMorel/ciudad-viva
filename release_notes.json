@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.76",
+  "currentVersion": "0.77",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.77",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 33: delegación administrativa opcional para propuestas comerciales. El municipio puede aceptar automáticamente inversiones con permiso dentro de un tope configurable; cada obra sigue consumiendo caja municipal, capital privado y cuadrilla, y conserva sus etapas, materiales e inspección. Propuestas fuera del tope quedan para aprobación manual. Online y Offline.",
+        "Ciudad > Puerto muestra la política, su límite y las condiciones de operación en un panel adaptable. Verificada en Chromium a 390×844 y 1440×844: sin desbordamiento horizontal, solapamientos ni errores de consola."
+      ],
+      "roadmapPhase": 33,
+      "phaseProgress": 35,
+      "overallProgress": null
+    },
     {
       "version": "0.76",
       "date": "2026-10-31",
@@ -979,12 +990,12 @@
     {
       "phase": 33,
       "title": "Síntesis, equilibrio de largo plazo y partidas de décadas",
-      "progress": 30,
-      "summary": "Edades y migración con residentes persistentes, rehabilitación, mercado regional finito e inversión privada por etapas",
+      "progress": 35,
+      "summary": "Envejecimiento y rehabilitación, mercados finitos, inversiones condicionadas y delegación municipal con tope",
       "pending": [
         "Ensayar partidas de 30 años y ciclos económicos entre mandatos",
         "Completar cierres y aperturas empresariales bajo demanda, capital e insumos",
-        "Validar escenarios pequeños, metropolitanos, portuarios y turísticos"
+        "Probar ciudades pequeñas, metropolitanas, portuarias y turísticas"
       ]
     }
   ]

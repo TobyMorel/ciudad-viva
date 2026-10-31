@@ -25,9 +25,9 @@ Este documento es el punto de relevo de Ciudad Viva. Léelo junto con `ROADMAP_J
 - `release_notes.json`: historial de versiones y datos de la guía visual de fases. Actualizar la versión y los cambios de la interfaz con cada subida.
 - Documentación: auditoría, estado, decisiones y próxima tarea deben concordar con código y pruebas.
 
-## Estado al cerrar Alfa 0.76
+## Estado al cerrar Alfa 0.77
 
-- Roadmap: hito F; fase activa 33, parcial (30%). La fase 21 está al 60% tras enlazar migración y perfiles de personas. Estos son porcentajes por fase, no del juego completo. El avance global permanece “sin estimar” por falta de pesos globales basados en criterios verificables.
+- Roadmap: hito F; fase activa 33, parcial (35%). La fase 21 está al 60% tras enlazar migración y perfiles de personas. Estos son porcentajes por fase, no del juego completo. El avance global permanece “sin estimar” por falta de pesos globales basados en criterios verificables.
 - Estado de partida: el servidor inicia/salva en esquema 59; el adaptador Offline completa los campos y eleva el guardado local a 59. `offline_seed.json` conserva el valor legado 21, se normaliza al iniciar y no debe editarse solo para cambiar ese número. Versión de cliente: Alfa 0.76. La mecánica de migración no añade campos persistentes nuevos.
 - Mercado exterior de fase 33 tiene volúmenes y presupuestos finitos. La oferta cambia de acuerdo con trabajadores, precio, condición, servicios y acceso.
 - Si queda demanda regional sin atender, hay una parcela comercial libre conectada, existe capital privado y reserva, el permiso cabe en caja municipal y una constructora tiene cupo y siete trabajadores, se crea una sola propuesta privada de comercio. La oferta expira a 90 días. Rechazarla no gasta fondos ni reserva parcela y activa una espera de 90 días.
@@ -51,3 +51,11 @@ Estado comprobado de Alfa 0.76:
 ## Siguiente tarea exacta
 
 Continuar la fase 33 con simulación reproducible de varias décadas. Hacer pruebas de al menos 30 años en ambos motores y observar si demanda finita, inversión, obras, materiales, empleo, migración con registros personales, envejecimiento, caja y elecciones forman un ciclo estable. Encontrar y corregir bucles de generación/destrucción de capital; registrar ciudades que se vacían, se estancan o crecen sin soporte. Después ampliar la propuesta privada a los tipos de empresa que realmente permitan los mercados/cadenas ya simulados y ejecutar los escenarios pequeño, metropolitano, portuario y turístico que enumera el roadmap. Hacer una sola mecánica de contenido significativa por entrega y actualizar porcentajes solo con evidencia.
+
+
+### Alfa 0.77 (actual)
+
+- La fase 33 queda al 35%: delegación municipal opcional para propuestas comerciales con tope configurable. El anfitrión aplica la política en Online; Offline sigue la misma condición. Una contratación crea proyecto estándar, descuenta permiso de la caja, inversión del capital privado y abona anticipo de contratista; asigna siete trabajadores. Online incluye el abastecimiento por materiales; Offline aún permite avanzar sin inventario y eso debe corregirse en una entrega de mecánica, no de detalle.
+- Prueba comprobada Online: permiso $432, capital $3.168, anticipo $634, siete trabajadores. Tope $0 deja oferta pendiente sin crear obra. Chromium comprobó Ciudad > Puerto en móvil 390×844 y escritorio 1440×844, sin overflow horizontal ni errores JS.
+- Antes de dar el sistema por verificado en Offline, reproducir la misma propuesta bajo el motor local y probar topes $0/$500. Próximo contenido: escenarios largos de la fase 33, comenzando por 30 años en los perfiles básico y metropolitano; no invertir entregas sucesivas solo en UI.
+- Versión en index y notas: Alfa 0.77. Esquema persistente sigue en 59; sin migración.

@@ -1450,7 +1450,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [ ] Ejecutar escenarios de 20–50 años de juego sin duplicación de recursos o crecimiento imposible.
 - [ ] Probar una ciudad pequeña, una metropolitana, una portuaria y una turística bajo reglas comunes.
 - [ ] Evaluar trayectorias de deuda, empleo, suelo, materiales, demanda, contaminación y mantenimiento.
-- [ ] Añadir delegación administrativa opcional con presupuesto y consecuencias observables.
+- [x] Añadir delegación administrativa opcional con presupuesto y consecuencias observables (Alfa 0.77; delegación limitada a propuestas comerciales, resto pendiente).
 - [ ] Registrar decisiones que permiten ganar y perder de manera explicable durante mandatos sucesivos.
 
 ### Criterios de aceptación

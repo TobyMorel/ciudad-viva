@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.76
+# Ciudad Viva · Alfa 0.77
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -209,3 +209,8 @@ Para retomar el desarrollo en otra sesión o con otra IA, consulta [CONTINUIDAD_
 ## Alfa 0.76 · migración con residentes persistentes
 
 Las mudanzas ahora crean y retiran personas identificables en Online y Offline. Cada nuevo residente tiene edad, etapa de vida y estado laboral; solo los residentes elegibles y con perfil pueden cubrir empleos. Al salir, se libera la plaza que ocupaba esa persona y baja la recaudación futura. La llegada permanece limitada por aprobación, vacantes y empleo potencial. La fase 21 avanza a 60%; fase 33 sigue parcial hasta superar los escenarios de varias décadas.
+
+
+## Alfa 0.77 · delegación administrativa
+
+En Ciudad > Puerto podés delegar la aprobación automática de comercios hasta un tope de permiso configurable. La contratación solo ocurre si las cuentas, el capital inversor y la constructora pueden cubrirla; conserva construcción por etapas e inspección. Las propuestas que exceden el límite requieren decisión manual. Funciona en Online y Offline.

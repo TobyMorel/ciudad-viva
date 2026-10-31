@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.76
+# Auditoría del roadmap · Alfa 0.77
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -263,3 +263,8 @@ A la demanda externa finita se suma una oferta para abrir un comercio si hay ven
 ### Fase 21 · Alfa 0.76: migración y padrón vinculados (parcial, 60%)
 
 Llegadas limitadas por aprobación, vivienda vacante y empleo potencial añaden perfiles con identidad, edad, etapa de vida y elegibilidad laboral reproducible; salidas retiran individuos de hogares y liberan empleo. Esto mantiene vinculados ocupantes y residentes para empleo, escuela y envejecimiento en Online y Offline. Pendiente: desigualdad, movilidad social y efectos de ingreso/educación a largo plazo.
+
+
+### Fase 33 · Alfa 0.77: delegación opcional de inversiones (parcial, 35%)
+
+Automatización de una tarea administrativa rutinaria con un tope de permiso definido por el jugador. Solo contrata cuando se satisfacen demanda no cubierta, parcela conectada, caja municipal, capital privado y disponibilidad de cuadrilla. La obra resultante consume recursos reales y avanza por la cadena contractual existente. El tope y la decisión se guardan en el estado compartido; Online y Offline implementan la regla. El resto de la fase sigue pendiente: escenarios de décadas y especializaciones urbanas, herramientas de previsión comparativa y pruebas de aceptación a 30 años.

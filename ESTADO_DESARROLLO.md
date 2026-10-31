@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.76 · 31 de octubre de 2026
+**Entrega:** Alfa 0.77 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -492,3 +492,10 @@ Avance fase 21: 60% orientativo por el criterio de cobertura; fase 33 permanece 
 - Offline en Chromium cruzó el cierre mensual: siete residentes llegaron con edad, etapa y perfil; población y padrón sumaron 627, ocupación total también 627.
 - Se ejecutaron compilación Python y chequeos JavaScript. No se cambió la interfaz; no se requirió revisión visual nueva.
 - Trayectoria de 30 años, LAN física y Vercel aún pendientes.
+
+
+## Alfa 0.77 · delegación municipal opcional
+
+La gestión puede delegar la aprobación de comercios privados hasta un tope elegible ($0, $500, $1.000 o $1.500). Si el permiso queda dentro del límite, la oferta cumple los requisitos de mercado y hay caja, capital privado y cuadrilla disponibles, Online y Offline generan el contrato y registran permiso, anticipo, siete trabajadores y materiales pendientes. La obra conserva las etapas e inspección existentes. Fuera del límite queda como propuesta manual. Sin migración de esquema: la política se agrega al libro de inversiones y se normaliza al usarlo.
+
+Verificación: prueba autoritativa Online creó la propuesta y contrato con $432 de permiso, $3.168 de inversión privada, anticipo de $634 y 7 trabajadores; con tope $0 no creó obra ni movió fondos. Chromium móvil 390×844 y escritorio 1440×844: panel Ciudad > Puerto legible, sin overflow horizontal, solapamientos ni errores JS. La simulación multidecenal completa y LAN física siguen pendientes.

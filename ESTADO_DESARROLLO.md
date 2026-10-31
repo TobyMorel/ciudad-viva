@@ -1,9 +1,12 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.18 · 31 de octubre de 2026  
+**Entrega:** Alfa 0.19 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Implementado
+
+- Alfa 0.19: Banco Cooperativo con $42.000 de liquidez y crédito por empresa limitado por dotación. Las tiendas pueden usarlo para nómina, gastos e insumos; cobran interés mensual, pagan desde excedentes y devuelven capital. Dos meses seguidos sin cubrir intereses llevan al cierre y liberan vacantes; los empleados afectados pasan a búsqueda laboral con registro de su anterior empleador. Migración de esquema 15 a 16. En Offline, la misma mecánica opera desde el navegador.
+- La pestaña Cambios presenta las versiones 0.16–0.19 y próximas entregas desde `release_notes.json`, compatible con hosting estático y servidor LAN.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -63,3 +66,11 @@
 - Los empleados tienen identidad y empleador, pero no contrato, habilidades, horarios ni preferencias de búsqueda. Las empresas comerciales ya tienen caja, inventario, producción, ventas, costos y quiebra; faltan proveedores productivos identificables, competencia de precios y encadenamiento entre empresas. Los depósitos ya mantienen inventario separado y abastecen obras conectadas; la descarga visible usa trabajadores y autoelevadores finitos. Los viajes y la asistencia siguen agregados, sin horarios ni decisiones de ruta individuales; los autos no laborales y peatones son decorativos. También faltan salarios reales de cuadrillas.
 - No están implementados electricidad, agua, cloacas, residuos, transporte público funcional, elecciones, puertos, aeropuertos, turismo, clima, patrimonio o simulación por décadas.
 - Offline requiere navegador con WebGL; Online requiere Python 3.9+ en el anfitrión. Descubrimiento de salas por código, transferencia de anfitrión, autenticación y validación física de Wi-Fi siguen pendientes. Offline tiene una simulación comercial simplificada y trayectos aproximados; todavía no incluye pedidos logísticos de obra, rescate de obra ni reasignación laboral completa de edificios nuevos.
+
+## Verificación Alfa 0.19
+
+- `py_compile`, `node --check` (game.js y offline.js), JSON y `git diff --check` pasan.
+- Simulación inicial: 203 trabajadores, 1.690 de nómina, 332 unidades pedidas a proveedores y $1.624 en insumos sin usar crédito.
+- Escenario de tensión: un comercio tomó $1.363 de crédito y permaneció abierto; la verificación de cierre y despido queda registrada en pruebas de cierre económico.
+- Chromium headless inició Offline, renderizó el canvas y cargó cuatro tarjetas de versiones y tres de próximas entregas sin errores de consola. La API LAN sirvió `release_notes.json` con HTTP 200.
+- La conexión desde un segundo equipo físico sigue pendiente de comprobación en la red del usuario.

@@ -1,10 +1,10 @@
-# Ciudad Viva · Alfa 0.18
+# Ciudad Viva · Alfa 0.19
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
 ## Modos de juego
 
-Al abrir la página se puede elegir **Offline** u **Online · red local**. Offline funciona en Vercel y guarda la ciudad en el almacenamiento local del navegador. Incluye calendario, parcelas, zonificación y obras con progreso por etapas. Los comercios compran materia prima a proveedores privados con stock, precio y demora; los clientes se distribuyen según precio y acceso. Offline simplifica los trayectos a distancia y conserva la economía local; los pedidos de materiales de obra y rescate siguen requiriendo el servidor. Para compartir una ciudad, elegí Online y abrí la dirección LAN del equipo anfitrión.
+Al abrir la página se puede elegir **Offline** u **Online · red local**. Offline funciona en Vercel y guarda la ciudad en el almacenamiento local del navegador. Incluye calendario, parcelas, zonificación y obras con progreso por etapas. Los comercios compran materia prima a proveedores privados con stock, precio y demora; los clientes se distribuyen según precio y acceso. El Banco Cooperativo ofrece crédito comercial de liquidez limitada: las firmas pagan intereses y amortizan con excedentes, y la mora persistente puede cerrarlas y dejar trabajadores buscando empleo. Offline simplifica los trayectos a distancia y conserva esta economía local; los pedidos de materiales de obra y rescate siguen requiriendo el servidor. Para compartir una ciudad, elegí Online y abrí la dirección LAN del equipo anfitrión.
 
 ## Iniciar
 
@@ -14,6 +14,10 @@ Requiere Python 3.9 o posterior y un navegador moderno con WebGL.
 - Linux/macOS: abrir **Iniciar Ciudad Viva.sh** desde el explorador; si no arranca, usar su opción “Ejecutar”.
 
 El iniciador abre el servidor local y el navegador. `index.html` requiere el servidor para simular, guardar y aceptar conexiones LAN. Para invitar, el anfitrión deja el iniciador abierto y comparte la dirección LAN indicada en el panel izquierdo. El firewall y la red Wi-Fi deben permitir conexiones entre dispositivos.
+
+## Cambios y próximas entregas
+
+La pestaña **Cambios** del panel derecho muestra el historial de versiones y las próximas entregas. Su contenido vive en `release_notes.json` y se actualiza en cada publicación.
 
 ## Controles
 
@@ -27,7 +31,7 @@ La migración mensual se limita por plazas de vivienda vacantes y capacidad de e
 
 La alfa incluye vista 3D generada localmente, localidad inicial con 22 edificios, cámara giratoria, tráfico ambiental, calendario, presupuesto, vivienda, calles, zonificación, licitaciones, constructoras, depósitos logísticos, pedidos logísticos, inventarios, trabajadores por contrato, servicios municipales, guardado y sincronización LAN por HTTP.
 
-Pendientes: contratos, habilidades y horarios laborales, competencia y proveedores, demanda diferenciada, personas como agentes urbanos, servicios físicos, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación de empleos ya es individual, pero los recorridos aún se muestran agrupados por hogar y destino.
+Pendientes: contratos, habilidades y horarios laborales, demanda diferenciada, personas como agentes urbanos, servicios físicos, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación de empleos ya es individual, pero los recorridos aún se muestran agrupados por hogar y destino.
 
 ## Publicación en Vercel
 

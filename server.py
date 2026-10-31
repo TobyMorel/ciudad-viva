@@ -38,10 +38,15 @@ def new_market_supply():
     return {name:{**values,"cash":18000,"lastSales":0} for name,values in MARKET_SUPPLIERS.items()}
 
 def new_business(building, job_slots, starting_cash=5000):
+    slots=max(1,int(job_slots))
     return {"id":f"firm-{building['x']}-{building['y']}","name":building.get("name","Comercio local"),
-            "status":"abierto","cash":starting_cash,"jobSlots":max(1,int(job_slots)),"inventory":0,
+            "status":"abierto","cash":starting_cash,"jobSlots":slots,"inventory":0,
             "price":18,"inputCost":5,"inputInventory":24,"wage":10,"productivity":.06,"fixedCost":40,
+            "creditDebt":0,"creditLimit":slots*200,"creditRate":.02,"creditDelinquencyMonths":0,"lastCreditDraw":0,"lastInterest":0,"lastRepayment":0,
             "lastSales":0,"lastLocalSales":0,"lastRegionalSales":0,"lastLocalDemand":0,"lastRevenue":0,"lastInputs":0,"lastInputUnits":0,"lastInputSupplier":"Sin compras","lastInputShortage":0,"lastProduction":0,"lastPayroll":0,"lastProfit":0,"lastWorkers":0,"lastDemand":0}
+
+def new_finance():
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24}}
 
 def new_supply():
     return {"regional":INITIAL_REGIONAL_STOCK.copy(),
@@ -81,7 +86,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":15,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":16,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -128,7 +133,17 @@ def ensure_business_state():
         for key,value in new_business(building,firm.get("jobSlots",estimated_slots),firm.get("cash",5000)).items():
             firm.setdefault(key,value)
         firm.setdefault("inputInventory",20)
+        firm.setdefault("creditDebt",0)
+        firm.setdefault("creditLimit",max(1000,int(firm.get("jobSlots",estimated_slots))*200))
+        firm.setdefault("creditRate",.02)
+        firm.setdefault("creditDelinquencyMonths",0)
+        firm.setdefault("lastCreditDraw",0);firm.setdefault("lastInterest",0);firm.setdefault("lastRepayment",0)
         if firm.get("status")=="cerrado":building["status"]="cerrado"
+
+def ensure_finance_state():
+    state.setdefault("finance",new_finance())
+    bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
+    for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
 
 def ensure_resident_roster():
     for home in (b for b in state["buildings"] if b.get("kind")=="home"):
@@ -145,7 +160,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(15,state.get("version",1))
+    state["version"]=max(16,state.get("version",1))
     state.setdefault("roadAssets",[])
     for building in state["buildings"]:
         if building["kind"]=="home":
@@ -237,6 +252,7 @@ def ensure_supply_state():
                                 for key,amount in p["materialsRequired"].items()}
         p.setdefault("materialsUsed",{key:0 for key in MATERIAL_NAMES})
     ensure_business_state()
+    ensure_finance_state()
     ensure_resident_roster()
 
 def material_delta(p, next_elapsed):
@@ -457,6 +473,33 @@ def pay_public_wages(workforce):
         payroll+=wage
     return payroll
 
+def draw_business_credit(firm, amount):
+    if amount<=0:return 0
+    ensure_finance_state();bank=state["finance"]["businessBank"]
+    room=max(0,int(firm.get("creditLimit",0)-firm.get("creditDebt",0)))
+    draw=min(int(math.ceil(amount)),room,max(0,int(bank.get("liquidity",0))))
+    if draw:
+        firm["creditDebt"]=firm.get("creditDebt",0)+draw
+        firm["cash"]=firm.get("cash",0)+draw
+        firm["lastCreditDraw"]=firm.get("lastCreditDraw",0)+draw
+        bank["liquidity"]-=draw
+    return draw
+
+def close_business(shop, workforce, reason):
+    firm=shop.get("business",{})
+    if firm.get("status")!="abierto":return 0
+    firm["status"]="cerrado";firm["closedDay"]=state["day"];firm["closureReason"]=reason;shop["status"]="cerrado"
+    state["jobs"]=max(0,state.get("jobs",0)-firm.get("jobSlots",0));dismissed=0
+    for home in (b for b in state["buildings"] if b.get("kind")=="home"):
+        for person in home.get("residents",[]):
+            if person.get("employerId")!=firm.get("id"):continue
+            person["previousEmployer"]=firm.get("name",shop.get("name","Comercio"));person["unemployedSinceDay"]=state["day"]
+            person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
+            dismissed+=1
+    state.setdefault("unemploymentEvents",[]).append({"day":state["day"],"employerId":firm.get("id"),"employerName":firm.get("name"),"workers":dismissed,"cause":reason})
+    ev("Empresa insolvente",f"{firm.get('name',shop.get('name','Comercio'))} cerró: {reason}. {dismissed} trabajadores perdieron el puesto y vuelven a buscar empleo; se eliminan {firm.get('jobSlots',0)} vacantes.")
+    return dismissed
+
 def refill_market_suppliers():
     for supplier in state["supply"].get("market",{}).values():
         supplier["stock"]=min(supplier.get("maxStock",0),supplier.get("stock",0)+supplier.get("monthlyOutput",0))
@@ -488,10 +531,22 @@ def simulate_business_month(workforce):
     shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
     demand={(b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand};roads={tuple(r) for r in state["roads"]}
-    for emp in workforce.get("employees",[]):
-        if emp["site"].get("kind")=="shop":
-            wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
-            home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+    ensure_finance_state();workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]};payroll_paid={}
+    for shop in list(shops):
+        firm=shop["business"];site=workplace.get((shop["x"],shop["y"]),{});payroll=max(0,int(site.get("payroll",0)))
+        firm["lastCreditDraw"]=0;firm["lastInterest"]=0;firm["lastRepayment"]=0
+        if firm.get("cash",0)<0:
+            close_business(shop,workforce,"caja negativa antes de cubrir la nómina");continue
+        if firm.get("cash",0)<payroll:draw_business_credit(firm,payroll-firm.get("cash",0))
+        if firm.get("cash",0)<payroll:
+            close_business(shop,workforce,"la caja y el crédito disponible no alcanzaron para pagar salarios");continue
+        firm["cash"]-=payroll;payroll_paid[firm["id"]]=payroll
+        for emp in workforce.get("employees",[]):
+            if emp["site"] is shop:
+                wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
+                home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+    shops=[b for b in shops if b.get("business",{}).get("status")=="abierto"]
+    demand={ (b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand}
     # Las empresas ajustan el precio con las ventas y el inventario del período anterior.
     prior_prices={(b["x"],b["y"]):max(1,b["business"].get("price",18)) for b in shops}
     for shop in shops:
@@ -524,15 +579,11 @@ def simulate_business_month(workforce):
         for (shop,_),quantity in zip(choices,allocations):
             if quantity:
                 key=(shop["x"],shop["y"]);demand[key]+=quantity;shopping[key].append((home,quantity))
-    workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]}
     market_suppliers=state["supply"].setdefault("market",new_market_supply())
     market_orders=state["supply"].setdefault("marketOrders",[])
     revenue_total=payroll_total=sales_total=closed=inputs_total=0
     for shop in shops:
         firm=shop["business"];key=(shop["x"],shop["y"]);site=workplace.get(key,{})
-        if firm.get("cash",0)<0:
-            firm["status"]="cerrado";shop["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",0));closed+=1
-            ev("Empresa en quiebra",f"{firm['name']} no pudo pagar sus compromisos y cerró con saldo negativo. Se pierden {firm['jobSlots']} puestos potenciales.");continue
         staffed=max(0,round(site.get("staffedJobs",0)));headcount=max(0,int(site.get("workersAssigned",0)))
         local_demand=demand.get(key,0);regional_demand=max(0,round(firm.get("jobSlots",0)*.35));total_demand=local_demand+regional_demand
         inventory=max(0,int(firm.get("inventory",0)));input_inventory=max(0,int(firm.get("inputInventory",0)))
@@ -548,9 +599,13 @@ def simulate_business_month(workforce):
         regional_sales=min(max(0,inventory+production-sold_local),regional_demand)
         sales=sold_local+regional_sales;export_price=max(1,round(unit_price*.78))
         revenue=sold_local*unit_price+regional_sales*export_price
-        payroll=max(0,int(site.get("payroll",headcount*firm.get("wage",10))));overhead=max(0,int(firm.get("fixedCost",40)))
+        payroll=payroll_paid.get(firm["id"],0);overhead=max(0,int(firm.get("fixedCost",40)))
         firm["inputInventory"]=input_inventory-production
-        cash_before_orders=firm.get("cash",0)+revenue-payroll-overhead
+        cash_before_orders=firm.get("cash",0)+revenue-overhead
+        if cash_before_orders<0:
+            draw_business_credit(firm,-cash_before_orders);cash_before_orders=firm.get("cash",0)+revenue-overhead
+        if cash_before_orders<0:
+            firm["cash"]=round(cash_before_orders);close_business(shop,workforce,"las ventas no cubrieron gastos fijos y agotó su línea de crédito");closed+=1;continue
         target_inputs=min(110,max(12,round(staffed*firm.get("productivity",.06)*30*1.15)))
         pending=sum(order.get("quantity",0) for order in market_orders if order.get("businessId")==firm.get("id") and order.get("status")=="en tránsito")
         needed=max(0,target_inputs-firm["inputInventory"]-pending);purchases=procurement_cost=0;chosen=[]
@@ -565,7 +620,7 @@ def simulate_business_month(workforce):
             landed=supplier["unitCost"]+freight+supplier.get("leadDays",0)*.035
             providers.append((landed,name,supplier,route,distance))
         providers.sort(key=lambda item:(item[0],item[2].get("leadDays",0),item[1]))
-        cash_for_orders=max(0,int(cash_before_orders))
+        cash_for_orders=max(0,int(cash_before_orders+min(max(0,firm.get("creditLimit",0)-firm.get("creditDebt",0)),state["finance"]["businessBank"].get("liquidity",0))))
         for landed,name,supplier,route,distance in providers:
             if needed<=0 or cash_for_orders<=0:break
             quantity=min(needed,int(supplier.get("stock",0)),int(cash_for_orders//max(.01,landed)))
@@ -573,18 +628,37 @@ def simulate_business_month(workforce):
             cost=round(quantity*landed)
             if cost>cash_for_orders:quantity=max(0,int(cash_for_orders//max(.01,landed)));cost=round(quantity*landed)
             if not quantity:continue
+            if cash_before_orders<cost:
+                draw_business_credit(firm,cost-cash_before_orders);cash_before_orders=firm.get("cash",0)+revenue-overhead
+                if cash_before_orders<cost:
+                    quantity=max(0,int(max(0,cash_before_orders)//max(.01,landed)));cost=round(quantity*landed)
+            if not quantity:continue
             supplier["stock"]-=quantity;supplier["cash"]=supplier.get("cash",0)+cost;supplier["lastSales"]+=quantity
             order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en tránsito","statusCause":"Preparación en proveedor"}
             market_orders.append(order);needed-=quantity;cash_for_orders-=cost;purchases+=quantity;procurement_cost+=cost;chosen.append(name)
-        firm["cash"]=round(cash_before_orders-procurement_cost)
+        cash_after_ops=cash_before_orders-procurement_cost
+        debt=firm.get("creditDebt",0);interest=round(debt*firm.get("creditRate",.02));firm["lastInterest"]=interest
+        if cash_after_ops<interest:draw_business_credit(firm,interest-cash_after_ops);cash_after_ops=firm.get("cash",0)+revenue-overhead-procurement_cost
+        if cash_after_ops<0:
+            firm["cash"]=round(cash_after_ops);close_business(shop,workforce,"agotó caja y crédito antes de cubrir sus costos operativos");closed+=1;continue
+        if cash_after_ops>=interest:
+            cash_after_ops-=interest;firm["creditDelinquencyMonths"]=0;state["finance"]["businessBank"]["liquidity"]+=interest
+        else:
+            paid_interest=max(0,cash_after_ops);cash_after_ops=0;state["finance"]["businessBank"]["liquidity"]+=paid_interest
+            firm["creditDebt"]+=interest-paid_interest;firm["creditDelinquencyMonths"]=firm.get("creditDelinquencyMonths",0)+1
+        repayment=min(firm.get("creditDebt",0),max(0,int(cash_after_ops-500)))
+        if repayment:
+            cash_after_ops-=repayment;firm["creditDebt"]-=repayment;firm["lastRepayment"]=repayment;state["finance"]["businessBank"]["liquidity"]+=repayment
+        firm["cash"]=round(cash_after_ops)
         firm["inventory"]=inventory+production-sales;firm["lastSales"]=sales;firm["lastLocalSales"]=sold_local;firm["lastRegionalSales"]=regional_sales
         firm["lastLocalDemand"]=local_demand;firm["lastRevenue"]=revenue;firm["lastInputs"]=procurement_cost;firm["lastInputUnits"]=purchases;firm["lastInputSupplier"]=" · ".join(chosen) if chosen else "Sin stock o fondos"
-        firm["lastInputShortage"]=max(0,needed);firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=revenue-payroll-overhead-procurement_cost
+        firm["lastInputShortage"]=max(0,needed);firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=revenue-payroll-overhead-procurement_cost-interest
+        firm["creditAvailable"]=max(0,min(firm.get("creditLimit",0)-firm.get("creditDebt",0),state["finance"]["businessBank"].get("liquidity",0)))
+        firm["creditStatus"]="mora" if firm.get("creditDelinquencyMonths",0) else ("utilizada" if firm.get("creditDebt",0)>0 else "disponible")
         firm["lastWorkers"]=headcount;firm["lastDemand"]=round(total_demand)
         revenue_total+=revenue;payroll_total+=payroll;sales_total+=sales;inputs_total+=procurement_cost
-        if firm["cash"]<0:
-            firm["status"]="cerrado";shop["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",0));closed+=1
-            ev("Empresa en quiebra",f"{firm['name']} dejó de cubrir salarios, insumos y gastos; cerró con saldo negativo. Se pierden {firm['jobSlots']} puestos potenciales.")
+        if firm["cash"]<0 or firm.get("creditDelinquencyMonths",0)>=2:
+            close_business(shop,workforce,"incumplió dos vencimientos de intereses" if firm.get("creditDelinquencyMonths",0)>=2 else "caja negativa y crédito agotado");closed+=1
     return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed}
 
 def route_to_project(project):return route_between((4,10),(project["x"],project["y"]))
@@ -823,6 +897,8 @@ def public_state(player_id=None):
     view["traffic"]={k:commute[k] for k in ("commuters","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs")}
     view["commutes"]=commute["routes"]
     view["workplaces"]=commute["workplaces"]
+    bank=state["finance"]["businessBank"]
+    view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","depot"))
     view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"])
@@ -830,7 +906,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.18"
+    server_version="CiudadViva/0.19"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -849,7 +925,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT}); return
         rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
+        if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
             self._send(404,{"error":"No encontrado"}); return
         file=(ROOT/rel).resolve()
         if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta inválida"}); return

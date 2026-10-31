@@ -1,0 +1,54 @@
+{
+  "currentVersion": "0.19",
+  "versions": [
+    {
+      "version": "0.19",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Banco Cooperativo con liquidez finita y líneas de crédito empresariales según puestos de trabajo.",
+        "Las empresas pueden financiar salarios, gastos e insumos; pagan intereses y amortizan deuda desde sus excedentes.",
+        "Dos vencimientos de intereses impagos provocan insolvencia, cierre, pérdida de vacantes y trabajadores que vuelven a buscar empleo.",
+        "Nueva pestaña Cambios con historial de versiones y próximas entregas, también disponible en modo Offline."
+      ]
+    },
+    {
+      "version": "0.18",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Tres mayoristas privados mantienen existencias finitas y reponen mercancía cada mes.",
+        "Los comercios pagan insumos, reciben entregas por calles y limitan producción según inventario.",
+        "Los hogares comparan distancia y precio; los comercios responden a ventas y existencias ajustando precios."
+      ]
+    },
+    {
+      "version": "0.17",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Selector inicial entre partida Offline y sala Online por red local.",
+        "Partidas Offline guardadas en el navegador para jugar en Vercel sin un servidor de simulación."
+      ]
+    },
+    {
+      "version": "0.16",
+      "date": "30 de octubre de 2026",
+      "changes": [
+        "Logística de materiales de obra con prioridades de descarga, urgencia contractual y esperas visibles.",
+        "Avisos de plazos expuestos y causas de demora en el registro de acontecimientos."
+      ]
+    }
+  ],
+  "upcoming": [
+    {
+      "title": "Hogares y mercado laboral",
+      "detail": "Búsqueda de empleo tras cierres, contratación por vacantes y movilidad laboral más trazable."
+    },
+    {
+      "title": "Servicios urbanos conectados",
+      "detail": "Redes físicas de agua, electricidad, cloacas y residuos con capacidad, mantenimiento y fallas."
+    },
+    {
+      "title": "Expansión y gobierno",
+      "detail": "Sectores de mapa extensibles, responsabilidades municipales y apoyo ciudadano con elecciones."
+    }
+  ]
+}

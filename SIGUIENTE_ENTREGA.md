@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.69
+## Estado al cerrar Alfa 0.70
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -41,3 +41,12 @@ Online y Offline completaron protección y rehabilitación patrimonial: material
 ## Medición del progreso global
 
 El porcentaje total queda sin estimar: faltan pesos estables y criterios de finalización verificables para las 34 fases. No se convierte el número de entregas, archivos o pruebas en avance del juego.
+
+
+## Sistema agregado en Alfa 0.70
+
+Se incorporó la primera mecánica de gobierno competitivo de fase 32: mandatos de cuatro años, sondeos y voto por tres distritos, causas locales de apoyo, historial persistente y derrota compartida. Se mantiene parcial hasta añadir metas verificables del plan municipal, reclamos geolocalizados, transparencia y recuperación/destitución por crisis graves.
+
+## Punto exacto para continuar
+
+Próxima entrega: fase 32, crear registro de reclamos ligados a averías/colas y necesidades reales por distrito; añadir metas de mandato medibles (empleo, plazas de vivienda, servicios y mantenimiento) y comparar su avance en elecciones. Mantener en paralelo el modo de observación tras una derrota. No dedicar la próxima versión a pulir visuales; primero cerrar el circuito de sistema y comprobar sus efectos en ambos modos.

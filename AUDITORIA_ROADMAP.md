@@ -212,3 +212,10 @@ Alfa 0.68 incorpora inspección preventiva de centrales, potabilizadoras y depur
 Un local comercial cerrado conserva la parcela y solo puede reconvertirse si se pagaron sus deudas y no está catalogado como patrimonio. El promotor aporta $4.200, la ciudad cobra permiso de $200 y una constructora asigna cuatro trabajadores durante 20–30 días. Desmontaje, refuerzo, instalación de servicios e inspección habilitan 24 plazas residenciales. La migración existente llena plazas según vacantes, empleo y aprobación; cada residente paga alquiler después de 30 días en la vivienda y los impagos acumulados pueden bajar el apoyo ciudadano. Online/Offline, esquema 53. UI plegable comprobada a 390×844 y 1440×900.
 
 Fase 30 queda parcial: no hay protección de inquilinos, desplazamientos, reconversión de vivienda a comercio ni cambios de arquitectura por década. El siguiente sistema prioritario es fase 32, elecciones y derrota cooperativa.
+
+
+## Fase 32 · Alfa 0.70 (parcial)
+
+**Implementado:** ciclo ordinario de mandato de cuatro años; evaluación por Oeste, Centro y Puerto; indicadores explicables de empleo, vivienda, servicios y aprobación; escrutinio por distrito; renovación de mandato; derrota cooperativa, pausa y observación persistente; disponible en Online/Offline, guardado 54.
+
+**Pendiente:** plan municipal medible, promesas y seguimiento, reclamos localizados conectados con incidentes/servicios, transparencia y registro de acuerdos, diferencias de participación/voto por composición vecinal, crisis prolongadas con aviso y recuperación, destitución extraordinaria. No declarar completa la fase.

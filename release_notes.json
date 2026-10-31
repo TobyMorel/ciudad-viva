@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.69",
+  "currentVersion": "0.70",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.70",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 32 (parcial): elecciones cada cuatro años de juego, sondeo y resultados por distrito basados en empleo, vivienda, servicios y aprobación municipal.",
+        "El resultado queda guardado y sincronizado en LAN; renovar extiende el mandato y perder la elección termina la partida competitiva del equipo y pausa la ciudad para observarla.",
+        "Ciudad > Gobierno muestra calendario, participación prevista, causas y apoyo de Oeste, Centro y Puerto; diseño adaptable a móvil y escritorio.",
+        "Guardados migran al esquema 54 en Online y Offline."
+      ],
+      "archiveGap": false
+    },
     {
       "version": "0.69",
       "date": "2026-10-31",
@@ -590,12 +601,12 @@
   ],
   "upcoming": [
     {
-      "title": "Gobierno municipal y elecciones",
-      "detail": "Abrir fase 32 con mandatos, evaluación causal de gestión y derrota compartida, después continuar evolución barrial y protección ante desplazamiento."
+      "title": "Compromisos y reclamos barriales",
+      "detail": "Fase 32: registrar problemas locales observables, metas municipales por mandato y confianza según el cumplimiento de cada compromiso."
     },
     {
-      "title": "Ciclo de vida para propietarios privados",
-      "detail": "Extender diagnóstico, inspección y rehabilitación a viviendas y comercios, manteniendo sus responsabilidades financieras."
+      "title": "Crisis y gobierno cooperativo",
+      "detail": "Fase 32: sumar alertas y vías justificadas de recuperación ante crisis prolongadas; conservar derrotas compartidas y revisión de la ciudad."
     }
   ]
 }

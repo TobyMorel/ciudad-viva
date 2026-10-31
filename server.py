@@ -195,6 +195,58 @@ def ensure_heritage_state():
     state.setdefault("adaptiveReuseWorks",[]);state.setdefault("adaptiveReuseHistory",[])
     state["version"]=max(53,int(state.get("version",1)))
 
+def ensure_government_state():
+    day=max(1,int(state.get("day",1)))
+    government=state.setdefault("government",{})
+    government.setdefault("mandate",1)
+    government.setdefault("startDay",day)
+    government.setdefault("nextElectionDay",day+1440)
+    government.setdefault("status","en_mandato")
+    government.setdefault("elections",[])
+    government.setdefault("crisisMonths",0)
+
+def government_districts():
+    districts=[{"id":"oeste","name":"Oeste","homes":[]},{"id":"centro","name":"Centro","homes":[]},{"id":"puerto","name":"Puerto","homes":[]}]
+    for home in state.get("buildings",[]):
+        if home.get("kind")!="home":continue
+        idx=0 if home.get("x",0)<10 else 1 if home.get("x",0)<18 else 2
+        districts[idx]["homes"].append(home)
+    rows=[]
+    for d in districts:
+        residents=[r for h in d["homes"] for r in h.get("residents",[])]
+        population=sum(int(h.get("occupants",len(h.get("residents",[])))) for h in d["homes"])
+        eligible=[r for r in residents if r.get("workerEligible")]
+        employed=sum(1 for r in eligible if r.get("status")=="empleado")
+        crowding=sum(int(h.get("occupants",0)) for h in d["homes"])/max(1,sum(int(h.get("capacity",h.get("occupants",0))) for h in d["homes"]))
+        quality=sum(float(h.get("quality",80)) for h in d["homes"])/max(1,len(d["homes"]))
+        services=max(0,min(100,float(state.get("services",0))))
+        employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
+        housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
+        score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23))
+        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"support":round(score),"homes":len(d["homes"]),"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Gestión estable"})
+    return rows
+
+def government_report():
+    ensure_government_state()
+    g=state["government"];day=int(state.get("day",1));remaining=max(0,int(g["nextElectionDay"])-day)
+    districts=government_districts();eligible=sum(d["population"] for d in districts)
+    turnout=sum(round(d["population"]*.72) for d in districts)
+    incumbent=sum(round(round(d["population"]*.72)*d["support"]/100) for d in districts)
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":round(100*incumbent/max(1,turnout)),"lastElection":g["elections"][-1] if g["elections"] else None,"crisisMonths":g.get("crisisMonths",0)}
+
+def process_government_election():
+    ensure_government_state();g=state["government"]
+    if g["status"]!="en_mandato" or int(state.get("day",1))<int(g["nextElectionDay"]):return
+    report=government_report();districts=[]
+    for d in report["districts"]:
+        voters=round(d["population"]*.72);votes=round(voters*d["support"]/100)
+        districts.append({"name":d["name"],"eligible":d["population"],"turnout":voters,"governmentVotes":votes,"governmentPct":round(100*votes/max(1,voters)),"issue":d["issue"]})
+    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);pct=round(100*votes/max(1,total_votes));won=pct>=50
+    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%","Vivienda y hacinamiento: evaluación por distrito"]}
+    g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
+    if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elección consideró empleo, vivienda, servicios y confianza de los distritos.")
+    else:g["status"]="derrotado";state["paused"]=True;ev("Derrota compartida en las elecciones",f"El gobierno obtuvo {pct}% y perdió la mayoría. Todo el equipo deja el mandato; la ciudad queda pausada en modo observación.")
+
 def ensure_critical_inspection_schedule(building):
     if building.get("kind") not in ("powerPlant","waterPlant","wastewaterPlant"):return
     building.setdefault("inspectionIntervalDays",180)
@@ -432,7 +484,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":53,"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":240,"baseTelecomCapacityMbps":500,"baseDrainageCapacityM3Day":3300,"baseWastewaterTreatmentM3Day":180,"basePowerCapacityKw":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":54,"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -540,6 +592,8 @@ def ensure_supply_state():
     state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
     state.setdefault("busRoutes",[])
     ensure_heritage_state()
+    ensure_government_state()
+    state["version"]=max(54,int(state.get("version",1)))
     for building in state["buildings"]:
         ensure_critical_inspection_schedule(building)
         if building.get("kind")=="civic":building.setdefault("jobSlots",12)
@@ -2437,6 +2491,7 @@ def tick_one_day():
         move_households()
         collect_adaptive_rents()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
+    process_government_election()
     process_market_orders()
     process_supply_orders()
     process_port_logistics()
@@ -2727,6 +2782,7 @@ def public_state(player_id=None):
     ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
+    view["governmentReport"]=government_report()
     view["municipalFinance"]=municipal_finance_report()
     view["heritageReport"]=heritage_report()
     view["roadMaintenanceReport"]=road_maintenance_report()
@@ -2855,6 +2911,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                ensure_government_state()
+                if state["government"].get("status")=="derrotado" and action not in ("new",):
+                    self._send(409,{"error":"El equipo perdió las elecciones. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
                 if action=="startAdaptiveReuse":
                     ensure_supply_state();x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""))
                     building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)

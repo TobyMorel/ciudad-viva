@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.69 · 31 de octubre de 2026
+**Entrega:** Alfa 0.70 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -8,6 +8,8 @@
 El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no tiene una matriz estable de pesos y criterios de aceptación verificables que cubra las 34 fases completas del roadmap. Las entregas y funcionalidades listadas abajo describen evidencia funcional, pero no se convierten en un porcentaje por cantidad de versiones, archivos o pruebas. Para calcularlo hay que registrar y mantener una ponderación por alcance de fases y criterios de finalización; hasta entonces no corresponde publicar X%/Y%.
 
 ## Implementado
+
+- Alfa 0.70 · Fase 32 (parcial): mandatos de cuatro años y elecciones cada 1.440 días. El sondeo y escrutinio se calculan en Oeste, Centro y Puerto a partir de empleo residente, ocupación/calidad de hogares, servicios y aprobación municipal; el distrito muestra su indicador más rezagado. Participación inicial determinista del 72%. El resultado se guarda, se sincroniza mediante el estado anfitrión LAN y afecta a todo el equipo: victoria renueva el mandato; derrota pausa el juego competitivo y deja disponible la observación/guardado. Online/Offline, esquema 54. Python verificó renovación y derrota tras cambios de gestión; Chromium confirmó derrota persistida y pausa en Offline. UI de Gobierno comprobada a 390×900 y 1440×900: tres distritos visibles, scroll vertical utilizable, sin overflow horizontal ni errores JavaScript. No se probó la conexión entre dos equipos físicos. Faltan metas municipales, reclamos localizados, transparencia y destitución extraordinaria.
 
 - Alfa 0.69 · Fase 30 (parcial): un comercio cerrado puede reconvertirse a vivienda privada tras resolver deuda y patrimonio protegido. El permiso ingresa $200 a tesorería; inversor privado paga $4.200 al contratista, ocupa cuatro trabajadores y completa refuerzo, instalaciones y habilitación en 20–30 días. La casa recibe 24 plazas; migración mensual responde a vacantes, empleo y aprobación. Cada mudanza registra una fecha individual; el alquiler de $24 por residente empieza después de 30 días, consume caja doméstica, acumula mora y puede reducir aprobación. Online/Offline, esquema 53. Verificado ciclo de permiso, inversión, obra y conversión en ambos motores; la simulación Offline también completó migración de hogares. Chromium 390×844 y 1440×900: sin overflow horizontal ni errores JS, panel plegable conserva su estado entre actualizaciones y permite scroll vertical. Quedan fuera hogares desplazados, protección de inquilinos, aumentos de alquiler y reconversión inversa a comercio.
 

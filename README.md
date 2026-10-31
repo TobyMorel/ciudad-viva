@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.69
+# Ciudad Viva · Alfa 0.70
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -170,3 +170,8 @@ Centrales eléctricas, plantas potabilizadoras y depuradoras requieren una revis
 ## Alfa 0.69 · reconversión a vivienda
 
 Los comercios que cierran pueden volver a usarse como vivienda si no tienen deudas pendientes y no son inmuebles protegidos. El inversor paga $4.200 a una constructora, la ciudad recibe $200 por permiso y cuatro trabajadores realizan una obra de 20–30 días. La inspección de agua, saneamiento y seguridad habilita 24 plazas. La migración depende de viviendas libres, empleo y aprobación; cada residente comienza a pagar alquiler tras 30 días en esa vivienda. La mora acumulada puede reducir la aprobación. Funciona Online y Offline; guardados al esquema 53.
+
+
+## Alfa 0.70 · mandatos y elecciones
+
+Cada 1.440 días de juego se realiza una elección para renovar el gobierno municipal. La estimación y el escrutinio se presentan por Oeste, Centro y Puerto, utilizando empleo residente, hacinamiento/calidad de vivienda, servicios y aprobación. La participación inicial es 72% para una simulación determinista. Si el equipo gana, inicia un nuevo mandato; si pierde, la partida compartida se pausa en modo observación. Disponible Online y Offline, guardado esquema 54. La fase 32 continúa: todavía faltan planes con metas, reclamos localizados, transparencia y causales de destitución extraordinaria.

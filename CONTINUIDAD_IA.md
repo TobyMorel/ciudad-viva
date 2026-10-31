@@ -96,3 +96,10 @@ Continuar la fase 33 con simulación reproducible de varias décadas. Hacer prue
 - La instrucción explícita del usuario es que todos los jugadores invitados puedan hacer todo. Las carteras municipales son rótulos voluntarios, se pueden reasignar y no autorizan ni bloquean acciones.
 - Revisar y ejecutar escenarios para verificar inicio residencial/comercial/industrial en ambos motores, condiciones de capital/cuadrillas y demanda. La UI de parcela requiere comprobación responsive.
 - El progreso global no puede estimarse con rigor: el roadmap no asigna pesos entre sus 34 fases. Avances por fase estables: 1=70, 4=60, 5=70, 16=20, 17=60, 18=55, 20=55, redondeados a múltiplos de 5.
+
+
+### Alfa 0.82 · cadena regional de alimentos (actual)
+
+La procesadora compra grano finito a una cooperativa regional, paga con caja empresarial, espera preparación y ruta vial, produce solo con insumo real y vende stock de alimentos a comercios por el mercado existente. La ficha informa pedidos, inventario, faltantes y ventas; los camiones 3D pueden seleccionarse. Verificado Online y Offline con llegadas y producción.
+
+**Próximo punto:** implementar las cadenas áridos→hormigón→obra y madera→aserradero→materiales, y hacer que el abastecimiento de fábricas compita por cuotas bajo escasez. Después avanzar fase 19 (licitaciones y dirección de obras); continuar gobierno electoral del hito E más adelante. Conservar las acciones abiertas a invitados y documentar las diferencias Offline conocidas. El global continúa no estimable sin pesos de fase.

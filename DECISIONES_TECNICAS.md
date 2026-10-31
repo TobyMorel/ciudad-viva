@@ -257,3 +257,10 @@ La fábrica usa plantilla y acceso simultáneo a energía, agua y tratamiento cl
 - Las oportunidades de tiendas ahora pueden originarse en escasez local de hogares, además de demanda regional. Los inversores eligen parcelas conectadas; si faltan fondos, cuadrillas o materiales, se aplaza el crecimiento en vez de inventar edificios o recursos.
 - Offline reproduce la activación automática residencial, comercial e industrial sobre su motor existente. Su construcción simplificada aún no consume materiales; se mantiene como limitación explícita.
 - Las carteras del equipo cooperativo son etiquetas voluntarias para coordinarse. No hay permisos por rol ni acciones de gestión reservadas al usuario anfitrión: cualquier jugador puede hacer todo, usar herramientas, gestionar tiempo, guardar/cargar o iniciar otra ciudad. Las carteras solo organizan la conversación. La identidad anfitriona marca el proceso servidor y se conserva al reiniciar/cargar para no transferir autoridad técnica.
+
+
+## Alfa 0.82 · abastecimiento industrial por carretera
+
+- Se usa una cooperativa regional finita para abastecer a la procesadora con grano. La empresa paga el pedido desde caja privada, el stock del proveedor se descuenta al despachar y el insumo solo ingresa al recibir la carga por ruta. El límite de reposición mensual y el stock máximo evitan importaciones infinitas.
+- Cada unidad de grano permite procesar como máximo una unidad de alimento terminado. La producción también requiere plantilla, servicios y lugar en el inventario local; los comercios compran los alimentos y acreditan ventas a la fábrica. Se mantiene separado del proveedor de insumos minoristas para evitar que una tienda compre grano crudo.
+- El mismo objeto de pedido se usa para entrega temporal y representación en el mapa 3D. Online actualiza distancia recorrida con congestión; Offline estima llegada por ruta y días. No se afirma una simulación de tráfico idéntica entre motores.

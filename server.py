@@ -57,7 +57,9 @@ MARKET_SUPPLIERS = {
     "Abasto Expreso":{"unitCost":5.5,"stock":150,"maxStock":240,"monthlyOutput":115,"leadDays":1,"profile":"Reposición rápida · precio alto"}}
 
 def new_market_supply():
-    return {name:{**values,"cash":18000,"lastSales":0} for name,values in MARKET_SUPPLIERS.items()}
+    suppliers={name:{**values,"cash":18000,"lastSales":0} for name,values in MARKET_SUPPLIERS.items()}
+    suppliers["Cooperativa Agrícola Regional"]={"unitCost":3.4,"stock":320,"maxStock":600,"monthlyOutput":180,"leadDays":2,"profile":"Grano regional · cuota finita y entrega por carretera","cash":18000,"lastSales":0,"source":[21,10],"commodity":"grano"}
+    return suppliers
 
 def new_business(building, job_slots, starting_cash=5000):
     slots=max(1,int(job_slots))
@@ -777,7 +779,7 @@ CONTRACTORS = {
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
 PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y licitación","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
-PROJECTS["factory"]={"label":"Fábrica de bienes básicos","cost":9200,"days":68,"stageNames":["Licencia y capital privado","Cimentación y nave","Maquinaria y servicios","Pruebas de producción","Inspección y apertura"]}
+PROJECTS["factory"]={"label":"Procesadora de alimentos","cost":9200,"days":68,"stageNames":["Licencia y capital privado","Cimentación y nave","Maquinaria y servicios","Pruebas de producción","Inspección y apertura"]}
 PROJECTS["powerPlant"]={"label":"Central eléctrica","cost":18800,"days":96,"stageNames":["Estudio y permisos","Cimientos y turbina","Conexión eléctrica","Pruebas de generación","Inspección y puesta en marcha"]}
 PROJECTS["school"]={"label":"Escuela primaria","cost":9600,"days":68,"stageNames":["Proyecto y permisos","Cimientos y aulas","Instalaciones y patio","Equipamiento y contratación inicial","Inspección y habilitación"]}
 PROJECTS["fireStation"]={"label":"Cuartel de bomberos","cost":11200,"days":74,"stageNames":["Proyecto y permisos","Cimientos y estructura","Taller y dormitorios","Equipos y vehículos","Pruebas de despacho e inspección"]}
@@ -2305,11 +2307,19 @@ def process_market_orders():
         remaining=max(0,distance-order.get("travelledDistance",0))
         order["arrivalDay"]=max(state["day"]+1,max(state["day"],order["supplierReadyDay"])+math.ceil(remaining*factor/6))
         if state["day"]<=order["supplierReadyDay"] or order.get("travelledDistance",0)<distance:continue
-        firm=next((b.get("business") for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("id")==order["businessId"]),None)
+        building=next((b for b in state["buildings"] if b.get("kind") in ("shop","factory") and b.get("business",{}).get("id")==order["businessId"]),None)
+        firm=building.get("business") if building else None
         if firm and firm.get("status")=="abierto":
-            firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
+            if order.get("type")=="industrial_raw" and building.get("kind")=="factory":
+                firm["rawMaterialInventory"]=firm.get("rawMaterialInventory",0)+order["quantity"]
+                industry=state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]})
+                industry["unitsImported"]=industry.get("unitsImported",0)+order["quantity"]
+                firm["lastMaterialCause"]="Entrega recibida"
+                ev("Grano recibido en fábrica",f"{order['businessName']} recibió {order['quantity']} unidades tras {distance} tramos; existencias {firm['rawMaterialInventory']}.")
+            else:
+                firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
+                ev("Insumos recibidos",f"{order['supplier']} entregó {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
             order["status"]="entregado";order["deliveredDay"]=state["day"]
-            ev("Insumos recibidos",f"{order['supplier']} entregó {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
         else:
             order["status"]="cancelado";order["statusCause"]="Empresa cerrada antes de recibir la carga"
 
@@ -2478,16 +2488,19 @@ def simulate_business_month(workforce):
                 key=(shop["x"],shop["y"]);price=max(1,int(shop["business"].get("price",18)))
                 demand[key]+=quantity;shopping[key].append(({"householdCash":quantity*price},quantity))
     market_suppliers=state["supply"].setdefault("market",new_market_supply())
+    market_orders=state["supply"].setdefault("marketOrders",[])
     industry=state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]})
     for factory in [b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("status")=="abierto"]:
         firm=factory["business"];work=workplace.get((factory["x"],factory["y"]),{});staffed=max(0,int(work.get("staffedJobs",0)))
         utility=factory.get("utilityAccess",{});utility_factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100
         capacity=max(0,min(90,round(staffed*1.5*utility_factor)))
         name=f"Fábrica local {factory['x']+1}-{factory['y']+1}"
-        supplier=market_suppliers.setdefault(name,{"unitCost":4.0,"stock":0,"maxStock":180,"monthlyOutput":0,"leadDays":1,"profile":"Producción local · empleo y servicios urbanos","source":[factory["x"],factory["y"]],"cash":0,"lastSales":0})
-        produced=min(capacity,max(0,supplier.get("maxStock",180)-supplier.get("stock",0)))
+        supplier=market_suppliers.setdefault(name,{"unitCost":4.0,"stock":0,"maxStock":180,"monthlyOutput":0,"leadDays":1,"profile":"Alimentos procesados · producción local","source":[factory["x"],factory["y"]],"cash":0,"lastSales":0,"commodity":"alimentos"})
+        firm.setdefault("rawMaterialInventory",0);firm.setdefault("lastMaterialPurchase",0);firm.setdefault("lastMaterialShortage",0);firm.setdefault("lastMaterialCause","")
+        raw_inventory=max(0,int(firm.get("rawMaterialInventory",0)))
+        produced=min(capacity,raw_inventory,max(0,supplier.get("maxStock",180)-supplier.get("stock",0)))
         payroll=max(0,int(work.get("payroll",0)));operating=max(0,int(factory.get("monthlyOperatingCost",180)))
-        firm["cash"]=int(firm.get("cash",0)-payroll-operating)
+        firm["cash"]=int(firm.get("cash",0)-payroll-operating);firm["lastSales"]=0;firm["lastRevenue"]=0;firm["lastInputs"]=0;firm["lastProfit"]=-payroll-operating
         for employee in workforce.get("employees",[]):
             if employee.get("site") is factory:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee["home"]
@@ -2497,8 +2510,24 @@ def simulate_business_month(workforce):
             firm["status"]="cerrado";factory["status"]="cerrado";state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)));supplier["stock"]=0
             ev("Fábrica insolvente",f"{factory.get('name','Fábrica')}: ingresos locales insuficientes para pagar nómina de $ {payroll} y operación de $ {operating}. Se liberaron {firm.get('jobSlots',20)} puestos.")
             continue
-        supplier["stock"]+=produced;firm["lastProduction"]=produced;industry["unitsProduced"]+=produced;supplier["cash"]=firm["cash"]
-    market_orders=state["supply"].setdefault("marketOrders",[])
+        supplier["stock"]+=produced;firm["rawMaterialInventory"]=raw_inventory-produced;firm["lastProduction"]=produced;industry["unitsProduced"]+=produced;supplier["cash"]=firm["cash"]
+        pending=sum(o.get("quantity",0) for o in market_orders if o.get("businessId")==firm.get("id") and o.get("status")=="en tránsito" and o.get("type")=="industrial_raw")
+        raw_supplier=market_suppliers.get("Cooperativa Agrícola Regional",{});target=min(60,max(12,capacity*2));need=max(0,target-firm["rawMaterialInventory"]-pending)
+        route=route_between(tuple(raw_supplier.get("source",(21,10))),(factory["x"],factory["y"])) if need and raw_supplier.get("stock",0)>0 else None
+        firm["lastMaterialPurchase"]=0;firm["lastMaterialCost"]=0;firm["lastMaterialShortage"]=need
+        if need and route:
+            landed=float(raw_supplier.get("unitCost",3.4))+max(0,len(route)-1)*.08+raw_supplier.get("leadDays",2)*.15
+            quantity=min(need,int(raw_supplier.get("stock",0)),max(0,int(max(0,firm["cash"]-500)//max(.01,landed))))
+            if quantity:
+                cost=round(quantity*landed,2);firm["cash"]-=round(cost);raw_supplier["stock"]-=quantity;raw_supplier["cash"]+=cost;raw_supplier["lastSales"]=raw_supplier.get("lastSales",0)+quantity
+                ready=state["day"]+int(raw_supplier.get("leadDays",2));distance=max(0,len(route)-1)
+                market_orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"grano","businessId":firm["id"],"businessName":firm.get("name",factory.get("name","Fábrica")),"supplier":"Cooperativa Agrícola Regional","quantity":quantity,"unitCost":round(landed,2),"cost":round(cost),"orderedDay":state["day"],"supplierReadyDay":ready,"travelDistance":distance,"travelledDistance":0,"source":list(raw_supplier.get("source",(21,10))),"x":factory["x"],"y":factory["y"],"route":route,"status":"en tránsito","statusCause":"Preparación y viaje de materia prima"})
+                firm["lastMaterialPurchase"]=quantity;firm["lastMaterialCost"]=round(cost);firm["lastInputs"]=round(cost);firm["lastProfit"]-=round(cost);firm["lastMaterialCause"]="Pedido en tránsito";firm["lastMaterialShortage"]=max(0,need-quantity)
+                ev("Materia prima encargada",f"{factory.get('name','Fábrica')}: {quantity} unidades de grano por ${round(cost):,}; entrega vial prevista día {ready+max(1,math.ceil(distance/6))}.".replace(",","."))
+        elif need:
+            firm["lastMaterialShortage"]=need
+            firm["lastMaterialCause"]="Sin ruta vial a la cooperativa regional" if raw_supplier.get("stock",0)>0 else "Cuota regional de grano agotada"
+        else:firm["lastMaterialCause"]=""
     revenue_total=payroll_total=sales_total=closed=inputs_total=0
     for shop in shops:shop["business"]["lastRegionalSales"]=0
     for shop in shops:
@@ -2531,7 +2560,7 @@ def simulate_business_month(workforce):
         source=(4,10)
         providers=[]
         for name,supplier in market_suppliers.items():
-            if supplier.get("stock",0)<=0:continue
+            if supplier.get("commodity")=="grano" or supplier.get("stock",0)<=0:continue
             source=tuple(supplier.get("source",(4,10)))
             route=route_between(source,(shop["x"],shop["y"]))
             if not route:continue
@@ -2559,7 +2588,9 @@ def simulate_business_month(workforce):
                 source_factory=next((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and supplier.get("source")==[b.get("x"),b.get("y")]),None)
                 if source_factory:
                     source_factory["business"]["lastLocalSales"]=source_factory["business"].get("lastLocalSales",0)+quantity
-                    source_factory["business"]["cash"]+=round(quantity*supplier["unitCost"])
+                    source_factory["business"]["lastSales"]=source_factory["business"].get("lastSales",0)+quantity
+                    revenue=round(quantity*supplier["unitCost"]);source_factory["business"]["lastRevenue"]=source_factory["business"].get("lastRevenue",0)+revenue;source_factory["business"]["lastProfit"]=source_factory["business"].get("lastProfit",0)+revenue
+                    source_factory["business"]["cash"]+=revenue
             else:
                 industry["unitsImported"]+=quantity
             order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"source":list(source),"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en tránsito","statusCause":"Preparación en proveedor"}
@@ -3012,10 +3043,10 @@ def tick_one_day():
                 opening_capital=min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=opening_capital
                 building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
             elif p["kind"]=="factory":
-                building={"x":p["x"],"y":p["y"],"kind":"factory","name":"Fábrica de bienes básicos","level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":180}
-                building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"status":"abierto","cash":4200,"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0}
+                building={"x":p["x"],"y":p["y"],"kind":"factory","name":"Procesadora de alimentos","level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":180}
+                building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"status":"abierto","cash":4200,"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"Esperando el primer pedido regional"}
                 state["buildings"].append(building);state["jobs"]+=20
-                ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos y acceso al mercado local. La producción mensual depende de personal, servicios y ventas de comercios.")
+                ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos. Debe comprar grano regional por camión; la producción y venta local dependen de inventario, personal y servicios.")
             elif p["kind"]=="depot":
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":"Depósito municipal","level":1,"status":"habilitado","capacityAdded":500,"quality":quality})
                 depot_id=f"depot-{p['x']}-{p['y']}"

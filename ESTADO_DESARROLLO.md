@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.81 · 31 de octubre de 2026
+**Entrega:** Alfa 0.82 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -550,3 +550,18 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 - API LAN de dos participantes simulados: el invitado reasignó una cartera, zonificó, cambió velocidad y pausa, guardó, inició otra ciudad y cargó; las siete acciones respondieron correctamente y el anfitrión autoritativo se conservó. No equivale a prueba física entre dos equipos.
 - Chromium 390×844 y 1440×900: menús y mapa sin overflow horizontal ni errores JavaScript; la ficha de parcelas y peatones abrió sin desbordar el viewport. Los mandos de zona se dispusieron en grilla adaptable.
 - Fases actualizadas a 5 puntos por el método publicado: 4=60%, 5=70%, 17=60%, 18=55%, 20=55%. No se calcula porcentaje global porque las fases no tienen pesos comunes definidos.
+
+
+## Alfa 0.82 · grano, procesamiento y venta local
+
+- La procesadora ya no crea alimentos sin materia prima. La cooperativa regional ofrece 320 unidades iniciales de grano, cupo de reposición mensual de 180 y tope de stock de 600. Las empresas encargan según capacidad, pagan precio, flete y demora; la carga se descuenta al salir y viaja desde la entrada vial regional.
+- La fábrica transforma hasta el límite del insumo, personal, servicios y almacenamiento terminado. Se registran importaciones recibidas, producción, compras de comercios, costos, ventas y rentabilidad. Los comercios no pueden comprar el grano crudo como si fuera producto minorista. La planta vende alimentos por la misma infraestructura de proveedores y transferencias que ya usa el comercio.
+- Offline usa el mismo cupo regional, pedidos con ETA vial, inventario de grano, producción y ventas. Sus trayectos de compras aún usan su motor de días estimados, y la construcción Offline sigue sin consumo de materiales.
+- Los pedidos regionales se dibujan como camiones 3D seleccionables. La ficha de la procesadora muestra existencias, último pedido y costo, faltante, producción, stock terminado y compras comerciales.
+
+### Verificación Alfa 0.82
+
+- Online: la procesadora pidió 36 unidades, la cooperativa redujo su stock; la carga llegó al cabo de la ruta y la siguiente producción convirtió 18 unidades de grano.
+- Offline en navegador: llegaron pedidos de 54 y 27 unidades por calles conectadas; el siguiente cierre produjo 27 alimentos con 19 trabajadores. También se verificó que los pedidos de grano no se ofrecen a comercios como insumos minoristas.
+- Chromium 390×844 y 1440×900: el panel de abastecimiento ajusta sus columnas al ancho del modal; sin desborde horizontal de página ni errores JS. La ruta de grano se ve como camión 3D.
+- Fase 18 pasa de 55% a 60% usando el criterio documentado de saltos de cinco puntos. El progreso global sigue sin estimación por falta de ponderación de las 34 fases. LAN física y Vercel no se probaron.

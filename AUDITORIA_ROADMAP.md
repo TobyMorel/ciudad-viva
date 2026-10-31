@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.81
+# Auditoría del roadmap · Alfa 0.82
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -296,3 +296,10 @@ La fase 17 subraya las empresas y empleos de la nueva fábrica; fase 18 la caden
 - La interfaz de parcela expone los tres usos con códigos de color y explica qué inicia el crecimiento. Las viviendas no generan residentes hasta que una mudanza ocurra. Comercios y fábricas se vuelven edificios visibles tras terminar las obras por etapas.
 - La cooperación presenta referentes voluntarios y deja todas las herramientas y controles de juego disponibles a los invitados, incluidos velocidad, pausa, nueva partida, guardado y carga. El proceso servidor permanece autoritativo.
 - Verificado en Online y Offline: vivienda ante demanda; sin vivienda con demanda cero; fábrica al existir actividad comercial; tienda al quedar compras domésticas sin atender; permisos, contratista y capital aplicados. API de sala: invitado pudo hacer gestión, tiempo, nueva partida y guardado/carga. Chromium móvil/escritorio sin errores ni overflow horizontal. No se probó LAN física. Global no estimable por falta de ponderación entre las 34 fases.
+
+
+## Alfa 0.82 · primera cadena industrial de fase 18
+
+La procesadora importa grano de cuota regional limitada por camión, descuenta la compra de su caja, espera ETA, consume inventario en producción condicionada a empleo/servicios y ofrece alimentos como proveedor local. Los comercios compran esos productos y abonan a la fábrica. La ficha del edificio y los camiones 3D muestran el ciclo. Una primera cadena está verificada; permanecen pendientes los otros tres circuitos del roadmap, depósitos y mermas.
+
+La fase 18 sube a 60%. Offline comparte insumo/producción pero conserva sus diferencias: pedidos con ETA simplificada y obras sin consumo de materiales. El global permanece sin cálculo verificable porque no hay ponderaciones entre fases.

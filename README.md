@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.81
+# Ciudad Viva · Alfa 0.82
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -227,3 +227,8 @@ Cada contrato estándar conserva el mandato en que se aprobó. La pantalla Gobie
 ## Alfa 0.81 · crecimiento de ciudad autónomo
 
 Pintá suelo residencial, comercial o industrial para permitir inversión. Las casas, tiendas y fábricas se inician por promotores según la demanda real de hogares, empleo, compras no cubiertas y disponibilidad de capital, permisos, constructoras y acceso; no hace falta colocarlas manualmente. En salas cooperativas, los referentes de cada cartera son voluntarios: todos los jugadores conservan todas las acciones, controles de partida y guardado/carga.
+
+
+## Alfa 0.82 · primera cadena de alimentos
+
+La procesadora industrial compra grano a una cooperativa regional con cupo mensual finito, paga la mercancía y espera el transporte por carretera. El grano recibido limita su producción junto con el empleo y los servicios; el alimento terminado queda en inventario local y los comercios lo compran por la red de proveedores. Los pedidos y camiones son visibles, y la ficha del edificio informa cantidades, costos y faltantes. Online y Offline.

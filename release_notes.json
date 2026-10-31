@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.81",
+  "currentVersion": "0.82",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.82",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 18: la procesadora compra grano de un proveedor regional con inventario finito, paga con caja privada y recibe la carga tras tiempo de preparación y recorrido vial. Solo produce según grano disponible, personal, servicios y espacio de producto terminado; los comercios compran sus alimentos por la red de proveedores y pagan a la fábrica.",
+        "Online y Offline registran pedidos, existencias importadas, unidades procesadas y ventas locales. En 3D se ven los camiones regionales en ruta y se puede seleccionar su carga. La ficha de fábrica muestra grano, faltante, pedidos, producto terminado y compras comerciales. Offline conserva la simplificación existente de materiales de construcción."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 60,
+      "overallProgress": null
+    },
     {
       "version": "0.81",
       "date": "2026-10-31",
@@ -901,10 +912,10 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 55,
-      "summary": "Fábricas zonificadas aportan producción local automática; comercios compran según stock, precio y ruta vial.",
+      "progress": 60,
+      "summary": "Primer circuito completo: grano regional finito por camión → procesadora con costos, personal, servicios e inventario → compra de alimentos por comercios.",
       "pending": [
-        "Cadenas de materias primas y transformación detalladas; logística regional completa."
+        "Completar áridos→hormigón→obra, madera→aserradero y acero local/importado; escasez, depósitos, mermas y cuello de botella logístico."
       ]
     },
     {

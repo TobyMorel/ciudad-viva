@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.78 · 31 de octubre de 2026
+**Entrega:** Alfa 0.80 · 31 de octubre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -465,7 +465,7 @@ Ciudad > Puerto presenta volumen potencial, presupuesto, destinos competidores, 
 
 ## Alfa 0.75 · inversión privada y selección de habitantes (fase 33, parcial)
 
-El mercado regional finito puede generar una propuesta para un comercio cuando quedan al menos 12 ventas mensuales sin cubrir, hay una parcela comercial libre conectada al corredor de salida, la caja privada cubre construcción más reserva operativa, una empresa constructora tiene capacidad y siete trabajadores, y el municipio puede pagar el permiso. La oferta expira en 90 días; rechazar no consume dinero ni terreno y abre un enfriamiento de 90 días. Aceptarla verifica el identificador vigente y crea un proyecto privado real: permiso a la tesorería, capital al circuito de obra, constructor, cuadrilla, materiales/etapas e inspección previa a apertura. Disponible Online y Offline, esquema 59.
+El mercado regional finito puede generar una propuesta para un comercio cuando quedan al menos 12 ventas mensuales sin cubrir, hay una parcela comercial libre conectada al corredor de salida, la caja privada cubre construcción más reserva operativa, una empresa constructora tiene capacidad y siete trabajadores, y el municipio puede pagar el permiso. La oferta expira en 90 días; rechazar no consume dinero ni terreno y abre un enfriamiento de 90 días. Aceptarla verifica el identificador vigente y crea un proyecto privado real: permiso a la tesorería, capital al circuito de obra, constructor, cuadrilla, materiales/etapas e inspección previa a apertura. Disponible Online y Offline, esquema 60.
 
 Al seleccionar una vivienda, el panel muestra su padrón con edad, estado laboral, empleador, salario y transporte disponible. Peatones y vehículos con ruta simulada son seleccionables en el mapa y muestran actividad, ruta y perfiles de pasajeros cuando existen. Los vehículos ambientales sin perfil siguen siendo decorativos. La navegación de categorías de Ciudad se desplaza horizontalmente con rueda y gesto táctil; al cambiar de categoría la pestaña activa permanece visible.
 
@@ -473,7 +473,7 @@ Avance fase 33: 30% orientativo bajo el criterio fijo por fase. Falta comprobar 
 
 ### Verificación Alfa 0.75
 
-- `python -m py_compile server.py`, `node --check` en `offline.js`, `game.js` y `world3d.js`, y análisis JSON del historial: correctos. Guardados Online/Offline actualizan esquema 59.
+- `python -m py_compile server.py`, `node --check` en `offline.js`, `game.js` y `world3d.js`, y análisis JSON del historial: correctos. Guardados Online/Offline actualizan esquema 60.
 - Online: API creó una propuesta con ventas regionales sin atender; aceptación exacta inició contrato privado con siete trabajadores, cobró el permiso y registró el costo privado; el segundo intento de aceptar la misma oferta fue rechazado como duplicado.
 - Offline: Chromium acelerado cruzó el cierre mensual, generó oferta en parcela conectada (día 31, 35 unidades potenciales pendientes en el informe; una oferta vigente y vencimiento 90 días), y aceptó esa inversión. La obra quedó privada con siete trabajadores; tesorería pasó de $49.704 a $49.272 (permiso $432) y capital privado de $26.000 a $22.832 (costo contractual $3.168). La prueba usó un guardado controlado y no simula 30 años.
 - Chromium 390×844 y 1440×900: el panel Ciudad cabe sin overflow horizontal del documento; la tira de categorías supera el ancho disponible, sus etiquetas no se recortan y puede desplazarse. Captura móvil revisada. El contenido de roster y actores está vinculado a perfiles en el código; aún falta una pasada manual de inspección sobre hogares y actores en un mapa renderizado con la escena final.
@@ -503,6 +503,33 @@ Verificación: prueba autoritativa Online creó la propuesta y contrato con $432
 
 ## Alfa 0.78 · contratos visibles entre mandatos
 
-Cada nuevo contrato de construcción registra el mandato y el día en que se adjudicó. Gobierno > Obras y compromisos resume los proyectos activos con etapa, empresa, trabajadores, pagos realizados y saldo pendiente, separado entre fondos municipales y privados; señala cuáles provienen de mandatos anteriores. El acta electoral guarda la cartera al momento del voto, y la renovación del gobierno conserva el proyecto, su etapa y los pagos. No se modificó el esquema 59. La cobertura actual incluye proyectos estándar; no integra todavía todas las rehabilitaciones especiales, deuda y planes de mantenimiento en una sola cartera.
+Cada nuevo contrato de construcción registra el mandato y el día en que se adjudicó. Gobierno > Obras y compromisos resume los proyectos activos con etapa, empresa, trabajadores, pagos realizados y saldo pendiente, separado entre fondos municipales y privados; señala cuáles provienen de mandatos anteriores. El acta electoral guarda la cartera al momento del voto, y la renovación del gobierno conserva el proyecto, su etapa y los pagos. No se modificó el esquema 60. La cobertura actual incluye proyectos estándar; no integra todavía todas las rehabilitaciones especiales, deuda y planes de mantenimiento en una sola cartera.
 
 Prueba Online: una obra pública heredada con saldo $6.000 apareció en la cartera electoral; tras la renovación mantuvo el mismo ID y saldo. Offline Chromium avanzó la misma obra un día durante la elección, guardó en el acta el saldo de $5.885 y la dejó activa bajo el mandato siguiente. Chromium 390×844 y 1440×844: tarjeta de compromisos en Gobierno legible, sin overflow horizontal ni errores JS. Simulación de 30 años, LAN física y Vercel siguen pendientes.
+
+
+## Alfa 0.79 · zonificación y crecimiento privado
+
+- Pintura por arrastre de zonas verdes residenciales, azules comerciales y amarillas industriales. Solo una parcela libre junto a calle terminada es elegible; cambiar el color cambia el permiso. En el guardado nuevo, ninguna parcela vacía viene zonificada por defecto.
+- La demanda residencial acumula personas con posibilidad laboral y queda pendiente mientras falte vivienda o empleo. Solo la llegada real reduce el contador. Las viviendas nuevas terminan vacías; promotores privados usan caja municipal para permisos, capital, materiales regionales y cuadrillas para contratar la obra.
+- El crecimiento comercial automático exige demanda regional sin atender y zona pintada. Una fábrica privada requiere zona industrial, ofrece 20 puestos y produce mercancías solo con personal y servicios básicos; su inventario se vende por el mercado de insumos a los comercios mediante rutas/costos existentes.
+- Offline y Online tienen zonificación, backlog de hogares, promoción residencial, fábrica y compra de stock industrial local. Límite actual: el constructor Offline todavía avanza sin consumir materiales; la promoción comercial automática se comparte, pero su tubería de obra mantiene esa limitación.
+- Comprobado: sintaxis Python/JavaScript/JSON; Online inicia obra residencial solo en zona permitida, compra materiales y reserva permiso/capital; sin zona no hay obra. En escenario de fábrica Online, 16 unidades se produjeron y 15 se compraron por comercios desde proveedor local.
+- Verificado en Offline: migración con demanda pendiente inicia vivienda zonificada; 25 unidades fabriles producidas con 20 puestos, 18 atendidos, servicios al 100% y compra local de las 25 unidades por comercios. UI comprobada en Chromium a 390×844 y 1440×900, sin overflow horizontal ni errores JS; la ficha de suelo muestra la demanda y permisos. LAN física y Vercel siguen sin probarse.
+- Fases actualizadas conforme al criterio orientativo por fase en múltiplos de 5: 1=70%, 4=55%, 5=65%, 16=20%, 17=55%, 18=50%, 20=50%. El juego completo permanece sin estimación global porque el roadmap no define pesos totales.
+
+
+## Alfa 0.80 · zonificación, demanda persistente y fábricas locales
+
+- Las parcelas vacías empiezan sin permiso. Herramientas verde residencial, azul comercial y amarillo industrial pintan con arrastre y permiten cambiar el uso de parcelas libres conectadas a calles.
+- La presión residencial queda guardada como hogares candidatos sin alojamiento. Se genera por aprobación y empleo potencial, se mantiene aunque no haya suelo autorizado y solo baja al entrar personas reales. El promotor residencial inicia como máximo una obra por cierre mensual y verifica permiso, capital, materiales, empresa, cuadrilla, acceso y demanda. Las viviendas inspeccionadas esperan residentes; no añaden población por terminarse.
+- Los permisos comerciales permiten inversión automática cuando hay ventas regionales no cubiertas. La parcela industrial habilita una fábrica privada con puestos, costos, salarios, servicios y producción. Su inventario se ofrece a las tiendas por precio y ruta, se descuenta de stock al comprarse y añade ingresos/costos al circuito empresarial. El agotamiento de caja cierra la fábrica y libera empleos.
+- La pantalla Ciudad > Suelo separa permisos, demanda residencial, trabajos zonificados y producción local. Se conservan categorías compactas; la navegación sigue siendo desplazable horizontalmente.
+
+### Verificación Alfa 0.80
+
+- `python -m py_compile server.py`, `node --check game.js`, `node --check offline.js` y validación JSON de las notas: correctos.
+- Pruebas de mecánica registradas: pintura/recoloración atómica; no se inicia una casa sin zona; promoción residencial Online compra materiales y consume permiso/capital; el backlog solo se reduce con mudanzas; la fábrica local genera stock con personal y servicios y tiendas lo compran como pedido con origen vial. Offline comprobó crecimiento residencial pendiente y producción/venta local.
+- Chromium a 390×844 y 1440×900: Ciudad > Suelo sin overflow horizontal de página, controles de categoría desplazables, texto visible y sin errores JavaScript.
+- Guardado esquema 60, con migración aditiva de `housingDemand` y `localIndustry`. La construcción general Offline aún no descuenta inventario de materiales. Materias primas industriales, competencia entre fábricas y LAN entre equipos físicos siguen pendientes; Vercel no se probó.
+- El progreso global sigue sin estimación: no existe una ponderación verificable de las 34 fases. Se conservan los avances por fase en múltiplos de 5 con el método publicado.

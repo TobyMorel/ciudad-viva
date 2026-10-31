@@ -1,7 +1,30 @@
 {
-  "currentVersion": "0.78",
+  "currentVersion": "0.80",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.80",
+      "date": "2026-10-31",
+      "changes": [
+        "Zonificación con permisos visibles: verde para viviendas, azul para comercios y amarillo para fábricas. Las parcelas sin construcción empiezan sin permiso; arrastrar pinta varias parcelas y se pueden cambiar los permisos libres.",
+        "La demanda de vivienda se acumula mientras haya candidatos habilitados que no encuentran hogar. El promotor privado solo construye en suelo residencial conectado cuando dispone de materiales, capital, permiso y cuadrilla; la casa se ocupa cuando llegan residentes reales.",
+        "La ciudad crea una fábrica de bienes básicos en suelo industrial cuando los comercios necesitan insumos. Empleo y servicios determinan la producción; las tiendas comparan precio y distancia y compran existencias locales por la red vial, desplazando importaciones.",
+        "Ciudad > Suelo muestra demanda pendiente, permisos pintados, obras privadas y aporte local de fábricas. Offline y Online comparten la mecánica; la interfaz se revisó en 390×844 y 1440×900."
+      ],
+      "roadmapPhase": 4,
+      "phaseProgress": 55,
+      "overallProgress": null
+    },
+    {
+      "version": "0.79",
+      "date": "2026-10-31",
+      "changes": [
+        "Fases 1, 4, 5, 16, 17, 18 y 20: permisos por parcela en verde residencial, azul comercial y amarillo industrial; las parcelas existentes sin construir quedan sin zonificar. Arrastrar pinta una franja y se pueden repintar parcelas libres. Las zonas requieren acceso a una calle terminada.",
+        "La demanda de vivienda conserva un contador de personas que buscan hogar; solo baja al entrar residentes. Si hay empleo, zona residencial libre, permiso municipal, capital privado, constructora y materiales, el promotor inicia una obra por etapas. La vivienda terminada queda vacía y recibe hogares según la demanda y los empleos.",
+        "La inversión comercial se contrata automáticamente cuando existe demanda regional no cubierta y una zona comercial pintada; los guardados antiguos con propuesta manual mantienen aprobación municipal. La fábrica básica ofrece 20 empleos, exige servicios y abastece el inventario de insumos de comercios con sus propias existencias y ubicación vial.",
+        "Interfaz: nueva categoría Ciudad > Suelo con demanda, parcelas permitidas, obras privadas y stock local; nueva zona industrial con edificio de fábrica visible en 3D. El avance porcentual global sigue sin estimarse: el roadmap no provee una ponderación global estable."
+      ]
+    },
     {
       "version": "0.78",
       "date": "2026-10-31",
@@ -711,10 +734,10 @@
     {
       "phase": 1,
       "title": "Terreno, parcelas, calles y urbanización",
-      "progress": 65,
-      "summary": "Parcelas, selección, calles, zonas y expansión del mapa",
+      "progress": 70,
+      "summary": "Parcelas, zonificación por color y pintura continua desde herramientas.",
       "pending": [
-        "Catastro completo, propiedad/derechos de suelo y mapas extensibles sin límites."
+        "Catastro completo, derechos de propiedad y expansión extensible del mapa."
       ]
     },
     {
@@ -740,17 +763,17 @@
     {
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
-      "progress": 45,
-      "summary": "Zonificación y crecimiento privado básico condicionado por ciudad",
+      "progress": 55,
+      "summary": "Permisos residenciales, comerciales e industriales; vivienda automática desde demanda y comercio desde demanda regional.",
       "pending": [
-        "Promotores con decisión de inversión, permisos y competencia inmobiliaria completa."
+        "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas."
       ]
     },
     {
       "phase": 5,
       "title": "Población, hogares, necesidades y migración",
-      "progress": 60,
-      "summary": "Hogares/residentes, mudanzas, empleo y necesidades básicas",
+      "progress": 65,
+      "summary": "Demanda migratoria persistente que se consume solo al recibir residentes; empleo limita la llegada.",
       "pending": [
         "Necesidades individuales completas, migración multidimensional y desigualdad."
       ]
@@ -848,28 +871,28 @@
     {
       "phase": 16,
       "title": "Geografía, geología, catastro y derecho de suelo",
-      "progress": 15,
-      "summary": "Terreno, elevación básica, parcelas y zonificación",
+      "progress": 20,
+      "summary": "Parcela zonificable y permisos por uso, con acceso vial como requisito.",
       "pending": [
-        "Geología, titularidad, catastro legal y derecho de suelo."
+        "Geología, titularidad, catastro legal y derechos de suelo."
       ]
     },
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 50,
-      "summary": "Empresas con inventario, empleo, salarios, liquidez y cierres",
+      "progress": 55,
+      "summary": "Negocios minoristas y fábrica privada con empleos; compras locales y capital operativo.",
       "pending": [
-        "Inversión y competencia dinámica, expansión, quiebras y obras abandonadas."
+        "Competencia empresarial completa, expansión y quiebra industrial; costes de producción extensos."
       ]
     },
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 40,
-      "summary": "Comercio local/regional y cadenas de insumos básicas",
+      "progress": 50,
+      "summary": "Mercado de insumos minoristas recibe producción industrial local según plantilla y servicios; comercios compran por ruta y costo.",
       "pending": [
-        "Industria, mercancías detalladas, cadenas completas y comercio regional avanzado."
+        "Cadenas de materias primas y transformación detalladas; logística regional completa."
       ]
     },
     {
@@ -884,10 +907,10 @@
     {
       "phase": 20,
       "title": "Mercado de vivienda, alquileres, desarrolladores y abandono",
-      "progress": 45,
-      "summary": "Vivienda ocupada, alquiler básico, abandono y reconversión de locales",
+      "progress": 50,
+      "summary": "Promotor residencial construye sobre demanda acumulada y parcela permitida; las viviendas reciben migrantes después de inspección.",
       "pending": [
-        "Desarrolladores, mercado de alquileres, protección de inquilinos y desplazamiento."
+        "Promotores con cartera de proyectos y mercado de alquiler con protección de inquilinos."
       ]
     },
     {

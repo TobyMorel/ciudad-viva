@@ -2,7 +2,7 @@
 
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
-## Estado al cerrar Alfa 0.78
+## Estado al cerrar Alfa 0.80
 
 La fase 30 comenzó con ocho edificios históricos inventariados, protección parcial/integral y obras de rehabilitación conectadas a constructoras, cuadrillas, materiales, entrega, etapas y conservación final. El resto del tejido conserva su edad, uso original y reformas. Alfa 0.69 suma reconversión privada de locales cerrados a vivienda con permiso, inversión, cuadrilla y etapas de obra; migración por empleo/aprobación y alquiler a los nuevos residentes. Aún no mide desplazamiento, protege inquilinos, incorpora alquileres de mercado dinámicos ni transforma arquitectura por décadas. Alfa 0.63 inició fase 31 con desgaste vial financiado desde Redes y residuos. Alfa 0.64 suma edificios públicos a la misma cartera: condición según carga, diagnóstico, inspección de un día, licitación de reparación y cuatro trabajadores durante la obra. Cuando al menos 35% de los tramos cae bajo 45% o 25% de los edificios públicos queda bajo 60%, el nivel de servicios baja un punto por mes hasta corregir la cartera. Fase 30 permanece parcial. Hacienda de fase 29 continúa operativa con créditos, impuestos, reserva y presupuestos por programa.
 
@@ -99,7 +99,7 @@ Online: sin ruta, oferta 0; con salida, reparto finito y cierre comercial respet
 
 ## Avance agregado en Alfa 0.75
 
-Fase 33: el mercado finito ahora puede proponer una inversión privada de comercio solo con ventas no cubiertas, parcela conectada, caja privada y municipal y una cuadrilla disponible. Aprobar usa las etapas de obra existentes; una oferta rechazada no cuesta dinero. Hogares, peatones y vehículos con datos simulados tienen panel de inspección, y el submenú de Ciudad es desplazable horizontalmente. Modo Online/Offline, guardados esquema 59. El panel de fases señala fase 33 al 30%; el juego completo sigue sin estimación global por falta de ponderación estable.
+Fase 33: el mercado finito ahora puede proponer una inversión privada de comercio solo con ventas no cubiertas, parcela conectada, caja privada y municipal y una cuadrilla disponible. Aprobar usa las etapas de obra existentes; una oferta rechazada no cuesta dinero. Hogares, peatones y vehículos con datos simulados tienen panel de inspección, y el submenú de Ciudad es desplazable horizontalmente. Modo Online/Offline, guardados esquema 60. El panel de fases señala fase 33 al 30%; el juego completo sigue sin estimación global por falta de ponderación estable.
 
 ## Próxima entrega concreta
 
@@ -117,9 +117,23 @@ Ejecutar una simulación reproducible de 30 años Online y Offline y registrar d
 
 ## Sistema agregado en Alfa 0.77
 
-La política opcional de delegación puede contratar automáticamente una propuesta comercial cuyo permiso esté dentro del tope. La condición económica y operativa reusa demanda, terreno, capital, caja, contrato y cuadrilla; fuera del límite queda revisión manual. Cliente Online/Offline, guardado esquema 59. Fase 33: 35% orientativo. Pendiente inmediato: verificar contratación y rechazo por límite en Offline; luego ejecutar perfiles de 30 años pequeño/metropolitano/portuario/turístico y completar trayectorias/recuperación según fase 33.
+La política opcional de delegación puede contratar automáticamente una propuesta comercial cuyo permiso esté dentro del tope. La condición económica y operativa reusa demanda, terreno, capital, caja, contrato y cuadrilla; fuera del límite queda revisión manual. Cliente Online/Offline, guardado esquema 60. Fase 33: 35% orientativo. Pendiente inmediato: verificar contratación y rechazo por límite en Offline; luego ejecutar perfiles de 30 años pequeño/metropolitano/portuario/turístico y completar trayectorias/recuperación según fase 33.
 
 
 ## Sistema agregado en Alfa 0.78
 
 Los proyectos estándar llevan origen de mandato y se muestran como obligaciones activas/heredadas en Gobierno; el resultado electoral guarda la cartera y las victorias mantienen el contrato y su saldo. Pruebas de elección y obra en ambas simulaciones. Fase 33: 40%. Próximo: simular 30 años en ambos motores; ampliar la verificación de continuidad a deuda, rehabilitación y mantenimiento, y probar perfiles urbanos pequeños, metropolitanos, portuarios y turísticos.
+
+
+## Próxima entrega tras Alfa 0.79
+
+1. Verificar en Chromium la pantalla Ciudad > Suelo y los controles de pintura a 390×844 y escritorio; corregir cualquier solapamiento o overflow.
+2. Llevar el guardado Online hasta completar vivienda privada y comprobar que un residente individual consume la demanda; repetir la secuencia de fábrica Offline y corregirla.
+3. Implementar compras/materiales de construcción en la tubería Offline y promoción comercial automática por zona permitida para cerrar paridad.
+4. Extender demanda industrial con materias primas pagadas y capacidad/stock, y registrar diferencia local/importada.
+5. Retomar la simulación de décadas de fase 33 después de que este crecimiento autónomo esté probado.
+
+
+## Punto exacto tras Alfa 0.80
+
+Probar varios cierres mensuales con hogares que llegan después de que la vivienda termina, y con fábrica que enfrenta escasez de trabajadores, cortes de servicio, costes y competencia. Corregir consumo de materiales en la construcción Offline y comparar inventarios/ventas locales en ambos motores. Mantener los porcentajes por fase salvo que nuevos criterios aceptados cambien cobertura; después retomar corridas reproducibles de 30 años de la fase 33. La prueba LAN física y la publicación Vercel siguen pendientes.

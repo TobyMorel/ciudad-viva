@@ -25,7 +25,7 @@ Este documento es el punto de relevo de Ciudad Viva. Léelo junto con `ROADMAP_J
 - `release_notes.json`: historial de versiones y datos de la guía visual de fases. Actualizar la versión y los cambios de la interfaz con cada subida.
 - Documentación: auditoría, estado, decisiones y próxima tarea deben concordar con código y pruebas.
 
-## Estado al cerrar Alfa 0.78
+## Estado histórico al cerrar Alfa 0.78
 
 - Roadmap: hito F; fase activa 33, parcial (40%). La fase 21 está al 60% tras enlazar migración y perfiles de personas. Estos son porcentajes por fase, no del juego completo. El avance global permanece “sin estimar” por falta de pesos globales basados en criterios verificables.
 - Estado de partida: el servidor inicia/salva en esquema 59; el adaptador Offline completa los campos y eleva el guardado local a 59. `offline_seed.json` conserva el valor legado 21, se normaliza al iniciar y no debe editarse solo para cambiar ese número. Versión de cliente: Alfa 0.76. La mecánica de migración no añade campos persistentes nuevos.
@@ -61,8 +61,30 @@ Continuar la fase 33 con simulación reproducible de varias décadas. Hacer prue
 - Versión en index y notas: Alfa 0.77. Esquema persistente sigue en 59; sin migración.
 
 
-### Alfa 0.78 (actual)
+### Alfa 0.78 · anterior
 
 - Proyecto estándar registra `contractedMandate` y `contractedDay`. Gobierno muestra cartera activa, pagos/saldos municipales y privados, etapa y cuadrilla, con etiqueta de obra heredada. La instantánea de la cartera se anota en cada elección; una victoria no reinicia pagos ni proyectos.
 - Online, contrato escolar heredado por $10.000, pagado $4.000 y saldo $6.000; tras la elección renovada conservó el mismo proyecto. Offline, una elección en día 1.440 renovó del mandato 2 al 3, guardó el saldo $5.885 tras el pago diario y mantuvo proyecto/etapa activos. UI revisada en Chromium 390×844 y 1440×844; sin errores JS o desborde horizontal.
 - Límite: cartera cubre proyectos estándar, no centraliza contratos especiales, deuda y mantenimiento. Fase 33 al 40%; ejecutar escenarios de 30 años sigue siendo la prioridad. Esquema 59.
+
+
+### Alfa 0.79 · entrega anterior: zonificación por permisos y promotores autónomos
+
+- Cliente con herramientas residencial verde, comercial azul e industrial amarilla. Arrastrar pinta un lote de parcelas y cada franja se aplica como acción atómica al estado Online. Las zonas requieren calle adyacente, no pisan parcelas ocupadas, y pueden cambiar de color. Las parcelas no edificadas comienzan sin permiso.
+- `housingDemand.unmet` conserva candidatos a migrar hasta que cada uno entra a una vivienda; empleo y capacidad de casas limitan la llegada. Las casas que termina una constructora quedan vacías hasta que el proceso de migración las ocupa.
+- `advance_zoned_development` crea proyectos privados en parcelas residenciales permitidas al llegar a 12 candidatos y compra déficit de materiales a proveedores con cargo al capital privado. Requiere permiso municipal, capital restante, cuadrilla y materiales. La oferta comercial no cubierta y una parcela azul generan una inversión comercial automática con materiales pagados.
+- Las fábricas de bienes básicos (parcela amarilla) son negocios privados con 20 puestos. Capacidad depende de mano de obra asignada y acceso a energía, agua y cloacas. El producto se agrega a proveedores con origen vial, inventario, precio y plazo; las tiendas lo compran por su flujo de procurement ya existente, reduciendo importación de producto terminado. Cadena de materias primas y transformación detallada sigue pendiente.
+- Funciona en `server.py` y `offline.js`. Limitación conocida: las construcciones Offline no consumen materiales de obra (la ruta vieja tiene materiales en cero), aunque las obras automáticas sí aplican capital, permisos, tiempo, constructor y etapas.
+- Estado actualizado al guardado esquema 60 con campos retrocompatibles `housingDemand` y `localIndustry`. Fases: 1=70%, 4=55%, 5=65%, 16=20%, 17=55%, 18=50%, 20=50%, redondeo por saltos documentados de 5 puntos. Global sigue sin estimación por falta de pesos del roadmap.
+- Pruebas de esta entrega: acción HTTP de pintura en lote/recoloreo atómica; sin zona no hay casa automática; promoción residencial Online compra materiales; hogar baja demanda solo tras mudanza; fábrica Online: 16 producidas y 15 suministradas a comercios; Offline: vivienda autónoma con demanda pendiente y fábrica produce/vende 25 unidades con servicios y personal completos; Chromium 390×844 y 1440×900 sin overflow horizontal ni errores JS. Físico LAN/Vercel no probados.
+
+**Siguiente punto exacto:** validar construcción Online hasta inspección y llegada posterior de residente; auditar el agotamiento/margen de fábrica con múltiples cierres mensuales; completar consumo de materiales de obra en Offline y probar comercio/fábrica bajo escasez y competencia; luego retomar los escenarios de 30 años de fase 33.
+
+
+### Alfa 0.80 · zonificación y crecimiento privado (actual)
+
+- Se conserva el sistema de permisos verde residencial, azul comercial y amarillo industrial. El arrastre aplica el permiso a una franja de parcelas; parcelas vacías nuevas siguen sin zonificar y cambiar el color revoca el uso anterior.
+- La demanda residencial queda acumulada mientras haya candidatos sin vivienda. Cada casa privada se construye en una parcela residencial conectada por calle, consume capital/permiso/materiales, usa contratista y cuadrilla, y solo descuenta demanda al llegar un hogar real.
+- Fábricas privadas visibles requieren permiso industrial, cuadrilla, capital, materiales, empleo y servicios. Producen insumos con trabajadores y servicios disponibles; los comercios priorizan el proveedor local por precio y ruta, lo que reduce la compra externa. La cadena de materias primas y el agotamiento de insumos aún no están simulados.
+- Disponible en Online y Offline; guardado esquema 60. La limitación Offline de consumo de materiales en obras generales sigue abierta.
+- **Siguiente punto exacto:** probar la secuencia Online hasta inspección y llegada de residente y los ciclos mensuales de fábrica con competencia/escasez; cerrar consumo de materiales en obras Offline; después retomar pruebas de 30 años de fase 33.

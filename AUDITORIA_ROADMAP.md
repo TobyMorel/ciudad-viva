@@ -1,4 +1,4 @@
-# Auditoría del roadmap · Alfa 0.78
+# Auditoría del roadmap · Alfa 0.80
 
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
@@ -257,7 +257,7 @@ Alfa 0.74 agrega mercados de exportación mensuales finitos en Online y Offline.
 
 ### Fase 33 · Alfa 0.75: inversión privada condicionada (parcial, 30%)
 
-A la demanda externa finita se suma una oferta para abrir un comercio si hay ventas regionales sin cubrir, parcela zonificada conectada, presupuesto privado y reserva, permiso municipal y cuadrilla libre. Aprobar crea una obra con contratista, siete trabajadores, costo y plazo; el comercio solo abre tras el flujo de materiales, construcción e inspección existente. La oferta expira o puede rechazarse sin gasto. Implementado en Online y Offline, esquema 59. Sigue sin verificar el ciclo de 30 años y escenarios de la fase. Verificaciones específicas de código e interfaz se anotan en `ESTADO_DESARROLLO.md`.
+A la demanda externa finita se suma una oferta para abrir un comercio si hay ventas regionales sin cubrir, parcela zonificada conectada, presupuesto privado y reserva, permiso municipal y cuadrilla libre. Aprobar crea una obra con contratista, siete trabajadores, costo y plazo; el comercio solo abre tras el flujo de materiales, construcción e inspección existente. La oferta expira o puede rechazarse sin gasto. Implementado en Online y Offline, esquema 60. Sigue sin verificar el ciclo de 30 años y escenarios de la fase. Verificaciones específicas de código e interfaz se anotan en `ESTADO_DESARROLLO.md`.
 
 
 ### Fase 21 · Alfa 0.76: migración y padrón vinculados (parcial, 60%)
@@ -273,3 +273,19 @@ Automatización de una tarea administrativa rutinaria con un tope de permiso def
 ### Fase 33 · Alfa 0.78: registro de contratos heredados (parcial, 40%)
 
 La aprobación de una obra guarda el mandato de origen. El panel de Gobierno presenta los contratos activos, su etapa, contratista, trabajadores, pagos, saldo público/privado y si se heredaron de otra gestión. El acta electoral incluye la cartera financiera a la fecha de elección; renovar el mandato no interrumpe el proyecto ni reembolsa pagos. Probado en Online y Offline con una obra de escuela y elecciones que renuevan al gobierno. El reporte cubre los proyectos estándar; la contabilidad conjunta de todas las rehabilitaciones, deuda y mantenimiento de largo plazo y los escenarios de décadas aún necesitan validación.
+
+
+## Alfa 0.79 · permisos y crecimiento por demanda
+
+**Implementado:** pintura continua de permisos residenciales/comerciales/industriales; residencia privada por demanda persistente; comercio automático si la parcela comercial pintada responde a demanda regional sin atender; producción fabril vendida a comercios por el mercado de insumos local. El edificio industrial tiene modelo 3D y empleo registrado.
+
+**Prueba mecánica Online:** se inició una vivienda residencial tras comprar materiales y asignar cuadrilla; sin parcela zonificada no se crea proyecto; el contador solo descuenta residentes que realmente llegan. En simulación de mercado, una fábrica produjo 16 unidades y proveedores locales vendieron 15 a tiendas.
+
+**Pendiente:** paridad de consumo de materiales en Offline, contratación automática comercial Offline sin política de delegación, prueba de interfaz en dispositivos, entrada de hogares tras terminación y comprobación LAN/Vercel. Las fases 1/4/5/16/17/18/20 pasan a 70/55/65/20/55/50/50%; no son porcentaje global.
+
+
+## Alfa 0.80 · zonificación, promotores y producción local
+
+El circuito de fase 4 combina permisos pintados con demanda: el uso residencial acumula candidatos, el uso comercial habilita una inversión condicionada por ventas no atendidas y el uso industrial permite que una empresa fabrique bienes que las tiendas compran. La fábrica necesita ruta, personal y servicios; produce al límite de capacidad y stock, paga nómina y costo operativo, cobra ventas locales y cierra si no puede financiar costos. La migración no reduce presión residencial hasta asignarse a una vivienda.
+
+La fase 17 subraya las empresas y empleos de la nueva fábrica; fase 18 la cadena inicial proveedor local→tiendas; fase 20 el promotor de vivienda sobre parcela permitida. No se elevan porcentajes respecto del Alfa 0.79 porque las cadenas todavía son parciales: no hay materias primas industriales, cartera de promotores ni mercado de alquiler integrado.

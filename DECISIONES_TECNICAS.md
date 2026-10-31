@@ -231,3 +231,22 @@ La política `privateInvestments.delegation` es opt-in y contiene `enabled` y `m
 ## Alfa 0.78 · cartera contractual intermandatos
 
 Los proyectos de construcción registran `contractedMandate` y `contractedDay` al adjudicarse. `government_contract_portfolio()` / `governmentContractPortfolio()` suman el saldo `max(0, cost-paid)` en categorías pública y privada, y clasifican como heredados los proyectos adjudicados antes del mandato vigente. La instantánea se incluye en el resultado electoral, y el reporte actual alimenta el panel Gobierno. No hay reinicio ni movimiento de fondos en la elección; los pagos siguen su flujo contractual. El cambio es aditivo al estado de proyecto/resultado y se mantiene esquema 59. Esta primera cartera no cubre aún todos los contratos especializados de rehabilitación, crédito municipal y obligaciones de mantenimiento.
+
+
+## Alfa 0.79 · reglas de zonificación y mercado (entrega anterior)
+
+Una zona pintada es un permiso municipal persistente, no una construcción. El jugador puede pintar una franja con arrastre y cambiar el permiso de una parcela vacía. Casas y comercios automáticos requieren demanda, calle, cuadrilla, capital y, en Online, materiales comprados a proveedores existentes; permiso e inversión se descuentan de cajas diferentes. Las viviendas pasan inspección desocupadas y el contador de migración solo cae cuando entran personas.
+
+La fábrica vende bienes básicos al mercado de insumos con coordenada de origen, costo y plazo de entrega. Producción depende de personal asignado y disponibilidad de agua, energía y cloacas. Esto desplaza compras a proveedores externos de producto terminado, pero aún no simula materias primas de una cadena industrial completa. La primera implementación de Offline mantiene los contratos de obra existentes, aunque estos todavía avanzan sin gasto de materiales.
+
+
+La versión de guardado sube de 59 a 60 para agregar campos inicializados automáticamente `housingDemand` y `localIndustry`. La semilla Offline histórica se mantiene sin modificar y el adaptador migra el estado al abrirlo.
+
+
+## Alfa 0.80 · permisos pintados y producción local
+
+La zonificación es permiso de uso sobre una parcela vacía, no propiedad ni obra. Los tres valores son `home`, `shop` y `factory`, representados en verde, azul y amarillo; los permisos nuevos se crean por acción explícita y requieren acceso vial. Una solicitud de lote es atómica para evitar pintar solo parte si alguna parcela no es elegible.
+
+La demanda residencial persiste en `housingDemand.unmet`; empleos/aprobación producen candidatos, pero su llegada exige plaza vacante y capacidad laboral. Un hogar solo descuenta el backlog al mudarse. El promotor consume caja privada, permiso municipal, stock real de materiales, capacidad de constructor y tiempo contractual; el inicio mensual se limita para evitar colocar una fábrica o varias viviendas sin capacidad económica.
+
+La fábrica usa plantilla y acceso simultáneo a energía, agua y tratamiento cloacal para determinar producción. Su proveedor local tiene stock finito, precio y coordenada vial; el mecanismo de compra existente compara costo entregado y disponibilidad y registra pedido desde el origen de la fábrica. Los pagos devuelven ingresos al capital fabril. Materias primas, insumos industriales y contratos offline con materiales siguen como pendientes explícitos. Guardado continúa en esquema 60.

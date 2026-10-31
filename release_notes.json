@@ -1,7 +1,16 @@
 {
-  "currentVersion": "0.26",
+  "currentVersion": "0.27",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.27",
+      "date": "31 de octubre de 2026",
+      "changes": [
+        "Las paradas de colectivo ahora se construyen como obras municipales en parcelas libres junto a una línea activa: licitación, cuadrilla de cuatro trabajadores y etapas de obra de 18 días estimados.",
+        "La parada terminada aparece como refugio 3D, se integra al itinerario del bus y suma $25 mensuales de mantenimiento. Online consume los materiales de obra requeridos; Offline reproduce contrato, plazo y habilitación con el inventario simplificado del navegador.",
+        "La ciudad permite elegir parcela por línea; las estaciones construidas se conservan al guardar y se comparten con todos los jugadores de la sala."
+      ]
+    },
     {
       "version": "0.26",
       "date": "31 de octubre de 2026",
@@ -207,6 +216,10 @@
     }
   ],
   "upcoming": [
+    {
+      "title": "Conductores y turnos municipales",
+      "detail": "Asignar personal y horarios a las flotas, reflejar disponibilidad por turno y dar el siguiente paso de la fase 22."
+    },
     {
       "title": "Fase 22 · Operación y personal de transporte",
       "detail": "Modelar conductores residentes, turnos, depósitos, mantenimiento, horarios de fin de semana, paradas intermedias y conexiones de líneas con capacidad compartida."

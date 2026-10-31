@@ -1,6 +1,6 @@
 # Estado de desarrollo · Ciudad Viva
 
-**Entrega:** Alfa 0.26 · 31 de octubre de 2026
+**Entrega:** Alfa 0.27 · 31 de octubre de 2026
 **Especificación:** roadmap adjunto de 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global
@@ -21,6 +21,8 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - Alfa 0.25: se pueden abrir líneas de bus en corredores laborales existentes, comprar 1–3 colectivos de 30 plazas y elegir entre bus/auto por tiempo, espera y tarifa. Las rutas transportan pasajeros de la relación origen–destino elegida; frecuencia depende de longitud y flota. Compra $700/vehículo, tarifa $0,25, operación $140/mes por unidad; el hogar paga desde caja disponible y la recaudación cubre parte del costo. Pausa/reanudación/retiro recuperando 50%, vehículos animados en la calle. Online y Offline; guardado esquema 21. Conductores como agentes, paradas intermedias y transbordos pendientes.
 
 - Alfa 0.26: los corredores enumeran paradas en edificios situados junto a su recorrido. Una línea puede conectar hogares y empleos diferentes a sus extremos originales si están a distancia caminable, comparten la ruta en el sentido de marcha y el bus mejora el modo usado previamente (a pie o auto). El tiempo suma acceso caminando, espera, viaje en línea y tarifa; el aforo se comparte entre todos los pares servidos. Los puntos de parada se recalculan con el mapa y siguen la ruta al guardar/cargar, tanto Online como Offline. No son edificios construibles y no simulan conductores; estos, horarios por turno y transbordos siguen pendientes.
+
+- Alfa 0.27: las paradas de bus son edificios públicos construibles desde una línea activa y una parcela libre adyacente al recorrido. Se licitan como obra con cuatro trabajadores, cinco etapas, plazo base de 18 días (ajustado por constructora) y materiales online (10 áridos, 5 madera, 2 componentes). Tras inspección se agrega un refugio 3D, el bus incorpora la estación a su ruta y el municipio paga $25/mes. La selección de parcela y asociación de línea se valida en Online y Offline; Offline replica costo/plazo/etapas, pero mantiene su modelo de materiales simplificado. Guardado/carga usa los proyectos y edificios existentes; sin migración de esquema.
 
 - Comercios conectados a tres proveedores mayoristas de mercancía con existencias finitas, costos, reposición mensual y tiempos de entrega. Las tiendas pagan compras desde su caja, conservan inventario de materia prima, envían pedidos por la red vial y esperan entrega antes de producir. El costo incorpora flete y demora; el proveedor recibe el pago y pierde stock. Los hogares distribuyen su presupuesto entre locales según distancia y precio; las tiendas reaccionan a rotación/stock ajustando precios, y también venden excedentes al mercado regional. Guardados previos migran a esquema 15 con stock inicial de insumos.
 - Menú de inicio con modos Offline y Online LAN. Offline carga ciudad inicial estática, guarda/carga en localStorage y permite calendario, zonificación, licitaciones básicas y construcción por etapas sin backend; Online comprueba la API antes de abrir para evitar reintentos engañosos. Vercel permite jugar Offline. Pedidos logísticos y rescate aún requieren servidor.
@@ -148,3 +150,12 @@ El porcentaje total del juego queda **sin estimar** por ahora. El repositorio no
 - En Online y Offline se montó una línea de tres colectivos y se comprobó que cubre pares hogar–empleo secundarios que no son los extremos del corredor. El tiempo de abordaje suma caminata a la ruta y distancia efectiva viajada; los corredores siguen limitados por flota y aforo.
 - Chromium revisó Ciudad a 1440×950 y 390×844: nombres de paradas envuelven dentro de las tarjetas, sin scroll horizontal ni errores JS. El popup conserva scroll vertical para el listado largo.
 - La prueba LAN entre dos equipos físicos continúa pendiente.
+
+
+## Verificación Alfa 0.27
+
+- Python (`py_compile`) y JavaScript (`node --check` para `game.js`, `offline.js` y `world3d.js`) pasan; `release_notes.json` valida y `git diff --check` no reporta errores.
+- Online: se abrió un corredor, se adjudicó una parada a una constructora con cuatro trabajadores y los materiales requeridos (10 áridos, 5 madera, 2 componentes). La obra llegó a edificio habilitado, consumió esos insumos, agregó $25/mes y el recorrido guardado pasa por la estación. Guardar/cargar conservó el edificio y su ruta.
+- Offline: el adaptador creó la línea y el contrato, mantuvo el proyecto al reconstruir el adaptador, completó la parada tras el plazo simulado y conservó edificio, costo mensual y recorrido al volver a cargar.
+- Chromium revisó el panel y la licitación a 1440×960 y 390×844. Se detectó y corrigió el orden de capas del modal; ahora aparece sobre Ciudad. En móvil los tres presupuestos y la adjudicación quedan accesibles con scroll interno, sin desborde horizontal ni errores JavaScript.
+- La conexión LAN entre dos equipos físicos y la publicación en Vercel no son verificables desde esta prueba local.

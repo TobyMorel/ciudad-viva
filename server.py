@@ -27,7 +27,8 @@ MATERIAL_NEEDS = {
     "home":{"aggregate":27,"steel":9,"timber":15,"components":10},
     "shop":{"aggregate":24,"steel":14,"timber":8,"components":12},
     "civic":{"aggregate":52,"steel":22,"timber":12,"components":24},
-    "depot":{"aggregate":38,"steel":18,"timber":14,"components":12}}
+    "depot":{"aggregate":38,"steel":18,"timber":14,"components":12},
+    "busStop":{"aggregate":10,"steel":0,"timber":5,"components":2}}
 CONTRACTOR_NAMES = ("Sur Obras","Constructora Delta","Estudio y Obra Norte")
 MARKET_SUPPLIERS = {
     "Cooperativa Regional":{"unitCost":3.7,"stock":120,"maxStock":260,"monthlyOutput":65,"leadDays":4,"profile":"Precio bajo · lotes limitados · entrega lenta"},
@@ -196,8 +197,8 @@ CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
-PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]}}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8}
+PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Licitación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]}}
+LABOR_NEEDS = {"road":4,"home":6,"shop":7,"civic":11,"depot":8,"busStop":4}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -429,6 +430,40 @@ def route_between(start_coord, destination_coord):
     if destination_coord not in roads:path.append(list(destination_coord))
     return path
 
+def bus_line_route(line):
+    base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
+    if not base:return None
+    stops=[]
+    for building in state.get("buildings",[]):
+        if building.get("kind")!="busStop" or building.get("status") not in ("operativo","habilitado"):continue
+        access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(base))
+        if access<=1:stops.append((index,building["x"],building["y"]))
+    route=[list(line["from"])]
+    for _,x,y in sorted(set(stops)):
+        point=(x,y);segment=route_between(tuple(route[-1]),point)
+        if not segment:return None
+        route.extend(segment[1:])
+    segment=route_between(tuple(route[-1]),tuple(line["to"]))
+    if not segment:return None
+    route.extend(segment[1:])
+    return route
+
+def bus_stop_sites(line):
+    if not line or line.get("status") not in ("active","paused"):return []
+    path=line.get("route") or bus_line_route(line) or []
+    roads={tuple(r) for r in state.get("roads",[])}
+    occupied={(b["x"],b["y"]) for b in state.get("buildings",[])}|{(p["x"],p["y"]) for p in state.get("projects",[])}|{(a["x"],a["y"]) for a in state.get("abandoned",[])}|roads
+    candidates=set()
+    for x,y in path:
+        if (x,y) not in roads:continue
+        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
+            point=(x+dx,y+dy)
+            if 0<=point[0]<28 and 0<=point[1]<20 and not is_water(*point) and point not in occupied:candidates.add(point)
+    built=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="busStop" and b.get("status") in ("operativo","habilitado") and min((abs(b["x"]-x)+abs(b["y"]-y) for x,y in path),default=99)<=1)
+    reserved=sum(1 for p in state.get("projects",[]) if p.get("kind")=="busStop" and p.get("busLineId")==line.get("id"))
+    limit=max(0,4-built-reserved)
+    return [{"x":x,"y":y,"label":f"Parcela {x+1},{y+1}"} for x,y in sorted(candidates)[:min(12,limit)]]
+
 _commute_cache_key=None
 _commute_cache=None
 def commute_model():
@@ -441,7 +476,7 @@ def commute_model():
            (b.get("kind") in ("civic","depot") or (b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"))]
     state.setdefault("busRoutes",[])
     for line in state["busRoutes"]:
-        path=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
+        path=bus_line_route(line)
         line["route"]=path or []
         line["stops"]=bus_line_stops(line["route"])
         line["operational"]=bool(line.get("status")=="active" and path)
@@ -643,7 +678,7 @@ def commute_model():
 
 def bus_line_stops(path):
     if not path:return []
-    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot") and b.get("status","operativo") in ("operativo","habilitado") and (b.get("kind")!="shop" or b.get("business",{}).get("status")=="abierto")]
+    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","civic","depot","busStop") and b.get("status","operativo") in ("operativo","habilitado") and (b.get("kind")!="shop" or b.get("business",{}).get("status")=="abierto")]
     stops=[]
     for building in buildings:
         access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(path))
@@ -1121,6 +1156,10 @@ def tick_one_day():
                 state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":500,"label":"Depósito municipal","stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
                 state["supply"]["storageCapacity"]+=500;state["monthlyExpenses"]+=180
                 ev("Depósito logístico habilitado",f"El depósito abre con 500 unidades de capacidad adicional. Operación y seguridad $ 180/mes.")
+            elif p["kind"]=="busStop":
+                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busStop","name":"Parada de colectivo","level":1,"status":"habilitado","quality":quality,"monthlyCost":25})
+                state["monthlyExpenses"]+=25
+                ev("Parada de colectivo habilitada",f"La parada abrió junto a la vía con calidad {quality}%. Operación y mantenimiento $ 25/mes.")
             elif p["kind"]=="civic":
                 operating_cost=round(650*(1.4-c["quality"]*.5))
                 coverage=round(5+5*c["quality"])
@@ -1151,6 +1190,7 @@ def public_state(player_id=None):
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])
+    view["busStopSites"]={line["id"]:bus_stop_sites(line) for line in state.get("busRoutes",[]) if line.get("status") in ("active","paused")}
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
     view["trainingCatalog"]=training_catalog()
@@ -1167,7 +1207,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income+transit_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.25"
+    server_version="CiudadViva/0.27"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -1268,6 +1308,12 @@ class Handler(BaseHTTPRequestHandler):
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
+                    bus_line=None
+                    if kind=="busStop":
+                        bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)
+                        if not bus_line:self._send(409,{"error":"Elegí una línea activa para ubicar la parada."});return
+                        if not any(site["x"]==x and site["y"]==y for site in bus_stop_sites(bus_line)):
+                            self._send(409,{"error":"La parcela ya no está disponible junto al recorrido o la línea alcanzó su límite de paradas."});return
                     zone=next((z for z in state.get("zones",[]) if z["x"]==x and z["y"]==y),None)
                     if kind in ("home","shop") and (not zone or zone["kind"]!=kind):
                         required="residencial" if kind=="home" else "comercial"
@@ -1286,6 +1332,7 @@ class Handler(BaseHTTPRequestHandler):
                     spec=PROJECTS[kind]; c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    if kind=="busStop":p["busLineId"]=bus_line["id"]
                     if kind in ("home","shop"):
                         p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
                         if state["privateCapital"]<p["cost"]:
@@ -1369,7 +1416,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         spent=round(project.get("priorSpent",0)+(project["cost"]+project.get("municipalPermitPaid",0) if project.get("privatePaid") else project.get("paid",0))); progress=project.get("progress",0)
                         if progress>0:
-                            state.setdefault("abandoned",[]).append({"id":project["id"],"x":project["x"],"y":project["y"],"kind":project["kind"],"label":project["label"],"progress":progress,"spent":spent,"contractor":project["contractor"],"stage":project["stages"][project["stageIndex"]],"status":"obra inconclusa","privatePaid":project.get("privatePaid",False)})
+                            state.setdefault("abandoned",[]).append({"id":project["id"],"x":project["x"],"y":project["y"],"kind":project["kind"],"label":project["label"],"progress":progress,"spent":spent,"contractor":project["contractor"],"stage":project["stages"][project["stageIndex"]],"status":"obra inconclusa","privatePaid":project.get("privatePaid",False),"busLineId":project.get("busLineId")})
                         state["projects"].remove(project)
                         ev("Contrato cancelado",f"{project['label']}: gasto hundido $ {spent:,}; se libera el saldo contractual no pagado. {('La estructura inconclusa permanece en la parcela.' if progress>0 else 'La obra no había iniciado trabajos físicos.') }".replace(",","."))
                 elif action=="rescue":
@@ -1382,6 +1429,7 @@ class Handler(BaseHTTPRequestHandler):
                     if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} no tiene {LABOR_NEEDS[kind]} trabajadores libres para el rescate."}); return
                     total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
                     private=kind in ("home","shop")
                     if private:
                         fee=max(50,round(spec["cost"]*(1-initial)*.12));privateCost=total-fee

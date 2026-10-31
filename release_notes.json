@@ -1,16 +1,7 @@
 {
-  "currentVersion": "0.57",
+  "currentVersion": "0.56",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
-    {
-      "version": "0.57",
-      "date": "2026-10-31",
-      "changes": [
-        "Fase 28 (parcial): comisaría municipal como obra por etapas (78 días base, $12.800), 12 puestos y costo operativo de $1.050/mes más nómina. Oficiales con habilidad Seguridad pública ≥48 forman hasta tres patrullas; el curso municipal ya puede formarlos. Los incidentes patrimoniales se relacionan con inmuebles abandonados o deteriorados cercanos, y se seleccionan de forma reproducible sin atribuir riesgo a grupos sociales.",
-        "El despacho exige cuatro oficiales y una ruta vial; la patrulla más cercana llega según el tiempo de recorrido y queda ocupada dos días. La falta de cobertura deja pérdidas económicas acumulables; tras tres días sin respuesta baja el apoyo ciudadano. Ciudad > Seguridad muestra cobertura, dotación, incidentes y tiempos. Comisaría 3D, Online/Offline y migración de guardados al esquema 42.",
-        "Se corrigió la interacción de las subcategorías de Ciudad al abrirlas en la ventana modal. Chromium comprobó Ciudad > Seguridad y la herramienta de construcción a 390×844 y 1440×900: sin desborde horizontal ni errores JavaScript; el contenido extenso usa scroll vertical. Regresiones: Online respondió en 17 min; sin patrulla, pérdida de $105 tras tres días y apoyo −1. Offline respondió en 17 min con nueve oficiales asignados; sin errores JS. LAN física y Vercel siguen pendientes de validación."
-      ]
-    },
     {
       "version": "0.56",
       "date": "2026-10-31",
@@ -489,12 +480,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 28 · protección social",
-      "detail": "Ayudas municipales con cupos, gasto y efectos medibles para hogares con pérdida de ingresos o desplazamiento; después ampliar respuesta médica."
+      "title": "Fase 28 · seguridad y protección social",
+      "detail": "Añadir patrullaje y alumbrado con personal, rutas y cobertura territorial, más asistencia municipal a hogares vulnerables con cupos, costo y resultados medibles."
     },
     {
       "title": "Fase 29 · hacienda plurianual",
-      "detail": "Separar caja, ingresos cobrados, contratos comprometidos, mantenimiento y deuda; mostrar previsiones de flujo y escenarios antes de iniciar obras."
+      "detail": "Distinguir caja, ingresos cobrados, contratos comprometidos, mantenimiento y deuda; dar previsión de flujo y escenarios para nuevas obras."
     }
   ]
 }

@@ -29,19 +29,26 @@ MATERIAL_NEEDS = {
     "civic":{"aggregate":52,"steel":22,"timber":12,"components":24},
     "depot":{"aggregate":38,"steel":18,"timber":14,"components":12}}
 CONTRACTOR_NAMES = ("Sur Obras","Constructora Delta","Estudio y Obra Norte")
+MARKET_SUPPLIERS = {
+    "Cooperativa Regional":{"unitCost":3.7,"stock":120,"maxStock":260,"monthlyOutput":65,"leadDays":4,"profile":"Precio bajo · lotes limitados · entrega lenta"},
+    "Mayorista del Puerto":{"unitCost":4.6,"stock":260,"maxStock":420,"monthlyOutput":100,"leadDays":2,"profile":"Stock amplio · precio medio · entrega estable"},
+    "Abasto Expreso":{"unitCost":5.5,"stock":150,"maxStock":240,"monthlyOutput":115,"leadDays":1,"profile":"Reposición rápida · precio alto"}}
+
+def new_market_supply():
+    return {name:{**values,"cash":18000,"lastSales":0} for name,values in MARKET_SUPPLIERS.items()}
 
 def new_business(building, job_slots, starting_cash=5000):
     return {"id":f"firm-{building['x']}-{building['y']}","name":building.get("name","Comercio local"),
             "status":"abierto","cash":starting_cash,"jobSlots":max(1,int(job_slots)),"inventory":0,
-            "price":18,"inputCost":5,"wage":10,"productivity":.06,"fixedCost":40,
-            "lastSales":0,"lastRevenue":0,"lastInputs":0,"lastProduction":0,"lastPayroll":0,"lastProfit":0,"lastWorkers":0,"lastDemand":0}
+            "price":18,"inputCost":5,"inputInventory":24,"wage":10,"productivity":.06,"fixedCost":40,
+            "lastSales":0,"lastLocalSales":0,"lastRegionalSales":0,"lastLocalDemand":0,"lastRevenue":0,"lastInputs":0,"lastInputUnits":0,"lastInputSupplier":"Sin compras","lastInputShortage":0,"lastProduction":0,"lastPayroll":0,"lastProfit":0,"lastWorkers":0,"lastDemand":0}
 
 def new_supply():
     return {"regional":INITIAL_REGIONAL_STOCK.copy(),
             "contractors":{name:INITIAL_CONTRACTOR_STOCK.copy() for name in CONTRACTOR_NAMES},
             "contractorCash":CONTRACTOR_CASH.copy(),
             "suppliers":{name:stock.copy() for name,stock in SUPPLIER_STOCK.items()},
-            "orders":[],"storageCapacity":240,"yardCapacity":240,"depots":[]}
+            "orders":[],"market":new_market_supply(),"marketOrders":[],"storageCapacity":240,"yardCapacity":240,"depots":[]}
 
 def initial_state():
     roads = [[x, 10] for x in range(4, 22)] + [[12, y] for y in range(5, 16)] + [[18, y] for y in range(10, 16)]
@@ -74,7 +81,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":14,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":15,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"abandoned":[],"zones":[],"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -120,6 +127,7 @@ def ensure_business_state():
         firm=building["business"]
         for key,value in new_business(building,firm.get("jobSlots",estimated_slots),firm.get("cash",5000)).items():
             firm.setdefault(key,value)
+        firm.setdefault("inputInventory",20)
         if firm.get("status")=="cerrado":building["status"]="cerrado"
 
 def ensure_resident_roster():
@@ -137,7 +145,7 @@ def ensure_resident_roster():
 
 def ensure_supply_state():
     legacy_version=state.get("version",1)
-    state["version"]=max(14,state.get("version",1))
+    state["version"]=max(15,state.get("version",1))
     state.setdefault("roadAssets",[])
     for building in state["buildings"]:
         if building["kind"]=="home":
@@ -148,6 +156,11 @@ def ensure_supply_state():
     supply.setdefault("contractorCash",CONTRACTOR_CASH.copy())
     supply.setdefault("suppliers",{name:stock.copy() for name,stock in SUPPLIER_STOCK.items()})
     supply.setdefault("orders",[])
+    supply.setdefault("market",new_market_supply())
+    supply.setdefault("marketOrders",[])
+    for name,values in new_market_supply().items():
+        supplier=supply["market"].setdefault(name,values)
+        for key,value in values.items():supplier.setdefault(key,value)
     for order in supply["orders"]:
         order.setdefault("priority","normal")
         if order.get("status") in ("esperando equipo","descargando"):
@@ -408,7 +421,8 @@ def traffic_factor(route, exclude_order=None):
     """Tiempo relativo por tramo: empleo local más camiones que ocupan ese tramo hoy."""
     if not route or len(route)<2:return 1.0
     factors=[]
-    active=[o for o in state.get("supply",{}).get("orders",[])
+    supply=state.get("supply",{})
+    active=[o for o in supply.get("orders",[])+supply.get("marketOrders",[])
             if o is not exclude_order and o.get("status")=="en tránsito" and state["day"]>o.get("supplierReadyDay",o.get("orderedDay",0)) and len(o.get("route",[]))>1]
     for i in range(len(route)-1):
         a=tuple(route[i]);b=tuple(route[i+1]);edge=tuple(sorted((a,b)))
@@ -443,52 +457,135 @@ def pay_public_wages(workforce):
         payroll+=wage
     return payroll
 
+def refill_market_suppliers():
+    for supplier in state["supply"].get("market",{}).values():
+        supplier["stock"]=min(supplier.get("maxStock",0),supplier.get("stock",0)+supplier.get("monthlyOutput",0))
+
+def process_market_orders():
+    for order in state["supply"].get("marketOrders",[]):
+        if order.get("status")!="en tránsito":continue
+        route=route_between((4,10),(order["x"],order["y"]))
+        if not route:
+            if order.get("statusCause")!="Sin acceso vial":ev("Entrega comercial demorada",f"{order['supplier']} no encuentra una ruta vial hasta {order['businessName']}; la mercadería espera una calle conectada.")
+            order["route"]=[];order["statusCause"]="Sin acceso vial";order["arrivalDay"]=state["day"]+1;continue
+        order["route"]=route;order["statusCause"]=""
+        distance=max(0,len(route)-1);order["travelDistance"]=distance
+        factor=traffic_factor(route,order);order["trafficFactor"]=round(factor,2)
+        if state["day"]>order["supplierReadyDay"] and order.get("travelledDistance",0)<distance:
+            order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,factor))
+        remaining=max(0,distance-order.get("travelledDistance",0))
+        order["arrivalDay"]=max(state["day"]+1,max(state["day"],order["supplierReadyDay"])+math.ceil(remaining*factor/6))
+        if state["day"]<=order["supplierReadyDay"] or order.get("travelledDistance",0)<distance:continue
+        firm=next((b.get("business") for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("id")==order["businessId"]),None)
+        if firm and firm.get("status")=="abierto":
+            firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
+            order["status"]="entregado";order["deliveredDay"]=state["day"]
+            ev("Insumos recibidos",f"{order['supplier']} entregó {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
+        else:
+            order["status"]="cancelado";order["statusCause"]="Empresa cerrada antes de recibir la carga"
+
 def simulate_business_month(workforce):
     shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
-    demand={(b["x"],b["y"]):0.0 for b in shops};roads={tuple(r) for r in state["roads"]}
+    demand={(b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand};roads={tuple(r) for r in state["roads"]}
     for emp in workforce.get("employees",[]):
         if emp["site"].get("kind")=="shop":
             wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
             home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
-    reachable_by_home={}
+    # Las empresas ajustan el precio con las ventas y el inventario del período anterior.
+    prior_prices={(b["x"],b["y"]):max(1,b["business"].get("price",18)) for b in shops}
+    for shop in shops:
+        firm=shop["business"];price=prior_prices[shop["x"],shop["y"]]
+        if firm.get("lastLocalDemand",0)>0:
+            turnover=firm.get("lastLocalSales",0)/max(1,firm["lastLocalDemand"])
+            competitors=[p for xy,p in prior_prices.items() if xy!=(shop["x"],shop["y"])]
+            competition=min(competitors) if competitors else price
+            if turnover<.72 and firm.get("inventory",0)>12:price=max(8,min(price-1,competition))
+            elif turnover>1.05 and firm.get("inventory",0)<8:price=min(32,price+1)
+        firm["price"]=price
     for home in homes:
-        reachable=[]
+        choices=[]
         for shop in shops:
             route=route_between((home["x"],home["y"]),(shop["x"],shop["y"]))
-            if route:
-                distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
-                reachable.append((shop,1/max(1,distance+1)**1.4))
-        weight=sum(w for _,w in reachable);reachable_by_home[id(home)]=reachable
-        if weight:
-            desired=max(0,round(home.get("occupants",0)*.12));affordable=max(0,round(home.get("householdCash",0)/18));buy=min(desired,affordable)
-            for shop,w in reachable:demand[shop["x"],shop["y"]]+=buy*w/weight
+            if not route:continue
+            distance=sum(1 for x,y in zip(route,route[1:]) if tuple(x) in roads and tuple(y) in roads)
+            proximity=1/max(1,distance+1)**1.4
+            preference=proximity*(18/max(1,shop["business"].get("price",18)))**2
+            choices.append((shop,preference))
+        if not choices:continue
+        choices.sort(key=lambda x:(-x[1],x[0]["x"],x[0]["y"]))
+        desired=max(0,round(home.get("occupants",0)*.12))
+        cheapest=min(max(1,shop["business"].get("price",18)) for shop,_ in choices)
+        units=min(desired,max(0,int(home.get("householdCash",0)//cheapest)))
+        total_weight=sum(w for _,w in choices)
+        shares=[units*w/total_weight for _,w in choices]
+        allocations=[int(value) for value in shares]
+        for index in sorted(range(len(choices)),key=lambda i:(-(shares[i]-allocations[i]),-choices[i][1]))[:max(0,units-sum(allocations))]:allocations[index]+=1
+        for (shop,_),quantity in zip(choices,allocations):
+            if quantity:
+                key=(shop["x"],shop["y"]);demand[key]+=quantity;shopping[key].append((home,quantity))
     workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]}
-    revenue_total=payroll_total=sales_total=closed=0
+    market_suppliers=state["supply"].setdefault("market",new_market_supply())
+    market_orders=state["supply"].setdefault("marketOrders",[])
+    revenue_total=payroll_total=sales_total=closed=inputs_total=0
     for shop in shops:
         firm=shop["business"];key=(shop["x"],shop["y"]);site=workplace.get(key,{})
         if firm.get("cash",0)<0:
             firm["status"]="cerrado";shop["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",0));closed+=1
             ev("Empresa en quiebra",f"{firm['name']} no pudo pagar sus compromisos y cerró con saldo negativo. Se pierden {firm['jobSlots']} puestos potenciales.");continue
         staffed=max(0,round(site.get("staffedJobs",0)));headcount=max(0,int(site.get("workersAssigned",0)))
-        market=demand.get(key,0);regional=max(0,round(firm.get("jobSlots",0)*.35));total_demand=market+regional;inventory=max(0,int(firm.get("inventory",0)))
-        production=min(max(0,200-inventory),max(0,math.ceil(total_demand-inventory)),max(0,round(staffed*firm.get("productivity",.06)*30)))
-        sales=min(inventory+production,max(0,math.floor(total_demand)));local_sales=min(sales,max(0,round(market)))
-        revenue=sales*firm.get("price",18);inputs=production*firm.get("inputCost",5);payroll=max(0,int(site.get("payroll",headcount*firm.get("wage",10))));overhead=firm.get("fixedCost",40)
-        local_left=local_sales
-        buyers=sorted(homes,key=lambda h:sum(w for sh,w in reachable_by_home[id(h)] if sh is shop),reverse=True)
-        for home in buyers:
+        local_demand=demand.get(key,0);regional_demand=max(0,round(firm.get("jobSlots",0)*.35));total_demand=local_demand+regional_demand
+        inventory=max(0,int(firm.get("inventory",0)));input_inventory=max(0,int(firm.get("inputInventory",0)))
+        production_target=min(max(0,200-inventory),max(0,math.ceil(total_demand-inventory)),max(0,round(staffed*firm.get("productivity",.06)*30)))
+        production=min(production_target,input_inventory)
+        local_target=min(inventory+production,local_demand);local_left=local_target;sold_local=0
+        unit_price=max(1,int(firm.get("price",18)))
+        for home,quantity in shopping.get(key,[]):
             if local_left<=0:break
-            if not any(sh is shop for sh,_ in reachable_by_home[id(home)]):continue
-            bought=min(max(0,round(home.get("occupants",0)*.12)),max(0,round(home.get("householdCash",0)/18)),local_left)
-            home["householdCash"]-=bought*18;local_left-=bought
-        profit=revenue-inputs-payroll-overhead;firm["cash"]=round(firm.get("cash",0)+profit);firm["inventory"]=inventory+production-sales
-        firm["lastSales"]=sales;firm["lastLocalSales"]=local_sales;firm["lastRegionalSales"]=sales-local_sales;firm["lastRevenue"]=revenue;firm["lastInputs"]=inputs;firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=profit;firm["lastWorkers"]=headcount;firm["lastDemand"]=round(total_demand)
-        revenue_total+=revenue;payroll_total+=payroll;sales_total+=sales
+            bought=min(quantity,local_left,max(0,int(home.get("householdCash",0)//unit_price)))
+            if bought:
+                home["householdCash"]-=bought*unit_price;sold_local+=bought;local_left-=bought
+        regional_sales=min(max(0,inventory+production-sold_local),regional_demand)
+        sales=sold_local+regional_sales;export_price=max(1,round(unit_price*.78))
+        revenue=sold_local*unit_price+regional_sales*export_price
+        payroll=max(0,int(site.get("payroll",headcount*firm.get("wage",10))));overhead=max(0,int(firm.get("fixedCost",40)))
+        firm["inputInventory"]=input_inventory-production
+        cash_before_orders=firm.get("cash",0)+revenue-payroll-overhead
+        target_inputs=min(110,max(12,round(staffed*firm.get("productivity",.06)*30*1.15)))
+        pending=sum(order.get("quantity",0) for order in market_orders if order.get("businessId")==firm.get("id") and order.get("status")=="en tránsito")
+        needed=max(0,target_inputs-firm["inputInventory"]-pending);purchases=procurement_cost=0;chosen=[]
+        source=(4,10)
+        providers=[]
+        for name,supplier in market_suppliers.items():
+            if supplier.get("stock",0)<=0:continue
+            route=route_between(source,(shop["x"],shop["y"]))
+            if not route:continue
+            distance=max(0,len(route)-1);factor=traffic_factor(route)
+            freight=distance*.055+max(0,factor-1)*.22
+            landed=supplier["unitCost"]+freight+supplier.get("leadDays",0)*.035
+            providers.append((landed,name,supplier,route,distance))
+        providers.sort(key=lambda item:(item[0],item[2].get("leadDays",0),item[1]))
+        cash_for_orders=max(0,int(cash_before_orders))
+        for landed,name,supplier,route,distance in providers:
+            if needed<=0 or cash_for_orders<=0:break
+            quantity=min(needed,int(supplier.get("stock",0)),int(cash_for_orders//max(.01,landed)))
+            if quantity<=0:continue
+            cost=round(quantity*landed)
+            if cost>cash_for_orders:quantity=max(0,int(cash_for_orders//max(.01,landed)));cost=round(quantity*landed)
+            if not quantity:continue
+            supplier["stock"]-=quantity;supplier["cash"]=supplier.get("cash",0)+cost;supplier["lastSales"]+=quantity
+            order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en tránsito","statusCause":"Preparación en proveedor"}
+            market_orders.append(order);needed-=quantity;cash_for_orders-=cost;purchases+=quantity;procurement_cost+=cost;chosen.append(name)
+        firm["cash"]=round(cash_before_orders-procurement_cost)
+        firm["inventory"]=inventory+production-sales;firm["lastSales"]=sales;firm["lastLocalSales"]=sold_local;firm["lastRegionalSales"]=regional_sales
+        firm["lastLocalDemand"]=local_demand;firm["lastRevenue"]=revenue;firm["lastInputs"]=procurement_cost;firm["lastInputUnits"]=purchases;firm["lastInputSupplier"]=" · ".join(chosen) if chosen else "Sin stock o fondos"
+        firm["lastInputShortage"]=max(0,needed);firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=revenue-payroll-overhead-procurement_cost
+        firm["lastWorkers"]=headcount;firm["lastDemand"]=round(total_demand)
+        revenue_total+=revenue;payroll_total+=payroll;sales_total+=sales;inputs_total+=procurement_cost
         if firm["cash"]<0:
             firm["status"]="cerrado";shop["status"]="cerrado";state["jobs"]=max(0,state["jobs"]-firm.get("jobSlots",0));closed+=1
-            ev("Empresa en quiebra",f"{firm['name']} dejó de cubrir salarios e insumos; cerró con saldo negativo. Se pierden {firm['jobSlots']} puestos potenciales.")
-    return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"closed":closed}
+            ev("Empresa en quiebra",f"{firm['name']} dejó de cubrir salarios, insumos y gastos; cerró con saldo negativo. Se pierden {firm['jobSlots']} puestos potenciales.")
+    return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed}
 
 def route_to_project(project):return route_between((4,10),(project["x"],project["y"]))
 
@@ -616,6 +713,7 @@ def tick_one_day():
         for home in state["buildings"]:
             if home.get("kind")=="home":home["monthlyWageIncome"]=0
         supplier_stock=state["supply"]["suppliers"]
+        refill_market_suppliers()
         for key,amount in REGIONAL_PRODUCTION.items():
             supplier_stock["Distribuidora Regional"][key]+=round(amount*.6)
             supplier_stock["Corralón del Puerto"][key]+=round(amount*.25)
@@ -645,6 +743,7 @@ def tick_one_day():
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} (impuesto comercial $ {business_income:,}) · gastos base $ {state['monthlyExpenses']:,} + nómina pública $ {public_payroll:,} · balance neto $ {net:,}.".replace(",","."))
         move_households()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
+    process_market_orders()
     process_supply_orders()
     for p in list(state["projects"]):
         if p.get("status")=="pausada": continue
@@ -731,7 +830,7 @@ def public_state(player_id=None):
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":round(state["monthlyIncome"]+business_income),"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.17"
+    server_version="CiudadViva/0.18"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())

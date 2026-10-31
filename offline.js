@@ -15,6 +15,11 @@ export async function createOfflineAdapter(){
   const seed=await response.json();let state;
   try{state=JSON.parse(localStorage.getItem(SAVE_KEY)||'null')}catch{state=null}
   if(!state)state=clone(seed);
+  state.supply=state.supply||clone(seed.supply);
+  if(!state.supply.market)state.supply.market=clone(seed.supply.market||{});
+  state.supply.marketOrders=state.supply.marketOrders||[];
+  for(const b of state.buildings||[])if(b.kind==='shop'&&b.business){const current=b.business,template=seed.buildings.find(x=>x.kind==='shop'&&x.x===b.x&&x.y===b.y)?.business||{};for(const [key,value] of Object.entries(template))if(current[key]===undefined)current[key]=value}
+  state.version=Math.max(15,state.version||1);
   state.players={};state.host='offline';state.paused=Boolean(state.paused);let last=Date.now(),debtDays=0;
 
   function view(){
@@ -24,6 +29,42 @@ export async function createOfflineAdapter(){
   }
   function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(state))}catch{}}
   function event(title,detail){state.events=state.events||[];state.events.unshift({day:state.day,title,detail});state.events=state.events.slice(0,30)}
+  function receiveMarketDeliveries(){
+    for(const order of state.supply.marketOrders||[]){
+      if(order.status!=='en tránsito'||state.day<order.arrivalDay)continue;
+      const firm=state.buildings.find(b=>b.kind==='shop'&&b.business?.id===order.businessId)?.business;
+      if(firm?.status==='abierto'){firm.inputInventory=(firm.inputInventory||0)+order.quantity;order.status='entregado';order.deliveredDay=state.day}
+      else{order.status='cancelado';order.statusCause='Empresa cerrada antes de recibir la carga'}
+    }
+  }
+  function simulateOfflineMarket(){
+    const shops=state.buildings.filter(b=>b.kind==='shop'&&b.business?.status==='abierto');
+    const homes=state.buildings.filter(b=>b.kind==='home'&&b.occupants>0),allocations=new Map(shops.map(b=>[b.business.id,0])),buyers=new Map(shops.map(b=>[b.business.id,[]]));
+    for(const h of homes){
+      const choices=shops.map(b=>({b,weight:(1/(1+Math.abs(h.x-b.x)+Math.abs(h.y-b.y)))**1.4*(18/Math.max(1,b.business.price||18))**2})).sort((a,b)=>b.weight-a.weight);
+      if(!choices.length)continue;const budget=homes.reduce((s,x)=>s+(x.householdCash||0),0);const cheapest=Math.min(...choices.map(x=>Math.max(1,x.b.business.price||18)));
+      let units=Math.min(Math.round(h.occupants*.12),Math.floor((h.householdCash||0)/cheapest));const total=choices.reduce((s,x)=>s+x.weight,0);
+      const shares=choices.map(x=>units*x.weight/total),counts=shares.map(Math.floor);let rem=units-counts.reduce((s,x)=>s+x,0);
+      for(const i of shares.map((v,i)=>({i,r:v-counts[i]})).sort((a,b)=>b.r-a.r)){if(rem--<=0)break;counts[i.i]++}
+      choices.forEach(({b},i)=>{if(counts[i]>0){allocations.set(b.business.id,allocations.get(b.business.id)+counts[i]);buyers.get(b.business.id).push({home:h,units:counts[i]})}});
+    }
+    let salesIncome=0,orders=state.supply.marketOrders||(state.supply.marketOrders=[]),suppliers=state.supply.market||{};
+    for(const shop of shops){
+      const f=shop.business,key=f.id,localDemand=allocations.get(key)||0,regional=Math.round(f.jobSlots*.35),inv=f.inventory||0,raw=f.inputInventory||0;
+      if(f.lastLocalDemand>0){const rate=(f.lastLocalSales||0)/Math.max(1,f.lastLocalDemand),other=shops.filter(x=>x!==shop).map(x=>x.business.price||18);if(rate<.72&&inv>12)f.price=Math.max(8,Math.min((f.price||18)-1,other.length?Math.min(...other):18));else if(rate>1.05&&inv<8)f.price=Math.min(32,(f.price||18)+1)}
+      const workplace=(state.workplaces||[]).find(w=>w.x===shop.x&&w.y===shop.y),staffed=workplace?.staffedJobs||0;
+      const planned=Math.min(Math.max(0,200-inv),Math.max(0,Math.ceil(localDemand+regional-inv)),Math.round(staffed*(f.productivity||.06)*30));
+      const produced=Math.min(planned,raw);let localLeft=Math.min(inv+produced,localDemand),localSold=0;
+      for(const item of buyers.get(key)||[]){if(localLeft<=0)break;const q=Math.min(item.units,localLeft,Math.floor((item.home.householdCash||0)/Math.max(1,f.price||18)));item.home.householdCash-=q*(f.price||18);localSold+=q;localLeft-=q}
+      const exportSold=Math.min(Math.max(0,inv+produced-localSold),regional),sales=localSold+exportSold,revenue=localSold*(f.price||18)+exportSold*Math.round((f.price||18)*.78),payroll=workplace?.payroll||0,overhead=f.fixedCost||40;
+      f.inputInventory=raw-produced;const pending=orders.filter(o=>o.businessId===key&&o.status==='en tránsito').reduce((a,o)=>a+o.quantity,0),target=Math.min(110,Math.max(12,Math.round(staffed*(f.productivity||.06)*30*1.15)));let need=Math.max(0,target-f.inputInventory-pending),cash=Math.max(0,(f.cash||0)+revenue-payroll-overhead),purchased=0,costs=0,used=[];
+      const providers=Object.entries(suppliers).map(([name,s])=>({name,s,landed:s.unitCost+Math.abs(shop.x-4)*.055+Math.abs(shop.y-10)*.055+s.leadDays*.035})).sort((a,b)=>a.landed-b.landed);
+      for(const {name,s,landed} of providers){if(!need||!s.stock||!cash)continue;const q=Math.min(need,s.stock,Math.floor(cash/landed));if(!q)continue;const cost=Math.round(q*landed);s.stock-=q;s.cash=(s.cash||0)+cost;s.lastSales=(s.lastSales||0)+q;cash-=cost;need-=q;purchased+=q;costs+=cost;used.push(name);orders.push({id:`offline-market-${state.day}-${key}-${name}`,businessId:key,businessName:f.name,supplier:name,quantity:q,unitCost:+landed.toFixed(2),cost,orderedDay:state.day,supplierReadyDay:state.day+s.leadDays,arrivalDay:state.day+s.leadDays+Math.max(1,Math.ceil((Math.abs(shop.x-4)+Math.abs(shop.y-10))/6)),travelDistance:Math.abs(shop.x-4)+Math.abs(shop.y-10),x:shop.x,y:shop.y,status:'en tránsito'})}
+      f.cash=Math.round(cash);f.inventory=inv+produced-sales;f.lastProduction=produced;f.lastSales=sales;f.lastLocalSales=localSold;f.lastRegionalSales=exportSold;f.lastLocalDemand=localDemand;f.lastDemand=localDemand+regional;f.lastRevenue=revenue;f.lastPayroll=payroll;f.lastInputs=costs;f.lastInputUnits=purchased;f.lastInputSupplier=used.join(' · ')||'Sin stock o fondos';f.lastInputShortage=need;f.lastProfit=revenue-payroll-overhead-costs;f.lastWorkers=workplace?.workersAssigned||0;salesIncome+=revenue;
+      if(f.cash<0){f.status='cerrado';shop.status='cerrado';state.jobs=Math.max(0,state.jobs-f.jobSlots);event('Empresa en quiebra',`${f.name} cerró tras acumular pérdidas.`)}
+    }
+    state.lastMarketRevenue=salesIncome;
+  }
   function complete(p){
     const q={x:p.x,y:p.y,status:'habilitado',level:1,quality:82};
     if(p.kind==='road'){
@@ -34,7 +75,9 @@ export async function createOfflineAdapter(){
       const residents=Array.from({length:occupants},(_,i)=>({id:`off-${p.id}-${i}`,workerEligible:i<Math.round(occupants*.42),status:'buscando',employerId:null,employerName:null,monthlyWage:0,attendance:0}));
       state.buildings.push({...q,kind:'home',name:'Viviendas nuevas',occupants,capacity:28,residents,householdCash:0,monthlyWageIncome:0});state.population+=occupants;state.monthlyIncome+=occupants*3;
     }else if(p.kind==='shop'){
-      const b={...q,kind:'shop',name:'Comercio nuevo',occupants:0};b.business={id:`firm-${p.x}-${p.y}`,name:b.name,status:'abierto',cash:1200,jobSlots:12,inventory:0,price:18,inputCost:5,wage:10,productivity:.06,fixedCost:40,lastSales:0,lastRevenue:0,lastInputs:0,lastProduction:0,lastPayroll:0,lastProfit:0,lastWorkers:0,lastDemand:0};state.buildings.push(b);state.jobs+=12;state.privateCapital=Math.max(0,state.privateCapital-1200);
+      const b={...q,kind:'shop',name:'Comercio nuevo',occupants:0};b.business={id:`firm-${p.x}-${p.y}`,name:b.name,status:'abierto',cash:1200,jobSlots:12,inventory:0,price:18,inputCost:5,inputInventory:18,wage:10,productivity:.06,fixedCost:40,lastSales:0,lastLocalSales:0,lastRegionalSales:0,lastLocalDemand:0,lastRevenue:0,lastInputs:0,lastInputUnits:0,lastInputSupplier:'Sin compras',lastInputShortage:0,lastProduction:0,lastPayroll:0,lastProfit:0,lastWorkers:0,lastDemand:0};state.buildings.push(b);state.jobs+=12;state.privateCapital=Math.max(0,state.privateCapital-1200);
+      const candidates=[];for(const home of state.buildings.filter(x=>x.kind==='home'))for(const person of home.residents||[])if(person.workerEligible&&person.status!=='empleado')candidates.push({home,person,distance:Math.abs(home.x-p.x)+Math.abs(home.y-p.y)});candidates.sort((a,b)=>a.distance-b.distance);const hired=candidates.slice(0,12);for(const {person} of hired){person.status='empleado';person.employerId=b.business.id;person.employerName=b.name;person.monthlyWage=10;person.attendance=1}
+      state.workplaces=state.workplaces||[];state.workplaces.push({name:b.name,kind:'shop',x:p.x,y:p.y,jobSlots:12,workersAssigned:hired.length,staffedJobs:hired.length,payroll:hired.length*10,attendance:hired.length?1:0,meanMinutes:null});
     }else if(p.kind==='civic'){
       q.monthlyCost=650;state.buildings.push({...q,kind:'civic',name:'Centro de salud',occupants:0});state.monthlyExpenses+=650;state.services=Math.min(100,state.services+8);
     }else if(p.kind==='depot'){
@@ -53,7 +96,9 @@ export async function createOfflineAdapter(){
           if(p.elapsed>=p.duration){complete(p);state.projects=state.projects.filter(x=>x.id!==p.id)}
         }
         const month=Math.floor((state.day-1)/30);
+        receiveMarketDeliveries();
         if(month>(state.lastMonth||0)){
+          for(const supplier of Object.values(state.supply.market||{}))supplier.stock=Math.min(supplier.maxStock||0,(supplier.stock||0)+(supplier.monthlyOutput||0));
           let wages=0,publicPayroll=0;const payrollByEmployer={};
           for(const h of state.buildings.filter(b=>b.kind==='home')){
             const credits=(h.residents||[]).filter(r=>r.status==='empleado').reduce((sum,r)=>sum+Math.round((r.monthlyWage||0)*(r.attendance??1)),0);
@@ -61,11 +106,12 @@ export async function createOfflineAdapter(){
             for(const r of h.residents||[])if(r.status==='empleado')payrollByEmployer[r.employerId]=(payrollByEmployer[r.employerId]||0)+Math.round((r.monthlyWage||0)*(r.attendance??1));
           }
           for(const b of state.buildings){
-            if(b.business?.id&&payrollByEmployer[b.business.id]!=null){b.business.lastPayroll=payrollByEmployer[b.business.id];b.business.cash-=b.business.lastPayroll}
+            if(b.business?.id&&payrollByEmployer[b.business.id]!=null)b.business.lastPayroll=payrollByEmployer[b.business.id];
             if(b.kind==='civic'||b.kind==='depot')publicPayroll+=payrollByEmployer[`public-${b.kind}-${b.x}-${b.y}`]||0;
           }
           for(const w of state.workplaces||[]){const b=state.buildings.find(x=>x.x===w.x&&x.y===w.y);const id=b?.business?.id||`public-${w.kind}-${w.x}-${w.y}`;w.payroll=payrollByEmployer[id]||0}
           state.publicPayroll=publicPayroll;state.effectiveMonthlyExpenses=state.monthlyExpenses+publicPayroll;
+          simulateOfflineMarket();
           state.money=Math.max(0,state.money+(state.grossMonthlyIncome||state.monthlyIncome)-(state.effectiveMonthlyExpenses||state.monthlyExpenses));
           state.lastMonth=month;event('Balance mensual',`La tesorería cerró el mes. Nómina de referencia $ ${wages.toLocaleString('es-AR')}.`);
         }

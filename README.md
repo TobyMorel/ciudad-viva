@@ -1,10 +1,10 @@
-# Ciudad Viva · Alfa 0.17
+# Ciudad Viva · Alfa 0.18
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
 ## Modos de juego
 
-Al abrir la página se puede elegir **Offline** u **Online · red local**. Offline funciona en Vercel y guarda la ciudad en el almacenamiento local del navegador. Incluye calendario, parcelas, zonificación y obras con progreso por etapas; pedidos logísticos y rescate de obras siguen requiriendo el servidor. Para compartir una ciudad, elegí Online y abrí la dirección LAN del equipo anfitrión.
+Al abrir la página se puede elegir **Offline** u **Online · red local**. Offline funciona en Vercel y guarda la ciudad en el almacenamiento local del navegador. Incluye calendario, parcelas, zonificación y obras con progreso por etapas. Los comercios compran materia prima a proveedores privados con stock, precio y demora; los clientes se distribuyen según precio y acceso. Offline simplifica los trayectos a distancia y conserva la economía local; los pedidos de materiales de obra y rescate siguen requiriendo el servidor. Para compartir una ciudad, elegí Online y abrí la dirección LAN del equipo anfitrión.
 
 ## Iniciar
 

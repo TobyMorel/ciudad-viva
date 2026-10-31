@@ -24,3 +24,7 @@ La migración mensual se limita por plazas de vivienda vacantes y capacidad de e
 La alfa incluye vista 3D generada localmente, localidad inicial con 22 edificios, cámara giratoria, tráfico ambiental, calendario, presupuesto, vivienda, calles, zonificación, licitaciones, constructoras, depósitos logísticos, pedidos logísticos, inventarios, trabajadores por contrato, servicios municipales, guardado y sincronización LAN por HTTP.
 
 Pendientes: contratos, habilidades y horarios laborales, competencia y proveedores, demanda diferenciada, personas como agentes urbanos, servicios físicos, gobierno y elecciones, mapas ampliables y validación de LAN entre dos equipos físicos. La asignación de empleos ya es individual, pero los recorridos aún se muestran agrupados por hogar y destino.
+
+## Publicación en Vercel
+
+Esta versión no se puede jugar desplegando solo los archivos estáticos: el navegador necesita la API autoritativa de `server.py` para el reloj, acciones, guardado y sincronización. Vercel no mantiene ese proceso Python activo entre solicitudes, y no ofrece la sala LAN local del iniciador. El sitio puede servir los recursos, pero no iniciar una partida funcional. Para jugar hoy, ejecutá el iniciador incluido en una computadora anfitriona; para una versión web en Vercel hace falta separar la simulación y persistir su estado en un backend durable. Eso también cambiaría el requisito de multijugador exclusivamente LAN si ese backend fuera público.

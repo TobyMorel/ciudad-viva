@@ -150,6 +150,11 @@ try{
     await live.evaluate(async()=>{
       const city=await fetch('/offline_seed.json').then(r=>r.json());
       city.paused=true;city.day=31;city.lastMonth=1;
+      // Una comisaría sin agua o electricidad debe permanecer en base. Para esta
+      // prueba de movimiento conectamos instalaciones y calles físicamente.
+      const lines=[[4,10],[5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[10,11],[11,11],[12,11]];
+      city.utilities=city.utilities||{};
+      for(const network of ['powerLines','waterPipes','sewerLines'])city.utilities[network]=lines;
       city.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Comisaría visual de prueba',x:10,y:11,status:'operativo',
         policeUnit:{vehicles:1,priority:'mixto'},jobSlots:22,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.buildings.push({kind:'civic',serviceModel:'generalHospital',name:'Hospital visual de prueba',x:11,y:11,status:'operativo',

@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.124
+
+1. Completar fase 8 con escenario fiscal reproducible: cambiar impuestos/presupuestos, observar caja, mora, crédito empresarial, empleo, demanda y apoyo, y luego recuperar la ciudad.
+2. Medir durante el mismo escenario la continuidad y recuperación de salud, educación, residuos, redes y colectivos en motores Online y Offline.
+3. Conservar los resultados causales: sin castigos arbitrarios, sin sanar pérdidas de otras fuentes y sin mover dinero antes de su fecha de cobro.
+4. Priorizar sistemas del roadmap; cuando haya cambios visuales, revisar móvil/escritorio. Publicar en `main`, verificar commit/CI/Vercel y entregar ZIP completo.
+
+Fase actual: 8, 90% orientativo; próxima: escenario fiscal integral con actividad urbana y cinco servicios. Progreso global no estimable: falta una ponderación común verificable para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.123
 
 1. Seguir fase 8 con escenarios fiscales donde cambios de impuestos y presupuestos alteren empleo, atractivo residencial/comercial, demanda y apoyo ciudadano según causas legibles.

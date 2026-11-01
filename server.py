@@ -1133,7 +1133,12 @@ def collect_municipal_taxes():
     for shop in (b for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"):
         firm=shop["business"];key=firm.get("id",f"shop-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates["business"]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
         firm["cash"]=cash-paid;accounts[key]=due-paid;firm["municipalTaxDue"]=due;firm["municipalTaxPaid"]=paid;firm["municipalTaxArrears"]=due-paid
-        firm["taxDelinquencyMonths"]=firm.get("taxDelinquencyMonths",0)+1 if due>paid else 0
+        previous_delinquency=firm.get("taxDelinquencyMonths",0);firm["taxDelinquencyMonths"]=previous_delinquency+1 if due>paid else 0
+        if firm["taxDelinquencyMonths"]==3 and previous_delinquency<3:
+            ev("Crédito comercial suspendido por mora tributaria",f"{firm.get('name',shop.get('name','Empresa'))} acumuló tres cierres sin pagar sus impuestos; no podrá tomar nuevo crédito hasta regularizar la deuda.")
+        elif previous_delinquency>=3 and firm["taxDelinquencyMonths"]==0:
+            ev("Crédito comercial restablecido",f"{firm.get('name',shop.get('name','Empresa'))} regularizó sus impuestos y recuperó su línea de crédito, descontando cualquier saldo fiscal aún pendiente.")
+        firm["taxAdjustedCreditLimit"]=business_credit_limit_after_tax(firm)
         business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
     taxes["lastProcessedMonth"]=month
     report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":property_paid+business_paid,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
@@ -3090,10 +3095,18 @@ def pay_public_wages(workforce):
                 home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
     return payroll
 
+def business_credit_limit_after_tax(firm):
+    """Tax arrears encumber a firm's credit line; three consecutive missed tax bills freeze new draws."""
+    base=max(0,int(firm.get("creditLimit",0)))
+    if firm.get("taxDelinquencyMonths",0)>=3:return 0
+    key=firm.get("id",f"shop-{firm.get('x',0)}-{firm.get('y',0)}")
+    arrears=max(0,int(state.get("taxes",{}).get("arrearsByAsset",{}).get(key,0)))
+    return max(0,base-arrears)
+
 def draw_business_credit(firm, amount):
     if amount<=0:return 0
     ensure_finance_state();bank=state["finance"]["businessBank"]
-    room=max(0,int(firm.get("creditLimit",0)-firm.get("creditDebt",0)))
+    room=max(0,int(business_credit_limit_after_tax(firm)-firm.get("creditDebt",0)))
     draw=min(int(math.ceil(amount)),room,max(0,int(bank.get("liquidity",0))))
     if draw:
         firm["creditDebt"]=firm.get("creditDebt",0)+draw
@@ -3407,7 +3420,7 @@ def simulate_business_month(workforce):
             landed=supplier["unitCost"]+freight+supplier.get("leadDays",0)*.035
             providers.append((landed,name,supplier,route,distance))
         providers.sort(key=lambda item:(item[0],item[2].get("leadDays",0),item[1]))
-        cash_for_orders=max(0,int(cash_before_orders+min(max(0,firm.get("creditLimit",0)-firm.get("creditDebt",0)),state["finance"]["businessBank"].get("liquidity",0))))
+        cash_for_orders=max(0,int(cash_before_orders+min(max(0,business_credit_limit_after_tax(firm)-firm.get("creditDebt",0)),state["finance"]["businessBank"].get("liquidity",0))))
         for landed,name,supplier,route,distance in providers:
             if needed<=0 or cash_for_orders<=0:break
             quantity=min(needed,int(supplier.get("stock",0)),int(cash_for_orders//max(.01,landed)))
@@ -3455,7 +3468,7 @@ def simulate_business_month(workforce):
             if port:state["supply"].setdefault("portOrders",[]).append({"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"businessId":firm.get("id"),"businessName":firm.get("name",shop.get("name","Comercio")),"quantity":regional_sales,"orderedDay":state["day"],"travelledDistance":0,"status":"pendiente","route":[]})
         firm["lastLocalDemand"]=local_demand;firm["lastRegionalDemand"]=shop_regional_demand;firm["lastRevenue"]=revenue;firm["lastInputs"]=procurement_cost;firm["lastInputUnits"]=purchases;firm["lastInputSupplier"]=" · ".join(chosen) if chosen else "Sin stock o fondos"
         firm["lastInputShortage"]=max(0,needed);firm["lastProduction"]=production;firm["lastPayroll"]=payroll;firm["lastProfit"]=revenue-payroll-overhead-procurement_cost-interest
-        firm["creditAvailable"]=max(0,min(firm.get("creditLimit",0)-firm.get("creditDebt",0),state["finance"]["businessBank"].get("liquidity",0)))
+        firm["creditAvailable"]=max(0,min(business_credit_limit_after_tax(firm)-firm.get("creditDebt",0),state["finance"]["businessBank"].get("liquidity",0)))
         firm["creditStatus"]="mora" if firm.get("creditDelinquencyMonths",0) else ("utilizada" if firm.get("creditDebt",0)>0 else "disponible")
         firm["lastWorkers"]=headcount;firm["lastDemand"]=round(total_demand)
         revenue_total+=revenue;payroll_total+=payroll;sales_total+=sales;inputs_total+=procurement_cost

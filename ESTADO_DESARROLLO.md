@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.124
+
+## Impuestos empresariales y solvencia
+
+- Online y Offline descuentan los atrasos tributarios empresariales de la línea de crédito disponible. La operación afecta giros de caja y compras operativas; el crédito vigente conserva su amortización.
+- Al tercer cierre mensual consecutivo sin pagar impuestos, la empresa queda sin nuevos giros. Tras cancelar la deuda, recupera la línea y el registro municipal informa la suspensión y el restablecimiento.
+- Pruebas Online verifican el descuento peso por peso y el ciclo de suspensión/restablecimiento; prueba Offline confirma el mismo límite. La interfaz no cambió.
+- Fase actual: 8, 90% orientativo. Restan escenarios fiscales que unan impuestos, empleo, demanda, apoyo y recuperación de cinco servicios. Global no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.123
 
 ## Recuperación fiscal de servicios

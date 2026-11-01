@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.124
+
+La mora tributaria de una empresa reduce su línea de crédito: `business_credit_limit_after_tax` en `server.py` y `taxAdjustedBusinessCreditLimit` en `offline.js` restan los atrasos del límite comercial. Con tres cierres seguidos impagos los nuevos giros se congelan; la deuda bancaria existente sigue su calendario. Al quedar al día, vuelve el límite disponible. La regla se usa al financiar caja y compras, no solo para mostrar el dato. El cobro emite eventos al tercer impago y al regularizarse. Tests: Online cubre cálculo, giros y ciclo de mora; Offline cubre límites equivalentes. Sin cambios de interfaz.
+
+Fase 8=90% orientativo; falta probar el escenario fiscal completo enlazando impuestos, presupuestos, caja, empleo, demanda, apoyo y recuperación de cinco servicios en ambos motores. El avance global sigue no estimable sin pesos comunes verificables para 34 fases. LAN física pendiente.
+
+**Siguiente:** priorizar la validación integral de la crisis recuperable; no dedicar una entrega solo a pulido.
+
 ## Continuidad inmediata · Alfa 0.123
 
 Fase 8 suma recuperación fiscal gradual del nivel de servicios. `finance.programBudgets.financialServiceImpact` (Online) y su contraparte Offline registran solo los puntos que efectivamente bajaron por la falta de fondos del programa de servicios. No incluye pérdidas por contaminación, deterioro, epidemias u otras causas. Cuando la factura corriente está cubierta y toda la mora de servicios se cancela, se restaura un punto por cierre mensual, limitado a la deuda fiscal registrada y al máximo 100. La migración crea el campo en partidas previas. Tests Online y Offline cubren default, mora que bloquea recuperación y disminución gradual del saldo.

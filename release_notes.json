@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.123",
+  "currentVersion": "0.124",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.124",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 90,
+      "overallProgress": null,
+      "changes": [
+        "La deuda tributaria empresarial ahora reduce la línea disponible peso por peso. Los fondos ya usados siguen su calendario, pero los giros nuevos quedan limitados por la mora fiscal.",
+        "Tras tres cierres seguidos sin pagar impuestos se suspenden nuevos giros. Al saldar la deuda tributaria, la empresa recupera su límite de crédito; el registro municipal informa ambos cambios.",
+        "La regla se aplica en Online y Offline a la caja operativa y a las compras de insumos, así que una empresa con mora puede reducir producción o cerrar si ya no cubre sus costos.",
+        "Verificación: pruebas Online de cálculo de solvencia, cobro, suspensión y restablecimiento; prueba Offline de los mismos límites. No se cambió la interfaz.",
+        "La fase 8 avanza de 85% a 90% por conectar cobro tributario, solvencia, continuidad empresarial y actividad/empleo con resultados persistentes. Quedan escenarios fiscales completos, relación con demanda/apoyo y recuperación de cinco servicios. El avance global no es estimable sin pesos comunes verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.123",
       "date": "2026-11-01",
@@ -1268,8 +1282,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.124 · crisis fiscal y actividad urbana",
-      "detail": "Fase 8: conectar decisiones tributarias y presupuestarias con empleo, demanda privada, apoyo ciudadano y continuidad verificable de cinco servicios."
+      "title": "Alfa 0.125 · escenario fiscal completo",
+      "detail": "Fase 8: ejecutar una crisis recuperable donde impuestos, caja, deuda, mora, empleo, demanda, apoyo ciudadano y los cinco servicios reaccionen juntos y queden medidos en Online y Offline."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1357,11 +1371,11 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 85,
+      "progress": 90,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Escenarios integrales de crisis que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
-        "Medir con pruebas de extremo a extremo cómo la recuperación fiscal recompone salud, educación, residuos, redes y transporte.",
+        "Escenarios integrales que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
+        "Validar en una crisis de punta a punta la recuperación de salud, educación, residuos, redes y transporte.",
         "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },

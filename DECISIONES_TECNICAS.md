@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.124
+
+## Crédito empresarial bajo mora tributaria
+
+La línea de cada comercio se calcula como `max(0, límite contractual - mora tributaria del activo)`. Se identifica la cuenta por el ID estable de la empresa (o coordenada heredada). Tres cierres consecutivos impagos fijan en cero la disponibilidad para nuevos giros. La deuda crediticia vigente se conserva; no se acelera su vencimiento. Cuando el impuesto completo queda saldado, el contador vuelve a cero y se restaura el límite después de descontar cualquier saldo tributario restante.
+
+La regla se consulta en cada giro y compra para evitar usar capacidad calculada antes del cobro mensual. Online y Offline aplican las mismas condiciones; los eventos aparecen al cruzar la tercera mora y al regularizarse.
+
 # Decisiones técnicas · Alfa 0.123
 
 ## Recuperación fiscal de servicios

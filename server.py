@@ -68,14 +68,18 @@ def new_market_supply():
     suppliers["Cooperativa Agrícola Regional"]={"unitCost":3.4,"stock":320,"maxStock":600,"monthlyOutput":180,"leadDays":2,"profile":"Grano regional · cuota finita y entrega por carretera","cash":18000,"lastSales":0,"source":[21,10],"commodity":"grano"}
     return suppliers
 
+FACTORY_LABELS = {"food":"Procesadora de alimentos", "quarry":"Cantera de Puerto Claro",
+                  "concrete":"Hormigonera de Puerto Claro", "sawmill":"Aserradero de Puerto Claro",
+                  "metalworks":"Metalúrgica de Puerto Claro"}
+
 def next_factory_industry():
-    """Start local supply chains before allowing more food processors."""
-    factories=[b for b in state.get("buildings",[]) if b.get("kind")=="factory"]
-    if factories and not any(b.get("business",{}).get("industryType")=="quarry" and b.get("business",{}).get("status")=="abierto" for b in factories):return "quarry"
-    if factories and not any(b.get("business",{}).get("industryType")=="concrete" and b.get("business",{}).get("status")=="abierto" for b in factories):return "concrete"
-    if factories and not any(b.get("business",{}).get("industryType")=="sawmill" and b.get("business",{}).get("status")=="abierto" for b in factories):return "sawmill"
-    if factories and not any(b.get("business",{}).get("industryType")=="metalworks" and b.get("business",{}).get("status")=="abierto" for b in factories):return "metalworks"
-    return "food"
+    """Asignar especialidad al contratar, incluyendo la capacidad que ya está en obra."""
+    occupied={b.get("business",{}).get("industryType","food") for b in state.get("buildings",[])
+              if b.get("kind")=="factory" and b.get("business",{}).get("status")=="abierto"}
+    occupied.update(p["industryType"] for p in state.get("projects",[])
+                    if p.get("kind")=="factory" and p.get("industryType") and p.get("status") not in ("pausada","cancelada"))
+    return next((kind for kind in ("food","quarry","concrete","sawmill","metalworks")
+                 if kind not in occupied),"food")
 
 def settle_concrete_sale(quantity):
     remaining=max(0,int(quantity));unit_revenue=MATERIAL_PRICE["concrete"]*SUPPLIERS["Hormigonera local"]["price"]
@@ -3050,7 +3054,10 @@ def advance_zoned_development():
             settle_local_material_sale(supplier,{material:amount})
         state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance;state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
         zone["status"]="en obra"
-        if kind=="factory":project["operatingReserve"]=reserve
+        if kind=="factory":
+            project["operatingReserve"]=reserve
+            project["industryType"]=next_factory_industry()
+            project["label"]=FACTORY_LABELS[project["industryType"]]
         ev("Promotor inicia obra",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. Permiso municipal $ {permit}, inversión privada $ {private_cost:,}, materiales $ {material_bill:,}, cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
 
 def move_households():
@@ -3336,7 +3343,7 @@ def tick_one_day():
                 opening_capital=min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=opening_capital
                 building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
             elif p["kind"]=="factory":
-                industry_type=next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name="Cantera de Puerto Claro" if is_quarry else "Aserradero de Puerto Claro" if is_sawmill else "Metalúrgica de Puerto Claro" if is_metalworks else "Procesadora de alimentos"
+                industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
                 building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180}
                 if industry_type=="concrete":name="Hormigonera de Puerto Claro"
                 building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
@@ -3979,6 +3986,9 @@ class Handler(BaseHTTPRequestHandler):
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
+                    if kind=="factory":
+                        p["industryType"]=next_factory_industry()
+                        p["label"]=FACTORY_LABELS[p["industryType"]]
                     if kind in ("home","shop","hotel","factory"):
                         p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
                         operating_reserve=4200 if kind=="factory" else 0

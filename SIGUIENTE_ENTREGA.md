@@ -242,3 +242,8 @@ Nueva decisión ante corte de carretera: renegociar una vez los contratos canter
 ## Continuación · penalización por vencimiento
 
 Remesas de áridos no entregadas al vencimiento generan devolución desde custodia y, si comprador y proveedor siguen abiertos, una indemnización adicional desde caja real del proveedor (5% de producto, limitada a fondos disponibles). Nunca se emite dinero nuevo; cada remesa se liquida una vez. Pruebas Online/Offline agregadas. Próximo: extensión B2B a otras materias primas y escenarios multidecada.
+
+
+## Continuación · quiebra del vendedor B2B
+
+Cuando el proveedor quiebra, las órdenes contractuales pendientes se cancelan inmediatamente y devuelven el escrow al cliente: el material que había sido reservado por una firma ya cerrada consta como pérdida, no vuelve al mercado ficticiamente. Ambas simulaciones implementadas con pruebas de no duplicación. Seguir con contratos para otras materias primas, comercio y escenarios multidecada; interfaz sin cambios.

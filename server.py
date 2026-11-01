@@ -257,6 +257,7 @@ def advance_local_concrete_plants(workplaces,employees):
             quarry_stock["aggregate"]-=quantity
             settle_industrial_vendor_offer("Cantera local","aggregate",quantity,
                 {"site":quarry,"productCost":product_cost,"factor":factor})
+            state["supply"]["logisticsCash"]=state["supply"].get("logisticsCash",0)+max(0,cost-product_cost)
             firm["cash"]-=cost
             ready=state["day"]+1
             orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"áridos",
@@ -4232,6 +4233,7 @@ class Handler(BaseHTTPRequestHandler):
                     if vendor_offer:
                         material=INDUSTRIAL_VENDOR_GOODS[supplier][1]
                         settle_industrial_vendor_offer(supplier,material,clean[material],vendor_offer)
+                        state["supply"]["logisticsCash"]=state["supply"].get("logisticsCash",0)+vendor_offer["freight"]
                         order["vendorId"]=vendor_offer["site"]["business"].get("id")
                         order["vendorName"]=vendor_offer["site"].get("name")
                         order["productCost"]=vendor_offer["productCost"]

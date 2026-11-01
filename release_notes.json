@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.107",
+  "currentVersion": "0.108",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.108",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 70,
+      "overallProgress": null,
+      "changes": [
+        "Vehículos situados sobre el carril derecho en ambos sentidos y giros de orientación suavizados; cruces de tres o cuatro calles muestran semáforos con ciclo visual y detención visual de los vehículos.",
+        "La pestaña Tráfico colorea los tramos según viajes simulados de autos, colectivos y entregas, y muestra trayectos y demoras.",
+        "Árboles con ramas y copas más redondeadas, autos con ruedas segmentadas, luces y espejos, casas y fábricas con nuevos elementos de fachada y cubierta. Zoom máximo ampliado a 4×.",
+        "Avisos flotantes reutilizan sus nodos y respiran suavemente; basura y avisos viales se sitúan cerca de la calle. Al tocarlos se abre el detalle causal existente.",
+        "Construir se separa en nueve grupos; Economía en tres secciones; Ciudad usa categorías verticales con desplazamiento propio y texto más legible. Se añadió un tema oscuro persistente.",
+        "Música ambiental generativa tranquila activada después de interacción del usuario y efectos conservados. Salas públicas muestra salas LAN reales si hay iniciador; en un navegador estático muestra estado vacío y permite ingresar dirección sin afirmar descubrimiento inexistente.",
+        "Se corrigió la restauración de paneles al cambiar ventanas, que podía retirar botones del documento."
+      ]
+    },
     {
       "version": "0.107",
       "date": "2026-11-01",
@@ -1049,12 +1065,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.108 · crisis con decisiones urbanas",
-      "detail": "Respuesta sanitaria y vial a incidentes causales, con presupuesto, equipos, demora y resultados visibles."
+      "title": "Alfa 0.109 · capacidad vial y accidentes",
+      "detail": "Llevar los semáforos y la capacidad por tramo al cálculo principal de tiempos; introducir accidentes y respuesta municipal."
     },
     {
       "title": "Validación de experiencia",
-      "detail": "Sesiones de juego prolongadas y revisión de accesibilidad, especialmente flujos extensos en móvil."
+      "detail": "Pruebas de usabilidad y rendimiento con ciudades densas, sesión LAN física entre dos equipos y revisión de contrastes."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1128,10 +1144,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 65,
-      "summary": "Peatones, autos y buses con rutas, horarios parciales, capacidad, tarifa y trabajo",
+      "progress": 70,
+      "summary": "Peatones, autos, buses y carga con rutas, horarios parciales, capacidad, tarifa y mapa de estrés vial; semáforos visuales",
       "pending": [
-        "Bicicletas, ocio, capacidad vial detallada, accidentes y transporte multimodal."
+        "Bicicletas, ocio, accidentes y transporte multimodal.",
+        "Integrar fases de semáforos y capacidad por tramo en el tiempo de viaje autoritativo; medir con ciudad densa."
       ]
     },
     {
@@ -1201,11 +1218,11 @@
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 65,
-      "summary": "Interfaz Atlas municipal, paneles, navegación, historial, controles y accesibilidad visual básica",
+      "progress": 70,
+      "summary": "Interfaz Atlas municipal, grupos de construcción y economía, navegación vertical, tema claro/oscuro, historial y controles",
       "pending": [
         "Pruebas de usabilidad con jugadores y revisión de contraste con tecnologías de asistencia.",
-        "Equilibrio de experiencia en sesiones largas y ciudades extensas."
+        "Equilibrio de experiencia y rendimiento en sesiones largas y ciudades extensas."
       ]
     },
     {

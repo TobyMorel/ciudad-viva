@@ -33,27 +33,42 @@ try{
       city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',vendorId:'rival-6',type:'industrial_raw',commodity:'áridos',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,productCost:280,freight:0,source:[6,9],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
     });
+    await page.locator('#modeThemeToggle').evaluate(button=>button.click());
+    assert.equal(await page.locator('body').getAttribute('data-theme'),'dark',name+': el tema oscuro debe aplicarse en inicio');
+    await page.locator('#modeThemeToggle').evaluate(button=>button.click());
+    await page.locator('#onlineMode').evaluate(button=>button.click());
+    await page.locator('#browseRoom').evaluate(button=>button.click());
+    await page.waitForFunction(()=>document.getElementById('roomList')?.textContent?.includes('Salas disponibles'),{timeout:10000});
+    assert.ok((await page.locator('#roomList').innerText()).includes('No se detectaron salas abiertas'),name+': la búsqueda sin iniciador debe mostrar una lista vacía');
+    await page.locator('#lanBack').evaluate(button=>button.click());
     await page.locator('#offlineMode').click();
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     await page.waitForTimeout(400);
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
     await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
+    await page.locator('[data-popup="traffic"]').evaluate(button=>button.click());
+    assert.equal(await page.locator('#trafficPanel').isVisible(),true,name+': Tráfico debe quedar sobre el mapa sin taparlo');
+    assert.equal(await page.locator('#panelPopup').isVisible(),false,name+': la capa vial no debe abrir el popup borroso');
+    await page.locator('#trafficPanel [data-close-traffic]').evaluate(button=>button.click());
+    await page.locator('#themeToggle').evaluate(button=>button.click());
+    assert.equal(await page.locator('body').getAttribute('data-theme'),'dark',name+': tema oscuro en el juego');
+    await page.locator('#themeToggle').evaluate(button=>button.click());
     // Ayuda y avisos deben funcionar también en móvil, sin depender del motor Online.
-    await page.locator('[data-popup="guide"]').click();
+    await page.locator('[data-popup="guide"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
     const instructions=await page.locator('#popupContent').innerText();
     assert.ok(instructions.includes('Primeros pasos en tu ciudad')&&instructions.includes('Hormigón')&&instructions.includes('Hormigonera'),
       name+': la guía de construcción no explica el hormigón ni la progresión.');
     assert.equal(await page.locator('#popupContent .quick-start-step').count(),6);
-    await page.locator('#popupClose').click();
-    await page.locator('[data-popup="alerts"]').click();
+    await page.locator('#popupClose').evaluate(button=>button.click());
+    await page.locator('[data-popup="alerts"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
     const alertsIntro=await page.locator('#popupContent').innerText();
     assert.ok(alertsIntro.includes('avisos')||alertsIntro.includes('Avisos'),
       name+': el panel de eventos urbanos no está disponible.');
-    await page.locator('#popupClose').click();
-    await page.locator('[data-popup="build"]').click();
+    await page.locator('#popupClose').evaluate(button=>button.click());
+    await page.locator('[data-popup="build"]').evaluate(button=>button.click());
     const catalog=await page.evaluate(()=>{
       const pane=document.querySelector('#panelPopup:not(.hidden)'),buttons=[...pane.querySelectorAll('[data-model]')];
       return {count:buttons.length,factoryCount:pane.querySelectorAll('[data-industry]').length,categories:[...pane.querySelectorAll('.tool-category')].map(x=>x.textContent.trim()),
@@ -62,9 +77,9 @@ try{
     });
     assert.ok(catalog.count===16&&catalog.factoryCount===5&&catalog.categories.length===6&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
-    await page.locator('#popupClose').click();
+    await page.locator('#popupClose').evaluate(button=>button.click());
 
-    await page.locator('[data-popup="supply"]').click();
+    await page.locator('[data-popup="supply"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
     await page.waitForFunction(()=>document.querySelector('#popupContent')?.textContent?.includes('Contratos privados de materias primas'),{timeout:10000});
     const popup=await page.evaluate(()=>{
@@ -111,10 +126,11 @@ try{
     assert.ok(popup.scrollWidth<=popup.width+2,name+': overflow horizontal en Economía '+JSON.stringify(popup));
     assert.ok(popup.scrollable,name+': el contenido largo no se puede desplazar');
     await page.screenshot({path:'ui-captures/'+name+'-economia.png'});
-    await page.locator('#popupClose').click();
-    await page.locator('[data-popup="city"]').click();
+    await page.locator('#popupClose').evaluate(button=>button.click());
+    await page.locator('[data-popup="city"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
     await page.locator('[data-city-section-button="tourism"]').evaluate(button=>button.click());
+    await page.waitForFunction(()=>!document.querySelector('[data-city-section="tourism"]')?.hidden,{timeout:10000});
     const eventUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="tourism"]');
       const buttons=[...section.querySelectorAll('[data-tourism-event]')];
@@ -126,6 +142,7 @@ try{
       name+': eventos turísticos recortados u ocultos '+JSON.stringify(eventUI));
     await page.screenshot({path:'ui-captures/'+name+'-turismo.png'});
     await page.locator('[data-city-section-button="health"]').evaluate(button=>button.click());
+    await page.waitForFunction(()=>!document.querySelector('[data-city-section="health"]')?.hidden,{timeout:10000});
     const hospitalUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="health"]'),selection=document.querySelector('#selection').getBoundingClientRect();
       const buttons=[...section.querySelectorAll('[data-hospital-invest]')];
@@ -138,6 +155,7 @@ try{
       name+': panel hospitalario con controles o textos solapados/ocultos '+JSON.stringify(hospitalUI));
     await page.screenshot({path:'ui-captures/'+name+'-salud.png'});
     await page.locator('[data-city-section-button="security"]').evaluate(button=>button.click());
+    await page.waitForFunction(()=>!document.querySelector('[data-city-section="security"]')?.hidden,{timeout:10000});
     const policeUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="security"]'),selection=document.querySelector('#selection').getBoundingClientRect();
       const buttons=[...section.querySelectorAll('[data-police-action]')];
@@ -151,7 +169,7 @@ try{
     assert.ok(policeUI.visible&&policeUI.count===4&&policeUI.contained&&!policeUI.overlap&&!policeUI.overflow&&policeUI.validLabels,
       name+': controles policiales ocultos, solapados o desbordados '+JSON.stringify(policeUI));
     await page.screenshot({path:'ui-captures/'+name+'-seguridad.png'});
-    await page.locator('#popupClose').click();
+    await page.locator('#popupClose').evaluate(button=>button.click());
 
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));
     await page.close();

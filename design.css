@@ -34,3 +34,76 @@ button:focus-visible{outline:3px solid #df784e;outline-offset:2px}
 .world-wrap{height:100%;min-height:0}
 @media(max-width:650px){.layout{height:100%;min-height:0}.world-wrap{height:100%;min-height:0}}
 .mode-icon{width:44px;height:44px;display:grid;place-items:center;font-size:14px;font-weight:900;letter-spacing:-.08em;font-variant-numeric:tabular-nums}
+
+/* Alfa 0.108: legibilidad, agrupación, tráfico y dos temas de interfaz. */
+.popup-window:has(.city-subnav){width:min(1100px,calc(100vw - 24px));max-height:92dvh}
+.popup-content #selection:has(.city-subnav){display:grid;grid-template-columns:192px minmax(0,1fr);align-items:start;column-gap:22px;row-gap:8px}
+#selection:has(.city-subnav)>.eyebrow,#selection:has(.city-subnav)>h2,#selection:has(.city-subnav)>p{grid-column:1/-1;margin:0}
+#selection:has(.city-subnav)>p{margin-bottom:12px;font-size:14px;line-height:1.5}
+.popup-content .city-subnav{grid-column:1;grid-row:4;position:sticky;top:0;display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:3px;margin:0;padding:7px;max-height:min(65dvh,670px);overflow-y:auto;overflow-x:hidden;scroll-snap-type:none;touch-action:pan-y;scrollbar-width:thin;background:#e9efea}
+.popup-content .city-subnav button{flex:0 0 auto;display:block;width:100%;min-width:0;max-width:none;min-height:39px;padding:9px 10px;text-align:left;white-space:normal;font-size:12px;line-height:1.3;overflow-wrap:break-word}
+.popup-content .city-content{grid-column:2;grid-row:4;min-width:0;max-width:100%}
+.popup-content .city-section{font-size:13px;line-height:1.52}
+.popup-content .city-section .detail-grid span,.popup-content .city-section .detail-grid b{font-size:12px;line-height:1.4}
+.popup-content .city-section small,.popup-content .city-section .government-note,.popup-content .city-section .workplace small{font-size:11px;line-height:1.5}
+.popup-content .city-section h3{font-size:17px}
+.popup-content .tool-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+.build-intro{grid-column:1/-1;margin:0 0 2px;padding:13px 15px;border-radius:10px;background:#e6f0ec;color:#345960;font-size:13px;line-height:1.5}
+.build-group{display:grid;grid-template-columns:1fr;align-content:start;gap:7px;min-width:0;padding:12px;border:1px solid #dce5e0;border-radius:12px;background:#f5f7f2}
+.build-group h3,.build-group .tool-category{margin:0 0 4px;padding:0 0 9px;border-bottom:1px solid #cddbd4;color:#225d62;font-size:13px;font-weight:850;letter-spacing:.02em;line-height:1.3}
+.build-group .tool{width:100%}
+.build-group .tool small{font-size:11px}
+.popup-window:has(.tool-list){width:min(1000px,calc(100vw - 24px))}
+.economy-section{display:grid;gap:11px;margin:0 0 17px;padding:16px;border:1px solid #dbe4df;border-left:4px solid #387f77;border-radius:12px;background:#f6f8f4}
+.economy-section:nth-child(2){border-left-color:#bd8151;background:#fcf7ef}
+.economy-section:nth-child(3){border-left-color:#4d8299;background:#f3f8fa}
+.economy-section h3{margin:0 0 3px;color:#234750;font-size:18px;letter-spacing:-.02em}
+.economy-section>p{font-size:12px;line-height:1.5;margin:0}
+.economy-section .supply-line,.economy-section .detail-grid>div{background:#fffefa;padding:11px}
+.traffic-panel{display:grid;gap:13px;max-width:650px;font-size:14px;line-height:1.5}
+.traffic-panel p{margin:0;color:#49666b}
+.traffic-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.traffic-stats span{display:grid;gap:3px;padding:12px;border:1px solid #d7e5dd;border-radius:10px;background:#f3f8f3;font-size:12px;color:#41666a}
+.traffic-stats b{font-size:17px;color:#244c54}
+.traffic-low{color:#278057}.traffic-mid{color:#af7e29}.traffic-high{color:#ba5149}
+.theme-toggle{display:grid;place-items:center;flex:0 0 34px;min-width:34px;min-height:36px;border:1px solid #d4e2da;border-radius:9px;background:#eaf1e9;color:#305862;font-size:19px;cursor:pointer}
+.city-alert-pin{animation:city-alert-breathe 2.7s ease-in-out infinite;transform-origin:center bottom;transition:left .25s ease,top .25s ease}
+.city-alert-pin:hover,.city-alert-pin:focus-visible{animation-play-state:paused;transform:translate(-50%,-100%) scale(1.16)}
+@keyframes city-alert-breathe{0%,100%{transform:translate(-50%,-100%) scale(.96)}50%{transform:translate(-50%,-100%) scale(1.09)}}
+.room-list{min-height:125px;font-size:13px}.room-list b{font-size:16px}.room-list p{margin:2px 0 9px;line-height:1.5}.room-list button{justify-self:start}
+@media(max-width:650px){.popup-content #selection:has(.city-subnav){grid-template-columns:118px minmax(0,1fr);column-gap:9px;row-gap:7px}.popup-content .city-subnav{max-height:68dvh;padding:4px;gap:2px}.popup-content .city-subnav button{min-height:35px;padding:7px 5px;font-size:10px}.popup-content .city-section{font-size:12px}.popup-content .city-section .detail-grid{grid-template-columns:1fr}.popup-content .tool-list{grid-template-columns:1fr;gap:8px}.build-group{padding:10px}.popup-content .tool{min-height:58px}.economy-section{padding:10px;gap:8px}.traffic-stats{grid-template-columns:1fr}.game-dock{overflow-x:auto}.theme-toggle{flex:0 0 34px}}
+@media(prefers-reduced-motion:reduce){.city-alert-pin{animation:none;transition:none}}
+body[data-theme="dark"]{--bg:#111c25;--panel:#192b33;--panel2:#22353c;--line:#3a555a;--muted:#a8bdc1;--text:#e5f0ec;--mint:#274b49;--green:#7ad4b4;--gold:#eeb57d;--red:#f49484;--blue:#9ac9e0;--ink:#e5f0ec;--paper:#22353c;--accent:#ee9b74;--shadow:0 20px 55px #0009;background:#111c25;color:#e5f0ec}
+body[data-theme="dark"] #app,body[data-theme="dark"] .topbar,body[data-theme="dark"] .metrics,body[data-theme="dark"] footer{background:#14242c;color:#e4f0ed;border-color:#385158}
+body[data-theme="dark"] .metric,body[data-theme="dark"] .panel,body[data-theme="dark"] .popup-window,body[data-theme="dark"] .bid-modal,body[data-theme="dark"] .mode-card,body[data-theme="dark"] .popup-header{background:#1d3038;color:#e6f0ed;border-color:#405961}
+body[data-theme="dark"] .popup-content,body[data-theme="dark"] .popup-content *,body[data-theme="dark"] .selection,body[data-theme="dark"] .panel-head{color:#dbe9e7}
+body[data-theme="dark"] .metric b,body[data-theme="dark"] .popup-header h2,body[data-theme="dark"] .popup-content h2,body[data-theme="dark"] .popup-content h3,body[data-theme="dark"] .popup-content b,body[data-theme="dark"] .mode-card h1{color:#f3faf5}
+body[data-theme="dark"] .metric span,body[data-theme="dark"] .metric small,body[data-theme="dark"] .popup-content p,body[data-theme="dark"] .popup-content small,body[data-theme="dark"] .popup-content .eyebrow,body[data-theme="dark"] .mode-card>p{color:#b4c9ca}
+body[data-theme="dark"] .game-dock,body[data-theme="dark"] .world-toolbar,body[data-theme="dark"] .city-alert-counter{background:#1c3035f2;color:#e8f5ef;border-color:#4c6b69}
+body[data-theme="dark"] .game-dock button,body[data-theme="dark"] .world-toolbar button,body[data-theme="dark"] .theme-toggle{background:#29454a;color:#d5eee8;border-color:#50716d}
+body[data-theme="dark"] .game-dock button span,body[data-theme="dark"] .world-toolbar b{color:#e5f1ed}
+body[data-theme="dark"] .popup-content .tool,body[data-theme="dark"] .build-group,body[data-theme="dark"] .build-intro,body[data-theme="dark"] .economy-section,body[data-theme="dark"] .economy-section .supply-line,body[data-theme="dark"] .economy-section .detail-grid>div,body[data-theme="dark"] .popup-content .supply-line,body[data-theme="dark"] .popup-content .workplace,body[data-theme="dark"] .popup-content .project,body[data-theme="dark"] .popup-content .detail-grid>div,body[data-theme="dark"] .traffic-stats span,body[data-theme="dark"] .room-list,body[data-theme="dark"] .lan-choice,body[data-theme="dark"] .mode-option{background:#263c43;color:#e4eeeb;border-color:#4a6667}
+body[data-theme="dark"] .city-subnav{background:#20383f;border-color:#456164}
+body[data-theme="dark"] .city-subnav button{background:transparent;color:#d1e4e1}
+body[data-theme="dark"] .city-subnav button.active{background:#3b6867;color:#fff}
+body[data-theme="dark"] .modal-close,body[data-theme="dark"] .city-actions button,body[data-theme="dark"] .popup-content button:not(.tool):not(.city-alert-pin){background:#325457;color:#ecf5ef;border-color:#597674}
+body[data-theme="dark"] .city-alert-pin{background:#203b42;color:#fff;border-color:#91aba6}
+body[data-theme="dark"] .mode-backdrop{background:radial-gradient(circle at 80% 18%,#355b5a,transparent 40%),#101f29}
+.popup-content .city-section small,.popup-content .city-section .workplace small,.popup-content .city-section .government-note{font-size:11px!important;line-height:1.48!important}
+.economy-section small,.economy-section .supply-line small{font-size:11px!important;line-height:1.48!important}
+.traffic-float{position:absolute;z-index:10;right:14px;top:70px;width:min(380px,calc(100% - 28px));max-height:min(58dvh,520px);overflow:auto;display:grid;gap:10px;padding:17px;border:1px solid #c5d8ce;border-radius:12px;background:#fffef8f5;box-shadow:0 15px 38px #12323c42;backdrop-filter:blur(12px)}
+.traffic-float.hidden{display:none}
+.traffic-float h3{margin:0;color:#204a52;font-size:17px}
+.traffic-float .traffic-close{position:absolute;right:10px;top:8px;width:28px;height:28px;border-radius:7px;background:#e8f1ea;color:#335c5d;font-size:20px}
+.traffic-float .traffic-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.traffic-float .traffic-stats span{padding:8px;font-size:10px}
+.traffic-float .traffic-stats b{font-size:15px}
+.game-dock>[data-popup="traffic"].active{background:#e5f2e8;outline:2px solid #5ba582;color:#14584a}
+body[data-theme="dark"] .traffic-float{background:#21373dee;color:#e9f4ef;border-color:#587274}
+body[data-theme="dark"] .traffic-float h3,body[data-theme="dark"] .traffic-float b{color:#e9f4ef}
+@media(max-width:650px){.traffic-float{top:54px;right:8px;width:min(320px,calc(100% - 16px));max-height:42dvh;padding:13px}.traffic-float p{font-size:11px}.traffic-float .traffic-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.popup-content .city-section span:not(.eyebrow),.popup-content .city-section small,.popup-content .city-section .workplace small{font-size:11px!important;line-height:1.48!important}
+.mode-theme-toggle{position:absolute;right:22px;top:20px;display:grid;place-items:center;width:36px;height:36px;border:1px solid #d0ddd6;border-radius:9px;background:#e7efea;color:#2f5b60;font-size:19px;cursor:pointer}
+body[data-theme="dark"] .mode-theme-toggle,body[data-theme="dark"] .lan-join-form,body[data-theme="dark"] .created-room{background:#29454a;color:#edf6f1;border-color:#557473}
+body[data-theme="dark"] .lan-join-form label,body[data-theme="dark"] .lan-join-form small,body[data-theme="dark"] .lan-choice small,body[data-theme="dark"] .room-list p{color:#c0d4d1}
+body[data-theme="dark"] input,body[data-theme="dark"] select{background:#1b3036;color:#edf6f1;border-color:#557473}

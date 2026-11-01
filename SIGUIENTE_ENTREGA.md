@@ -1,11 +1,11 @@
-# Siguiente entrega · después de Alfa 0.137
+# Siguiente entrega · después de Alfa 0.138
 
-1. Fase 29: llevar los escenarios de 12 meses a 1, 4, 10 y 20 años; modelar población, inflación ficticia, salarios, impuestos, demanda y compromisos sin cambiar la caja real.
-2. Incorporar costo total de ciclo de vida antes de confirmar infraestructura: suelo, diseño, obra, operación, personal, mantenimiento, renovación, cierre y financiamiento; enlazar cada rubro con un sistema real del juego.
-3. Completar el libro de caja con conceptos tipados y contrapartidas para separar gasto, ingreso, transferencia y fondo reservado, y conciliarlo con compromisos.
-4. Ejecutar regresiones Online/Offline, stress de 30 años y Chromium responsive de Hacienda; publicar en `main`, comprobar SHA/Actions/Vercel y adjuntar ZIP completo.
+1. Fase 29: conectar el estimador de ciclo de vida a costos reales por activo: terreno/diseño cuando existan, personal y operación, mantenimiento observado, reposición, cierre y financiamiento. Mantener separados los rubros no simulados.
+2. Extender los escenarios de 12 meses a 1, 4, 10 y 20 años usando población, salarios, inflación y demanda trazables, sin tocar la caja real.
+3. Completar la clasificación contable de ingresos, egresos, transferencias y reservas; avanzar en paralelo a sistemas jugables pendientes de otras fases para no concentrar entregas sucesivas en Hacienda.
+4. Ejecutar pruebas funcionales Online/Offline, stress de 30 años y Chromium responsive al cambiar la interfaz; publicar en `main`, verificar SHA, Actions y despliegue, y adjuntar ZIP desde el commit publicado.
 
-Fase actual: 29 (50% orientativo y parcial; bloques estables 100/50/50/0/50 en `ESTADO_DESARROLLO.md`). Próximo hito: costo de ciclo de vida y escenarios a 1/4/10/20 años. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
+Fase actual: 29 (60% orientativo parcial; cinco bloques estables 100/50/50/50/50 documentados en `ESTADO_DESARROLLO.md`). Próximo hito: costos reales de ciclo de vida y escenarios fiscales largos. Progreso global y restante no estimables: faltan pesos comunes verificables para las 34 fases. LAN entre equipos físicos permanece pendiente.
 
 # Siguiente entrega · después de Alfa 0.134
 

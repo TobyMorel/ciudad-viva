@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.137
+# Estado de desarrollo · Alfa 0.138
+
+## Costo municipal de ciclo de vida · fase 29
+
+La ficha previa de infraestructura municipal incluye un desglose estimativo acumulado para 1, 4, 10 y 20 años: inversión de construcción, costo operativo mensual cuando el modelo ya lo define y una provisión presupuestaria de mantenimiento del 2,5% anual sobre la inversión. Los costos operativos no disponibles se marcan como no cuantificados y no suman cero disfrazado. La provisión no se cobra ni altera la partida. No cubre todavía suelo, diseño, financiamiento, inflación, reposición, cierre ni operación de todos los modelos.
+
+Verificado: `tests/test_build_preview_ui.mjs` en Chromium a 390×844 y 1440×900: horizontes y limitaciones legibles, texto dentro del modal desplazable, sin desborde horizontal ni errores JS; se inicia la obra en ambas vistas. Sintaxis JavaScript y `git diff --check` también pasan.
+
+Fase 29: 60% parcial por bloques iguales (100/50/50/50/50; promedio 60%). El ciclo de vida recibe 50% porque ofrece una estimación de planificación trazable y límites explícitos, pero sus rubros aún no están conectados completamente a la economía real. Global no estimable: faltan pesos verificables comunes para las 34 fases.
 
 ## Escenarios fiscales comparados · fase 29
 
@@ -6,7 +14,7 @@ Hacienda simula doce cierres consecutivos bajo tres casos: base (ingresos/gastos
 
 Son escenarios de sensibilidad, no predicciones; mantienen población, impuestos y contratos fijos, y no proyectan más de 12 meses. Verificado: 99 pruebas Python, 66 Node Offline, stress 30 años × cuatro perfiles y Chromium responsive del panel financiero a 390×844 y 1440×900; supuestos, tres tarjetas, caja final y mora visibles, sin desborde horizontal ni solapamiento. CI en GitHub pendiente al momento de la publicación.
 
-Fase 29: 50% orientativo mediante los cinco bloques estables de igual peso (20 puntos): caja/compromisos 100%, auditoría contable 50%, presupuestos/prioridades 50%, ciclo de vida 0%, escenarios 50% (100/50/50/0/50; promedio 50%). El bloque de escenarios permanece parcial hasta cubrir 1, 4, 10 y 20 años con inflación/población/demanda trazables. Global no estimable: faltan pesos verificables comunes para las 34 fases.
+Fase 29: 60% orientativo mediante cinco bloques estables de igual peso (20 puntos): caja/compromisos 100%, auditoría contable 50%, presupuestos/prioridades 50%, ciclo de vida 50%, escenarios 50% (100/50/50/50/50; promedio 60%). Global no estimable: faltan pesos verificables comunes para las 34 fases.
 
 ## Libro de caja municipal y conciliación neta
 

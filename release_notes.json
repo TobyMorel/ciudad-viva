@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.137",
+  "currentVersion": "0.138",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.138",
+      "date": "2026-11-01",
+      "roadmapPhase": 29,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "La ficha previa de infraestructura pública despliega un estimador municipal de ciclo de vida con horizontes de 1, 4, 10 y 20 años.",
+        "Cada horizonte separa inversión inicial, operación conocida (solo modelos con costo mensual ya implementado) y una reserva anual de mantenimiento del 2,5% del costo de obra, identificada como supuesto de planificación.",
+        "Los modelos sin costo operativo explícito se etiquetan como no cuantificados y se excluyen del total; la estimación no modifica caja ni simulación y documenta rubros fuera de alcance.",
+        "La ficha es plegable y desplaza internamente el contenido largo. La prueba de construcción verifica lectura completa y encuadre en Chromium a 390×844 y 1440×900.",
+        "Fase 29 pasa de 50% a 60% mediante los cinco bloques fijos de igual peso: caja 100%, auditoría 50%, presupuestos 50%, ciclo de vida 50%, escenarios 50%. El ciclo de vida sigue parcial; no incluye aún terreno, diseño, inflación, renovación, cierre ni todos los costos operativos. Global no estimable sin pesos verificables para 34 fases."
+      ]
+    },
     {
       "version": "0.137",
       "date": "2026-11-01",
@@ -1465,8 +1479,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 29 · costo de ciclo de vida",
-      "detail": "Estimar diseño, suelo, obra, operación, personal, mantenimiento, reposición, cierre y financiamiento de infraestructuras; contrastar los costos con escenarios a 1, 4, 10 y 20 años."
+      "title": "Fase 29 · ciclo de vida completo y escenarios largos",
+      "detail": "Conectar suelo, diseño, obra, personal, operación, renovación y cierre con costos ya presentes en cada subsistema; convertir los horizontes 1/4/10/20 años en escenarios fiscales con población, inflación, salarios y demanda trazables."
     },
     {
       "title": "Fase 29 · libro contable clasificado",
@@ -1763,11 +1777,11 @@
     {
       "phase": 29,
       "title": "Hacienda municipal, deuda, crédito y planificación plurianual",
-      "progress": 50,
-      "summary": "Hacienda compara proyección base, favorable y adversa a 12 meses; mantiene créditos, impuestos, caja, reservas y prioridades de programas.",
+      "progress": 60,
+      "summary": "Hacienda proyecta caja a 12 meses, compara tres sensibilidades y estima inversión, operación conocida y reserva de mantenimiento de infraestructura a 1/4/10/20 años.",
       "pending": [
         "Escenarios de 1, 4, 10 y 20 años con población, salarios, inflación y demanda trazables.",
-        "Costo de ciclo de vida de infraestructura ligado a operación, personal, mantenimiento, reposición, cierre y financiamiento.",
+        "Costo completo: suelo, diseño, personal, operación real para todos los activos, renovación, cierre y financiamiento.",
         "Libro de caja con clasificación por concepto y origen/destino."
       ]
     },

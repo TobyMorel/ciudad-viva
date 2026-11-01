@@ -1,3 +1,9 @@
+# Decisiones técnicas · Alfa 0.138
+
+## Estimación preliminar de ciclo de vida
+
+La ficha de obra pública calcula escenarios acumulados a 1, 4, 10 y 20 años. Construcción se cuenta una sola vez. Operación solo se suma donde el modelo existente tiene costo mensual explícito; para los demás se muestra “no cuantificada” y se excluye del total. Mantenimiento se muestra como provisión orientativa del 2,5% anual del capital, no como gasto simulado ni descuento de tesorería. Suelo, diseño, financiación, inflación, renovación, cierre y costos operativos ausentes permanecen excluidos en forma visible. La UI se pliega para evitar saturar y el diálogo conserva scroll para que la nota completa sea accesible.
+
 # Decisiones técnicas · Alfa 0.133
 
 ## Obras de construcción sin elección de empresa

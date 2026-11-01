@@ -28,13 +28,13 @@ jobs:
       - name: Regresión Online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs tests/test_industry_offline.mjs tests/test_industrial_recovery_offline.mjs tests/test_industrial_competition_offline.mjs tests/test_private_construction_supply_offline.mjs tests/test_private_staffing_offline.mjs tests/test_forward_contracts_offline.mjs tests/test_retail_road_access_offline.mjs
+        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs tests/test_industry_offline.mjs tests/test_industrial_recovery_offline.mjs tests/test_industrial_competition_offline.mjs tests/test_private_construction_supply_offline.mjs tests/test_private_staffing_offline.mjs tests/test_forward_contracts_offline.mjs tests/test_retail_road_access_offline.mjs tests/test_maritime_steel_import_offline.mjs
       - name: Stress económico 30 años (cuatro perfiles)
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.98
+          name: ciudad-viva-alfa-0.99
           path: |
             .
             !.git/**
@@ -64,7 +64,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.98-responsive
+          name: ciudad-viva-alfa-0.99-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

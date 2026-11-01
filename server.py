@@ -155,6 +155,7 @@ def settle_industrial_vendor_offer(supplier, material, quantity, offer):
     firm["cash"]=round(firm.get("cash",0)+offer["productCost"])
     firm["lastLocalSales"]=firm.get("lastLocalSales",0)+quantity
     firm["lifetimeIndustrialSales"]=firm.get("lifetimeIndustrialSales",0)+quantity
+    firm["industrialSalesSincePricing"]=firm.get("industrialSalesSincePricing",0)+quantity
     firm["lastWinningPriceFactor"]=offer["factor"]
     industrial=state.setdefault("localIndustry",{})
     industrial[metric]=industrial.get(metric,0)+quantity

@@ -177,6 +177,11 @@ La fase 18 llegó a 65% con extracción privada de áridos, empleo/servicios, re
 Fase 18=70%: hay áridos finitos, cantera, hormigonera que los compra por carretera, conversión 2:1, stock vendible y recetas de hormigón que consume la obra. El endpoint ya verifica compra y stock insuficiente, y `missing_materials` verifica el bloqueo por hito. Antes de ampliar la cadena, simular un tick completo de obra que se suspenda, reciba el camión y reanude el avance. Luego llevar el modelo de materiales al motor Offline (pedidos, stock, saldo, tiempos y bloqueo de obra), y abrir madera/acero industriales; no sobreprofundizar la cantera. Mantener como límite actual que estas compras funcionan solo Online/LAN. Fase siguiente amplia según roadmap: continuar fase 19 después de cerrar pruebas de construcción integradas. La prueba LAN en dos equipos y el deploy Vercel siguen sin evidencia. No estimar progreso global sin pesos estables comparables para las 34 fases.
 
 
-## Entrega al cerrar Alfa 0.89
+## Entrega al cerrar Alfa 0.89 · histórico
 
 La siguiente mecánica debe ser verificación explícita del ciclo completo de escasez en los dos motores: obra suspendida por material de etapa, pedido a proveedor con suficiente stock, pago/caja consistente, ETA y ruta vial, recepción en destino, reanudación con avance no duplicado e inspección final. La interfaz se revisó en móvil 390×844 y escritorio 1440×900 para el modal de compra; mantener esa comprobación si se modifica la ventana. Después ampliar fase 18 con aserradero/madera y acero regional/local con causas de operación y consumo real. No dedicar la siguiente entrega a pulido aislado. No afirmar LAN entre dos dispositivos ni publicación Vercel probadas. Progreso fase18=75%; progreso global no estimable mientras no haya ponderación verificable común.
+
+
+## Entrega al cerrar Alfa 0.90
+
+Primero probar end-to-end la nueva cadena: adjudicar la segunda fábrica como aserradero, terminarla, asignar trabajadores, ver efecto de servicios/caja/reserva, generar stock finito, pedir madera desde una obra, recibirla por carretera y reanudar una etapa detenida sin doble consumo/pago. Repetir Offline y Online. Después implementar acero local o regional conectado a fabricación/construcción con inventario finito y transporte real. No invertir la próxima entrega en decoración; agregar mecánicas del roadmap. Revisar Economía responsive si se amplía la tarjeta. LAN entre equipos físicos sigue sin validar. Fase18=80%; global no estimable por falta de pesos comunes verificables.

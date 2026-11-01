@@ -26,13 +26,15 @@ SUPPLIERS = {
     "Distribuidora Regional":{"price":.82,"days":9,"profile":"Compra mayorista · menor precio · viaje largo"},
     "Flete Urgente":{"price":1.75,"days":1,"profile":"Prioridad de carga · tarifa alta · despacho inmediato"},
     "Cantera local":{"price":.76,"days":1,"profile":"Producción privada de Puerto Claro · árido trazable y entrega por camión"},
-    "Hormigonera local":{"price":.91,"days":1,"profile":"Hormigón producido con áridos locales · entrega por camión"}}
+    "Hormigonera local":{"price":.91,"days":1,"profile":"Hormigón producido con áridos locales · entrega por camión"},
+    "Aserradero local":{"price":.92,"days":1,"profile":"Madera producida en Puerto Claro · reserva forestal y entrega por camión"}}
 SUPPLIER_STOCK = {
     "Corralón del Puerto":{"aggregate":260,"concrete":60,"steel":90,"timber":110,"components":45},
     "Distribuidora Regional":{"aggregate":1200,"concrete":240,"steel":520,"timber":420,"components":300},
     "Flete Urgente":{"aggregate":70,"concrete":20,"steel":35,"timber":35,"components":32},
     "Cantera local":{"aggregate":0,"concrete":0,"steel":0,"timber":0,"components":0},
-    "Hormigonera local":{"aggregate":0,"concrete":0,"steel":0,"timber":0,"components":0}}
+    "Hormigonera local":{"aggregate":0,"concrete":0,"steel":0,"timber":0,"components":0},
+    "Aserradero local":{"aggregate":0,"concrete":0,"steel":0,"timber":0,"components":0}}
 CONTRACTOR_CASH = {"Sur Obras":5000,"Constructora Delta":9000,"Estudio y Obra Norte":14000}
 MATERIAL_NEEDS = {
     "road":{"aggregate":16,"concrete":6,"steel":0,"timber":0,"components":2},
@@ -69,6 +71,7 @@ def next_factory_industry():
     factories=[b for b in state.get("buildings",[]) if b.get("kind")=="factory"]
     if factories and not any(b.get("business",{}).get("industryType")=="quarry" and b.get("business",{}).get("status")=="abierto" for b in factories):return "quarry"
     if factories and not any(b.get("business",{}).get("industryType")=="concrete" and b.get("business",{}).get("status")=="abierto" for b in factories):return "concrete"
+    if factories and not any(b.get("business",{}).get("industryType")=="sawmill" and b.get("business",{}).get("status")=="abierto" for b in factories):return "sawmill"
     return "food"
 
 def settle_concrete_sale(quantity):
@@ -81,9 +84,20 @@ def settle_concrete_sale(quantity):
         if not remaining:break
     state.setdefault("localIndustry",{})["concreteSold"]=state.get("localIndustry",{}).get("concreteSold",0)+max(0,int(quantity))-remaining
 
+def settle_sawmill_sale(quantity):
+    remaining=max(0,int(quantity));unit_revenue=MATERIAL_PRICE["timber"]*SUPPLIERS["Aserradero local"]["price"]
+    mills=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")=="sawmill"),key=lambda b:(b["x"],b["y"]))
+    for mill in mills:
+        firm=mill["business"];sold=min(remaining,max(0,int(firm.get("timberStock",0))))
+        if sold:
+            firm["timberStock"]-=sold;firm["cash"]=int(round(firm.get("cash",0)+sold*unit_revenue));firm["lastLocalSales"]=firm.get("lastLocalSales",0)+sold;remaining-=sold
+        if not remaining:break
+    industry=state.setdefault("localIndustry",{});industry["timberSold"]=industry.get("timberSold",0)+max(0,int(quantity))-remaining
+
 def settle_local_material_sale(supplier,items):
     if supplier=="Cantera local":settle_quarry_sale(items.get("aggregate",0))
     elif supplier=="Hormigonera local":settle_concrete_sale(items.get("concrete",0))
+    elif supplier=="Aserradero local":settle_sawmill_sale(items.get("timber",0))
 
 def advance_local_concrete_plants(workplaces,employees):
     supply=state["supply"]["suppliers"].setdefault("Hormigonera local",SUPPLIER_STOCK["Hormigonera local"].copy())
@@ -130,8 +144,30 @@ def advance_local_concrete_plants(workplaces,employees):
         elif need and quarry_stock.get("aggregate",0)<=0:firm["lastMaterialCause"]="Cantera sin áridos disponibles"
         elif need and firm.get("cash",0)<=500:firm["lastMaterialCause"]="Caja insuficiente para comprar materia prima"
 
+def advance_local_sawmills(workplaces,employees):
+    industry=state.setdefault("localIndustry",{});industry.setdefault("timberProduced",0);industry.setdefault("timberSold",0)
+    reserve=max(0,int(industry.setdefault("timberReserve",1800)));regrowth=max(0,int(industry.setdefault("timberRegrowthMonthly",18)));industry["timberReserve"]=min(2400,reserve+regrowth)
+    supplier=state["supply"]["suppliers"].setdefault("Aserradero local",SUPPLIER_STOCK["Aserradero local"].copy());supplier["timber"]=max(0,int(supplier.get("timber",0)))
+    mills=[b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")=="sawmill" and b.get("business",{}).get("status")=="abierto"]
+    employees=employees or []
+    for mill in mills:
+        firm=mill["business"];work=workplaces.get((mill["x"],mill["y"]),{});staff=max(0,int(work.get("staffedJobs",0)));access=mill.get("utilityAccess",{})
+        services=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100
+        payroll=max(0,int(work.get("payroll",0)));operating=max(0,int(mill.get("monthlyOperatingCost",360)));firm["cash"]=int(firm.get("cash",0)-payroll-operating)
+        for employee in employees:
+            if employee.get("site") is mill:
+                wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
+                if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+        if firm["cash"]<0:
+            firm["status"]="cerrado";mill["status"]="cerrado";supplier["timber"]=max(0,supplier["timber"]-int(firm.get("timberStock",0)));state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
+            ev("Aserradero insolvente",f"{mill.get('name','Aserradero')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
+        potential=max(0,min(30,round(staff*1.25)));capacity=max(0,round(potential*services));logs=max(0,int(industry["timberReserve"]))
+        output=min(capacity,logs//2,max(0,240-supplier["timber"]));industry["timberReserve"]-=output*2;supplier["timber"]+=output;firm["timberStock"]=max(0,int(firm.get("timberStock",0)))+output;firm["lastProduction"]=output;firm["lastProductionPotential"]=potential;firm["lastMaterialShortage"]=max(0,potential-output);firm["lastLocalSales"]=0
+        industry["timberProduced"]+=output
+        firm["lastMaterialCause"]=("Reserva forestal agotada" if industry["timberReserve"]<2 else "Faltan electricidad, agua o tratamiento cloacal" if services<1 else "Sin trabajadores suficientes" if staffed<20 else "Capacidad de almacenamiento completa") if output<potential else ""
+
 def advance_local_quarries(workplaces, employees):
-    industry=state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]})
+    industry=state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]});state["localIndustry"].setdefault("timberReserve",1800);state["localIndustry"].setdefault("timberRegrowthMonthly",18);state["localIndustry"].setdefault("timberProduced",0);state["localIndustry"].setdefault("timberSold",0)
     industry.setdefault("materialProduced",0);industry.setdefault("materialSold",0);industry.setdefault("quarryReserveRemaining",0)
     stock=state["supply"].setdefault("suppliers",{}).setdefault("Cantera local",SUPPLIER_STOCK["Cantera local"].copy())
     quarries=[b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")=="quarry" and b.get("business",{}).get("status")=="abierto"]
@@ -2623,7 +2659,7 @@ def simulate_business_month(workforce):
     shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"]
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
     demand={(b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand};roads={tuple(r) for r in state["roads"]}
-    ensure_finance_state();workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]};advance_local_quarries(workplace,workforce.get("employees",[]));advance_local_concrete_plants(workplace,workforce.get("employees",[]));payroll_paid={}
+    ensure_finance_state();workplace={(w["x"],w["y"]):w for w in workforce["workplaces"]};advance_local_quarries(workplace,workforce.get("employees",[]));advance_local_concrete_plants(workplace,workforce.get("employees",[]));advance_local_sawmills(workplace,workforce.get("employees",[]));payroll_paid={}
     for shop in list(shops):
         firm=shop["business"];site=workplace.get((shop["x"],shop["y"]),{});payroll=max(0,int(site.get("payroll",0)))
         firm["lastCreditDraw"]=0;firm["lastInterest"]=0;firm["lastRepayment"]=0
@@ -2691,7 +2727,7 @@ def simulate_business_month(workforce):
     industry=state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]})
     for factory in [b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("status")=="abierto"]:
         firm=factory["business"]
-        if firm.get("industryType") in ("quarry","concrete"):continue
+        if firm.get("industryType") in ("quarry","concrete","sawmill"):continue
         work=workplace.get((factory["x"],factory["y"]),{});staffed=max(0,int(work.get("staffedJobs",0)))
         utility=factory.get("utilityAccess",{});utility_factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100
         capacity=max(0,min(90,round(staffed*1.5*utility_factor)))
@@ -3255,14 +3291,15 @@ def tick_one_day():
                 opening_capital=min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=opening_capital
                 building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
             elif p["kind"]=="factory":
-                industry_type=next_factory_industry();is_quarry=industry_type=="quarry";name="Cantera de Puerto Claro" if is_quarry else "Procesadora de alimentos"
-                building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 180}
+                industry_type=next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";name="Cantera de Puerto Claro" if is_quarry else "Aserradero de Puerto Claro" if is_sawmill else "Procesadora de alimentos"
+                building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 180}
                 if industry_type=="concrete":name="Hormigonera de Puerto Claro"
                 building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
-                building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0}
+                building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
                 state["buildings"].append(building);state["jobs"]+=20
                 if is_quarry:ev("Cantera local habilitada","20 puestos industriales y una reserva geológica finita de 2.400 unidades. La extracción depende de personal, electricidad, agua y tratamiento cloacal; los áridos se venden por el sistema de pedidos con camiones.")
                 elif industry_type=="concrete":ev("Hormigonera local habilitada","20 puestos y producción de hormigón en proporción 2 áridos por 1 hormigón. Compra a la cantera local por ruta vial; personal y servicios limitan la producción.")
+                elif is_sawmill:ev("Aserradero local habilitado","20 puestos y madera de una reserva forestal finita con regeneración mensual. La producción depende de personal, electricidad, agua y saneamiento; la madera se vende por pedidos con camión.")
                 else:ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos. Debe comprar grano regional por camión; la producción y venta local dependen de inventario, personal y servicios.")
             elif p["kind"]=="depot":
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":"Depósito municipal","level":1,"status":"habilitado","capacityAdded":500,"quality":quality})
@@ -3936,7 +3973,7 @@ class Handler(BaseHTTPRequestHandler):
                     if priority not in ("normal","alta"):self._send(400,{"error":"Prioridad de descarga inválida."});return
                     if not location:self._send(400,{"error":"Depósito de destino inválido."});return
                     source_building=None
-                    local_type={"Cantera local":"quarry","Hormigonera local":"concrete"}.get(supplier)
+                    local_type={"Cantera local":"quarry","Hormigonera local":"concrete","Aserradero local":"sawmill"}.get(supplier)
                     if local_type:
                         candidates=[b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")==local_type and b.get("business",{}).get("status")=="abierto"]
                         candidates.sort(key=lambda b:(len(route_between((b["x"],b["y"]),(location["x"],location["y"])) or [10**6]),b["x"],b["y"]))

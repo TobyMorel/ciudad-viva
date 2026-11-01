@@ -315,7 +315,7 @@ export async function createOfflineAdapter(){
     });
     const sites=state.buildings.filter(b=>['home','shop'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status));
     const rows=sites.map(b=>{
-      const choices=units.map(unit=>{const path=offlineRoadRoute(unit.building,b);return {unit,minutes:path?Math.round(Math.max(0,path.length-1)*2.5+4):Infinity}})
+      const choices=units.map(unit=>{const path=offlineRoadRoute(unit.building,b);return {unit,path,minutes:path?Math.round(Math.max(0,path.length-1)*2.5+4):Infinity}})
         .filter(row=>row.minutes<=40).sort((a,b)=>a.minutes-b.minutes||a.unit.name.localeCompare(b.unit.name));
       return {building:b,choices,protected:choices.some(row=>row.unit.active>0)};
     });
@@ -334,7 +334,7 @@ export async function createOfflineAdapter(){
         let response=null;
         if(options.length){
           const best=options[0];best.unit.remaining--;best.unit.responded++;
-          response={station:best.unit.name,minutes:best.minutes};responded++;
+          response={station:best.unit.name,minutes:best.minutes,stationX:best.unit.building.x,stationY:best.unit.building.y,route:best.path};responded++;
         }else{
           unanswered++;
           if(kind==='shop'&&b.business?.status==='abierto'){
@@ -344,7 +344,7 @@ export async function createOfflineAdapter(){
         }
         incidents.push({id:`seg-${month}-${kind}-${b.x}-${b.y}`,month,day:state.day,location:b.name||'Barrio',
           kind:kind==='shop'?'Comercio':'Espacio residencial',x:b.x,y:b.y,status:response?'atendido':'sin respuesta',
-          responseMinutes:response?.minutes??null,station:response?.station??null});
+          responseMinutes:response?.minutes??null,station:response?.station??null,stationX:response?.stationX??null,stationY:response?.stationY??null,route:response?.route??null});
       }
       p.recentIncidents=[...(p.recentIncidents||[]),...incidents].slice(-24);
       p.lastIncidents=incidents.length;p.lastResponded=responded;p.lastUnanswered=unanswered;p.lastInventoryLoss=damage;

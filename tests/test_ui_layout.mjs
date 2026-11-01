@@ -84,6 +84,18 @@ try{
     assert.ok(popup.scrollable,name+': el contenido largo no se puede desplazar');
     await page.screenshot({path:'ui-captures/'+name+'-economia.png'});
     await page.locator('#popupClose').click();
+    await page.locator('[data-city-section-button="tourism"]').click();
+    const eventUI=await page.evaluate(()=>{
+      const section=document.querySelector('[data-city-section="tourism"]');
+      const buttons=[...section.querySelectorAll('[data-tourism-event]')];
+      const selection=document.querySelector('#selection').getBoundingClientRect();
+      return {present:!section.hidden,buttons:buttons.length,within:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>20&&r.height>20&&r.left>=selection.left-2&&r.right<=selection.right+2}),
+        noOverflow:section.scrollWidth<=section.clientWidth+3,hasExplanations:section.textContent.includes('Limpieza de eventos')&&section.textContent.includes('Contratá una actividad')};
+    });
+    assert.ok(eventUI.present&&eventUI.buttons===3&&eventUI.within&&eventUI.noOverflow&&eventUI.hasExplanations,
+      name+': eventos turísticos recortados u ocultos '+JSON.stringify(eventUI));
+    await page.screenshot({path:'ui-captures/'+name+'-turismo.png'});
+
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));
     await page.close();
   }

@@ -1,0 +1,28 @@
+name: Validación Ciudad Viva
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  engines:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Sintaxis y JSON
+        run: |
+          python -m py_compile server.py
+          node --experimental-default-type=module --check offline.js
+          node --experimental-default-type=module --check game.js
+          node --experimental-default-type=module --check world3d.js
+          python -m json.tool release_notes.json > /dev/null
+          python -m json.tool offline_seed.json > /dev/null
+      - name: Regresión Online
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Regresión Offline
+        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs

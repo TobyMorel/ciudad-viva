@@ -15,15 +15,15 @@ test('Offline avanza hora continua, cruza medianoche ordenadamente y se congela 
   const adapter=await createOfflineAdapter();adapter.setRealtimeClock(true);
   await adapter.request('/api/action',{action:'speed',value:4});
   let state=await adapter.request('/api/state'),day=state.day;
-  const startMinutes=state.timeOfDayMinutes;
+  const startMinutes=state.timeOfDayMinutes,startRevision=state.stateRevision;
   for(let i=0;i<4;i++){
    now+=250;state=await adapter.request('/api/state');
-   assert.equal(state.day,day,`la hora ${i+1} no debe adelantar el calendario antes de medianoche`);
+   assert.equal(state.day,day,`la hora ${i+1} no debe adelantar el calendario antes de medianoche`);assert.equal(state.stateRevision,startRevision,'el reloj no invalida la ciudad a cada consulta');
   }
   assert.equal(state.timeOfDayMinutes,startMinutes+240,'cuatro actualizaciones a ×4 avanzan cuatro horas de juego');
   for(let i=4;i<18;i++){now+=250;state=await adapter.request('/api/state')}
   assert.equal(state.day,day+1,'la jornada avanza al cruzar medianoche');
-  assert.equal(state.timeOfDayMinutes,0,'la nueva jornada comienza a medianoche');day=state.day;
+  assert.equal(state.timeOfDayMinutes,0,'la nueva jornada comienza a medianoche');assert.equal(state.stateRevision,startRevision+1,'el cruce de día publica una única revisión de ciudad');day=state.day;
   await adapter.request('/api/action',{action:'pause'});now+=10_000;
   state=await adapter.request('/api/state');assert.equal(state.day,day);assert.equal(state.timeOfDayMinutes,0);assert.equal(state.paused,true);
   await adapter.request('/api/action',{action:'pause'});now+=250;

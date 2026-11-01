@@ -1,5 +1,14 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.117 · quitar los tirones al cambiar el día
+
+El hilo principal queda libre de la simulación Offline: `offline_client.js` solicita un Worker dedicado (`offline_worker.js`) para procesar jornadas y devolver estados. Online expone una revisión que cambia al cerrar un día o ejecutar una acción; Offline aplica la misma idea. El sondeo compara esa revisión en vez de serializar dos veces el estado completo a cada actualización del reloj. El indicador de hora cambia por separado, sin volver a dibujar los paneles.
+
+`world3d.js` dibuja cada frame solicitado por el navegador sin el intervalo adaptativo de hasta 50 ms. El mapa compara rasgos visibles compactos: el avance de un residente, su salario o el número del día ya no ordenan reconstruir la escena y reiniciar todos los actores. Los umbrales visibles de las obras y los cambios de rutas/vehículos sí actualizan su geometría. Se eliminó del historial la nota que defendía el límite adaptativo.
+
+Verificación de esta entrega: `node --check` de los módulos modificados pasó; 46 pruebas Node/Offline, 63 Python y stress de 30 años en cuatro perfiles pasan. El smoke test Playwright cruzó medianoche y confirmó Día 2 con Worker activo y sin errores JavaScript. Las comprobaciones responsive pasaron en móvil y escritorio hasta el chequeo de eventos turísticos; Chromium SwiftShader agotó 30 s al capturar una vista posterior, por lo que la batería visual completa no quedó concluida. La cadencia por GPU real requiere confirmación en dispositivo físico. LAN física no comprobada. Fase 7: 90% orientativo, pendiente de desvíos y logística. Progreso global no estimable: faltan pesos y criterios estables verificables para las 34 fases.
+
+
 ## Alfa 0.116 · reloj de 24 horas y ciclo día/noche
 
 La ciudad comparte un reloj HH:mm en Online y Offline. A ×1 transcurre una hora del juego por segundo real; ×2/×4 aceleran ese reloj. La fecha avanza al completar medianoche, y pausar congela el tiempo. El estado de hora se guarda en las partidas. El mapa interpola amanecer/atardecer y cambia cielo, luz ambiental y sol; las farolas iluminan con tono cálido las calles por la noche. Tráfico muestra la franja activa y destaca su fila en el perfil diario para relacionar la demanda pico con la hora actual.
@@ -16,7 +25,7 @@ Verificado: 63 pruebas Python y 46 pruebas Node/Offline; `tests/stress_30_years.
 
 ## Alfa 0.114 · reloj escalonado y tránsito fluido
 
-Online acumula tiempo a la velocidad seleccionada y consume como máximo una jornada por iteración de simulación; el atraso se conserva y nunca se liquida como una ráfaga de días. Offline de juego real procesa como máximo una jornada por consulta a la frecuencia X1/X2/X4. Pausar limpia el acumulador y detiene actores móviles. El reloj de Three.js escala peatones y vehículos con X1/X2/X4, mantiene animación de cámara y limita el intervalo adaptativo del render a 50 ms. Coches comparten separación segura por carril y esperan los semáforos rojos. 59 pruebas Online y 42 Offline pasaron; la batería de 30 años conserva cuatro perfiles. Playwright de cámara pasó en 390×844 y 1440×900. No hay pruebas de LAN física.
+Online acumula tiempo a la velocidad seleccionada y consume como máximo una jornada por iteración de simulación; el atraso se conserva y nunca se liquida como una ráfaga de días. Offline de juego real procesa como máximo una jornada por consulta a la frecuencia X1/X2/X4. Pausar limpia el acumulador y detiene actores móviles. El reloj de Three.js escala peatones y vehículos con X1/X2/X4, mantiene animación de cámara y renderiza en cada solicitud de animación. Coches comparten separación segura por carril y esperan los semáforos rojos. 59 pruebas Online y 42 Offline pasaron; la batería de 30 años conserva cuatro perfiles. Playwright de cámara pasó en 390×844 y 1440×900. No hay pruebas de LAN física.
 
 Fase 7 se mantiene en 85% orientativo: falta la demanda horaria y el transporte multimodal con colas persistentes. Progreso global sin estimar por falta de pesos estables verificables para las 34 fases.
 

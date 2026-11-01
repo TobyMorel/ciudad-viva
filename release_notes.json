@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.116",
+  "currentVersion": "0.117",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.117",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 90,
+      "overallProgress": null,
+      "changes": [
+        "El render 3D ya no reduce de forma adaptativa la frecuencia de cuadros: se dibuja en cada solicitud de animación del navegador.",
+        "La simulación Offline y su cálculo de jornadas se ejecutan en un Web Worker, separado del hilo de animación y controles.",
+        "La escena 3D ya no reconstruye peatones, vehículos y objetos por cada cambio invisible del día; compara solo rasgos visuales y hitos de obra.",
+        "Online y Offline usan revisiones de estado para evitar serializar y redibujar todas las pantallas en cada consulta de reloj. El reloj HUD se actualiza sin reconstruir los paneles.",
+        "La frase que justificaba limitar el render a 50 ms fue retirada del historial.",
+        "Verificación: 46 pruebas Node/Offline, 63 pruebas Python y estrés de 30 años en cuatro perfiles pasan. Un smoke test Playwright cruzó a Día 2 usando el Worker sin errores de página. La batería responsive completa alcanzó las comprobaciones visuales principales, pero una captura de escritorio agotó 30 s con SwiftShader; la cadencia real requiere repetirse en GPU/dispositivo físico. Sin prueba LAN física.",
+        "Fase 7 sigue en 90% orientativo. Progreso global no estimable sin una ponderación verificable común para las 34 fases."
+      ]
+    },
     {
       "version": "0.116",
       "date": "2026-11-01",
@@ -39,8 +55,7 @@
       "changes": [
         "Los motores Online y Offline acumulan el tiempo de simulación y procesan un solo día por paso: X1, X2 y X4 conservan el orden sin ejecutar ráfagas de jornadas atrasadas.",
         "La actualización del estado acompaña la velocidad seleccionada; en Offline procesa jornadas separadas y muestra cada fecha, y la pausa limpia el tiempo pendiente.",
-        "Los vehículos animados avanzan con el reloj de simulación: aceleran en X2/X4 y se detienen al pausar. Los autos mantienen distancia de seguridad en el mismo carril y esperan el semáforo.",
-        "El render adaptativo queda limitado a intervalos breves para evitar que las escenas costosas se ralenticen a varios segundos por cuadro."
+        "Los vehículos animados avanzan con el reloj de simulación: aceleran en X2/X4 y se detienen al pausar. Los autos mantienen distancia de seguridad en el mismo carril y esperan el semáforo."
       ]
     },
     {

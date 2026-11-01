@@ -419,6 +419,12 @@ Fase 15 sube de 60% a 65% por coherencia visual y legibilidad comprobables. Prog
 - Verificación: sintaxis JS, pruebas Python 52/52, inspección visual móvil y escritorio de Construir, Ciudad, Economía y Tráfico. La prueba completa de Playwright terminó correctamente en 390 y 1440 px tras evitar el render 3D detrás de ventanas; también pasó la prueba visual de respuesta de servicios. Se verificaron por navegador la lista vacía LAN, el panel flotante de tráfico y el tema oscuro. Pasó también el stress económico de 30 años con cuatro perfiles y 360 cierres mensuales por perfil. La prueba entre dos computadoras físicas sigue pendiente.
 - Progreso global: no cuantificable todavía. El método por fase usa incrementos de 5 puntos con evidencia, pero no hay pesos estables y verificables para agregar las 34 fases. Fases 7 y 15: 70% cada una, ambas parciales. Hito actual F; próximo: completar simulación vial con tiempos autoritativos, accidentes y otros sistemas pendientes de F.
 
+## Render y simulación sin tirones (Alfa 0.117)
+
+Offline delega el adaptador a un Worker de módulo (`offline_worker.js`); `offline_client.js` adapta su ciclo de mensajes a la API async usada por `game.js`. El Worker imita `localStorage` con una memoria persistente pasada desde la página y devuelve snapshots cuando guardar/cargar o cambió la revisión; también sincroniza un checkpoint de reloj cada cinco segundos. Si el navegador no soporta Worker, conserva el adaptador directo como compatibilidad. El host LAN permanece en Python y autoritativo.
+
+`stateRevision` cambia por acciones y días terminados, nunca por cada incremento del reloj; el HUD actualiza la hora independientemente. La firma visual del Three.js contiene proyecciones de propiedades que alteran mallas, rutas, proyectos, incidentes y capas. No incluye el reloj, el día general ni el contenido salarial/residencial completo. `requestAnimationFrame` no tiene espera adaptativa ni tope de 50 ms.
+
 ## Reloj, calendario y luz (Alfa 0.116)
 
 La hora es parte del estado de la partida: `timeOfDayMinutes` usa 0–1440 y se persiste. El factor de velocidad multiplica el tiempo de juego; una hora simulada transcurre cada segundo real a ×1. El calendario cambia únicamente al cruzar medianoche. Esta escala permite que la hora visible corresponda con demanda y horarios de movilidad, manteniendo el avance diario existente a un ritmo jugable. El host online es autoritativo; el render 3D interpola la luz entre actualizaciones de estado. Offline guarda la misma variable en el snapshot local.

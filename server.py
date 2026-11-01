@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parent
 SAVE = ROOT / "ciudad_guardada.json"
 LOCK = threading.RLock()
 ROOM_OPEN = False
+STATE_REVISION = 0
 ROOM_CODE = uuid.uuid4().hex[:6].upper()
 DISCOVERED_ROOMS = {}
 DISCOVERY_PORT = 8766
@@ -4688,6 +4689,7 @@ def public_state(player_id=None):
     ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
+    view["stateRevision"]=STATE_REVISION
     view["governmentReport"]=government_report()
     view["municipalTeam"]=municipal_team_report(player_id)
     view["municipalFinance"]=municipal_finance_report()
@@ -4791,7 +4793,7 @@ class Handler(BaseHTTPRequestHandler):
                 rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
             self._send(200,{"rooms":rooms});return
         rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","design.css","reference.css","reference-ui.js","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
+        if rel not in ("index.html","style.css","design.css","reference.css","reference-ui.js","game.js","offline.js","offline_client.js","offline_worker.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
             self._send(404,{"error":"No encontrado"}); return
         file=(ROOT/rel).resolve()
         if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta inválida"}); return
@@ -4799,12 +4801,13 @@ class Handler(BaseHTTPRequestHandler):
         typ="text/html; charset=utf-8" if file.suffix==".html" else "text/css; charset=utf-8" if file.suffix==".css" else "application/javascript; charset=utf-8" if file.suffix==".js" else "application/json; charset=utf-8" if file.suffix==".json" else "image/svg+xml" if file.suffix==".svg" else "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
-        global state
+        global state,STATE_REVISION
         try: data=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
         except Exception: self._send(400,{"error":"JSON inválido"}); return
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
         with LOCK:
+            if path in ("/api/action","/api/load"): STATE_REVISION+=1
             global ROOM_OPEN
             if path=="/api/room/create":
                 if self.client_address[0] not in ("127.0.0.1","::1"):
@@ -5359,6 +5362,7 @@ def advance_simulation_clock(day_progress,elapsed,speed):
     return progress,False
 
 def simulation_loop():
+    global STATE_REVISION
     last=time.monotonic()
     while True:
         time.sleep(.05)
@@ -5370,7 +5374,9 @@ def simulation_loop():
             last=now
             state["timeOfDayMinutes"]=round(day_progress*60,2)
             # La hora guardada es autoritativa; cada jornada nace al cruzar medianoche.
-            if run_day:tick_one_day()
+            if run_day:
+                tick_one_day()
+                STATE_REVISION+=1
 
 def main():
     global state

@@ -1,5 +1,14 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.117
+
+Se corrigieron los tirones al cruzar medianoche: `offline_client.js` manda operaciones a `offline_worker.js`, que contiene su propio estado local y corre `createOfflineAdapter`; el hilo principal conserva el render y los controles. El servidor LAN conserva su reloj autoritativo. Ambos motores incrementan `stateRevision` por acción/día y no por el reloj, y `game.js:poll()` evita `JSON.stringify` del estado completo y redibujos en cada consulta. El HUD actualiza la hora/franja aparte.
+
+`world3d.js:sync()` no incluye el día ni datos internos de residentes en su firma visual, usa proyecciones de elementos que realmente se ven, y `animate()` renderiza cada RAF sin limitador adaptativo. No reintroducir el límite de 50 ms ni el vaciado/recreación total de actores por cambios invisibles. Los umbrales de construcción, incidentes y rutas sí deben invalidar el mapa si alteran objetos visibles.
+
+Pruebas locales: 46 Node/Offline, 63 Python y stress 30 años/4 perfiles pasan. Un smoke Playwright alcanzó Día 2 con Worker y sin errores JS. La captura responsive con SwiftShader agotó 30 s; repetir en GPU/dispositivo real para medir fluidez y terminar batería completa. Revisar que la carga `offline_worker.js` está permitida en `server.py` para el iniciador LAN. Pendiente de verificación física LAN y de Vercel tras el push. Fase 7: 90%; próximo: desvíos viales y su efecto en logística.
+
+
 ## Continuidad inmediata · Alfa 0.116
 
 `simulation_time.js` comparte formato HH:mm, evaluación de noche/luz solar y asignación de las franjas pico. `server.py:advance_simulation_clock` mide avance en horas: elapsed segundos × velocidad; `simulation_loop` toma como autoritativa `state.timeOfDayMinutes`, y procesa una jornada al cruzar 24:00. Offline interactivo hace lo mismo; conserva un solo día por paso y guarda `timeOfDayMinutes`. No cambiar la ejecución determinista de pruebas/regresiones que usa días artificiales sin activar `setRealtimeClock(true)`. A ×1 una jornada dura 24 s reales y a ×4 dura 6 s.

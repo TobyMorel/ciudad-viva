@@ -20,6 +20,7 @@ try{
     await page.evaluate(async()=>{
       const city=await fetch('/offline_seed.json').then(response=>response.json());
       city.timeOfDayMinutes=21*60;
+      city.paused=true; // El fixture conserva la noche durante toda la inspección visual.
       city.supply.suppliers['Metalúrgica local']={aggregate:0,concrete:0,steel:0,timber:0,components:9,cash:0};
       for(const [x,factor,stock] of [[4,1.35,4],[6,.8,5]]){
         city.buildings.push({x,y:9,kind:'factory',name:'Metalúrgica rival '+x,status:'habilitado',

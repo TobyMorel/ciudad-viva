@@ -1,5 +1,14 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.117
+
+1. Validar suavidad de animaciones al cruzar día y noche en X1/X2/X4 y pausa, móvil y escritorio; confirmar que la jornada Offline se procesa en Worker y el estado queda guardado.
+2. Completar fase 7 con desvíos/rutas alternativas y efecto de congestión sobre pedidos y obras, Online/Offline. No pasar demasiado tiempo refinando los colectivos; continuar añadiendo mecánicas de otras fases.
+3. Publicar a `main` con email válido y verificar SHA, Vercel, flujo CI y ZIP integral por entrega. La prueba de LAN en dos equipos sigue pendiente.
+
+Progreso global no estimable: falta una matriz verificable de pesos estables para las 34 fases. Fase actual 7: 90% orientativo. Próximo hito: rutas alternativas y logística afectada por colas.
+
+
 ## Punto exacto · después de Alfa 0.116
 
 1. Fase 7: implementar desvíos y rutas alternativas verificables; probar reducción de colas al abrir conectividad y aumento de demora de suministros durante obras, Online y Offline.

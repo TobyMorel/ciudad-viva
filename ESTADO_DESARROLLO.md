@@ -649,3 +649,8 @@ Tests GitHub Actions: sintaxis, JSON, reservas, producción, pedidos y transform
 ## Alfa 0.94 · instalaciones industriales reutilizables tras insolvencia
 
 Se implementó en `server.py` y `offline.js` la reapertura privada de fábricas cerradas con identidad de nuevo operador, demanda causal, suelo compatible, inversión y permiso ($4.200 operación + $900 rehabilitación + $200 permiso), cinco operarios por siete días, acceso y servicios verificables en inspección. Los proveedores pierden inventarios de empresas quebradas, la nueva empresa no recibe existencias gratis y una cantera conserva el remanente geológico. Se preservan cronología y capital origen; los proyectos que están rehabilitando ocupan capacidad de contratistas. Se añadió Economía/ficha con estado, motivo de suspensión y costos. Tests Online y Offline agregados a GitHub Actions. Fase 17 65%, fase 18 90%, global sin ponderación verificable. LAN física y Vercel no examinados.
+
+
+## Alfa 0.95 · licitación industrial competitiva
+
+Online y Offline cotizan cada planta industrial con su propio inventario, factor de precio (0.8–1.35 de tarifa base) y distancia vial. Cada pedido manual de construcción compra el lote completo a una sola planta conectada al menor costo total, guarda el origen físico y debita al ganador. La firma recibe el valor del producto, mientras el transportista acredita el flete; no se duplican ingresos. La hormigonera también licita compras automáticas de áridos entre canteras, con restricciones de caja y stock. Precios responden a ventas acumuladas y stock ocioso. Economía y el modal de materiales muestran cotizaciones reales, límites de lotes y rutas. Se amplían tests de ambos motores y revisión con Chromium móvil/escritorio. Fase 17=70%, 18=90%; global no estimado.

@@ -26,3 +26,15 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
         run: node --experimental-default-type=module --test tests/test_materials_offline.mjs
+      - name: Empaquetar entrega completa
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciudad-viva-alfa-0.92
+          path: |
+            .
+            !.git/**
+            !__pycache__/**
+            !tests/__pycache__/**
+            !ciudad_guardada.json
+          include-hidden-files: true
+          retention-days: 90

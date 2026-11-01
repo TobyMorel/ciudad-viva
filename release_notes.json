@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.115",
+  "currentVersion": "0.116",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.116",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 90,
+      "overallProgress": null,
+      "changes": [
+        "El reloj de ciudad muestra HH:mm y avanza continuamente: a ×1 una hora de juego por segundo, ×2/×4 aceleran el tiempo y la pausa detiene el reloj. El calendario cambia al cruzar medianoche, con tiempo guardado compartido Online y persistido Offline.",
+        "El cielo, la iluminación ambiental y el sol transicionan entre amanecer, día, atardecer y noche. Las farolas existentes en calles se encienden suavemente, con luz cálida sobre el pavimento, al oscurecer.",
+        "La pestaña Tráfico muestra la hora y franja activa y resalta su informe dentro del perfil horario, conectando las horas pico ya simuladas con el reloj visible.",
+        "Verificado: 63 pruebas Python, 46 pruebas Node/Offline y estrés de 30 años en cuatro perfiles. La comprobación Playwright del indicador HH:mm en móvil y escritorio está incluida en CI; LAN física con dos equipos no fue comprobada.",
+        "Fase 7 permanece en 90% orientativo; siguen pendientes las rutas alternativas y el efecto de las colas en logística. Progreso global sin estimar: no hay ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.115",
       "date": "2026-11-01",

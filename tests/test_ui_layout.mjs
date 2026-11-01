@@ -19,6 +19,7 @@ try{
     assert.ok(loaded,'El servidor estático debe responder.');
     await page.evaluate(async()=>{
       const city=await fetch('/offline_seed.json').then(response=>response.json());
+      city.timeOfDayMinutes=21*60;
       city.supply.suppliers['Metalúrgica local']={aggregate:0,concrete:0,steel:0,timber:0,components:9,cash:0};
       for(const [x,factor,stock] of [[4,1.35,4],[6,.8,5]]){
         city.buildings.push({x,y:9,kind:'factory',name:'Metalúrgica rival '+x,status:'habilitado',
@@ -46,12 +47,14 @@ try{
     await page.waitForTimeout(400);
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
+    const clockLayout=await page.evaluate(()=>{const clock=document.querySelector('#mapTime'),toolbar=document.querySelector('.world-toolbar'),r=clock.getBoundingClientRect(),t=toolbar.getBoundingClientRect();return {text:clock.textContent,night:clock.dataset.night,visible:r.width>1&&r.height>1,inside:r.left>=t.left&&r.right<=t.right,toolbarOverflow:toolbar.scrollWidth>toolbar.clientWidth+2}});
+    assert.ok((clockLayout.text.includes('21:')||clockLayout.text.includes('22:')||clockLayout.text.includes('23:'))&&clockLayout.night==='true'&&clockLayout.visible&&clockLayout.inside&&!clockLayout.toolbarOverflow,name+': hora nocturna oculta o barra de mapa desbordada '+JSON.stringify(clockLayout));
     await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
     await page.locator('[data-popup="traffic"]').evaluate(button=>button.click());
     assert.equal(await page.locator('#trafficPanel').isVisible(),true,name+': Tráfico debe quedar sobre el mapa sin taparlo');
     assert.equal(await page.locator('#panelPopup').isVisible(),false,name+': la capa vial no debe abrir el popup borroso');
-    const trafficSummary=await page.evaluate(()=>{const panel=document.querySelector('#trafficPanel'),stats=panel?.querySelector('.traffic-stats');return {panelWidth:panel?.clientWidth,scrollWidth:panel?.scrollWidth,statsVisible:Boolean(stats&&stats.getBoundingClientRect().height>0),hasSummary:panel?.textContent?.includes('Colas más largas'),hasProfile:panel?.textContent?.includes('Ver demanda y espera por horario')}});
-    assert.ok(trafficSummary.statsVisible&&trafficSummary.hasSummary&&trafficSummary.hasProfile&&trafficSummary.scrollWidth<=trafficSummary.panelWidth+2,name+': resumen de tráfico cortado o desbordado '+JSON.stringify(trafficSummary));
+    const trafficSummary=await page.evaluate(()=>{const panel=document.querySelector('#trafficPanel'),stats=panel?.querySelector('.traffic-stats');return {panelWidth:panel?.clientWidth,scrollWidth:panel?.scrollWidth,statsVisible:Boolean(stats&&stats.getBoundingClientRect().height>0),hasSummary:panel?.textContent?.includes('Colas más largas'),hasProfile:panel?.textContent?.includes('Ver demanda y espera por horario'),hasCurrentTime:panel?.textContent?.includes(document.querySelector('#mapTime')?.textContent||'')}});
+    assert.ok(trafficSummary.statsVisible&&trafficSummary.hasSummary&&trafficSummary.hasProfile&&trafficSummary.hasCurrentTime&&trafficSummary.scrollWidth<=trafficSummary.panelWidth+2,name+': resumen de tráfico cortado o desbordado '+JSON.stringify(trafficSummary));
     await page.locator('#trafficPanel .traffic-profile summary').click();
     const profile=await page.evaluate(()=>{const panel=document.querySelector('#trafficPanel'),items=[...panel.querySelectorAll('.traffic-window')];return {count:items.length,inside:items.every(item=>{const r=item.getBoundingClientRect(),p=panel.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1})}});
     assert.ok(profile.count===9&&profile.inside,name+': el detalle de franjas está incompleto o desborda '+JSON.stringify(profile));

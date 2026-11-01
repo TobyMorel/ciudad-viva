@@ -1,10 +1,16 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.116 · reloj de 24 horas y ciclo día/noche
+
+La ciudad comparte un reloj HH:mm en Online y Offline. A ×1 transcurre una hora del juego por segundo real; ×2/×4 aceleran ese reloj. La fecha avanza al completar medianoche, y pausar congela el tiempo. El estado de hora se guarda en las partidas. El mapa interpola amanecer/atardecer y cambia cielo, luz ambiental y sol; las farolas iluminan con tono cálido las calles por la noche. Tráfico muestra la franja activa y destaca su fila en el perfil diario para relacionar la demanda pico con la hora actual.
+
+Las validaciones específicas cubren la progresión horaria, medianoche, pausa, velocidades, formato HH:mm, franjas pico, exposición diurna/nocturna y farolas. Pasaron 63 pruebas Python, 46 pruebas Node/Offline y estrés de 30 años en cuatro perfiles; Playwright confirmó el mapa nocturno y el panel Tráfico en móvil (390×844), además del encaje de la barra y el reloj en escritorio (1440×900); no se completó la batería visual integral local porque el renderizador WebGL software consume mucha CPU. CI conserva la batería completa de UI. No se comprobó una sesión LAN entre dos equipos físicos. Fase 7 permanece en 90% orientativo; rutas alternativas y efecto logístico siguen pendientes. Progreso global no estimable: falta ponderación estable verificable para las 34 fases.
+
 ## Alfa 0.115 · colas de tráfico por franja y día
 
 En Online (`server.py`) y Offline (`offline.js`) el flujo de automóviles, buses y camiones se reparte en nueve franjas de dos horas. Cada tramo tiene capacidad según jerarquía y condición de calle. El exceso deja una cola que persiste en franjas siguientes y se guarda al cambiar de día. La espera de ruta aumenta duración del viaje, reduce asistencia laboral y cambia puestos efectivos y salarios ganados. Se anticipa la franja de regreso de los autos laborales; Offline también suma los regresos y viajes cotidianos ya modelados. El panel Tráfico resume la franja más lenta, cola máxima, calles con cola, tres tramos más cargados y detalle horario plegable.
 
-Verificado: 62 pruebas Python y 44 pruebas Node/Offline; `tests/stress_30_years.py` completó 30 años en cuatro perfiles. La inspección Playwright del panel a 390×844 y 1440×900 confirma que los nueve horarios caben sin desborde horizontal. Pendiente: finalizar el recorrido automatizado integral de UI, LAN física y estado de despliegue Vercel. Fase 7 pasa de 85% a 90% orientativo por nueva evidencia funcional; faltan desvíos por obras/accesos alternativos y completar impacto en logística. Progreso global no estimable: no existe matriz de pesos verificables estable para las 34 fases.
+Verificado: 63 pruebas Python y 46 pruebas Node/Offline; `tests/stress_30_years.py` completó 30 años en cuatro perfiles. La inspección Playwright del panel a 390×844 y 1440×900 confirma que los nueve horarios caben sin desborde horizontal. Pendiente: finalizar el recorrido automatizado integral de UI, LAN física y estado de despliegue Vercel. Fase 7 pasa de 85% a 90% orientativo por nueva evidencia funcional; faltan desvíos por obras/accesos alternativos y completar impacto en logística. Progreso global no estimable: no existe matriz de pesos verificables estable para las 34 fases.
 
 # Estado de desarrollo · Ciudad Viva
 

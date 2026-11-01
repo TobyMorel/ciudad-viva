@@ -1234,7 +1234,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -5349,27 +5349,27 @@ class Handler(BaseHTTPRequestHandler):
                 SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","host")},ensure_ascii=False,indent=2),encoding="utf-8"); self._send(200,{"ok":True,"file":SAVE.name}); return
             if path=="/api/load":
                 if not SAVE.exists(): self._send(404,{"error":"No hay ciudad guardada todavía"}); return
-                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
+                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360)); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
         self._send(404,{"error":"No encontrado"})
 
 def advance_simulation_clock(day_progress,elapsed,speed):
-    """Acumula tiempo sin descartar días; entrega como máximo un paso por vuelta."""
+    """Avanza horas de juego y entrega un nuevo día al cruzar la medianoche."""
     progress=max(0.0,float(day_progress))+max(0.0,float(elapsed))*max(1,int(speed))
-    if progress>=1.0:return progress-1.0,True
+    if progress>=24.0:return progress-24.0,True
     return progress,False
 
 def simulation_loop():
     last=time.monotonic()
-    day_progress=0.0
     while True:
         time.sleep(.05)
         now=time.monotonic()
         with LOCK:
-            if state["paused"]: last=now; day_progress=0.0; continue
+            if state["paused"]: last=now; continue
+            day_progress=max(0.0,min(23.999,float(state.get("timeOfDayMinutes",360))/60))
             day_progress,run_day=advance_simulation_clock(day_progress,now-last,state["speed"])
             last=now
-            # Una jornada como máximo por iteración: conserva el orden y deja
-            # responder a la UI entre días en lugar de ejecutar ráfagas de catch-up.
+            state["timeOfDayMinutes"]=round(day_progress*60,2)
+            # La hora guardada es autoritativa; cada jornada nace al cruzar medianoche.
             if run_day:tick_one_day()
 
 def main():

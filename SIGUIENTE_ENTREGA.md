@@ -1,5 +1,14 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.116
+
+1. Fase 7: implementar desvíos y rutas alternativas verificables; probar reducción de colas al abrir conectividad y aumento de demora de suministros durante obras, Online y Offline.
+2. Mantener el reloj de 24 horas y la coherencia entre franja pico activa, tráfico, pausa, ×1/×2/×4 y cambio de fecha en medianoche.
+3. Revisar mapa y panel de Tráfico en 390×844 y 1440×900, tema claro/oscuro; comprobar que el indicador HH:mm no desborde la barra de cámara ni tape controles.
+4. Ejecutar pruebas Online/Offline y estrés de 30 años, publicar todo `main`, verificar commit y despliegue, entregar ZIP completo.
+
+Fase actual: 7 (90% orientativo); siguiente: desvíos y perturbaciones viales. Hito actual: F; próximo: terminar movilidad y seguir con las fases del roadmap pendientes. Progreso global sin estimar: no hay matriz estable de pesos verificables para 34 fases.
+
 ## Punto exacto · después de Alfa 0.115
 
 1. Fase 7: implementar rutas alternativas y perturbaciones temporales por obra/cierre. Probar que abrir una conexión puede reducir colas y que una obra aumenta el tiempo de camiones, en Online y Offline.

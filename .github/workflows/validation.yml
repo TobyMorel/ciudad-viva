@@ -20,24 +20,25 @@ jobs:
       - name: Sintaxis y JSON
         run: |
           python -m py_compile server.py
-          node --experimental-default-type=module --check offline.js
-          node --experimental-default-type=module --check traffic.js
-          node --experimental-default-type=module --check game.js
-          node --experimental-default-type=module --check world3d.js
-          node --experimental-default-type=module --check cityGuide.js
-          node --experimental-default-type=module --check reference-ui.js
+          node --check offline.js
+          node --check traffic.js
+          node --check simulation_time.js
+          node --check game.js
+          node --check world3d.js
+          node --check cityGuide.js
+          node --check reference-ui.js
           python -m json.tool release_notes.json > /dev/null
           python -m json.tool offline_seed.json > /dev/null
       - name: Regresión Online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --experimental-default-type=module --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs
+        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs
       - name: Stress económico 30 años (cuatro perfiles)
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.115
+          name: ciudad-viva-alfa-0.116
           path: |
             .
             !.git/**
@@ -67,7 +68,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.115-responsive
+          name: ciudad-viva-alfa-0.116-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

@@ -1,5 +1,13 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.116
+
+`simulation_time.js` comparte formato HH:mm, evaluación de noche/luz solar y asignación de las franjas pico. `server.py:advance_simulation_clock` mide avance en horas: elapsed segundos × velocidad; `simulation_loop` toma como autoritativa `state.timeOfDayMinutes`, y procesa una jornada al cruzar 24:00. Offline interactivo hace lo mismo; conserva un solo día por paso y guarda `timeOfDayMinutes`. No cambiar la ejecución determinista de pruebas/regresiones que usa días artificiales sin activar `setRealtimeClock(true)`. A ×1 una jornada dura 24 s reales y a ×4 dura 6 s.
+
+`game.js` dibuja hora y franja del reloj en el mapa y panel Tráfico. `world3d.js:updateLighting` interpola cielo, niebla, hemisferio, luz solar/exposición, y las farolas de `addRoad` habilitan PointLight, bulbo y charco de luz cálida. El render anima la transición a frame por frame mientras el estado de simulación se actualiza en la frecuencia correspondiente. Las franjas de demanda siguen modeladas por colas de día, no se recalculan cada segundo; la pantalla marca qué franja horaria está activa.
+
+Pruebas: `tests/test_simulation_time.mjs`, `tests/test_realtime_clock_offline.mjs`, `tests/test_simulation_clock.py`; workflow contempla el nuevo módulo. Siguiente mecánica prioritaria en fase 7: conexiones alternativas/desvíos con efecto medible en las colas, además del retraso logístico. Mantener pruebas responsivas del mapa, formato de estado persistido, CI, publicación a main y ZIP integral.
+
 ## Continuidad inmediata · Alfa 0.115
 
 Mecánica añadida: en `server.py`, `traffic_queue_step`, `traffic_queue_delay` y `advance_traffic_queues` calculan carga/capacidad y colas por tramo para nueve horarios. En `offline.js`, `advanceOfflineTrafficQueues` mantiene el mismo formato. Estado guardado: `traffic.queueState = {lastDay, queues}` y reporte `traffic.queueReport` con resumen de franjas y segmentos. La rutina es idempotente dentro del día, depura segmentos que ya no son calles y transporta el remanente al próximo día. Demanda: viajes en auto por ventana, salidas de buses por horario y pedidos de suministro en tránsito; en Online se anticipa el retorno laboral para cargar la franja de tarde/noche, y el regreso también suma su espera de cola y semáforo.

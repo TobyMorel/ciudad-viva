@@ -3,28 +3,35 @@ import server
 
 
 class SimulationClockTests(unittest.TestCase):
-    def test_x4_emits_one_ordered_day_per_quarter_second(self):
-        progress = 0.0
+    def test_x4_advances_four_game_hours_per_real_second(self):
+        progress = 6.0
         days = 0
         for _ in range(4):
             progress, due = server.advance_simulation_clock(progress, .25, 4)
             days += int(due)
-        self.assertEqual(days, 4)
-        self.assertAlmostEqual(progress, 0)
+        self.assertEqual(days, 0)
+        self.assertAlmostEqual(progress, 10)
 
-    def test_lag_is_carried_without_batching_or_dropping_days(self):
-        progress, due = server.advance_simulation_clock(0, 2.5, 4)
+    def test_midnight_emits_one_day_and_preserves_remainder(self):
+        progress, due = server.advance_simulation_clock(23.5, .25, 4)
         self.assertTrue(due)
-        self.assertAlmostEqual(progress, 9)
-        for _ in range(9):
-            progress, due = server.advance_simulation_clock(progress, 0, 4)
-            self.assertTrue(due)
-        self.assertAlmostEqual(progress, 0)
+        self.assertAlmostEqual(progress, .5)
+
+    def test_lag_carries_full_day_backlog_one_day_at_a_time(self):
+        progress, due = server.advance_simulation_clock(0, 50, 1)
+        self.assertTrue(due)
+        self.assertAlmostEqual(progress, 26)
+        progress, due = server.advance_simulation_clock(progress, 0, 1)
+        self.assertTrue(due)
+        self.assertAlmostEqual(progress, 2)
+        progress, due = server.advance_simulation_clock(progress, 0, 1)
+        self.assertFalse(due)
+        self.assertAlmostEqual(progress, 2)
 
     def test_pause_does_not_add_time(self):
-        progress, due = server.advance_simulation_clock(0, 0, 1)
+        progress, due = server.advance_simulation_clock(6, 0, 1)
         self.assertFalse(due)
-        self.assertEqual(progress, 0)
+        self.assertEqual(progress, 6)
 
 
 if __name__ == '__main__':

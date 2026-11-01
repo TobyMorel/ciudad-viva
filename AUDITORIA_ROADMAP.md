@@ -1,3 +1,9 @@
+# Auditoría del roadmap · Alfa 0.133
+
+## Cambio de alcance de construcción
+
+La licitación elegida manualmente se retiró del flujo interactivo a pedido del usuario. El cliente muestra costo/plazo estimados y asigna automáticamente una empresa compatible; los contratos y sus consecuencias económicas, materiales y temporales siguen activos. Fase 2 permanece parcial en 75%; fase 28 sigue como siguiente sistema de contenido. Pruebas y revisión responsive de esta versión pendientes de ejecución.
+
 # Auditoría del roadmap · Alfa 0.132
 
 ## Revisión de alcance · Alfa 0.132

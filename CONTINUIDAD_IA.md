@@ -1,3 +1,9 @@
+# Continuidad inmediata · Alfa 0.133
+
+El usuario decidió quitar la licitación/selección manual de constructora para iniciar edificios. El modal core vive en `game.js` (`openBid` conserva ese nombre legacy; renombrar en una pasada posterior si se desea). Ahora presenta costo estimado, plazo base, trabajadores, pagador y etapas; `automaticContractor` filtra disponibilidad y elige la oferta compatible de menor costo. El botón dice “Iniciar construcción”. La acción `/api/action` y el contrato/stages siguen funcionando como antes, por lo que el edificio todavía exige cuadrilla, materiales, presupuesto y revisión. El modo Offline usa el mismo flujo de cliente. Anexos y rehabilitaciones ya no muestran selectores de empresa; la asignación se hace internamente. La prueba Playwright `tests/test_build_preview_ui.mjs` valida ficha, precio del consultorio, ausencia de empresas, encuadre responsive e inicio real de la obra a 390×844 y 1440×900; `tests/test_school_expansion_ui.mjs` comprueba que el anexo no ofrezca selector. Verificación: 92 pruebas Online, 51 Offline y stress 30 años × cuatro perfiles.
+
+No confundirlo con demolición del sistema de contratistas. Al usuario le interesa quitar el trabajo de comparar/seleccionar empresas, conservar construcción por etapas y dedicar próximas versiones a contenido nuevo del roadmap. La fase 2 queda en 75%, global `null`; no inflar avance por este cambio de interfaz. Próximo alcance: fase 28, atención/cuidado de adultos mayores conectada con vecinos, accesibilidad, transporte, personal y caja.
+
 # Continuidad inmediata · Alfa 0.132
 
 Mantener el objetivo del usuario: añadir mecánicas del roadmap en cada entrega, no encadenar varias versiones de pulido. Cada cambio se publica en `main`; si hay UI, comprobar móvil y escritorio sin textos ocultos/solapados. Entregar ZIP del `HEAD` publicado. Autor Git: `66056611+TobyMorel@users.noreply.github.com`.

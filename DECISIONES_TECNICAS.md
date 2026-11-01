@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.133
+
+## Obras de construcción sin elección de empresa
+
+El jugador elige el tipo de obra y confirma la ficha económica; el cliente asigna automáticamente una constructora compatible con menor precio, desempata por plazo y calidad, y el anfitrión/servidor vuelve a validar fondos, trabajadores, capacidad y parcela antes de registrar el contrato. No se elimina el modelo interno de empresas: sus perfiles todavía determinan precio, duración, calidad, caja de obra, abastecimiento y garantías. La ficha presenta la inversión del proyecto, el plazo base y el responsable del financiamiento. Si todas las cuadrillas están ocupadas o falta caja, la acción queda deshabilitada y explica el motivo. Esta decisión prioriza la gestión urbana y quita la microdecisión de licitar a cada edificio.
+
+Las inversiones privadas zonificadas siguen siendo automáticas, de acuerdo con la decisión anterior del usuario. Construcción municipal y rehabilitación continúan como obra por etapas; la confirmación directa no significa que el edificio aparezca terminado.
+
 # Decisiones técnicas · Alfa 0.132
 
 ## Desplazamiento temporal por desastres

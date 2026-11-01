@@ -1,3 +1,11 @@
+# Estado de desarrollo · Alfa 0.133
+
+## Inicio directo de construcción
+
+El flujo de construcción estándar ya no presenta ofertas ni pide adjudicar o elegir una constructora. Al seleccionar un edificio/lugar aparece una ficha previa con costo estimado (incluye el precio de la empresa asignada automáticamente), plazo base, cuadrilla requerida, fuente de financiación y explicación de etapas/materiales. “Iniciar construcción” crea la obra con el contratista compatible de menor costo que tenga capacidad y trabajadores disponibles; el servidor valida de nuevo presupuesto y capacidad en la acción compartida. Si no hay fondos o cuadrilla, se informa antes de iniciar. La constructora, el contrato y las etapas siguen existiendo como sistemas internos para pagos, materiales, demoras, garantía e inspección. Rescate continúa el avance guardado sin licitación. Se retiró la selección manual de empresa en anexos escolares y paneles de rehabilitación.
+
+La ficha se adapta al modal móvil/escritorio y la confirmación se mantiene en una sola acción después de revisar los detalles. La fase 2 conserva 75% orientativo: se cambió la interacción por pedido del usuario, no se declara completa la logística, permisos y riesgos. Avance global no estimable sin ponderación común verificable para las 34 fases. Verificado localmente: 92 pruebas Python Online, 51 Node Offline, stress 30 años × cuatro perfiles; Playwright comprueba la ficha e inicio de obra en 390×844/1440×900 y la ampliación escolar en ambos tamaños, sin desbordes ni errores JavaScript.
+
 # Estado de desarrollo · Alfa 0.132
 
 ## Evacuación y retorno de hogares por inundación o incendio

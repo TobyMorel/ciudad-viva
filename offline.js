@@ -11,20 +11,20 @@ const SPECS={
  home:{label:'Vivienda privada',cost:4200,days:39,stages:['Permiso y financiación','Preparación de parcela','Estructura','Instalaciones y terminaciones','Inspección y ocupación']},
  shop:{label:'Local comercial',cost:3600,days:34,stages:['Permiso y financiación','Preparación de parcela','Estructura','Instalaciones y terminaciones','Inspección y habilitación']},
  factory:{label:'Procesadora de alimentos',cost:9200,days:68,stages:['Licencia y capital privado','Cimentación y nave','Maquinaria y servicios','Pruebas de producción','Inspección y apertura']},
- civic:{label:'Centro de salud',cost:8000,days:62,stages:['Anteproyecto y permisos','Licitación y movilización','Cimientos y estructura','Instalaciones y equipamiento','Inspección y habilitación']},
+ civic:{label:'Centro de salud',cost:8000,days:62,stages:['Anteproyecto y permisos','Asignación y movilización','Cimientos y estructura','Instalaciones y equipamiento','Inspección y habilitación']},
  school:{label:'Escuela primaria',cost:9600,days:68,stages:['Proyecto y permisos','Cimientos y aulas','Instalaciones y patio','Equipamiento y contratación inicial','Inspección y habilitación']},
  fireStation:{label:'Cuartel de bomberos',cost:11200,days:74,stages:['Proyecto y permisos','Cimientos y estructura','Taller y dormitorios','Equipos y vehículos','Pruebas de despacho e inspección']},
  depot:{label:'Depósito municipal',cost:5600,days:50,stages:['Proyecto y permisos','Preparación del terreno','Estructura y playa de carga','Estanterías y seguridad','Inspección y apertura']},
  busGarage:{label:'Cochera municipal',cost:4200,days:40,stages:['Proyecto y permisos','Preparación del terreno','Estructura y cubierta','Taller y portones','Inspección y habilitación']},
  busStop:{label:'Parada de colectivo',cost:950,days:18,stages:['Proyecto y permisos','Base accesible','Refugio y señalización','Iluminación','Inspección y habilitación']},
- port:{label:'Terminal portuaria',cost:14500,days:82,stages:['Permisos costeros y licitación','Pilotaje y muelle','Patio de carga y grúa','Pruebas de atraque','Inspección y apertura']},
+ port:{label:'Terminal portuaria',cost:14500,days:82,stages:['Permisos costeros y movilización','Pilotaje y muelle','Patio de carga y grúa','Pruebas de atraque','Inspección y apertura']},
  airport:{label:'Aeropuerto regional',cost:19500,days:112,stages:['Evaluación y adquisición del suelo','Terraplenado y drenaje','Pista y señalización','Terminal y equipos de seguridad','Pruebas e inspección operativa']},
  hotel:{label:'Hotel privado',cost:13200,days:76,stages:['Licencia y capital privado','Cimientos y estructura','Agua y energía','Habitaciones y cocina','Inspección y apertura']},
  powerPlant:{label:'Central eléctrica',cost:18800,days:96,stages:['Estudio y permisos','Cimientos y turbina','Conexión eléctrica','Pruebas de generación','Inspección y puesta en marcha']},
  waterPlant:{label:'Planta potabilizadora',cost:14200,days:84,stages:['Estudio de fuente y permisos','Captación y filtros','Conexión y bombeo','Pruebas sanitarias','Inspección y puesta en marcha']},
  wastewaterPlant:{label:'Planta depuradora',cost:16600,days:90,stages:['Estudio ambiental y permisos','Colectores y tanques','Digestores y filtros','Pruebas de calidad','Inspección y puesta en marcha']},
- landfill:{label:'Relleno sanitario municipal',cost:9800,days:72,stages:['Evaluación ambiental y licitación','Impermeabilización del terreno','Celdas de disposición','Báscula y control de acceso','Inspección y habilitación']},
- recyclingPlant:{label:'Planta de reciclaje',cost:14800,days:88,stages:['Estudio ambiental y licitación','Separación y clasificación','Línea de lavado','Pruebas de recuperación','Inspección y habilitación']}
+ landfill:{label:'Relleno sanitario municipal',cost:9800,days:72,stages:['Evaluación ambiental y movilización','Impermeabilización del terreno','Celdas de disposición','Báscula y control de acceso','Inspección y habilitación']},
+ recyclingPlant:{label:'Planta de reciclaje',cost:14800,days:88,stages:['Estudio ambiental y movilización','Separación y clasificación','Línea de lavado','Pruebas de recuperación','Inspección y habilitación']}
 };
 const NEEDS={road:4,home:6,shop:7,factory:12,civic:11,school:12,fireStation:12,depot:8,landfill:12,recyclingPlant:16,busGarage:6,busStop:4,port:14,airport:16,hotel:10,powerPlant:18,waterPlant:12,wastewaterPlant:14};
 const clone=x=>JSON.parse(JSON.stringify(x));

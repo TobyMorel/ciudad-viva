@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.132",
+  "currentVersion": "0.133",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.133",
+      "date": "2026-11-01",
+      "roadmapPhase": 2,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La construcción ya no abre una licitación ni pide elegir una empresa: seleccioná el edificio, revisá su ficha y confirmá “Iniciar construcción”.",
+        "La ficha muestra parcela, costo estimado con el precio de la cuadrilla asignada, plazo base, personal necesario, quién financia el proyecto y cómo avanza por etapas.",
+        "La cuadrilla compatible se asigna automáticamente por disponibilidad y costo. Se conservan presupuesto compartido, constructoras, materiales, retrasos, inspecciones, operación privada y etapas visuales de obra.",
+        "Se quitó también la selección manual de empresa en anexos, rehabilitaciones y reparaciones correctivas; la cuadrilla se asigna sola según disponibilidad. Las obras inconclusas pueden continuar desde su avance guardado.",
+        "Verificado localmente: 92 pruebas Python Online, 51 Node Offline, estrés de 30 años en cuatro perfiles y ficha de construcción completa con inicio de obra comprobados en Chromium a 390×844 y 1440×900; la ampliación escolar responde en ambos tamaños y ya no muestra selector. La fase 2 permanece parcial al 75%; el progreso global sigue sin estimar porque no hay ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.132",
       "date": "2026-11-01",
@@ -1396,7 +1410,7 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.133 · atención a adultos mayores",
+      "title": "Alfa 0.134 · atención a adultos mayores",
       "detail": "Enlazar envejecimiento individual, accesibilidad, atención primaria y cupos de cuidado con personal, transporte, presupuesto y vivienda; integrar necesidades a los ciclos de hogar."
     },
     {
@@ -1433,10 +1447,11 @@
       "phase": 2,
       "title": "Constructoras, contrataciones y obras por etapas",
       "progress": 75,
-      "summary": "Constructoras, ofertas, contratos, cuadrillas y obras con etapas/inspección",
+      "summary": "Obras por etapas, cuadrillas, contratos y asignación automática de una empresa compatible; el jugador consulta costo/plazo y comienza sin licitar.",
       "pending": [
         "Permisos y planificación completos para todos los usos",
-        "riesgos y retrasos integrales."
+        "riesgos y retrasos integrales",
+        "contratos y disputas especializadas siguen existiendo internamente aunque la asignación inicial sea automática."
       ]
     },
     {

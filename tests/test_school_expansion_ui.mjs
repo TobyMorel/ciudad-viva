@@ -16,7 +16,7 @@ try{
   assert.ok(layout.left>=0&&layout.right<=width+2&&layout.scroll<=layout.client+3,`${name}: tarjeta escolar desbordada ${JSON.stringify(layout)}`);
   assert.ok(layout.parts.every(p=>p.width>0&&p.scroll<=p.client+3),`${name}: contenido recortado ${JSON.stringify(layout)}`);
   const pieces=layout.parts;assert.ok(pieces.every((a,i)=>pieces.slice(i+1).every(b=>Math.min(a.right,b.right)<=Math.max(a.left,b.left)+2||Math.min(a.bottom,b.bottom)<=Math.max(a.top,b.top)+2)),`${name}: textos de la tarjeta se solapan`);
-  assert.match(layout.text,/Constructora Delta/);assert.match(layout.text,/vacantes docentes/);
+  assert.doesNotMatch(layout.text,/Constructora|Sur Obras|Estudio y Obra Norte/,'la ampliación no debe pedir elegir empresa');assert.match(layout.text,/40–61 días estimados/);assert.match(layout.text,/vacantes docentes/);
   await card.locator('[data-school-expand]').click();
   await page.waitForFunction(()=>document.querySelector('.school-expansion-status')?.textContent.includes('Anexo en obra'),{timeout:10000});
   const status=await card.locator('.school-expansion-status').innerText();assert.match(status,/Anexo en obra/);

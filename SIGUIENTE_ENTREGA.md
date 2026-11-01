@@ -1,3 +1,12 @@
+# Siguiente entrega · después de Alfa 0.133
+
+1. Avanzar fase 28 con atención a adultos mayores, enlazando edad de residentes, accesibilidad, personal, transporte, cupos, salud y financiación.
+2. Conectar protección a hogares desplazados y medir recuperación social longitudinal; después educación técnica con destinos laborales reales.
+3. Mantener el flujo sin licitación por edificio: validar que la asignación automática respete capacidad en salas Online y Offline, que la ficha de costo coincida con el cobro final y que una obra se pueda completar con materiales/inspección.
+4. Ejecutar suites funcionales, estrés y chequeos responsive a 390×844 y 1440×900; publicar cada versión en `main`, verificar SHA/Actions/Vercel y generar ZIP completo desde el commit publicado.
+
+Fase actual de desarrollo funcional: 28 (85% orientativo; parcial). Esta entrega también ajusta la fase 2 de construcción, que permanece en 75% orientativo. Próximo sistema de jugabilidad: atención a adultos mayores. Progreso global no estimable: no hay ponderación común verificable para las 34 fases. LAN física pendiente.
+
 # Siguiente entrega · después de Alfa 0.132
 
 1. Fase 28: añadir cuidado de adultos mayores basado en los perfiles individuales y el envejecimiento, con cupos y costos limitados por personal, accesibilidad, salud, rutas y financiamiento. Hacer que impacte hogares concretos.

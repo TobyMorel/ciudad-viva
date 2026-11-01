@@ -365,3 +365,8 @@ Dos cadenas del roadmap pasan a funcionar también Offline (cantera geológica a
 ### Alfa 0.94 — fase 17 (65% de cobertura)
 
 La quiebra de una fábrica ya no equivale a pérdida permanente de su edificio. Un promotor independiente puede rehabilitar y reocupar la instalación tras 90 días de inactividad, con demanda real, parcela industrial, acceso vial, mínimo de tres servicios, precio privado pagado, cuadrilla con cupo durante siete días e inspección final. Empresa nueva abre sin stock y debe contratar trabajadores. Reutiliza la geología restante sin recargarla. Se expone causa y presupuesto en Economía y parcela. Tests aseguran no reabrir gratis ni dos veces. Siguen pendientes competencia empresarial plena, expansión, reasignación laboral detallada, adquisición por competencia y escenarios de décadas. Se suman cinco puntos a la fase 17, no se estima progreso global.
+
+
+### Alfa 0.95 — fase 17 (70%) y fase 18 (90%)
+
+La competencia entre empresas de una misma rama industrial dejó de ser una abstracción: la compra a una industria local se adjudica por una oferta única con inventario, acceso vial, precio y flete concretos. La venta acredita a esa firma, no a una planta arbitraria; se registran los cargos logísticos y la identidad del proveedor. Las hormigoneras también eligen entre canteras rivales. El precio evoluciona por ventas y acumulación de inventario, no por bonificación global. Aún faltan competencia minorista avanzada, contratos privados a plazo, entregas físicas de promotores autónomos, expansión/reducción de plantillas y partidas de varias décadas; por eso la fase 17 se estima al 70%, la 18 permanece en 90% y el global sigue sin cálculo.

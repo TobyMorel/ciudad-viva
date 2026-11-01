@@ -780,7 +780,7 @@ export async function createOfflineAdapter(){
         if(month>(state.lastMonth||0)){
           processOfflineTraining();
           updateOfflineLabor();advanceOfflineQuarries();advanceOfflineConcretePlants();advanceOfflineSawmills();advanceOfflineMetalworks();
-          for(const supplier of Object.values(state.supply.market||{}))supplier.stock=Math.min(supplier.maxStock||0,(supplier.stock||0)+(supplier.monthlyOutput||0));for(const [name,output] of Object.entries(MATERIAL_MONTHLY_OUTPUT)){const stock=state.supply.suppliers[name];for(const [key,quantity] of Object.entries(output))stock[key]=Math.min(MATERIAL_STOCK[name][key]*1.5,(stock[key]||0)+quantity)}
+          for(const supplier of Object.values(state.supply.market||{}))supplier.stock=Math.min(supplier.maxStock||0,(supplier.stock||0)+(supplier.monthlyOutput||0));let regionalSteelReserve=Math.max(0,Math.trunc(state.supply.regionalSteelReserve??30000));for(const [name,output] of Object.entries(MATERIAL_MONTHLY_OUTPUT)){const stock=state.supply.suppliers[name];for(const [key,quantity] of Object.entries(output)){const requested=Math.max(0,Math.min(quantity,Math.floor(MATERIAL_STOCK[name][key]*1.5)-(stock[key]||0))),delivered=key==='steel'?Math.min(requested,regionalSteelReserve):requested;stock[key]=(stock[key]||0)+delivered;if(key==='steel')regionalSteelReserve-=delivered;}}state.supply.regionalSteelReserve=regionalSteelReserve
           let wages=0,publicPayroll=0;const payrollByEmployer={};
           for(const h of state.buildings.filter(b=>b.kind==='home')){
             const credits=(h.residents||[]).filter(r=>r.status==='empleado').reduce((sum,r)=>sum+Math.round((r.monthlyWage||0)*(r.attendance??1)),0);

@@ -26,7 +26,7 @@ try{
             materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
       }
       city.supply.tradeContracts=[{id:'ui-contract',buyerId:'rival-4',vendorId:'rival-6',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0,contractValue:700,extensionFee:35}];
-      city.buildings.push({x:7,y:11,kind:'civic',name:'Hospital del corredor periurbano del Puerto Claro',status:'operativo',hospitalWard:{beds:20,ambulances:1},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({x:7,y:11,kind:'civic',name:'Hospital del corredor periurbano del Puerto Claro',status:'operativo',hospitalWard:{beds:20,ambulances:1},policeUnit:{vehicles:2,priority:'mixto'},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.roads=[]; // Corte real de las vías, con proveedor contractual existente.
       city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',vendorId:'rival-6',type:'industrial_raw',commodity:'áridos',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,productCost:280,freight:0,source:[6,9],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
@@ -110,6 +110,20 @@ try{
     assert.ok(hospitalUI.visible&&hospitalUI.count===3&&hospitalUI.contained&&!hospitalUI.overlap&&!hospitalUI.overflow&&hospitalUI.validLabels,
       name+': panel hospitalario con controles o textos solapados/ocultos '+JSON.stringify(hospitalUI));
     await page.screenshot({path:'ui-captures/'+name+'-salud.png'});
+    await page.locator('[data-city-section-button="security"]').click();
+    const policeUI=await page.evaluate(()=>{
+      const section=document.querySelector('[data-city-section="security"]'),selection=document.querySelector('#selection').getBoundingClientRect();
+      const buttons=[...section.querySelectorAll('[data-police-action]')];
+      const rects=buttons.map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height,scroll:b.scrollWidth,client:b.clientWidth,hidden:getComputedStyle(b).visibility==='hidden'}});
+      const overlap=rects.some((r,i)=>rects.slice(i+1).some(t=>Math.min(r.right,t.right)-Math.max(r.left,t.left)>3&&Math.min(r.bottom,t.bottom)-Math.max(r.top,t.top)>3));
+      return {visible:!section.hidden,count:buttons.length,overlap,
+        contained:rects.every(r=>r.left>=selection.left-2&&r.right<=selection.right+2&&r.width>25&&r.height>20&&!r.hidden&&r.scroll<=r.client+3),
+        overflow:section.scrollWidth>section.clientWidth+3,
+        validLabels:section.textContent.includes('BASES MUNICIPALES')&&section.textContent.includes('Equipar base')&&section.textContent.includes('Comprar móvil')};
+    });
+    assert.ok(policeUI.visible&&policeUI.count===5&&policeUI.contained&&!policeUI.overlap&&!policeUI.overflow&&policeUI.validLabels,
+      name+': controles policiales ocultos, solapados o desbordados '+JSON.stringify(policeUI));
+    await page.screenshot({path:'ui-captures/'+name+'-seguridad.png'});
     await page.locator('#popupClose').click();
 
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));

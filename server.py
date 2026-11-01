@@ -1356,6 +1356,37 @@ def material_fraction(material, progress):
     start, span = {"aggregate":(0,.45),"concrete":(.08,.42),"steel":(.15,.5),"timber":(.25,.55),"components":(.55,.4)}[material]
     return max(0,min(1,(progress-start)/span))
 
+# Tipologías de equipamiento: el radio se mide por calles conectadas, nunca en línea recta.
+SERVICE_MODELS={
+ "clinic":{"kind":"civic","label":"Consultorio barrial","cost":8000,"days":62,"radius":6,"jobs":12,"care":True},
+ "medicalCenter":{"kind":"civic","label":"Policlínico municipal","cost":14200,"days":85,"radius":10,"jobs":24,"care":True},
+ "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
+ "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
+ "policeStation":{"kind":"civic","label":"Comisaría distrital","cost":16500,"days":90,"radius":11,"jobs":22,"police":2},
+ "policeHQ":{"kind":"civic","label":"Central de seguridad","cost":28700,"days":124,"radius":16,"jobs":36,"police":3},
+ "firePost":{"kind":"fireStation","label":"Destacamento de bomberos","cost":11200,"days":74,"radius":7,"jobs":12,"engines":1},
+ "fireStationPlus":{"kind":"fireStation","label":"Cuartel de bomberos","cost":19800,"days":96,"radius":12,"jobs":22,"engines":2},
+ "fireCommand":{"kind":"fireStation","label":"Comando de emergencias","cost":33000,"days":132,"radius":17,"jobs":36,"engines":3},
+ "wasteYard":{"kind":"depot","label":"Base de recolección","cost":5600,"days":50,"radius":6,"jobs":8,"trucks":1},
+ "wasteDepot":{"kind":"depot","label":"Centro de transferencia","cost":12000,"days":75,"radius":11,"jobs":14,"trucks":2},
+ "wasteComplex":{"kind":"depot","label":"Complejo de higiene urbana","cost":22200,"days":109,"radius":17,"jobs":26,"trucks":3},
+}
+SERVICE_DEFAULT={"civic":"clinic","fireStation":"firePost","depot":"wasteYard"}
+def service_model(building):
+    ident=building.get("serviceModel")
+    if ident in SERVICE_MODELS:return SERVICE_MODELS[ident]
+    if building.get("kind")=="civic":
+        if building.get("name")=="Municipalidad":return None
+        if building.get("policeUnit") and not building.get("hospitalWard"):return SERVICE_MODELS["policePost"]
+    return SERVICE_MODELS.get(SERVICE_DEFAULT.get(building.get("kind")))
+
+def service_route_within(building,target,radius=None):
+    model=service_model(building)
+    radius=int(radius if radius is not None else model.get("radius",6) if model else 0)
+    if radius<=0 or building.get("status") not in ("operativo","habilitado"):return None
+    path=route_between((building["x"],building["y"]),(target["x"],target["y"]))
+    return path if path and max(0,len(path)-1)<=radius else None
+
 def material_plan(kind, initial_progress=0):
     return {key:max(1,round(amount*(1-initial_progress))) if amount else 0
             for key,amount in MATERIAL_NEEDS[kind].items()}
@@ -3993,10 +4024,13 @@ def tick_one_day():
                 elif is_metalworks:ev("Metalúrgica local habilitada","20 puestos; compra acero por carretera y lo convierte en componentes de construcción. La producción depende de personal, servicios y caja; los componentes se venden a obras.")
                 else:ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos. Debe comprar grano regional por camión; la producción y venta local dependen de inventario, personal y servicios.")
             elif p["kind"]=="depot":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":"Depósito municipal","level":1,"status":"habilitado","capacityAdded":500,"quality":quality})
+                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["wasteYard"])
+                capacity=500*model["trucks"]
+                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":model["label"],"serviceModel":p.get("serviceModel","wasteYard"),"level":1,
+                    "status":"habilitado","capacityAdded":capacity,"jobSlots":model["jobs"],"quality":quality})
                 depot_id=f"depot-{p['x']}-{p['y']}"
-                state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":500,"label":"Depósito municipal","stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
-                state["supply"]["storageCapacity"]+=500;state["monthlyExpenses"]+=180
+                state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":capacity,"label":model["label"],"stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
+                state["supply"]["storageCapacity"]+=capacity;state["monthlyExpenses"]+=180*model["trucks"];state["jobs"]+=model["jobs"]
                 ev("Depósito logístico habilitado",f"El depósito abre con 500 unidades de capacidad adicional. Operación y seguridad $ 180/mes.")
             elif p["kind"]=="busGarage":
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
@@ -4040,16 +4074,24 @@ def tick_one_day():
                 state["monthlyExpenses"]+=25
                 ev("Parada de colectivo habilitada",f"La parada abrió junto a la vía con calidad {quality}%. Operación y mantenimiento $ 25/mes.")
             elif p["kind"]=="civic":
-                operating_cost=round(650*(1.4-c["quality"]*.5))
-                coverage=round(5+5*c["quality"])
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"civic","name":"Centro de salud","level":1,"occupants":0,"jobSlots":16,"status":"habilitado","monthlyCost":operating_cost,"quality":quality}); state["monthlyExpenses"]+=operating_cost; state["services"]=min(100,state["services"]+coverage); state["approval"]=min(100,state["approval"]+3)
-                ev("Centro de salud habilitado",f"Inspección aprobada con calidad {quality}%. Cobertura +{coverage} puntos; operación y mantenimiento $ {operating_cost}/mes.")
+                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["clinic"])
+                operating_cost=round((320+model["jobs"]*23)*(1.4-c["quality"]*.5))
+                building={"x":p["x"],"y":p["y"],"kind":"civic","name":model["label"],"serviceModel":p.get("serviceModel","clinic"),"level":1,
+                     "occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":operating_cost,"quality":quality}
+                if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":day}
+                if model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
+                state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
+                ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
             elif p["kind"]=="school":
                 operating_cost=820
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"school","name":"Escuela primaria municipal","level":1,"occupants":0,"jobSlots":12,"classrooms":4,"status":"habilitado","monthlyCost":operating_cost,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=operating_cost
                 ev("Escuela habilitada","Cuatro aulas para 96 estudiantes potenciales. El municipio financia $820/mes; la capacidad operativa depende de docentes, servicios y rutas.")
             elif p["kind"]=="fireStation":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":"Cuartel de bomberos municipal","level":1,"occupants":0,"jobSlots":12,"fireEngineCapacity":3,"dispatchReadyDay":state["day"],"status":"habilitado","monthlyCost":950,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=950
+                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["firePost"])
+                monthly=round(model["cost"]*.065)
+                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":model["label"],"serviceModel":p.get("serviceModel","firePost"),"level":1,
+                    "occupants":0,"jobSlots":model["jobs"],"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"],
+                    "status":"habilitado","monthlyCost":monthly,"quality":quality});state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
                 ev("Cuartel de bomberos habilitado","El cuartel ofrece 12 puestos y hasta tres dotaciones de cuatro bomberos. Sin personal cualificado o ruta no puede responder; operación y mantenimiento $950/mes.")
             if p["kind"] not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
             retention_pct=max(0,min(.2,float(p.get("retentionPct",0))))
@@ -4846,9 +4888,15 @@ class Handler(BaseHTTPRequestHandler):
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     else:
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    spec=PROJECTS[kind]; c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
+                    service_id=data.get("serviceModel") or SERVICE_DEFAULT.get(kind)
+                    model=SERVICE_MODELS.get(service_id)
+                    if data.get("serviceModel") and (model is None or model["kind"]!=kind):
+                        self._send(400,{"error":"Categoría de servicio inválida para esta obra"});return
+                    spec=({**PROJECTS[kind],"cost":model["cost"],"days":model["days"],"label":model["label"]} if model else PROJECTS[kind])
+                    c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    if model:p["serviceModel"]=service_id
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
                     if kind=="factory":
                         p["industryType"]=next_factory_industry()

@@ -313,3 +313,8 @@ En Online la industria privada se decide en `next_factory_industry`: alimentos �
 ## Alfa 0.91 · acero importado → metalúrgica → componentes
 
 El acero se fabrica en componentes de obra con una metalúrgica privada; no se crea acero local de la nada. Online/Offline la planta repone acero del Corralón con una orden industrial y ruta vial, guarda hasta 48 unidades de acero crudo en vuelo/insumo y convierte 1:1, limitada a 24 componentes por ciclo por personal, electricidad, agua y saneamiento. El almacén de salida admite 180; los pedidos de construcción descuentan el proveedor Metalúrgica local y pagan a la caja privada. La industria se habilita tras cantera, hormigonera y aserradero. Las ciudades heredadas reciben la ficha de proveedor vacía por la migración estándar de existencias.
+
+
+### Alfa 0.92 — exclusividad de industria y validación automática
+
+Una planta con industryType quarry, concrete, sawmill o metalworks solo participa en su cadena específica, no en la de alimentos. Offline ya filtra estas cuatro clases igual que simulate_business_month Online. Las pruebas de logística construyen una obra controlada con faltante de componentes, camión y una metalúrgica existente para evitar confundir la simulación de pedidos con la habilitación de plantas nuevas, que sigue pendiente. El workflow de GitHub Actions corre tests Python y Node sobre main.

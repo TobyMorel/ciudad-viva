@@ -3795,6 +3795,7 @@ def tick_one_day():
     calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
+        police_service_report(advance=True)
         for home in state["buildings"]:
             if home.get("kind")=="home":home["monthlyWageIncome"]=0
         supplier_stock=state["supply"]["suppliers"]
@@ -3879,7 +3880,7 @@ def tick_one_day():
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_summary=health_service_report(economic["workplaces"]);health_cost=health_summary.get("monthlySupplyCost",0)+health_summary.get("hospital",{}).get("monthlyOperatingCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
+        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0),"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
         available=state["money"]+monthly_income
@@ -4095,7 +4096,7 @@ def hospital_care_report(workplaces,homes,advance=False):
     for b in state.get("buildings",[]):
         ward=b.get("hospitalWard")
         if b.get("kind")!="civic" or not ward or b.get("status") not in ("operativo","habilitado"):continue
-        doctors=staff.get((b["x"],b["y"]),0)
+        doctors=max(0,staff.get((b["x"],b["y"]),0)-police_staff_reserved(b,workplaces))
         utility=b.get("utilityAccess",{})
         factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100*funding
         beds=max(0,int(ward.get("beds",0)))
@@ -4156,6 +4157,114 @@ def hospital_care_report(workplaces,homes,advance=False):
             "transfersPerDay":round(h["transferred"],2),"utilityPct":h["utilityPct"]} for h in hospitals],
         "neighborhoods":sorted(neighborhoods,key=lambda n:-n["waiting"])[:6]}
 
+# Fase 28: seguridad urbana con puestos físicos, dotaciones y sucesos causales.
+POLICE_COSTS={"openPoliceUnit":4000,"addPoliceVehicle":2500}
+POLICE_PRIORITIES=("mixto","residencial","comercial")
+
+def police_staff_reserved(building,workplaces):
+    unit=building.get("policeUnit")
+    if not unit or building.get("status") not in ("operativo","habilitado"):return 0
+    job=next((w for w in workplaces if w.get("kind")=="civic" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
+    assigned=max(0,int(job.get("staffedJobs",0)))
+    u=building.get("utilityAccess",{})
+    factor=min(u.get("powerServedPct",0),u.get("waterServedPct",0))/100
+    funding=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+    if factor*funding<.5:return 0
+    return 3*min(max(0,int(unit.get("vehicles",0))),max(0,(assigned-4)//3))
+
+def invest_police_unit(action,x,y,priority=None):
+    building=next((b for b in state.get("buildings",[]) if b.get("kind")=="civic" and b.get("x")==x and b.get("y")==y and b.get("status") in ("operativo","habilitado")),None)
+    if not building:raise ValueError("Elegí un centro cívico municipal habilitado.")
+    if action=="setPolicePriority":
+        if not building.get("policeUnit"):raise ValueError("Primero equipá una base de seguridad.")
+        if priority not in POLICE_PRIORITIES:raise ValueError("Prioridad de patrullaje inválida.")
+        building["policeUnit"]["priority"]=priority
+        ev("Prioridad de patrullaje",f"{building['name']}: prioridad {priority} desde el próximo operativo.")
+        return
+    if action not in POLICE_COSTS:raise ValueError("Inversión en seguridad desconocida.")
+    if route_between((4,10),(x,y)) is None:raise ValueError("La base necesita conexión vial para recibir vehículos.")
+    unit=building.get("policeUnit")
+    if action=="openPoliceUnit" and unit:raise ValueError("Esta base ya cuenta con seguridad urbana.")
+    if action=="addPoliceVehicle" and not unit:raise ValueError("Primero equipá una base de seguridad.")
+    if action=="addPoliceVehicle" and int(unit.get("vehicles",0))>=3:raise ValueError("La base admite como máximo tres móviles.")
+    reserved=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    cost=POLICE_COSTS[action]
+    if state.get("money",0)-reserved<cost:raise ValueError("Caja libre insuficiente después de reservar las obras.")
+    state["money"]-=cost
+    if action=="openPoliceUnit":building["policeUnit"]={"vehicles":1,"priority":"mixto","equippedDay":state["day"]}
+    else:unit["vehicles"]=int(unit.get("vehicles",0))+1
+    ev("Equipamiento de seguridad urbana",f"{building['name']}: inversión $ {cost}. Los móviles necesitan tres trabajadores cada uno y acceso por calles.")
+
+def police_service_report(workplaces=None,advance=False):
+    workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
+    police=state.setdefault("police",{})
+    month=(state.get("day",1)-1)//30
+    units=[]
+    for b in state.get("buildings",[]):
+        if b.get("kind")!="civic" or not b.get("policeUnit") or b.get("status") not in ("operativo","habilitado"):continue
+        u=b["policeUnit"];personnel=police_staff_reserved(b,workplaces);units.append({"building":b,"name":b.get("name","Base de seguridad"),
+            "vehicles":max(0,int(u.get("vehicles",0))),"active":personnel//3,"staff":personnel,
+            "priority":u.get("priority","mixto"),"remaining":personnel//3*2,"responded":0})
+    sites=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop") and b.get("status") not in ("cerrado","abandonado")]
+    rows=[]
+    for b in sites:
+        choices=[]
+        for unit in units:
+            path=route_between((unit["building"]["x"],unit["building"]["y"]),(b["x"],b["y"]))
+            if path:
+                minutes=round(max(0,len(path)-1)*2.5+4)
+                if minutes<=40:choices.append((minutes,unit))
+        choices.sort(key=lambda pair:(pair[0],pair[1]["name"]))
+        protected=bool(choices and any(u["active"]>0 for _,u in choices))
+        rows.append({"building":b,"choices":choices,"protected":protected})
+    if advance and month>police.get("lastProcessedMonth",state.get("lastMonth",0)):
+        police["lastProcessedMonth"]=month
+        incidents=[];unanswered=responded=damage=0
+        for row in rows:
+            b=row["building"];kind=b["kind"]
+            road_quality=next((float(a.get("quality",82)) for a in state.get("roadAssets",[]) if a.get("x")==b["x"] and a.get("y")==b["y"]),82)
+            power=float(b.get("utilityAccess",{}).get("powerServedPct",100))
+            threshold=14+(10 if road_quality<40 else 0)+(8 if power<60 else 0)+(7 if kind=="shop" else 0)
+            options=[(mins,u) for mins,u in row["choices"] if u["remaining"]>0 and u["active"]>0]
+            if any(u["priority"] in ("mixto","comercial" if kind=="shop" else "residencial") for _,u in options):threshold=max(3,threshold-7)
+            token=(month*37+b["x"]*19+b["y"]*43+(11 if kind=="shop" else 0))%100
+            if token>=threshold:continue
+            response=None
+            if options:
+                minutes,unit=min(options,key=lambda it:(it[0],it[1]["name"]))
+                unit["remaining"]-=1;unit["responded"]+=1
+                response={"station":unit["name"],"minutes":minutes}
+                responded+=1
+            else:
+                unanswered+=1
+                if kind=="shop" and b.get("business",{}).get("status")=="abierto":
+                    firm=b["business"];lost=min(3,max(0,int(firm.get("inventory",0))))
+                    firm["inventory"]=max(0,int(firm.get("inventory",0))-lost);damage+=lost
+            incidents.append({"id":f"seg-{month}-{kind}-{b['x']}-{b['y']}","month":month,
+                "day":state["day"],"location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
+                "x":b["x"],"y":b["y"],"status":"atendido" if response else "sin respuesta",
+                "responseMinutes":response["minutes"] if response else None,
+                "station":response["station"] if response else None})
+        police["recentIncidents"]=(police.get("recentIncidents",[])+incidents)[-24:]
+        police["lastIncidents"]=len(incidents);police["lastResponded"]=responded;police["lastUnanswered"]=unanswered;police["lastInventoryLoss"]=damage
+        police["totalResponded"]=police.get("totalResponded",0)+responded
+        police["totalUnanswered"]=police.get("totalUnanswered",0)+unanswered
+        if unanswered>=2:state["approval"]=max(0,state.get("approval",0)-1)
+        if unanswered>=4:state["services"]=max(0,state.get("services",0)-1)
+        if incidents:ev("Operativo mensual de seguridad",f"{len(incidents)} incidentes de convivencia y comercio; {responded} atendidos, {unanswered} sin dotación. Pérdidas físicas de comercios: {damage} unidades.")
+    coverage=sum(1 for x in rows if x["protected"])
+    base=sum(u["vehicles"]*390 for u in units)
+    variable=max(0,int(police.get("lastResponded",0)))*70
+    return {"month":month,"sites":len(sites),"coveredSites":coverage,"coveragePct":round(100*coverage/max(1,len(sites))),
+        "lastIncidents":police.get("lastIncidents",0),"lastResponded":police.get("lastResponded",0),
+        "lastUnanswered":police.get("lastUnanswered",0),"totalResponded":police.get("totalResponded",0),
+        "totalUnanswered":police.get("totalUnanswered",0),"lostInventoryUnits":police.get("lastInventoryLoss",0),
+        "monthlyOperatingCost":base+variable,
+        "units":[{"name":u["name"],"x":u["building"]["x"],"y":u["building"]["y"],
+            "vehicles":u["vehicles"],"activeVehicles":u["active"],"staff":u["staff"],
+            "priority":u["priority"],"responded":u["responded"]} for u in units],
+        "recentIncidents":police.get("recentIncidents",[])[-8:]}
+
 def health_service_report(workplaces=None,advance=False):
     health=state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0]
@@ -4176,7 +4285,7 @@ def health_service_report(workplaces=None,advance=False):
     clinics=[]
     for building in state.get("buildings",[]):
         if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
-        workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0)))
+        workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0))-police_staff_reserved(building,workplaces))
         access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
         clinic_staff=min(4,people) if building.get("hospitalWard") else people
         clinics.append({"building":building,"name":building.get("name","Centro de salud"),"staff":people,"utility":utility,
@@ -4371,14 +4480,14 @@ def public_state(player_id=None):
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
     view["trainingCatalog"]=training_catalog()
-    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"])
+    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"]);view["policeReport"]=police_service_report(commute["workplaces"])
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
     transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
+    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
@@ -4471,6 +4580,10 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action in POLICE_COSTS or action=="setPolicePriority":
+                    try:invest_police_unit(action,int(data.get("x",-1)),int(data.get("y",-1)),data.get("priority"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action in HOSPITAL_COSTS:
                     try:invest_hospital_care(action,int(data.get("x",-1)),int(data.get("y",-1)))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return

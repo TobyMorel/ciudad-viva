@@ -6,7 +6,7 @@ Una escuela municipal habilitada puede contratar un anexo de dos aulas, sujeto a
 
 Pruebas: `test_school_expansion.py` y `test_school_expansion_offline.mjs` verifican contrato, material requerido, presupuesto, rechazo de anexo simultáneo y efecto de inspección; `test_school_expansion_ui.mjs` verifica panel, acción y geometría en móvil/escritorio. Falta completar el ciclo de avances y materiales dentro de la simulación de días y comprobar impacto de la capacidad nueva en asistencia y cobertura distrital. Fase 9: 67%. Progreso global no estimable sin pesos comunes verificables.
 
-## Revisión de alcance · Alfa 0.128
+## Revisión de alcance · Alfa 0.127
 
 La fase 8 avanza de 95% a 97% orientativo: la municipalidad ahora puede ordenar los pagos de servicios, redes/residuos y transporte cuando falta caja. La deuda impaga conserva su mora y la cobertura afecta sistemas físicos existentes. Verificado Online/Offline, con asignación limitada sin duplicación y panel responsive. No cierra la fase: falta medir una crisis recuperable integral y continuidad de los cinco servicios. El progreso global sigue sin porcentaje por falta de pesos comunes verificables para las 34 fases.
 

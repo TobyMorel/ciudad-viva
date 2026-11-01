@@ -4100,8 +4100,8 @@ def hospital_care_report(workplaces,homes,advance=False):
         factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100*funding
         beds=max(0,int(ward.get("beds",0)))
         units=max(0,int(ward.get("ambulances",0)))
-        capacity=min(beds/3,max(0,doctors-4)*1.25)*factor
         crews=min(units,max(0,(doctors-6)//2)) if factor>=.5 else 0
+        capacity=min(beds/3,max(0,doctors-4-crews*2)*1.25)*factor
         hospitals.append({"building":b,"name":b.get("name","Centro de salud"),"staff":doctors,"beds":beds,
             "ambulances":units,"activeAmbulances":crews,"dailyCapacity":capacity,"remaining":capacity,
             "ambulanceRemaining":crews*2,"admitted":0,"transferred":0,"utilityPct":round(factor*100)})
@@ -4178,8 +4178,9 @@ def health_service_report(workplaces=None,advance=False):
         if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
         workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0)))
         access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+        clinic_staff=min(4,people) if building.get("hospitalWard") else people
         clinics.append({"building":building,"name":building.get("name","Centro de salud"),"staff":people,"utility":utility,
-            "primaryCapacity":people*2.2*utility,"urgentCapacity":people*.35*utility,"primaryRemaining":people*2.2*utility,"urgentRemaining":people*.35*utility,
+            "primaryCapacity":clinic_staff*2.2*utility,"urgentCapacity":clinic_staff*.35*utility,"primaryRemaining":clinic_staff*2.2*utility,"urgentRemaining":clinic_staff*.35*utility,
             "served":0,"urgentServed":0,"patients":0,"travelMinutes":[]})
     population=max(1,sum(max(0,b.get("occupants",0)) for b in homes));base_demand=0;urgent_demand=0;primary_served=0;urgent_served=0;areas=[]
     for home in homes:

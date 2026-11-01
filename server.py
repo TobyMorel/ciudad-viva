@@ -660,7 +660,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"lastReport":{},"history":[]}}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -1282,8 +1282,13 @@ def settle_municipal_program_budgets(costs,available):
         if key=="services":
             budgets["servicesFundingFactor"]=factor
             if unpaid_current:
-                loss=max(1,math.ceil((1-factor)*4));state["services"]=max(5,state.get("services",0)-loss)
+                loss=max(1,math.ceil((1-factor)*4));before=max(5,state.get("services",0));state["services"]=max(5,before-loss)
+                budgets["financialServiceImpact"]=max(0,budgets.get("financialServiceImpact",0))+before-state["services"]
                 if budgets["underfundedMonths"][key]>=2:state["approval"]=max(5,state.get("approval",0)-1)
+            elif new_arrears==0 and budgets.get("financialServiceImpact",0)>0:
+                restored=min(1,budgets["financialServiceImpact"],max(0,100-state.get("services",0)))
+                state["services"]=min(100,state.get("services",0)+restored);budgets["financialServiceImpact"]-=restored
+                if restored and budgets["financialServiceImpact"]==0:ev("Servicios municipales recuperados","El presupuesto estabilizado y sin atrasos recuperó gradualmente la capacidad de servicios perdida durante la crisis fiscal.")
         elif key=="mobility":budgets["mobilityFundingFactor"]=factor
         elif key=="networks":
             state.setdefault("utilities",{})["maintenanceFundingFactor"]=factor

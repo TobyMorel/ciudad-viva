@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.123
+
+## Recuperación fiscal de servicios
+
+`programBudgets.financialServiceImpact` registra solamente los puntos efectivamente perdidos por el deterioro de `services` durante cierres con facturas actuales sin cubrir. Se calcula contra el valor previo y respeta el piso de 5, por lo que no registra puntos que la ciudad no perdió.
+
+La recuperación solo ocurre cuando el costo corriente del programa está completamente pagado y su mora llega a cero. Entonces se restaura como máximo un punto por mes, sin superar 100 y sin reducir el daño fiscal pendiente más allá de la restauración aplicada. Otras causas de pérdida no se revierten. La regla corre igual en Online y Offline; el saneamiento de guardados agrega el saldo en cero para ciudades anteriores.
+
 # Decisiones técnicas · Alfa 0.122
 
 ## Cuotas municipales impagas

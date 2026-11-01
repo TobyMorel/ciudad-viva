@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.123
+
+1. Seguir fase 8 con escenarios fiscales donde cambios de impuestos y presupuestos alteren empleo, atractivo residencial/comercial, demanda y apoyo ciudadano según causas legibles.
+2. Probar una crisis moderada de punta a punta: déficit, mora presupuestaria, estabilización y recuperación medible de salud, educación, residuos, redes y colectivos.
+3. Evitar nuevas entregas de solo pulido; priorizar mecanismos del roadmap con reglas paralelas Online/Offline.
+4. Mantener verificaciones automáticas, revisar responsive cuando cambie la UI, publicar en `main`, confirmar commit/estado de Vercel y generar ZIP integral.
+
+Fase actual: 8, 85% orientativo; próxima: integración fiscal con actividad urbana y cinco servicios. Progreso global no estimable: no hay ponderación común verificable para las 34 fases. LAN física sigue pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.122
 
 1. Completar fase 8 con una crisis fiscal jugable: priorizar impuestos y presupuestos, observar mora/deuda y recuperar de forma gradual salud, educación, residuos, redes y colectivos.

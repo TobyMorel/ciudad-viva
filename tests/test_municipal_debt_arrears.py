@@ -40,3 +40,25 @@ class MunicipalDebtArrears(unittest.TestCase):
         self.assertEqual(self.loan['monthsRemaining'],0)
         self.assertEqual(self.loan['paymentArrears'],300)
         self.assertEqual(self.loan['status'],'active')
+
+    def test_service_budget_crisis_recovers_only_its_own_damage_after_all_arrears_clear(self):
+        server.state['services']=80
+        first=server.settle_municipal_program_budgets({'services':1000,'networks':0,'mobility':0},0)
+        impact=server.state['finance']['programBudgets']['financialServiceImpact']
+        damaged=server.state['services']
+        self.assertGreater(impact,0)
+        server.state['services']-=7  # Independent damage must not be healed by fiscal recovery.
+        server.state['finance']['programBudgets']['servicesPct']=200
+        server.settle_municipal_program_budgets({'services':1000,'networks':0,'mobility':0},2000)
+        budgets=server.state['finance']['programBudgets']
+        self.assertEqual(budgets['arrears']['services'],0)
+        self.assertEqual(budgets['financialServiceImpact'],impact-1)
+        self.assertEqual(server.state['services'],damaged-7+1)
+
+    def test_fiscal_service_recovery_waits_until_service_arrears_are_cleared(self):
+        budgets=server.state['finance']['programBudgets']
+        budgets['servicesPct']=200;budgets['financialServiceImpact']=3;budgets['arrears']['services']=1000
+        server.state['services']=70
+        server.settle_municipal_program_budgets({'services':1000,'networks':0,'mobility':0},1000)
+        self.assertEqual(server.state['services'],70)
+        self.assertEqual(budgets['financialServiceImpact'],3)

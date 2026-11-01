@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.123
+
+Fase 8 suma recuperación fiscal gradual del nivel de servicios. `finance.programBudgets.financialServiceImpact` (Online) y su contraparte Offline registran solo los puntos que efectivamente bajaron por la falta de fondos del programa de servicios. No incluye pérdidas por contaminación, deterioro, epidemias u otras causas. Cuando la factura corriente está cubierta y toda la mora de servicios se cancela, se restaura un punto por cierre mensual, limitado a la deuda fiscal registrada y al máximo 100. La migración crea el campo en partidas previas. Tests Online y Offline cubren default, mora que bloquea recuperación y disminución gradual del saldo.
+
+No se modificó la UI. Fase 8=85% orientativo; faltan escenarios que conecten impuestos/presupuesto con empleo, demanda y apoyo, además de validar una crisis y recuperación a lo largo de salud, educación, residuos, redes y colectivos. Global no estimable sin pesos comunes verificables para 34 fases. LAN física sigue sin verificar.
+
+**Siguiente:** completar la cadena causal económica de fase 8 y validar los cinco servicios sin dedicar una entrega a detalle visual.
+
 # Continuidad de desarrollo para otra IA
 
 ## Continuidad inmediata · Alfa 0.122

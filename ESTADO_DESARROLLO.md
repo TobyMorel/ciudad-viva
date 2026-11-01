@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.123
+
+## Recuperación fiscal de servicios
+
+- Online y Offline guardan el daño de nivel de servicios causado específicamente por presupuestos insuficientes. El saldo no reclama ni repara pérdidas ajenas a la crisis fiscal.
+- Tras cubrir el gasto mensual y cancelar los atrasos de servicios, el nivel recupera un punto por cierre mensual hasta devolver únicamente el daño fiscal registrado. La operación respeta el límite superior de 100.
+- Regresiones nuevas verifican déficit, mora que impide recuperación y recuperación gradual en ambos motores. No se modificó la interfaz.
+- Fase actual: 8, 85% orientativo. Restan escenarios integrales enlazando impuestos, empleo, demanda, apoyo ciudadano y verificación de cinco servicios. Avance global no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.122
 
 ## Mecánica fiscal y verificación

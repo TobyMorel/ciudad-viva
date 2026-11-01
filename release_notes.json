@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.122",
+  "currentVersion": "0.123",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.123",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 85,
+      "overallProgress": null,
+      "changes": [
+        "Los déficits de servicios ahora dejan registrado cuánto del nivel municipal se perdió específicamente por falta de presupuesto; esa cuenta no mezcla daños de otras causas.",
+        "Al normalizarse el costo corriente y cancelarse toda la mora de servicios, la capacidad fiscal perdida se recupera a razón de un punto por cierre mensual. La recuperación se detiene en 100 y nunca revierte daños no fiscales.",
+        "La misma regla funciona en Online y Offline, se migra en partidas existentes y conserva atrasos mientras la asignación mensual no alcance para pagarlos.",
+        "Verificación local: regresiones Online/Offline sobre déficit, mora pendiente y recuperación gradual; UI sin cambios. La recuperación LAN física sigue pendiente de verificar.",
+        "La fase 8 avanza de 80% a 85% por conectar un efecto fiscal persistente y su recuperación con límites. Faltan escenarios integrales que relacionen impuestos, empleo, demanda y apoyo ciudadano, además de recuperación completa verificable de cinco servicios. El progreso global no es estimable sin una ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.122",
       "date": "2026-11-01",
@@ -1254,8 +1268,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.123 · recuperación de servicios tras una crisis fiscal",
-      "detail": "Fase 8: al estabilizar pagos y reducir atrasos, verificar continuidad y recuperación gradual de servicios municipales, transporte y redes; ligar decisiones fiscales con demanda y apoyo ciudadano."
+      "title": "Alfa 0.124 · crisis fiscal y actividad urbana",
+      "detail": "Fase 8: conectar decisiones tributarias y presupuestarias con empleo, demanda privada, apoyo ciudadano y continuidad verificable de cinco servicios."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1343,11 +1357,11 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 80,
+      "progress": 85,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Escenarios jugables de crisis que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
-        "Pruebas de recuperación de un déficit moderado mediante decisiones y resultados visibles en cinco servicios.",
+        "Escenarios integrales de crisis que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
+        "Medir con pruebas de extremo a extremo cómo la recuperación fiscal recompone salud, educación, residuos, redes y transporte.",
         "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },

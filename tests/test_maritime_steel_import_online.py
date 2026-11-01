@@ -55,5 +55,30 @@ class MaritimeSteelImport(unittest.TestCase):
         self.assertEqual(s["supply"]["steelShipments"][0]["status"],"entregado")
         self.assertEqual(s["supply"]["steelImportedUnits"],20)
 
+    def test_two_ships_share_port_capacity_across_calls(self):
+        server.state=server.initial_state()
+        s=server.state
+        server.ensure_supply_state()
+        s["day"]=100
+        s["buildings"].append({"kind":"port","x":4,"y":10,"operational":True,"unloadingCapacity":7})
+        depot=s["supply"]["suppliers"]["Corralón del Puerto"]
+        before=depot["steel"]
+        s["supply"]["steelShipments"]=[
+            {"quantity":5,"port":[4,10],"arrivalDay":100,"status":"en viaje"},
+            {"quantity":8,"port":[4,10],"arrivalDay":100,"status":"en viaje"},
+        ]
+        with patch.object(server,"route_between",return_value=[[4,10]]):
+            server.advance_maritime_steel_shipments()
+            self.assertEqual([x["deliveredUnits"] for x in s["supply"]["steelShipments"]],[5,2])
+            server.advance_maritime_steel_shipments()
+            self.assertEqual(depot["steel"]-before,7,"El cupo no se reinicia el mismo día")
+            s["day"]=101
+            server.advance_maritime_steel_shipments()
+        self.assertEqual([x["deliveredUnits"] for x in s["supply"]["steelShipments"]],[5,8])
+        self.assertEqual(depot["steel"]-before,13)
+        self.assertEqual(s["supply"]["steelImportedUnits"],13)
+        self.assertTrue(all(x["status"]=="entregado" for x in s["supply"]["steelShipments"]))
+
+
 if __name__=="__main__":
     unittest.main()

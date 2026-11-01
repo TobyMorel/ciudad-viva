@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.140
+
+- El servidor Online y el primer inicio Offline arrancan en una partida nueva vacía. La acción Nueva partida Online limpia el estado actual; Offline aplica el inicio vacío solo si no hay guardado. Se conserva el modelo de servicios y hay una única puerta vial exterior. El mapa construye visualmente la continuación de esa ruta sin fingir que son calles municipales construidas. Offline solo aplica el escenario vacío cuando no hay guardado; no migra ni borra guardados anteriores.
+- La migración de arranque conserva una demanda pendiente inicial de 36 y genera cuatro solicitudes mensuales hasta 120 potenciales, incluso antes de que haya empleos. Este tope solo modera el arranque; el sistema de hogares y empleo debe gobernar la permanencia posterior.
+- Viviendas, comercios y fábricas zonificados son promociones privadas. El precio de proyecto cubre materiales/insumos de obra; no se inventan entregas del inventario municipal. La ciudad mantiene el costo del permiso y la obra conserva cuadrilla, duración, etapas e inspección.
+- Se conserva el generador mensual de incendios y robos existente; no se incrementa su frecuencia hasta integrar una evaluación de seguridad/equipos que no genere incidentes arbitrarios. En visual se representan partículas solo para incidentes activos.
+- Pendiente posterior, no parte terminada: muerte natural, capacidad funeraria, cementerios/crematorios, patrullas 3D y una farola asignada por nuevo tramo vial.
+
 # Decisiones técnicas · Alfa 0.139
 
 ## Viajes de acero importado por mar

@@ -8,6 +8,7 @@ const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
 window.__ciudadViva3D=()=>world.getEmergencyActors();
 window.__ciudadVivaShips=()=>world.getMaritimeActors();
+window.__ciudadVivaFire=()=>world.getFireParticleCounts();
 window.__ciudadVivaProjectTile=(x,y,height=0)=>world.projectTile(x,y,height);
 window.__ciudadVivaCoverage=(x,y,serviceModel)=>{if(!S)return [];world.sync(S,{x,y},{...viewParams(),servicePreview:serviceModel?{x,y,serviceModel}:null});return world.getCoverageTiles()};
 const ui={};['cityName','mapCityName','dateLabel','mapDate','mapTime','money','budgetFlow','population','jobs','employment','employmentNote','services','serviceNote','approval','approvalCause','netLabel','inviteAddress','selection','supply','projects','projectCount','events','playersLabel','speedLabel','pauseBtn','toast','fileInput','bidBackdrop','bidTitle','bidEyebrow','bidSummary','bidOffers','bidError','bidConfirm','supplyBackdrop','orderClose','orderProject','orderSupplier','orderDestination','orderPriority','orderSupplierNote','orderItems','orderError','orderConfirm'].forEach(id=>ui[id]=document.getElementById(id));

@@ -31,34 +31,19 @@ async function withCity(city,callback){
     globalThis.fetch=fetch0;globalThis.localStorage=storage0;Date.now=now0;
   }
 }
-test('Offline: promotor autónomo compra mercancía que llega en camión, no instantánea',async()=>{
+test('Offline: viviendas zonificadas usan inversión privada y no esperan entregas municipales',async()=>{
   const city=base(),before=city.privateCapital;
   await withCity(city,async({tick})=>{
-    let s=await tick();
-    const project=s.projects.find(p=>p.zonedDevelopment&&p.kind==='home');
+    const s=await tick(),project=s.projects.find(p=>p.zonedDevelopment&&p.kind==='home');
     assert.ok(project,'Debe iniciar una vivienda privada cuando hay demanda y capital');
-    const orders=s.supply.orders.filter(o=>o.projectId===project.id);
-    assert.ok(orders.length>=1,'Cada material necesario necesita un pedido');
-    assert.ok(orders.every(o=>o.privateContract&&o.status==='en tránsito'));
-    assert.ok(orders.every(o=>o.route.length>0&&o.cost>0&&o.arrivalDay>s.day));
-    assert.equal(project.materialsCost,orders.reduce((n,o)=>n+o.cost,0));
-    assert.ok(s.privateCapital<=before-project.materialsCost);
-    for(const key of Object.keys(project.materialsRequired))
-      if(project.materialsRequired[key])assert.equal(s.supply.contractors[project.contractor][key],0,
-        'Los materiales no aparecen hasta que llegan los camiones');
-    let arrived=false;
-    for(let i=0;i<24;i++){
-      s=await tick();
-      if(orders.every(order=>s.supply.orders.find(o=>o.id===order.id)?.status==='entregado')){arrived=true;break}
-    }
-    assert.ok(arrived,'La carga debe llegar por una ruta vial: '+JSON.stringify(s.supply.orders.filter(o=>o.projectId===project.id).map(o=>({id:o.id,status:o.status,cause:o.statusCause,pos:o.currentPosition,progress:o.travelledDistance,arrival:o.arrivalDay}))));
-    const projected=s.projects.find(p=>p.id===project.id);
-    assert.ok(!projected||projected.elapsed>=0);
-    assert.ok(s.supply.orders.filter(o=>o.projectId===project.id).every(o=>o.deliveredDay),
-      'Cada pedido recibe fecha real de entrega');
+    assert.equal(project.privateMaterialsIncluded,true);
+    assert.ok(Object.values(project.materialsRequired).every(n=>n===0));
+    assert.equal(s.supply.orders.filter(o=>o.projectId===project.id).length,0);
+    assert.ok(s.privateCapital<before,'El promotor aporta el costo de la obra desde su capital');
+    assert.equal(project.status,'contratada','La casa igualmente pasa por construcción y lleva plazos');
   });
 });
-test('Offline: sin capacidad de descarga no inicia una obra que exigiría materiales mágicos',async()=>{
+test('Offline: materiales agotados no bloquean vivienda privada zonificada',async()=>{
   const city=base();
   city.supply.yardCapacity=1;
   for(const depot of city.supply.depots||[])depot.capacity=0;
@@ -67,8 +52,8 @@ test('Offline: sin capacidad de descarga no inicia una obra que exigiría materi
   const cash=city.privateCapital;
   await withCity(city,async({tick})=>{
     const s=await tick();
-    assert.equal(s.projects.filter(p=>p.zonedDevelopment).length,0);
+    assert.equal(s.projects.filter(p=>p.zonedDevelopment&&p.kind==='home').length,1);
     assert.equal(s.supply.orders.filter(o=>o.privateContract).length,0);
-    assert.equal(s.privateCapital,cash);
+    assert.ok(s.privateCapital<cash);
   });
 });

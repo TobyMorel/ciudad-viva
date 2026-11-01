@@ -9,7 +9,7 @@ const seed=JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.ur
 test('Offline avanza hora continua, cruza medianoche ordenadamente y se congela al pausar',async()=>{
  const previousFetch=globalThis.fetch,previousStorage=globalThis.localStorage,previousNow=Date.now;
  let now=10_000;Date.now=()=>now;
- const storage=new Map();globalThis.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)};
+ const storage=new Map([['ciudad-viva-offline-v1',JSON.stringify(seed)]]);globalThis.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)};
  globalThis.fetch=async()=>({ok:true,json:async()=>structuredClone(seed)});
  try{
   const adapter=await createOfflineAdapter();adapter.setRealtimeClock(true);

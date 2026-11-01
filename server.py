@@ -1570,7 +1570,17 @@ def initial_state():
             building["business"]=new_business(building,42,5000)
     return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
-state = initial_state()
+def new_settlement_state():
+    """Empty playable map: the only road is the westbound regional gate."""
+    fresh=initial_state();gate=[[4,10]]
+    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":48000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Necesitan vivienda terminada, empleo y servicios para quedarse."}]})
+    fresh["fireService"]={"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0}
+    fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
+    fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}
+    fresh["waste"]={"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0}
+    return fresh
+
+state = new_settlement_state()
 
 def local_ips():
     ips=set()
@@ -4020,8 +4030,12 @@ def advance_zoned_development():
     """Promoters spend real capital and buy the materials for approved projects."""
     demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
-    for kind,threshold in (("home",12),("factory",0)):
+    for kind,threshold in (("home",12),("shop",0),("factory",0)):
         if kind=="home" and int(demand.get("unmet",0))<threshold:continue
+        if kind=="shop":
+            existing_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("status") not in ("cerrado","abandonado"))+sum(1 for p in state.get("projects",[]) if p.get("kind")=="shop" and p.get("status") not in ("cancelada","finalizada"))
+            needed_shops=max(1,int(state.get("population",0))//90)
+            if int(state.get("population",0))<24 or existing_shops>=needed_shops:continue
         if kind=="factory" and not any(b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0) for b in state.get("buildings",[])):continue
         candidates=[]
         for z in state.get("zones",[]):
@@ -4031,34 +4045,33 @@ def advance_zoned_development():
             if route:candidates.append((len(route),z["y"],z["x"],z))
         if not candidates:continue
         _,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
-        specification=PROJECTS[kind];required=material_plan(kind);options=[]
+        specification=PROJECTS[kind];required={key:0 for key in MATERIAL_NAMES};options=[]
         for name,company in CONTRACTORS.items():
             if not contractor_has_capacity(name) or contractor_free_workers(name)<LABOR_NEEDS[kind]:continue
             cost=round(specification["cost"]*company["price"]);permit=round(specification["cost"]*.12);private_cost=cost-permit
-            proposal={"contractor":name,"x":zone["x"],"y":zone["y"],"materialsRequired":required}
-            purchases=plan_private_construction_deliveries(proposal)
-            if purchases is None:continue
-            material_bill=sum(item["cost"] for item in purchases)
+            # Promotores privados incluyen materiales, flete y acopio en su presupuesto; no retienen parcelas esperando compras municipales.
+            purchases=[];material_bill=0
             reserve=4200 if kind=="factory" else 0
             if state.get("money",0)>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500:
                 options.append((cost,name,company,permit,private_cost,purchases,material_bill,reserve))
         if not options:continue
         _,name,company,permit,private_cost,purchases,material_bill,reserve=min(options,key=lambda row:(row[0],row[1]))
         project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
-        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":round(specification["days"]*company["days"]/30),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
-        commit_private_construction_deliveries(project,purchases)
+        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":round(specification["days"]*company["days"]/30),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
         state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance;state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
         zone["status"]="en obra"
         if kind=="factory":
             project["operatingReserve"]=reserve
             project["industryType"]=next_factory_industry()
             project["label"]=FACTORY_LABELS[project["industryType"]]
-        ev("Promotor inicia obra",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. Permiso municipal $ {permit}, inversión privada $ {private_cost:,}, materiales $ {material_bill:,}, cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
+        ev("Promotor inicia obra",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. Permiso municipal $ {permit}, inversión privada $ {private_cost:,} con insumos privados incluidos, cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
 
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
     tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
     desired=tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)
+    if state.get("newSettlement"):
+        desired=max(4,desired)
     demand_state=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     social=state.setdefault("socialServices",new_social_services());temporary=social.setdefault("shelterResidents",[])
     rehoused=0
@@ -4086,6 +4099,7 @@ def move_households():
     if rehoused:ev("Personas reubicadas desde el refugio",f"{rehoused} residentes volvieron a su vivienda reparada o accedieron a una casa disponible.")
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
+        if state.get("newSettlement"):jobs_room=max(jobs_room,max(0,120-int(state.get("population",0))))
         generated=min(desired,jobs_room)
         demand_state["unmet"]=min(600,max(0,int(demand_state.get("unmet",0)))+generated)
         demand_state["lastGenerated"]=generated;demand_state["lastFilled"]=0
@@ -5877,8 +5891,7 @@ class Handler(BaseHTTPRequestHandler):
                     ev("Rescate de obra adjudicado",f"{abandoned['label']} continúa desde {round(initial*100)}% con {contractor}; contrato nuevo $ {total:,} y plazo estimado {duration} días.".replace(",","."))
                 elif action=="new":
                     room_host=state.get("host",pid);active_players=state.get("players",{})
-                    state=initial_state();state["host"]=room_host;state["players"]=active_players
-                    ev("Nueva partida","Puerto Claro comenzó una nueva gestión municipal.")
+                    state=new_settlement_state();state["host"]=room_host;state["players"]=active_players
                 else: self._send(400,{"error":"Acción desconocida"}); return
                 self._send(200,public_state(pid)); return
             if path=="/api/save":

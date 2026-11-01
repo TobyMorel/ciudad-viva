@@ -47,7 +47,7 @@ export function collectCityAlerts(state){
  for(const v of police){
   if(!site(v.x,v.y)||now-(v.day||0)>35||now<(v.day||0))continue;
   const answered=v.status==='atendido';
-  push(item('police','🚨',answered?'Incidente atendido':'Robo o incidente sin respuesta',
+  push(item('police','🚨',answered?'Incidente atendido':'Se necesita una patrulla aquí',
    (v.location||'Barrio')+'. '+(answered?'Respondió '+(v.station||'una patrulla')+' en '+(v.responseMinutes||'?')+' minutos.':'No se pudo enviar patrulla: verificá comisaría, tres agentes por vehículo, energía, agua y calles.'),
    answered?'La intervención quedó registrada. Revisá la cobertura de seguridad para evitar nuevos incidentes.':'Construí un puesto o comisaría, asegurá personal y conexiones y revisá el panel Seguridad.',v.x,v.y,v.day,v.id||`pol-${v.x}-${v.y}-${v.day}`,answered?2:1));
  }
@@ -56,7 +56,7 @@ export function collectCityAlerts(state){
   if(!site(v.x,v.y))continue;
   const active=v.status==='ardiendo';
   if(!active&&now-(v.resolvedDay??v.startDay??0)>14)continue;
-  push(item('fire','🔥',active?'Incendio en curso':'Incendio registrado',
+  push(item('fire','🔥',active?'Se necesita una dotación de bomberos':'Incendio registrado',
    (v.name||'Edificio')+'. '+(active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
    active?'Construí y equipá un cuartel de bomberos. Un vehículo no sale sin cuatro bomberos cualificados y ruta vial.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
  }

@@ -59,7 +59,7 @@ class PrivateConstructionFreightTests(unittest.TestCase):
         self.assertEqual(len(s["supply"]["orders"]),0)
         self.assertEqual(s["privateCapital"],original)
 
-    def test_automatic_zoned_development_creates_real_delivery(self):
+    def test_automatic_zoned_development_includes_private_materials_without_municipal_delivery(self):
         s=self.s
         s["zones"]=[{"x":7,"y":11,"kind":"home","status":"disponible"}]
         s["housingDemand"]={"unmet":80,"lastGenerated":0,"lastFilled":0}
@@ -75,9 +75,9 @@ class PrivateConstructionFreightTests(unittest.TestCase):
         self.assertEqual(len(projects),1,"Debe empezar una vivienda privada con demanda y permisos")
         p=projects[0]
         orders=[o for o in s["supply"]["orders"] if o.get("projectId")==p["id"]]
-        self.assertGreater(len(orders),0)
-        self.assertTrue(all(o["status"]=="en tránsito" and o["privateContract"] for o in orders))
-        self.assertEqual(p["materialsCost"],sum(o["cost"] for o in orders))
+        self.assertEqual(orders,[])
+        self.assertTrue(p["privateMaterialsIncluded"])
+        self.assertTrue(all(amount==0 for amount in p["materialsRequired"].values()))
         self.assertLess(s["privateCapital"],old_capital)
         self.assertTrue(all(sum(stock.get(k,0) for stock in s["supply"]["contractors"].values())==0
                             for k in server.MATERIAL_NAMES),"No aparecen materiales en el patio al contratar")

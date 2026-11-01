@@ -1,3 +1,21 @@
+# Estado de desarrollo · Alfa 0.140
+
+## Ciudad vacía, acceso regional y expansión privada · fases 1, 4 y 5
+
+El servidor Online ahora inicia vacío; las partidas nuevas Online (acción Nueva partida) y Offline sin guardado empiezan con 0 habitantes, edificios, proyectos y zonas, una sola conexión vial al exterior y 36 personas en demanda residencial. El acceso exterior se dibuja en el mapa; mientras hay hogares buscando vivienda, vehículos entrantes recorren la entrada. La demanda no se congela por falta inicial de puestos de trabajo y puede llegar hasta un fondo inicial de 120 personas. La población solo se asigna a viviendas concluidas. Los guardados locales previos no se reinician.
+
+Pintar parcelas conectadas permite desarrollo privado automático residencial. La población habilita comercios zonificados; actividad comercial puede justificar fábricas locales. Los proyectos privados conservan inversión, permiso municipal, empresa asignada automáticamente, cuadrilla, duración y etapas, pero incluyen los insumos en su inversión privada y no esperan pedidos/stock de materiales municipales. La comprobación cubre Online y Offline.
+
+## Emergencias más visibles · fase 9
+
+Los incendios en curso se muestran con 11 mallas de llama y 18 partículas de humo por incidente, animadas continuamente desde el reloj visual del juego y detenidas en pausa. Los avisos señalan que se necesita bomberos o una patrulla y explican la falta de respuesta cuando se seleccionan. El motor ya tenía generadores de incendios y robos con reportes de cobertura; esta entrega mejora la representación del fuego y la claridad de los avisos, no la frecuencia ni el despacho base.
+
+Verificado en esta entrega: `python3 -m unittest discover -s tests -p 'test_*.py' -v` (103 pruebas), `node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs` pasa (68/68), stress de 30 años × cuatro perfiles pasa, y `node --test tests/test_port_import_ui.mjs` pasa en Chromium a 390×844 y 1440×900. La prueba visual confirma 11 llamas, 18 humos, aviso seleccionable, navegación Ciudad tras inspección, informe portuario y ausencia de desborde o solapamiento. La suite final Python/Node y los chequeos de sintaxis/JSON/diff quedaron limpios.
+
+Pendientes de la solicitud actual: cementerio/crematorio con capacidad y mortalidad por edad; representación 3D de robo con patrulla que acude; farola garantizada al construir cada tramo de calle; hacer el crecimiento más frecuente y validar el bucle largo en partidas nuevas. No afirmar estas mecánicas como implementadas. La LAN física entre computadoras continúa sin validarse.
+
+Progreso global del juego no estimable: el roadmap no define pesos verificables comunes para agregar las 34 fases. Fase principal de esta entrega: 4, se conserva en 60% con la rúbrica existente; se amplió contenido sin contar pruebas o archivos como progreso. Fases relacionadas: 1 y 5, parciales; fase 9 parcial.
+
 # Estado de desarrollo · Alfa 0.139
 
 ## Importación marítima visible y descarga en puerto · fase 23

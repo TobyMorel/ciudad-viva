@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.139",
+  "currentVersion": "0.140",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.140",
+      "date": "2026-11-01",
+      "roadmapPhase": 4,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "Nueva partida vacía en Online y Offline: se limpia el asentamiento, queda un acceso conectado a la ruta regional, la ciudad empieza con 0 habitantes y una demanda residencial inicial de 36 personas. Los guardados existentes se conservan.",
+        "El acceso regional se representa en el mapa y vehículos entrantes recorren la entrada cuando hay personas buscando vivienda. La migración inicial acumula demanda aunque todavía no existan empleos locales, hasta un fondo inicial acotado; los hogares solo llegan a viviendas terminadas.",
+        "La zonificación privada puede iniciar viviendas, comercios y fábricas. La demanda residencial alimenta hogares; la población habilita comercios y sus ventas pueden impulsar fábricas. El promotor privado absorbe obra e insumos en su inversión: no se crean pedidos municipales de materiales para estos proyectos. Continúan permiso, inversión, cuadrilla, plazo y etapas de obra.",
+        "Los incendios activos ya registrados se representan con 11 llamas y 18 partículas de humo animadas en el 3D; el aviso de bomberos y los avisos policiales identifican explícitamente la respuesta requerida y abren una explicación al seleccionarse.",
+        "Verificado: 103 pruebas Python, 68 pruebas Node Offline/modelo y Chromium de puerto/incendio a 390×844 y 1440×900; se comprobaron partículas, marcador seleccionable, ficha municipal después de inspeccionar, contenido económico y ausencia de desborde/solapamiento. El global sigue sin estimar: falta ponderación común verificable de las 34 fases.",
+        "Pendiente explícito: cementerio/crematorio y mortalidad; escena visual del robo y patrulla desplazándose; una farola garantizada por cada tramo de calle; prueba física LAN entre dos equipos. La policía/incendios aún dependen de sus generadores mensuales existentes."
+      ]
+    },
     {
       "version": "0.139",
       "date": "2026-11-01",
@@ -1551,18 +1566,20 @@
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
       "progress": 60,
-      "summary": "Promotores residenciales, comerciales e industriales inician obras automáticamente según demanda, empleo, acceso y recursos.",
+      "summary": "Promotores residenciales, comerciales e industriales inician obras según demanda, población, ventas, parcela permitida y conexión vial. Insumos de vivienda/comercio/fábrica incluidos en capital privado.",
       "pending": [
-        "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas."
+        "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas.",
+        "Demanda/viabilidad residencial y comercial más amplia, incluyendo empleos y servicios sin bloquear la demanda inicial."
       ]
     },
     {
       "phase": 5,
       "title": "Población, hogares, necesidades y migración",
       "progress": 70,
-      "summary": "Demanda migratoria persistente ligada a aprobación y empleo; hogares entran solo a viviendas reales.",
+      "summary": "Demanda migratoria persistente; nueva ciudad vacía y conectada a ruta regional; residentes entran solo a hogares terminados.",
       "pending": [
-        "Necesidades individuales completas, migración multidimensional y desigualdad."
+        "Necesidades individuales completas, migración multidimensional y desigualdad.",
+        "Comprobar permanencia y crecimiento en una ciudad nueva conectando empleo, accesibilidad y servicios."
       ]
     },
     {

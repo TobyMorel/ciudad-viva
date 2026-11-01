@@ -101,6 +101,25 @@ class AggregateForwardContracts(unittest.TestCase):
         self.assertEqual(seller["cash"],original_seller_cash+fee+contract["paidToSeller"])
         self.assertEqual(self.s["supply"]["logisticsCash"],contract["paidToLogistics"])
 
+    def test_supplier_bankruptcy_cancels_escrow_before_deadline(self):
+        quarry=self.quarry["business"];buyer=self.plant["business"]
+        contract=server.sign_aggregate_forward_contract(self.plant,30)
+        self.assertIsNotNone(contract)
+        lines=[o for o in self.s["supply"]["marketOrders"] if o.get("supplyContractId")==contract["id"]]
+        original=buyer["cash"]+contract["contractValue"]
+        quarry["status"]="cerrado"
+        self.s["day"]=2
+        server.expire_aggregate_contract_lines()
+        self.assertEqual(contract["status"],"incumplido")
+        self.assertEqual(contract["escrow"],0)
+        self.assertEqual(contract["refunded"],contract["contractValue"])
+        self.assertEqual(contract["lostReservedUnits"],30)
+        self.assertEqual(quarry["aggregateStock"],0)
+        self.assertEqual(buyer["cash"],original)
+        self.assertTrue(all(o["statusCause"]=="Proveedor insolvente" for o in lines))
+        server.expire_aggregate_contract_lines()
+        self.assertEqual(buyer["cash"],original)
+
     def test_financing_and_stock_shortage_prevent_contract(self):
         self.plant["business"]["cash"]=500
         self.assertIsNone(server.sign_aggregate_forward_contract(self.plant,30))

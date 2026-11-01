@@ -822,7 +822,7 @@ export async function createOfflineAdapter(){
     state.tourismEvents=state.tourismEvents.slice(-24);
   }
   function settleOfflineTourismRetail(){
-    const completed=(state.tourismEvents||[]).filter(e=>e.completedDay===state.day&&e.status==='realizado');
+    const completed=(state.tourismEvents||[]).filter(e=>e.completedDay===state.day&&e.status==='realizado'&&!e.retailSettled);
     if(!completed.length)return;
     const {shops}=offlineTourismAccess();
     shops.sort((a,b)=>a.x-b.x||a.y-b.y);
@@ -835,6 +835,7 @@ export async function createOfflineAdapter(){
         const sale=units*price;
         firm.inventory-=units;firm.cash=(firm.cash||0)+sale;firm.lastRevenue=(firm.lastRevenue||0)+sale;firm.lastProfit=(firm.lastProfit||0)+sale;firm.eventSalesThisMonth=(firm.eventSalesThisMonth||0)+sale;budget-=sale;item.retailSpend+=sale;state.eventRetailSpendThisMonth+=sale;
       }
+      item.retailSettled=true;
     }
     if(state.eventRetailSpendThisMonth)event('Compras de visitantes','Los turistas gastaron $ '+state.eventRetailSpendThisMonth+' en existencias reales de comercios conectados.');
   }

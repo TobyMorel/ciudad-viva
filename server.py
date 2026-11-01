@@ -1373,13 +1373,22 @@ SERVICE_MODELS={
  "wasteDepot":{"kind":"depot","label":"Centro de transferencia","cost":12000,"days":75,"radius":11,"jobs":14,"trucks":2},
  "wasteComplex":{"kind":"depot","label":"Complejo de higiene urbana","cost":22200,"days":109,"radius":17,"jobs":26,"trucks":3},
 }
+# Tipologías escolares y enseñanza antigua compatible.
+SCHOOL_MODELS={
+ "kindergarten":{"kind":"school","label":"Jardín municipal","cost":6200,"days":52,"radius":5,"jobs":8,"classrooms":3,"seatsPerClass":18,"minAge":5,"maxAge":6,"studentsPerTeacher":12,"monthlyCost":580,"supplies":1,"studyLevel":"jardín","skillGain":0},
+ "primarySchool":{"kind":"school","label":"Escuela primaria","cost":9600,"days":68,"radius":8,"jobs":12,"classrooms":4,"seatsPerClass":24,"minAge":7,"maxAge":12,"studentsPerTeacher":18,"monthlyCost":820,"supplies":1,"studyLevel":"primaria","skillGain":2},
+ "secondarySchool":{"kind":"school","label":"Escuela secundaria","cost":17800,"days":100,"radius":12,"jobs":18,"classrooms":6,"seatsPerClass":24,"minAge":13,"maxAge":17,"studentsPerTeacher":18,"monthlyCost":1550,"supplies":2,"studyLevel":"secundaria","skillGain":3},
+ "university":{"kind":"school","label":"Universidad municipal","cost":32000,"days":145,"radius":17,"jobs":30,"classrooms":8,"seatsPerClass":28,"minAge":18,"maxAge":24,"studentsPerTeacher":12,"monthlyCost":3200,"supplies":4,"studyLevel":"universidad","skillGain":5}
+}
 SERVICE_DEFAULT={"civic":"clinic","fireStation":"firePost","depot":"wasteYard"}
 def service_model(building):
     ident=building.get("serviceModel")
     if ident in SERVICE_MODELS:return SERVICE_MODELS[ident]
+    if ident in SCHOOL_MODELS:return SCHOOL_MODELS[ident]
     if building.get("kind")=="civic":
         if building.get("name")=="Municipalidad":return None
         if building.get("policeUnit") and not building.get("hospitalWard"):return SERVICE_MODELS["policePost"]
+    if building.get("kind")=="school":return SCHOOL_MODELS["primarySchool"]
     return SERVICE_MODELS.get(SERVICE_DEFAULT.get(building.get("kind")))
 
 def service_route_within(building,target,radius=None):
@@ -4089,9 +4098,15 @@ def tick_one_day():
                 state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
                 ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
             elif p["kind"]=="school":
-                operating_cost=820
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"school","name":"Escuela primaria municipal","level":1,"occupants":0,"jobSlots":12,"classrooms":4,"status":"habilitado","monthlyCost":operating_cost,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=operating_cost
-                ev("Escuela habilitada","Cuatro aulas para 96 estudiantes potenciales. El municipio financia $820/mes; la capacidad operativa depende de docentes, servicios y rutas.")
+                model=SCHOOL_MODELS.get(p.get("serviceModel"))
+                jobs=model["jobs"] if model else 12
+                monthly=model["monthlyCost"] if model else 820
+                building={"x":p["x"],"y":p["y"],"kind":"school","name":model["label"] if model else "Escuela primaria municipal",
+                          "level":1,"occupants":0,"jobSlots":jobs,"classrooms":model["classrooms"] if model else 4,
+                          "status":"habilitado","monthlyCost":monthly,"quality":quality}
+                if model:building["serviceModel"]=p["serviceModel"]
+                state["buildings"].append(building);state["jobs"]+=jobs;state["monthlyExpenses"]+=monthly
+                ev("Centro educativo habilitado",f"{building['name']}: {jobs} puestos y {building['classrooms']} aulas. Operación $ {monthly}/mes; se requieren docentes, rutas y servicios.")
             elif p["kind"]=="fireStation":
                 model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["firePost"])
                 monthly=round(model["cost"]*.065)
@@ -4392,6 +4407,7 @@ def health_service_report(workplaces=None,advance=False):
         "neighborhoods":area_rows[:6],"unreachableResidents":sum(a["population"] for a in areas if a["travelMinutes"] is None),"delayedWaterRiskPct":round(delayed_risk/population*100),"monthlySupplyCost":monthly_supplies,"primaryBacklog":round(health.get("primaryBacklog",0),1)}
 
 def education_service_report(workplaces=None,advance=False):
+    """Alumnado individual con edad, cupos, dotación, presupuesto y acceso vial real."""
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
     pupils=[]
     for home in (b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0):
@@ -4400,39 +4416,67 @@ def education_service_report(workplaces=None,advance=False):
             if person.get("age") is None:
                 seed=stable_skill(person.get("id",""),"edad")
                 person["age"]=18+seed%48 if person.get("workerEligible") else (5+seed%13 if seed%100<62 else 66+seed%20)
-            if 5<=person["age"]<=17:pupils.append((home,person))
+            if 5<=person["age"]<=24:pupils.append((home,person))
+    funding=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
     schools=[]
-    for building in (b for b in state["buildings"] if b.get("kind")=="school" and b.get("status") in ("habilitado","operativo")):
-        work=next((w for w in workplaces if w.get("kind")=="school" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
-        access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
-        schools.append({"building":building,"teachers":max(0,work.get("staffedJobs",0)),"utility":utility,"seats":max(0,int(building.get("classrooms",4))*24),"assigned":[]})
+    for b in (b for b in state["buildings"] if b.get("kind")=="school" and b.get("status") in ("habilitado","operativo")):
+        model=SCHOOL_MODELS.get(b.get("serviceModel"))
+        work=next((w for w in workplaces if w.get("kind")=="school" and w.get("x")==b["x"] and w.get("y")==b["y"]),{})
+        teachers=max(0,int(work.get("staffedJobs",0)));access=b.get("utilityAccess",{})
+        utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*funding
+        seats=max(0,int(b.get("classrooms",model["classrooms"] if model else 4))*(model["seatsPerClass"] if model else 24))
+        teacher_capacity=teachers*(model["studentsPerTeacher"] if model else 18)
+        schools.append({"building":b,"model":model,"ageMin":model["minAge"] if model else 5,
+                        "ageMax":model["maxAge"] if model else 17,"radius":model["radius"] if model else 15,
+                        "teachers":teachers,"utility":utility,"seats":seats,"teacherCapacity":teacher_capacity,
+                        "capacity":round(min(seats,teacher_capacity)*utility),"assigned":[],"nearby":0})
+    within=0
     for home,person in pupils:
         options=[]
         for school in schools:
+            if not school["ageMin"]<=person["age"]<=school["ageMax"]:continue
             path=route_between((home["x"],home["y"]),(school["building"]["x"],school["building"]["y"]))
-            if path:
-                minutes=max(0,len(path)-1)*2.5+4
-                if minutes<=40:options.append((minutes,school))
-        if options:
-            minutes,school=min(options,key=lambda x:(x[0],x[1]["building"]["x"],x[1]["building"]["y"]))
-            school["assigned"].append((person,minutes))
-    rows=[];within=served=0
+            if not path or len(path)-1>school["radius"]:continue
+            minutes=(len(path)-1)*2.5+4
+            if minutes<=(50 if school["model"] and school["model"]["studyLevel"]=="universidad" else 40):
+                options.append((minutes,school))
+        if not options:continue
+        within+=1
+        options.sort(key=lambda item:(item[0],item[1]["building"]["x"],item[1]["building"]["y"]))
+        options[0][1]["nearby"]+=1
+        chosen=next((s for _,s in options if len(s["assigned"])<s["capacity"]),None)
+        if chosen:chosen["assigned"].append((person,next(t for t,s in options if s is chosen)))
+    rows=[];served=0;supplies=0
     for school in schools:
-        teacher_capacity=school["teachers"]*18;capacity=round(min(school["seats"],teacher_capacity)*school["utility"])
-        enrolled=min(capacity,len(school["assigned"]));within+=len(school["assigned"]);served+=enrolled
-        rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),"seatCapacity":school["seats"],"teacherCapacity":teacher_capacity,"operationalCapacity":capacity,"studentsNearby":len(school["assigned"]),"enrolled":enrolled,"unserved":max(0,len(school["assigned"])-enrolled),"utilityPct":round(school["utility"]*100),"averageTravelMinutes":round(sum(x[1] for x in school["assigned"])/max(1,len(school["assigned"])),1) if school["assigned"] else None})
-    month=(state.get("day",1)-1)//30;education=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
+        enrolled=len(school["assigned"]);served+=enrolled;model=school["model"]
+        supplies+=enrolled*(model["supplies"] if model else .35)
+        times=[t for _,t in school["assigned"]]
+        rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],
+                     "serviceModel":school["building"].get("serviceModel"),"ageMin":school["ageMin"],"ageMax":school["ageMax"],
+                     "radius":school["radius"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),
+                     "seatCapacity":school["seats"],"teacherCapacity":school["teacherCapacity"],"operationalCapacity":school["capacity"],
+                     "studentsNearby":school["nearby"],"enrolled":enrolled,"unserved":max(0,school["nearby"]-enrolled),
+                     "utilityPct":round(school["utility"]*100),"averageTravelMinutes":round(sum(times)/len(times),1) if times else None})
+    month=(state.get("day",1)-1)//30
+    education=state.setdefault("education",{"lastProcessedMonth":month})
     if advance and month>education.get("lastProcessedMonth",-1):
         education["lastProcessedMonth"]=month
-        for school,row in zip(schools,rows):
-            for person,_ in school["assigned"][:row["enrolled"]]:
-                progress=person.setdefault("educationProgress",{"months":0,"level":"inicial"});progress["months"]+=1
-                if progress["months"]%12==0:
-                    progress["level"]="primaria" if progress["months"]<72 else "secundaria"
-                    for skill in ("comercio","administracion","logistica","salud"):person["skills"][skill]=min(100,person["skills"].get(skill,25)+2)
-        ev("Ciclo escolar",f"{served} estudiantes asisten; {within-served} quedan sin plaza operativa. Docentes y aulas limitan la cobertura.")
+        for school in schools:
+            model=school["model"];level=model["studyLevel"] if model else "primaria";gain=model["skillGain"] if model else 2
+            for person,_ in school["assigned"]:
+                progress=person.setdefault("educationProgress",{"months":0,"level":"inicial"})
+                progress["months"]=progress.get("months",0)+1
+                levels=progress.setdefault("monthsByLevel",{})
+                levels[level]=levels.get(level,0)+1
+                if levels[level]%12==0:
+                    progress["level"]=level
+                    if gain:
+                        for skill in ("comercio","administracion","logistica","salud","educacion"):
+                            person["skills"][skill]=min(100,person["skills"].get(skill,25)+gain)
+        ev("Ciclo escolar",f"{served} cursan; {within-served} esperan plaza y {len(pupils)-within} no tienen centro de su nivel conectado.")
     total=len(pupils)
-    return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,"coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(served*.35)}
+    return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,
+            "coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(supplies)}
 
 def fire_service_report(workplaces=None,advance=False):
     """Incendios urbanos deterministas: cobertura, despacho y daño dependen de personal y calles."""
@@ -4894,8 +4938,8 @@ class Handler(BaseHTTPRequestHandler):
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     else:
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    service_id=data.get("serviceModel") or SERVICE_DEFAULT.get(kind)
-                    model=SERVICE_MODELS.get(service_id)
+                    service_id=data.get("serviceModel") or ("primarySchool" if kind=="school" else SERVICE_DEFAULT.get(kind))
+                    model=SERVICE_MODELS.get(service_id) or SCHOOL_MODELS.get(service_id)
                     if data.get("serviceModel") and (model is None or model["kind"]!=kind):
                         self._send(400,{"error":"Categoría de servicio inválida para esta obra"});return
                     spec=({**PROJECTS[kind],"cost":model["cost"],"days":model["days"],"label":model["label"]} if model else PROJECTS[kind])

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.103",
+  "currentVersion": "0.104",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.104",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Jardín, primaria, secundaria y universidad municipal se licitan por $6.200, $9.600, $17.800 o $32.000; escalan costos de materiales, plazos, aulas, puestos y gastos operativos.",
+        "Matrícula individual por edad 5–24, radio vial de 5/8/12/17 calles, aulas, docentes realmente empleados, servicios y presupuesto. Se intenta otra sede compatible cuando la primera está llena; no se inventan plazas.",
+        "Cada 12 meses de asistencia efectiva por nivel acreditan el ciclo y mejoran habilidades. Las escuelas antiguas sin serviceModel conservan su cobertura 5–17.",
+        "Three.js distingue jardín, secundaria y universidad y colorea las calles efectivamente alcanzadas. Online/Offline y regresiones para licitación, edad, capacidad, ausencia de docentes y continuidad. Fase 28 parcial 75%; global no estimado."
+      ]
+    },
     {
       "version": "0.103",
       "date": "2026-11-01",
@@ -1268,10 +1281,10 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 72,
-      "summary": "Tipologías escalonadas de servicios, alcance territorial explícito, necesidad de construir instalaciones y flotas físicas de emergencia",
+      "progress": 75,
+      "summary": "Infraestructura de servicios independiente y cuatro niveles educativos construibles con puestos, aulas, costos y radios viales.",
       "pending": [
-        "Profundizar listas de espera, dotaciones especializadas y protección social; ampliar a hospitales y comisarías con turnos independientes."
+        "Protección social con presupuestos y hogares, educación técnica, carreras profesionales y desplazamientos estudiantiles visibles."
       ]
     },
     {

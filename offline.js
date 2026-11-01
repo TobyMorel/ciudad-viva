@@ -203,14 +203,71 @@ export async function createOfflineAdapter(){
   function offlineClimateForecasts(day,sourceCapacity,waterDemand){const climate=state.climate=state.climate||{region:'Costa templada de Puerto Claro'};const{heat,drought}=offlineClimateYearTargets(day);if(day<heat&&heat<=day+5&&climate.heatForecast?.targetDay!==heat){const homes=(state.buildings||[]).filter(b=>b.kind==='home').map(b=>({...b,exposure:offlineHeatExposure(b.x,b.y)})).sort((a,b)=>b.exposure*(b.occupants||0)-a.exposure*(a.occupants||0)),exposed=homes.filter(b=>b.exposure>=1),population=exposed.reduce((n,b)=>n+(b.occupants||0),0),cases=Math.round(exposed.reduce((n,b)=>n+(b.occupants||0)*.055*b.exposure,0));climate.heatForecast={issuedDay:day,targetDay:heat,durationDays:5,status:'pronosticada',warningLevel:cases>=Math.max(25,(state.population||0)*.04)?'alto':'moderado',exposedPopulation:population,expectedHealthCases:cases,exposedHomes:exposed.slice(0,6).map(b=>({name:b.name||`Barrio ${b.x+1},${b.y+1}`,x:b.x,y:b.y,population:b.occupants||0,exposure:b.exposure}))};event('Alerta de calor · refugios y consumo',`Ola de calor prevista para el día ${heat}, durante cinco días. ${cases} consultas estimadas en ${exposed.length} sectores; subirá la demanda de electricidad y agua.`)}if(day<drought&&drought<=day+5&&climate.droughtForecast?.targetDay!==drought){const capacity=Math.round(sourceCapacity*.55*(1-(state.utilities.waterLeakRate||.08)));climate.droughtForecast={issuedDay:day,targetDay:drought,durationDays:30,status:'pronosticada',warningLevel:capacity<waterDemand*.95?'alto':'moderado',capacityLossPct:45,effectiveCapacityM3Day:capacity,expectedDemandM3Day:Math.round(waterDemand),waterRestrictions:false};event('Alerta de sequía · captación en riesgo',`La estación seca empezará el día ${drought} y durará 30 días. Captación útil estimada ${capacity} m³/día frente a ${Math.round(waterDemand)} m³/día de demanda.`)}if(climate.heatForecast?.targetDay===heat)climate.heatForecast.active=heat<=day&&day<heat+5;if(climate.droughtForecast?.targetDay===drought){climate.droughtForecast.active=drought<=day&&day<drought+30;climate.droughtForecast.waterRestrictions=Boolean(climate.waterRestrictions&&climate.waterRestrictionsTarget===drought)}return{heatDay:heat,droughtDay:drought,heatActive:heat<=day&&day<heat+5,droughtActive:drought<=day&&day<drought+30,restrictionsActive:Boolean(climate.waterRestrictions&&climate.waterRestrictionsTarget===drought)}}
   function applyOfflineClimateImpacts(){const climate=state.climate||{},day=state.day;let f=climate.heatForecast;if(f&&day===f.targetDay&&f.status==='pronosticada'){const expected=f.expectedHealthCases||0,workplaces=state.workplaces||[],centers=(state.buildings||[]).filter(b=>b.kind==='civic'&&!['cerrado','abandonado'].includes(b.status)).map(b=>({building:b,work:workplaces.find(w=>w.kind==='civic'&&w.x===b.x&&w.y===b.y)})).filter(x=>(x.work?.staffedJobs||0)>=2&&(x.building.utilityAccess?.powerServedPct||0)>=75&&offlineRoadRoute({x:4,y:10},x.building));const cooling=climate.coolingPreparedForDay===day,capacity=cooling?centers.reduce((n,x)=>n+Math.min(100,Math.max(40,(x.work.staffedJobs||0)*2)),0):0,sheltered=Math.min(expected,capacity),actual=Math.max(0,expected-Math.round(sheltered*.72));Object.assign(f,{status:'ocurrida',actualHealthCases:actual,shelteredResidents:sheltered,shelterCapacity:capacity,coolingCenters:cooling?centers.map(x=>x.building.name):[]});if(actual>=Math.max(8,Math.round((state.population||0)*.012)))state.services=Math.max(0,state.services-1);if(actual>=Math.max(25,Math.round((state.population||0)*.05)))state.approval=Math.max(0,state.approval-1);event('Ola de calor · balance sanitario',`${actual} consultas estimadas por estrés térmico; ${sheltered} residentes refugiados en centros con personal y electricidad.`)}let d=climate.droughtForecast;if(d&&day===d.targetDay&&d.status==='pronosticada'){d.status='activa';d.endDay=day+30;event('Sequía regional · fuente reducida',`La captación baja 45% durante 30 días. Capacidad prevista ${d.effectiveCapacityM3Day} m³/día; se pueden activar restricciones o contratar cisternas.`)}if(d?.status==='activa'&&day>=d.endDay){d.status='finalizada';event('Fin de la sequía regional','La captación recuperó su capacidad normal.')}if(d?.status==='activa'&&day-(climate.lastDroughtImpactDay??-99)>=10){const exposed=(state.buildings||[]).filter(b=>b.kind==='home').reduce((n,b)=>n+(b.occupants||0)*(1-(b.utilityAccess?.waterServedPct||0)/100),0);d.residentsWithoutFullWaterService=Math.round(exposed);if(exposed>=Math.max(20,(state.population||0)*.08)){state.services=Math.max(0,state.services-1);if(exposed>=Math.max(50,(state.population||0)*.2))state.approval=Math.max(0,state.approval-1);event('Estrés de agua en hogares',`La sequía dejó a ${Math.round(exposed)} residentes con cobertura incompleta.`)}climate.lastDroughtImpactDay=day}}
   function calculateOfflineEducationReport(workplaces=state.workplaces||[]){
-    const homes=(state.buildings||[]).filter(b=>b.kind==='home'&&b.occupants>0),pupils=[];
-    for(const home of homes)for(const person of home.residents||[]){ensureWorkProfile(person);if(person.age===undefined){const seed=stableSkill(person.id||'','edad');person.age=person.workerEligible?18+seed%48:(seed%100<62?5+seed%13:66+seed%20)}if(person.age>=5&&person.age<=17)pupils.push({home,person})}
-    const schools=(state.buildings||[]).filter(b=>b.kind==='school'&&['habilitado','operativo'].includes(b.status)).map(b=>{const w=workplaces.find(x=>x.kind==='school'&&x.x===b.x&&x.y===b.y)||{},a=b.utilityAccess||{},utility=Math.min(a.powerServedPct||0,a.waterServedPct||0,a.wastewaterTreatedPct||0)/100*Math.max(0,Math.min(1,state.finance?.programBudgets?.servicesFundingFactor??1));return {building:b,teachers:w.staffedJobs||0,teacherCapacity:(w.staffedJobs||0)*18,seats:(b.classrooms||4)*24,utility,assigned:[],travel:[]}});
-    for(const row of pupils){const options=[];for(const school of schools){const route=offlineRoadRoute(row.home,school.building);if(route){const minutes=Math.max(0,route.length-1)*2.5+4;if(minutes<=40)options.push([minutes,school])}}if(options.length){options.sort((a,b)=>a[0]-b[0]||a[1].building.x-b[1].building.x);options[0][1].assigned.push(row.person);options[0][1].travel.push(options[0][0])}}
-    let withinReach=0,enrolled=0;const rows=schools.map(x=>{withinReach+=x.assigned.length;const capacity=Math.round(Math.min(x.seats,x.teacherCapacity)*x.utility),served=Math.min(capacity,x.assigned.length);enrolled+=served;return {name:x.building.name,x:x.building.x,y:x.building.y,teachers:x.teachers,classrooms:x.building.classrooms||4,seatCapacity:x.seats,teacherCapacity:x.teacherCapacity,operationalCapacity:capacity,studentsNearby:x.assigned.length,enrolled:served,unserved:x.assigned.length-served,utilityPct:Math.round(x.utility*100),averageTravelMinutes:x.travel.length?Math.round(x.travel.reduce((a,b)=>a+b,0)/x.travel.length*10)/10:null}});
-    return {schoolAgePopulation:pupils.length,withinReach,enrolled,waiting:withinReach-enrolled,unreachable:pupils.length-withinReach,coveragePct:Math.round(enrolled/Math.max(1,pupils.length)*100),schools:rows,monthlySuppliesCost:Math.round(enrolled*.35)}
+    const pupils=[];
+    for(const home of state.buildings.filter(b=>b.kind==='home'&&b.occupants>0))
+      for(const person of home.residents||[]){
+        ensureWorkProfile(person);
+        if(person.age===undefined||person.age===null){const seed=stableSkill(person.id||'','edad');person.age=person.workerEligible?18+seed%48:(seed%100<62?5+seed%13:66+seed%20)}
+        if(person.age>=5&&person.age<=24)pupils.push({home,person});
+      }
+    const funding=Math.max(0,Math.min(1,state.finance?.programBudgets?.servicesFundingFactor??1));
+    const schools=state.buildings.filter(b=>b.kind==='school'&&['habilitado','operativo'].includes(b.status)).map(b=>{
+      const model=SCHOOL_MODELS[b.serviceModel]||null,w=workplaces.find(x=>x.kind==='school'&&x.x===b.x&&x.y===b.y)||{},a=b.utilityAccess||{};
+      const utility=Math.min(a.powerServedPct||0,a.waterServedPct||0,a.wastewaterTreatedPct||0)/100*funding;
+      const teachers=Math.max(0,w.staffedJobs||0),seats=Math.max(0,(b.classrooms??model?.classrooms??4)*(model?.seatsPerClass??24));
+      const teacherCapacity=teachers*(model?.studentsPerTeacher??18),capacity=Math.round(Math.min(seats,teacherCapacity)*utility);
+      return {building:b,model,ageMin:model?.minAge??5,ageMax:model?.maxAge??17,radius:model?.radius??15,teachers,utility,seats,teacherCapacity,capacity,assigned:[],nearby:0};
+    });
+    let withinReach=0;
+    for(const row of pupils){
+      const options=[];
+      for(const school of schools){
+        if(row.person.age<school.ageMin||row.person.age>school.ageMax)continue;
+        const route=offlineRoadRoute(row.home,school.building);
+        if(!route||route.length-1>school.radius)continue;
+        const minutes=(route.length-1)*2.5+4;
+        if(minutes<=(school.model?.studyLevel==='universidad'?50:40))options.push({minutes,school});
+      }
+      if(!options.length)continue;
+      withinReach++;options.sort((a,b)=>a.minutes-b.minutes||a.school.building.x-b.school.building.x||a.school.building.y-b.school.building.y);
+      options[0].school.nearby++;
+      const available=options.find(x=>x.school.assigned.length<x.school.capacity);
+      if(available)available.school.assigned.push({person:row.person,minutes:available.minutes});
+    }
+    let enrolled=0,supplies=0;
+    const rows=schools.map(x=>{
+      enrolled+=x.assigned.length;supplies+=x.assigned.length*(x.model?.supplies??.35);
+      return {name:x.building.name,x:x.building.x,y:x.building.y,serviceModel:x.building.serviceModel||null,ageMin:x.ageMin,ageMax:x.ageMax,
+        radius:x.radius,teachers:x.teachers,classrooms:x.building.classrooms??4,seatCapacity:x.seats,teacherCapacity:x.teacherCapacity,
+        operationalCapacity:x.capacity,studentsNearby:x.nearby,enrolled:x.assigned.length,unserved:Math.max(0,x.nearby-x.assigned.length),
+        utilityPct:Math.round(x.utility*100),averageTravelMinutes:x.assigned.length?Math.round(x.assigned.reduce((n,a)=>n+a.minutes,0)/x.assigned.length*10)/10:null,
+        studentIds:x.assigned.map(a=>a.person.id)};
+    });
+    return {schoolAgePopulation:pupils.length,withinReach,enrolled,waiting:withinReach-enrolled,unreachable:pupils.length-withinReach,
+      coveragePct:Math.round(enrolled/Math.max(1,pupils.length)*100),schools:rows,monthlySuppliesCost:Math.round(supplies)};
   }
-  function advanceOfflineEducation(report){const month=Math.floor(((state.day||1)-1)/30),education=state.education=state.education||{lastProcessedMonth:Math.floor(((state.day||1)-1)/30)};if(month<=education.lastProcessedMonth)return;education.lastProcessedMonth=month;for(const row of report.schools){const b=state.buildings.find(x=>x.kind==='school'&&x.x===row.x&&x.y===row.y);if(!b)continue;const students=[];for(const home of state.buildings.filter(x=>x.kind==='home'))if(offlineRoadRoute(home,b))students.push(...(home.residents||[]).filter(p=>p.age>=5&&p.age<=17));for(const person of students.slice(0,row.enrolled)){const progress=person.educationProgress=person.educationProgress||{months:0,level:'inicial'};progress.months++;if(progress.months%12===0){progress.level=progress.months<72?'primaria':'secundaria';for(const skill of ['comercio','administracion','logistica','salud'])person.skills[skill]=Math.min(100,(person.skills[skill]||25)+2)}}}event('Ciclo escolar',`${report.enrolled} estudiantes asisten; ${report.waiting} quedan sin plaza operativa. Docentes y aulas limitan la cobertura.`)}
+  function advanceOfflineEducation(report){
+    const month=Math.floor(((state.day||1)-1)/30),education=state.education=state.education||{lastProcessedMonth:month};
+    if(month<=education.lastProcessedMonth)return;
+    education.lastProcessedMonth=month;
+    const people=new Map(state.buildings.filter(b=>b.kind==='home').flatMap(b=>b.residents||[]).map(p=>[p.id,p]));
+    for(const row of report.schools){
+      const model=SCHOOL_MODELS[row.serviceModel],level=model?.studyLevel||'primaria',gain=model?.skillGain??2;
+      for(const id of row.studentIds||[]){
+        const person=people.get(id);if(!person)continue;ensureWorkProfile(person);
+        const progress=person.educationProgress=person.educationProgress||{months:0,level:'inicial'};
+        progress.months=(progress.months||0)+1;
+        const levels=progress.monthsByLevel=progress.monthsByLevel||{};
+        levels[level]=(levels[level]||0)+1;
+        if(levels[level]%12===0){
+          progress.level=level;
+          if(gain)for(const skill of ['comercio','administracion','logistica','salud','educacion'])
+            person.skills[skill]=Math.min(100,(person.skills[skill]??25)+gain);
+        }
+      }
+    }
+    event('Ciclo escolar',report.enrolled+' estudiantes cursan; '+report.waiting+' esperan plaza y '+report.unreachable+' no tienen centro de su nivel conectado.');
+  }
   function calculateOfflineFireReport(advance=false){const fire=state.fireService=state.fireService||{incidents:[],lastGeneratedMonth:-1,dispatches:0,resolved:0,unanswered:0},incidents=fire.incidents=fire.incidents||[],day=state.day||1,workplaces=state.workplaces||[];if(advance){const month=Math.floor((day-1)/30);if(day%30===10&&month>(fire.lastGeneratedMonth??-1)){fire.lastGeneratedMonth=month;const eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status)),heat=Boolean(state.climate?.heatForecast?.active),drought=state.climate?.droughtForecast?.status==='activa',threshold=Math.min(82,12+eligible.length*2+(heat?10:0)+(drought?8:0)),roll=stableSkill(`${month}:${state.population||0}`,'incendio')%100;if(eligible.length&&roll<threshold&&!incidents.some(i=>i.status==='ardiendo')){const target=eligible[stableSkill(String(month),'parcela')%eligible.length],incident={id:`fire-${month}-${target.x}-${target.y}`,x:target.x,y:target.y,buildingKind:target.kind,name:target.name||target.kind,startDay:day,status:'ardiendo',damage:0};incidents.push(incident);event('Incendio urbano detectado',`Se inició un incendio en ${incident.name}. El personal cualificado, las dotaciones disponibles y las calles determinan la respuesta.`)}}const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(building=>({building,staff:workplaces.find(w=>w.kind==='fireStation'&&w.x===building.x&&w.y===building.y)?.staffedJobs||0,ready:building.dispatchReadyDay||day}));for(const incident of incidents.filter(i=>i.status==='ardiendo')){const choices=[];for(const station of stations){if(station.staff<4||station.ready>day)continue;const route=offlineServiceRoad(station.building,{x:incident.x,y:incident.y});if(route)choices.push({minutes:5+Math.max(0,route.length-1)*2.5,station})}choices.sort((a,b)=>a.minutes-b.minutes||a.station.building.x-b.station.building.x||a.station.building.y-b.station.building.y);if(choices.length){const {minutes,station}=choices[0],target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y),damage=Math.max(1,Math.min(18,Math.round(minutes/5)));if(target){target.quality=Math.max(20,(target.quality||75)-damage);if(target.kind==='home')target.householdCash=Math.max(0,(target.householdCash||0)-damage*25);else if(target.business)target.business.cash=Math.max(0,(target.business.cash||0)-damage*45)}station.building.dispatchReadyDay=day+2;Object.assign(incident,{status:'controlado',responseMinutes:Math.round(minutes),station:station.building.name||'Cuartel municipal',stationX:station.building.x,stationY:station.building.y,route:offlineRoadRoute(station.building,{x:incident.x,y:incident.y}),damage,resolvedDay:day});fire.dispatches=(fire.dispatches||0)+1;fire.resolved=(fire.resolved||0)+1;if(damage>=10)state.services=Math.max(0,state.services-1);event('Incendio controlado',`${incident.station} llegó en ${Math.round(minutes)} min con cuatro bomberos. Daño: ${damage} puntos; la dotación queda ocupada dos días.`)}else{incident.burningDays=(incident.burningDays||0)+1;const target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y);if(target)target.quality=Math.max(20,(target.quality||75)-2);if(incident.burningDays>=5){Object.assign(incident,{status:'extinguido sin dotación',resolvedDay:day,damage:10});fire.unanswered=(fire.unanswered||0)+1;state.services=Math.max(0,state.services-2);state.approval=Math.max(0,state.approval-1);event('Incendio sin respuesta',`${incident.name} ardió cinco días sin dotación cualificada o ruta operativa; bajan la condición y la confianza pública.`)}}}}const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(b=>{const workers=workplaces.find(w=>w.kind==='fireStation'&&w.x===b.x&&w.y===b.y)?.staffedJobs||0;return{name:b.name||'Cuartel de bomberos',x:b.x,y:b.y,firefighters:workers,crews:Math.min(b.fireEngineCapacity||1,Math.floor(workers/4)),readyDay:b.dispatchReadyDay||day}}),eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind));let covered=0;for(const target of eligible)if(stations.some(s=>{const building=state.buildings.find(b=>b.kind==='fireStation'&&b.x===s.x&&b.y===s.y),path=building&&s.firefighters>=4&&offlineServiceRoad(building,target);return Boolean(path)}))covered++;return{day,stations,coveragePct:Math.round(covered/Math.max(1,eligible.length)*100),coveredBuildings:covered,eligibleBuildings:eligible.length,dispatches:fire.dispatches||0,resolved:fire.resolved||0,unanswered:fire.unanswered||0,activeIncidents:incidents.filter(i=>i.status==='ardiendo').map(i=>({...i})),recentIncidents:incidents.slice(-8).reverse().map(i=>({...i})),monthlyOperatingCost:stations.length*950}}
     // Fase 28: camas de internación, ambulancias y ampliaciones en centros existentes.
   const HOSPITAL_COSTS={openHospitalWard:7200,expandHospitalWard:4600,addAmbulance:2800};
@@ -491,13 +548,21 @@ export async function createOfflineAdapter(){
     wasteDepot:{kind:'depot',label:'Centro de transferencia',cost:12000,days:75,radius:11,jobs:14,trucks:2},
     wasteComplex:{kind:'depot',label:'Complejo de higiene urbana',cost:22200,days:109,radius:17,jobs:26,trucks:3}
   };
+  const SCHOOL_MODELS={
+    kindergarten:{kind:'school',label:'Jardín municipal',cost:6200,days:52,radius:5,jobs:8,classrooms:3,seatsPerClass:18,minAge:5,maxAge:6,studentsPerTeacher:12,monthlyCost:580,supplies:1,studyLevel:'jardín',skillGain:0},
+    primarySchool:{kind:'school',label:'Escuela primaria',cost:9600,days:68,radius:8,jobs:12,classrooms:4,seatsPerClass:24,minAge:7,maxAge:12,studentsPerTeacher:18,monthlyCost:820,supplies:1,studyLevel:'primaria',skillGain:2},
+    secondarySchool:{kind:'school',label:'Escuela secundaria',cost:17800,days:100,radius:12,jobs:18,classrooms:6,seatsPerClass:24,minAge:13,maxAge:17,studentsPerTeacher:18,monthlyCost:1550,supplies:2,studyLevel:'secundaria',skillGain:3},
+    university:{kind:'school',label:'Universidad municipal',cost:32000,days:145,radius:17,jobs:30,classrooms:8,seatsPerClass:28,minAge:18,maxAge:24,studentsPerTeacher:12,monthlyCost:3200,supplies:4,studyLevel:'universidad',skillGain:5}
+  };
   const SERVICE_DEFAULT={civic:'clinic',fireStation:'firePost',depot:'wasteYard'};
   function offlineServiceModel(b){
     if(SERVICE_MODELS[b.serviceModel])return SERVICE_MODELS[b.serviceModel];
+    if(SCHOOL_MODELS[b.serviceModel])return SCHOOL_MODELS[b.serviceModel];
     if(b.kind==='civic'){
       if(b.name==='Municipalidad')return null;
       if(b.policeUnit&&!b.hospitalWard)return SERVICE_MODELS.policePost;
     }
+    if(b.kind==='school')return SCHOOL_MODELS.primarySchool;
     return SERVICE_MODELS[SERVICE_DEFAULT[b.kind]]||null;
   }
   function offlineServiceRoad(b,target,radius){
@@ -939,7 +1004,8 @@ export async function createOfflineAdapter(){
       if(model.police)building.policeUnit={vehicles:model.police,priority:'mixto',equippedDay:state.day};
       if(model.beds)building.hospitalWard={beds:model.beds,ambulances:model.ambulances||0,equippedDay:state.day};
       state.buildings.push(building);state.monthlyExpenses+=monthly;state.jobs+=model.jobs;
-    }else if(p.kind==='school'){state.buildings.push({...q,kind:'school',name:'Escuela primaria municipal',occupants:0,jobSlots:12,classrooms:4,monthlyCost:820});state.jobs+=12;state.monthlyExpenses+=820;
+    }else if(p.kind==='school'){const model=SCHOOL_MODELS[p.serviceModel],jobs=model?.jobs||12,monthly=model?.monthlyCost||820;
+      state.buildings.push({...q,kind:'school',name:model?.label||'Escuela primaria municipal',serviceModel:model?p.serviceModel:undefined,occupants:0,jobSlots:jobs,classrooms:model?.classrooms||4,monthlyCost:monthly});state.jobs+=jobs;state.monthlyExpenses+=monthly;
     }else if(p.kind==='fireStation'){const model=SERVICE_MODELS[p.serviceModel]||SERVICE_MODELS.firePost,monthly=Math.round(model.cost*.065);
       state.buildings.push({...q,kind:'fireStation',name:model.label,serviceModel:p.serviceModel||'firePost',occupants:0,jobSlots:model.jobs,fireEngineCapacity:model.engines,dispatchReadyDay:state.day,monthlyCost:monthly});
       state.jobs+=model.jobs;state.monthlyExpenses+=monthly;event('Cuartel de bomberos habilitado','12 puestos y hasta tres dotaciones. Sin cuatro bomberos cualificados y acceso vial no responde; operación $950/mes.');
@@ -1130,7 +1196,7 @@ export async function createOfflineAdapter(){
     if(a==='declinePrivateInvestment'){ensureOfflinePrivateInvestments(state);const book=state.privateInvestments,offer=book.proposal;if(!offer||offer.status!=='disponible'||offer.id!==String(d.investmentId))throw Error('La propuesta de inversión ya no está disponible.');offer.status='rechazada';offer.decisionDay=state.day;book.history.push(clone(offer));book.history=book.history.slice(-24);book.proposal=null;book.nextOfferDay=state.day+90;book.reason='El municipio rechazó la última propuesta; nuevos inversores evaluarán la demanda más adelante.';event('Inversión privada rechazada',`Se descartó la propuesta en parcela ${offer.x+1},${offer.y+1}; la ciudad no gastó fondos ni ocupó el terreno.`);return}
     if(a==='place'){
       ensureOfflinePrivateInvestments(state);const investmentId=String(d.investmentId||''),investmentBook=state.privateInvestments,investmentOffer=investmentBook.proposal;if(investmentId&&(!investmentOffer||investmentOffer.status!=='disponible'||investmentOffer.id!==investmentId||investmentOffer.x!==d.x||investmentOffer.y!==d.y||investmentOffer.contractor!==d.contractor||d.kind!=='shop'||state.day>investmentOffer.expiresDay))throw Error('La oportunidad privada cambió o venció. Revisá la propuesta actual.');
-      const modelId=d.serviceModel||SERVICE_DEFAULT[d.kind],model=SERVICE_MODELS[modelId];
+      const modelId=d.serviceModel||(d.kind==='school'?'primarySchool':SERVICE_DEFAULT[d.kind]),model=SERVICE_MODELS[modelId]||SCHOOL_MODELS[modelId];
       if(d.serviceModel&&(!model||model.kind!==d.kind))throw Error('Categoría de servicio incompatible con la obra.');
       const originalSpec=SPECS[d.kind],spec=model?{...originalSpec,cost:model.cost,days:model.days,label:model.label}:originalSpec,c=state.contractors[d.contractor];
       if(!spec||!c)throw Error('Proyecto o constructora inválidos.');const {x,y}=d;

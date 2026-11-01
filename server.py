@@ -2998,17 +2998,6 @@ def simulate_business_month(workforce):
     demand={ (b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand}
     regional_demand,regional_report=allocate_regional_export_demand(shops,workforce)
     for shop in shops:shop["business"]["lastRegionalSales"]=0
-    # Las empresas ajustan el precio con las ventas y el inventario del período anterior.
-    prior_prices={(b["x"],b["y"]):max(1,b["business"].get("price",18)) for b in shops}
-    for shop in shops:
-        firm=shop["business"];price=prior_prices[shop["x"],shop["y"]]
-        if firm.get("lastLocalDemand",0)>0:
-            turnover=firm.get("lastLocalSales",0)/max(1,firm["lastLocalDemand"])
-            competitors=[p for xy,p in prior_prices.items() if xy!=(shop["x"],shop["y"])]
-            competition=min(competitors) if competitors else price
-            if turnover<.72 and firm.get("inventory",0)>12:price=max(8,min(price-1,competition))
-            elif turnover>1.05 and firm.get("inventory",0)<8:price=min(32,price+1)
-        firm["price"]=price
     for home in homes:
         choices=[]
         for shop in shops:

@@ -3680,7 +3680,7 @@ def prepare_tourism_event_month(month):
 
 def settle_tourism_event_retail():
     """Los turistas externos compran mercadería existente; no crean stock ni residentes."""
-    events=[e for e in state.get("tourismEvents",[]) if e.get("completedDay")==state["day"] and e.get("status")=="realizado"]
+    events=[e for e in state.get("tourismEvents",[]) if e.get("completedDay")==state["day"] and e.get("status")=="realizado" and not e.get("retailSettled")]
     if not events:return
     venue,shops=tourism_event_access()
     shops=sorted(shops,key=lambda b:(b["x"],b["y"]))
@@ -3702,6 +3702,7 @@ def settle_tourism_event_retail():
             budget-=sale
             item["retailSpend"]+=sale
             state["eventRetailSpendThisMonth"]+=sale
+        item["retailSettled"]=True
     if state["eventRetailSpendThisMonth"]:
         ev("Compras de visitantes",f"Los turistas gastaron $ {state['eventRetailSpendThisMonth']} en existencias reales de comercios conectados.")
 

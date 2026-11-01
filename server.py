@@ -292,7 +292,11 @@ def advance_local_metalworks(workplaces,employees):
         firm["lastMaterialCause"]=("Esperando acero regional" if raw<1 else "Faltan electricidad, agua o saneamiento" if services<1 else "Sin trabajadores suficientes" if staff<20 else "Almacén de componentes completo") if output<potential else ""
         pending=sum(o.get("quantity",0) for o in orders if o.get("businessId")==firm.get("id") and o.get("status")=="en tránsito" and o.get("commodity")=="acero")
         need=max(0,min(48,capacity*2)-raw-pending);source_name="Corralón del Puerto";source=state["supply"]["suppliers"].setdefault(source_name,SUPPLIER_STOCK[source_name].copy());route=route_between((4,10),(plant["x"],plant["y"])) if need else None
-        landed=MATERIAL_PRICE["steel"]*SUPPLIERS[source_name]["price"]+max(0,len(route or [])-1)*.08;quantity=min(need,max(0,int(source.get("steel",0))),max(0,int(max(0,firm.get("cash",0)-500)//max(.01,landed)))) if route else 0
+        # Escasez real: el lote disponible determina la cotización, sin crear inventario.
+        stock_before=max(0,int(source.get("steel",0)))
+        steel_factor=1.5 if stock_before<20 else 1.25 if stock_before<60 else 1.0
+        source["lastSteelPriceFactor"]=steel_factor
+        landed=MATERIAL_PRICE["steel"]*SUPPLIERS[source_name]["price"]*steel_factor+max(0,len(route or [])-1)*.08;quantity=min(need,max(0,int(source.get("steel",0))),max(0,int(max(0,firm.get("cash",0)-500)//max(.01,landed)))) if route else 0
         if quantity:
             cost=round(quantity*landed);source["steel"]-=quantity;state["supply"].setdefault("supplierCash",{}).setdefault(source_name,0);state["supply"]["supplierCash"][source_name]+=cost;firm["cash"]-=cost;distance=max(0,len(route)-1);ready=state["day"]+SUPPLIERS[source_name]["days"]
             orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"acero","businessId":firm["id"],"businessName":firm.get("name",plant.get("name","Metalúrgica")),"supplier":source_name,"quantity":quantity,"unitCost":landed,"cost":cost,"orderedDay":state["day"],"supplierReadyDay":ready,"travelDistance":distance,"travelledDistance":0,"source":[4,10],"x":plant["x"],"y":plant["y"],"route":route,"status":"en tránsito","statusCause":"Acero regional en viaje a la metalúrgica"});firm["lastMaterialCause"]="Acero regional en tránsito"

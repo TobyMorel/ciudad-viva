@@ -1,5 +1,10 @@
 # Siguiente entrega · continuidad
 
+## Próximo paso · Alfa 0.112
+
+Fase 7: capacidad vial por tramo/horario, luego accidentes y respuesta municipal. Espera semafórica ya incluida en estimación y asistencia laboral en ambos modos.
+
+
 ## Punto de continuación después de Alfa 0.110
 
 1. Revisión visual de `design_reference_3d/` frente a `art_validation/`. Refinar proporciones, fachada cercana y costa sin cambiar `waterTile` ni la topología de rutas.

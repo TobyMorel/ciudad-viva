@@ -1,5 +1,10 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad · Alfa 0.111
+
+Fase 7 integra 30 s de espera por semáforo en rutas motorizadas para ambos motores; helper `signal_delay_minutes`/`signalDelayMinutes`. Próximo: capacidad por tramo y accidentes.
+
+
 ## Continuidad inmediata · Alfa 0.110
 
 El usuario aportó siete imágenes en `design_reference_3d/` y un texto de requisitos. `ARTE_3D.md` resume la dirección e inventario. La implementación visual nueva está en `world3d.js`: `premiumArchitecture`, `roof`, `tree`, `addRoad`, `addSite`, costa y caché de geometrías. No modificar mecánicas ni inventar datos; viviendas, comercios, industrias y servicios deben depender del estado real. Comprobar las cuatro rotaciones, selección, calles conectadas y zoom. Evitar que el trabajo de detalle frene nuevas mecánicas: el siguiente sistema prioritario es tráfico autoritativo y accidentes. `reference.css` corrige solapamiento en Tesorería y evita que el aviso temporal cubra el menú. `game.js` difiere la vista previa 3D del menú 1,8 segundos y la cancela al empezar, para no bloquear el clic. Progreso global no estimable; fase 15 80% orientativo, hito F en curso.

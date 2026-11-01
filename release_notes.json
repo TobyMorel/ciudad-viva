@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.110",
+  "currentVersion": "0.111",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.111",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Los viajes en auto y colectivo suman 30 segundos de espera media por cada cruce con semáforo en la ruta; caminar no recibe demora semafórica.",
+        "El tiempo adicional se refleja en minutos estimados, asistencia laboral y actividad de los puestos tanto en Online como en Offline.",
+        "Las intersecciones se reconocen por el grafo vial real de la ciudad; calles terminales sin semáforo mantienen su tiempo."
+      ]
+    },
     {
       "version": "0.110",
       "date": "2026-11-01",
@@ -1091,8 +1103,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.111 · capacidad vial y accidentes",
-      "detail": "Incorporar capacidad y semáforos a los tiempos de viaje; simular accidentes con respuestas municipales."
+      "title": "Alfa 0.112 · capacidad vial y accidentes",
+      "detail": "Aplicar capacidad por tramo a tiempos de viaje y simular accidentes con respuestas municipales."
     },
     {
       "title": "Validación de experiencia",
@@ -1170,11 +1182,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 70,
-      "summary": "Peatones, autos, buses y carga con rutas, horarios parciales, capacidad, tarifa y mapa de estrés vial; semáforos visuales",
+      "progress": 75,
+      "summary": "Semáforos visuales y espera media integrada a viajes en auto/colectivo, empleo y asistencia Online/Offline",
       "pending": [
-        "Bicicletas, ocio, accidentes y transporte multimodal.",
-        "Integrar fases de semáforos y capacidad por tramo en el tiempo de viaje autoritativo; medir con ciudad densa."
+        "Capacidad por tramo en la ruta autoritativa y colas según flujo horario.",
+        "Accidentes con causas, bloqueos y respuesta municipal."
       ]
     },
     {

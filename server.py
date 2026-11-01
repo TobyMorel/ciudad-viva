@@ -2741,9 +2741,11 @@ def commute_model():
         bus_line=next((b for b in state.get("busRoutes",[]) if b.get("id")==trip.get("busLineId")),None) if trip["mode"]=="bus" else None
         factor=1.0 if trip["mode"]=="walk" else traffic_factor(trip.get("busTravelRoute") or trip["route"])
         ride_rate=4 if trip["mode"]=="walk" else 1.8 if trip["mode"]=="bus" else 2.5
-        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]+trip.get("transferMinutes",0)
+        signal_wait=signal_delay_minutes(trip.get("busTravelRoute") or trip["route"],roads) if trip["mode"]!="walk" else 0
+        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]+trip.get("transferMinutes",0)+signal_wait
         trip["rideMinutes"]=round(trip["distance"]*ride_rate*factor)
         trip["estimatedMinutes"]=minutes
+        trip["signalWaitMinutes"]=signal_wait
         attendance=max(.25,1-max(0,minutes-15)/240)
         trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
         if trip.get("reason")=="regreso":continue
@@ -2841,6 +2843,15 @@ def bus_route_catalog(commute=None):
         existing=next((b for b in state.get("busRoutes",[]) if b.get("from")==row["from"] and b.get("to")==row["to"] and b.get("status")!="cancelled"),None)
         result.append({**row,"id":line_id,"originName":origin,"destinationName":destination,"stops":bus_line_stops(row["route"]),"buses":1,"purchaseCost":BUS_PURCHASE_COST,"canStart":not existing and available>=BUS_PURCHASE_COST,"reason":"Ya existe una línea para este corredor" if existing else "Fondos municipales comprometidos" if available<BUS_PURCHASE_COST else ""})
     return result[:8]
+
+def signal_delay_minutes(route, roads):
+    """Espera media de 30 s por cruce señalizado (tres o cuatro accesos)."""
+    delay=0
+    for x,y in (route or [])[1:-1]:
+        degree=sum((x+dx,y+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
+        if degree>=3:delay+=.5
+    return delay
+
 
 def traffic_factor(route, exclude_order=None):
     """Tiempo relativo por tramo: empleo local más camiones que ocupan ese tramo hoy."""

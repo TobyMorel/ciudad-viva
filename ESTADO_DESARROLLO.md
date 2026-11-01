@@ -1,5 +1,10 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.111 · espera semafórica en viajes
+
+Los viajes motorizados agregan 0,5 min por intersección de tres/cuatro accesos; los peatones no. La espera se integra al tiempo estimado, asistencia y puestos efectivos en Online/Offline. Fase 7: 75%. Global sin estimar por falta de pesos estables del roadmap.
+
+
 ## Alfa 0.110 · arte 3D según siete referencias (2026-11-01)
 
 - En `world3d.js`: geometrías básicas compartidas, cubiertas a dos aguas con volumen, variantes de vivienda con balcón y fachada posterior, escaparates y toldos comerciales, equipos por tipo industrial, anexos de salud/educación, árboles con formas y colores distintos, iluminación lateral cálida y sombras de copa, cruces peatonales conectados al grafo, paseo costero y obras visualizadas por progreso real. No se cambiaron estados ni contratos de la simulación.

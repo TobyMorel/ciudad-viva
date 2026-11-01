@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.101",
+  "currentVersion": "0.102",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.102",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 65,
+      "overallProgress": null,
+      "changes": [
+        "Sistema de seguridad urbana: bases municipales equipables en centros cívicos ($4.000 con un móvil; refuerzos por $2.500 hasta 3). Los móviles operan solo con tres trabajadores y reserva sanitaria inicial, redes, presupuesto y calles; el personal pasa realmente de salud a patrullaje.",
+        "Incidentes mensuales de convivencia y comercios causados por actividad comercial, infraestructura vial y cortes eléctricos, sin atribuir riesgo a datos demográficos de personas. Un móvil puede intervenir como máximo en dos incidentes por mes y necesita recorrer una ruta de hasta 40 minutos.",
+        "Enfoque del patrullaje mixto, residencial o comercial seleccionable por base, con prevención medible. Los incidentes desatendidos pueden destruir hasta tres unidades de inventario real y afectar aprobación o servicios. Gastos fijos y de desplazamiento impactan el presupuesto municipal, con registros y cobertura territorial.",
+        "Paridad Online/Offline; regresiones de capacidad, idempotencia, presupuestos, acceso vial y reparto de personal; nueva sección Ciudad > Seguridad con controles accesibles en móvil/escritorio y verificación visual en Chromium."
+      ]
+    },
     {
       "version": "0.101",
       "date": "2026-11-01",
@@ -1064,10 +1077,10 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 50,
-      "summary": "Atención primaria, escuelas y bomberos más hospitalización equipada, ampliación física y traslados por ambulancia",
+      "progress": 55,
+      "summary": "Servicios públicos con internación y ambulancias, más patrullaje urbano y eventos de convivencia vinculados a infraestructura",
       "pending": [
-        "Hospitales independientes, policía, protección social y niveles educativos completos."
+        "Policía independiente con capacitación, protección social, jardín de infantes y protección civil por capacidad efectiva."
       ]
     },
     {
@@ -1100,10 +1113,10 @@
     {
       "phase": 13,
       "title": "Crisis, inspecciones, protestas y acontecimientos",
-      "progress": 30,
-      "summary": "Incidentes climáticos, averías, inspecciones y registro de acontecimientos",
+      "progress": 35,
+      "summary": "Clima, contratos, averías e incidentes de convivencia y comercio con resultados medidos",
       "pending": [
-        "Protestas, emergencias sistémicas e inspecciones y recuperación completas."
+        "Biblioteca completa de doce crisis causales y opciones de recuperación persistente."
       ]
     },
     {
@@ -1242,10 +1255,10 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 60,
-      "summary": "Internación con camas, personal, servicios, acceso, traslados y costos municipales, junto a formación y bomberos",
+      "progress": 65,
+      "summary": "Internación hospitalaria y patrullaje municipal con móviles, personal compartido, prioridades, accesibilidad y registro de incidentes",
       "pending": [
-        "Ciclos de ocupación y altas médicas individuales agregadas, vehículos ocupados más de un día, hospital especializado, jardines, policía y protección social."
+        "Reclutamiento policial específico y comisarías independientes; servicios sociales, niveles educativos completos y ambulancias de misión multidiaria."
       ]
     },
     {

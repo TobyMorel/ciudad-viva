@@ -84,6 +84,8 @@ try{
     assert.ok(popup.scrollable,name+': el contenido largo no se puede desplazar');
     await page.screenshot({path:'ui-captures/'+name+'-economia.png'});
     await page.locator('#popupClose').click();
+    await page.locator('[data-popup="city"]').click();
+    await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
     await page.locator('[data-city-section-button="tourism"]').click();
     const eventUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="tourism"]');
@@ -95,6 +97,7 @@ try{
     assert.ok(eventUI.present&&eventUI.buttons===3&&eventUI.within&&eventUI.noOverflow&&eventUI.hasExplanations,
       name+': eventos turísticos recortados u ocultos '+JSON.stringify(eventUI));
     await page.screenshot({path:'ui-captures/'+name+'-turismo.png'});
+    await page.locator('#popupClose').click();
 
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));
     await page.close();

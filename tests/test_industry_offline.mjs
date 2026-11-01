@@ -55,7 +55,10 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     assert.ok(q.lastProduction>0,'La cantera produce con trabajadores y servicios');
     assert.ok(q.quarryReserve<100,'La extracción consume reserva geológica');
     const orders=v.supply.marketOrders.filter(o=>o.commodity==='áridos');
-    assert.equal(orders.length,1,'La hormigonera encarga áridos al proveedor local');
+    assert.equal(orders.length,3,'La hormigonera reserva tres remesas con custodia de pagos');
+    assert.equal(orders.reduce((total,o)=>total+o.quantity,0),q.lastProduction);
+    assert.equal(v.supply.tradeContracts[0].escrow,v.supply.tradeContracts[0].contractValue);
+    assert.ok(orders.every(o=>o.supplyContractId===v.supply.tradeContracts[0].id));
     assert.equal(v.supply.suppliers['Cantera local'].aggregate,q.aggregateStock);
     assert.ok(orders[0].route.length>0);
     let delivered=false;

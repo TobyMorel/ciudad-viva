@@ -660,7 +660,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -1181,7 +1181,7 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
     property_collection=min(1,max(0,tax_report.get("propertyCollected",0)/tax_report["propertyBilled"])) if tax_report.get("propertyBilled",0)>0 else 1;business_collection=min(1,max(0,tax_report.get("businessCollected",0)/tax_report["businessBilled"])) if tax_report.get("businessBilled",0)>0 else 1
     projected_tax=round(assessed*property_rate/120000*min(1,property_collection)+sales*business_rate/10000*min(1,business_collection))
     projected_income=max(0,round(monthly_income)-last_tax+projected_tax)
-    programs=finance.get("programBudgets",{});program_report=programs.get("lastReport",{}).get("programs",{});program_names=("services","networks","mobility")
+    programs=finance.get("programBudgets",{});program_report=programs.get("lastReport",{}).get("programs",{});program_names=("services","networks","mobility");program_order=municipal_program_priority(programs)
     program_costs={key:max(0,round(program_report.get(key,{}).get("monthlyCost",0))) for key in program_names}
     program_arrears={key:max(0,round(programs.get("arrears",{}).get(key,0))) for key in program_names}
     program_rates={key:max(0,min(200,int(programs.get(f"{key}Pct",100)))) for key in program_names}
@@ -1192,11 +1192,14 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
     rows=[];remaining_commitments=commitments;remaining_reserve=reserve;first_debt_default=None
     for offset in range(12):
         contract_payment=min(remaining_commitments,schedule[offset]);remaining_commitments-=contract_payment
-        program_payment=0
-        for key in program_names:
-            cost=program_costs[key];due=program_arrears[key]+cost;scheduled=min(due,round(cost*program_rates[key]/100));program_payment+=scheduled;program_arrears[key]=max(0,due-scheduled)
+        income=projected_income;other_operating=max(0,round(monthly_expenses)-program_cost_total)
+        program_cash=max(0,round(cash+income-other_operating-contract_payment));program_payment=0;program_shortfall=0;underfunded_programs=[]
+        for key in program_order:
+            cost=program_costs[key];old_arrears=program_arrears[key];due=old_arrears+cost;scheduled=min(due,round(cost*program_rates[key]/100));paid=min(scheduled,program_cash);program_cash-=paid;program_payment+=paid
+            program_arrears[key]=max(0,due-paid);unpaid_current=min(cost,max(0,program_arrears[key]-old_arrears))
+            if unpaid_current:program_shortfall+=unpaid_current;underfunded_programs.append(key)
         program_arrears_total=sum(program_arrears.values())
-        income=projected_income;operating=max(0,round(monthly_expenses)-program_cost_total+program_payment)
+        operating=other_operating+program_payment
         opening=round(cash);before_debt=cash+income-operating-contract_payment
         obligations=[];scheduled_debt=0
         for loan in loans:
@@ -1225,13 +1228,15 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
                 loan["delinquentMonths"]=int(loan.get("delinquentMonths",0))+1
         debt_arrears=sum(max(0,int(x.get("paymentArrears",0))) for x in loans if x.get("status")=="active")
         net=round(cash-opening);calendar_month=start_month+offset+1
-        rows.append({"offset":offset+1,"label":f"Año {calendar_month//12+1} · Mes {calendar_month%12+1}","openingCash":opening,"income":income,"taxIncome":projected_tax,"operatingExpenses":operating,"programPayments":program_payment,"programArrears":program_arrears_total,"contractPayments":contract_payment,"scheduledDebtService":scheduled_debt,"debtService":debt_service,"debtArrears":debt_arrears,"debtDefault":not can_pay and scheduled_debt>0,"net":net,"closingCash":round(cash),"fundingGap":max(0,round(scheduled_debt-max(0,before_debt)-reserve_before),round(-before_debt)),"remainingCommitments":remaining_commitments,"freeAfterCommitments":round(cash-remaining_commitments-program_arrears_total-debt_arrears),"debtReserve":remaining_reserve})
+        rows.append({"offset":offset+1,"label":f"Año {calendar_month//12+1} · Mes {calendar_month%12+1}","openingCash":opening,"income":income,"taxIncome":projected_tax,"operatingExpenses":operating,"programPayments":program_payment,"programArrears":program_arrears_total,"underfundedPrograms":underfunded_programs,"programShortfall":program_shortfall,"contractPayments":contract_payment,"scheduledDebtService":scheduled_debt,"debtService":debt_service,"debtArrears":debt_arrears,"debtDefault":not can_pay and scheduled_debt>0,"net":net,"closingCash":round(cash),"fundingGap":max(0,round(scheduled_debt-max(0,before_debt)-reserve_before),round(-before_debt),program_shortfall),"remainingCommitments":remaining_commitments,"freeAfterCommitments":round(cash-remaining_commitments-program_arrears_total-debt_arrears),"debtReserve":remaining_reserve})
     first_gap=next((r for r in rows if r["fundingGap"]>0),None);warning=None
     if first_gap:
         causes=[]
         if first_gap["operatingExpenses"]>first_gap["income"]:causes.append("El ingreso previsto no cubre los gastos de operación.")
         if first_gap["contractPayments"]:causes.append(f"Hay $ {first_gap['contractPayments']:,} en certificados de obras comprometidas.".replace(",","."))
         if first_gap["programArrears"]:causes.append(f"Los programas acumulan $ {first_gap['programArrears']:,} de mora.".replace(",","."))
+        if first_gap["underfundedPrograms"]:
+            labels={"services":"servicios públicos","networks":"redes y residuos","mobility":"transporte"};causes.append("La caja no cubre la prioridad elegida; riesgo inmediato en: " + ", ".join(labels[k] for k in first_gap["underfundedPrograms"]) + ".")
         if first_gap["scheduledDebtService"] and first_gap["debtDefault"]:causes.append(f"No alcanza para una cuota de deuda de $ {first_gap['scheduledDebtService']:,}.".replace(",","."))
         warning={"month":first_gap["offset"],"monthLabel":first_gap["label"],"shortfall":max(first_gap["fundingGap"],-first_gap["freeAfterCommitments"],0),"causes":causes or ["Los compromisos del mes exceden la caja disponible y la reserva."],"actions":["Revisá gastos y asignaciones de programas.","Reprogramá obras antes de asumir nuevos compromisos.","Revisá impuestos con cautela y la reserva destinada a deuda."]}
     return {"months":rows,"basis":"Ingresos y gastos operativos al ritmo actual; proyecta programas, obras y cuotas. Si caja y reserva no alcanzan, la cuota pasa a mora sin amortizar principal; al recuperarse se paga hasta una cuota vencida adicional.","committedProjects":commitments,"programArrears":arrears,"closingProgramArrears":rows[-1]["programArrears"],"closingDebtArrears":rows[-1]["debtArrears"],"firstDebtDefaultMonth":first_debt_default,"contractEscrow":escrow,"debtReserve":remaining_reserve,"projectedTaxIncome":projected_tax,"closingCash":rows[-1]["closingCash"],"closingFreeCash":rows[-1]["freeAfterCommitments"],"firstFundingGapMonth":first_gap["offset"] if first_gap else None,"earlyWarning":warning}
@@ -1250,8 +1255,28 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
     for name in ("services","mobility","networks"):
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
+    municipal_program_priority(budgets)
     forecast=municipal_finance_forecast(income,expenses)
     return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+forecast["debtReserve"]),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
+
+def municipal_program_priority(budgets=None):
+    if budgets is None:
+        ensure_finance_state();budgets=state["finance"]["programBudgets"]
+    default=("services","networks","mobility");allowed=set(default)
+    order=[]
+    for key in budgets.get("programPriority",[]):
+        if isinstance(key,str) and key in allowed and key not in order:order.append(key)
+    order.extend(key for key in default if key not in order)
+    budgets["programPriority"]=order
+    return order
+
+def set_municipal_program_priority(program):
+    ensure_finance_state();budgets=state["finance"]["programBudgets"];order=municipal_program_priority(budgets)
+    if program not in order:raise ValueError("Elegí un programa municipal válido para priorizar.")
+    budgets["programPriority"]=[program]+[key for key in order if key!=program]
+    labels={"services":"Servicios públicos","networks":"Redes y residuos","mobility":"Transporte"}
+    ev("Prioridad de gasto municipal actualizada",f"{labels[program]} se atenderá primero si la caja no alcanza; los otros programas conservan su orden relativo.")
+    return budgets["programPriority"]
 
 def municipal_debt_payment():
     finance=state.setdefault("finance",new_finance());total=0
@@ -1297,7 +1322,7 @@ def settle_municipal_program_budgets(costs,available):
     """Paga primero servicios, redes y movilidad según apropiaciones; lo pendiente queda en mora fiscal."""
     finance=state.setdefault("finance",new_finance());ensure_finance_state();budgets=finance["programBudgets"]
     names={"services":"Servicios públicos","networks":"Redes y residuos","mobility":"Transporte"};remaining=max(0,round(available));rows={}
-    for key in ("services","networks","mobility"):
+    for key in municipal_program_priority(budgets):
         current=max(0,round(costs.get(key,0)));old=max(0,round(budgets["arrears"].get(key,0)))
         rate=max(0,min(200,int(budgets.get(f"{key}Pct",100))));ceiling=round(current*rate/100)
         due=old+current;scheduled=min(due,ceiling);paid=min(scheduled,remaining);remaining-=paid
@@ -5158,6 +5183,10 @@ class Handler(BaseHTTPRequestHandler):
                     if new==old:self._send(409,{"error":"El presupuesto ya está en su límite."});return
                     budgets[key]=new;label={"services":"servicios públicos","mobility":"transporte","networks":"redes y residuos"}[program]
                     ev("Presupuesto municipal actualizado",f"Asignación mensual de {label}: {new}% del costo vigente. Se liquida al próximo cierre; lo que no alcance queda como obligación del programa.")
+                    self._send(200,public_state(pid));return
+                if action=="setProgramPriority":
+                    try:priority=set_municipal_program_priority(str(data.get("program","")))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action=="municipalLoan":
                     ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()

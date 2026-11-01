@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.127
+
+## Prioridad de gasto en crisis de caja
+
+- Economía permite elegir el primer programa de pago municipal: servicios, redes/residuos o movilidad. El reparto mensual consume caja una sola vez y respeta el orden escogido; lo que no se cubre queda en mora.
+- La cobertura financiada sigue propagándose a capacidad de servicios, mantenimiento de redes, recolección y operación del transporte. Prioridad común Online/Offline, persistida y migrada para partidas anteriores.
+- Verificación: 83 pruebas Python, 56 pruebas Node Offline, stress 30 años × 4 perfiles y panel de Economía en 390×844/1440×900; botones en viewport y sin solapamiento.
+- Fase actual: 8, 97% orientativo. Falta un escenario integral de crisis recuperable y comprobar continuidad de los cinco servicios. Global no estimable sin ponderación verificable para 34 fases; LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.126
 
 ## Advertencia anticipada de insolvencia

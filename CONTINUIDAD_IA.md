@@ -1,3 +1,9 @@
+## Continuidad inmediata · Alfa 0.127
+
+En Economía se elige `programPriority` para ordenar los pagos de servicios, redes/residuos y movilidad cuando hay caja insuficiente. `server.py`: `municipal_program_priority`, `set_municipal_program_priority`, `settle_municipal_program_budgets`, action `setProgramPriority`. `offline.js`: migración en `defaultProgramBudgets`, action equivalente y liquidación que respeta el orden. `game.js`: botón “Poner primero” por programa. Las asignaciones impagas conservan mora y afectan cobertura/mantenimiento/recogida/operación. Pruebas: `tests/test_municipal_budget_priority.py`, `_offline.mjs` y UI integrada en `test_municipal_forecast_ui.mjs`.
+
+Fase 8=97% orientativo; todavía falta un escenario fiscal recuperable completo y medir continuidad/recuperación de salud, educación, redes, residuos y colectivos. Global sin porcentaje; LAN física sin verificación entre equipos.
+
 ## Continuidad inmediata · Alfa 0.126
 
 La previsión fiscal ahora expone `earlyWarning` Online (`municipal_finance_forecast`) y Offline (`offlineMunicipalForecast`) con primer mes de `fundingGap`: etiqueta/offset, faltante, presiones del mes y sugerencias. Es solo proyección; no toca caja ni asignaciones. `game.js` lo muestra fuera del acordeón mensual para que sea visible sin abrirlo. `tests/test_municipal_forecast_ui.mjs` carga una ciudad insolvente y mide aviso/textos/overflow/solapamientos en 390×844 y 1440×900.

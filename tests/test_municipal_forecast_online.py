@@ -54,3 +54,14 @@ class MunicipalForecast(unittest.TestCase):
         recovered=server.municipal_finance_report(1000000,0)["forecastMonths"]
         self.assertGreaterEqual(recovered["months"][0]["debtService"],1000)
         self.assertLess(recovered["months"][0]["debtArrears"],500)
+
+    def test_forecast_applies_selected_program_priority_when_cash_is_short(self):
+        self.s["buildings"]=[];self.s["money"]=0;self.s["monthlyIncome"]=100;self.s["monthlyExpenses"]=300
+        budgets=self.s["finance"]["programBudgets"];budgets["programPriority"]=["mobility","services","networks"]
+        budgets["lastReport"]={"programs":{key:{"monthlyCost":100} for key in ("services","networks","mobility")}}
+        month=server.municipal_finance_report(100,300)["forecastMonths"]["months"][0]
+        self.assertEqual(month["programPayments"],100)
+        self.assertEqual(month["programArrears"],200)
+        self.assertEqual(month["underfundedPrograms"],["services","networks"])
+        self.assertEqual(month["programShortfall"],200)
+        self.assertEqual(month["fundingGap"],200)

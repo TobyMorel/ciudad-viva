@@ -1,3 +1,7 @@
+## Revisión de alcance · Alfa 0.127
+
+La fase 8 avanza de 95% a 97% orientativo: la municipalidad ahora puede ordenar los pagos de servicios, redes/residuos y transporte cuando falta caja. La deuda impaga conserva su mora y la cobertura afecta sistemas físicos existentes. Verificado Online/Offline, con asignación limitada sin duplicación y panel responsive. No cierra la fase: falta medir una crisis recuperable integral y continuidad de los cinco servicios. El progreso global sigue sin porcentaje por falta de pesos comunes verificables para las 34 fases.
+
 # Auditoría del roadmap · Alfa 0.110
 
 ## Revisión de alcance · Alfa 0.110

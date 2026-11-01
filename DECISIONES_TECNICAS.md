@@ -1,3 +1,9 @@
+# Decisiones técnicas · Alfa 0.127
+
+## Prioridad de pagos municipales
+
+`programPriority` conserva un orden completo y sin duplicados para `services`, `networks` y `mobility`. Al liquidar el cierre mensual, se aplica la apropiación y se descuenta caja disponible en ese orden. Los importes impagos siguen como mora y cada factor de financiación conserva sus efectos en el simulador. La acción Online es autoritativa; Offline usa la misma estructura y valida programas. Las partidas previas se migran al orden servicios → redes/residuos → movilidad.
+
 # Decisiones técnicas · Alfa 0.126
 
 ## Advertencia de caja insuficiente proyectada

@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.127
+
+1. Ejecutar una crisis fiscal recuperable de principio a fin en Online y Offline: caída de ingresos/caja, mora, elección de prioridad, deuda/reserva y estabilización.
+2. Comprobar efectos visibles en salud, educación, redes, residuos y colectivos; verificar que al sanear mora los servicios se recuperen sin borrar daños ajenos.
+3. Avanzar a cobertura y capacidad de servicios de la fase 9 con sistemas jugables antes de pulir presentación.
+4. Si se toca interfaz, revisar 390×844 y 1440×900; publicar en `main`, verificar SHA/CI/Vercel y generar ZIP.
+
+Fase actual 8, 97% orientativo; próximo alcance: crisis integral y fase 9. Progreso global no estimable por falta de ponderación común verificable para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.126
 
 1. Probar una crisis fiscal recuperable completa Online/Offline: iniciar estable, presionar caja mediante compromisos o ingresos menores, recibir la advertencia, entrar en mora y tomar medidas.

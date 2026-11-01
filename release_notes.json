@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.126",
+  "currentVersion": "0.127",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.127",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 97,
+      "overallProgress": null,
+      "changes": [
+        "En una crisis de caja, el gobierno puede elegir qué programa municipal se paga primero: servicios públicos, redes y residuos, o transporte.",
+        "El cierre mensual y la previsión de 12 meses usan el mismo orden; el dinero disponible se asigna una sola vez. Los programas restantes acumulan mora y muestran su cobertura real, que afecta servicios, mantenimiento, recolección y operación de colectivos.",
+        "La prioridad se comparte en Online y se conserva en partidas guardadas; las ciudades anteriores reciben un orden inicial de servicios, redes y movilidad.",
+        "Economía muestra el orden y ofrece “Poner primero” dentro de cada programa. Playwright comprueba posición y funcionamiento en 390×844 y 1440×900, sin controles fuera de pantalla ni texto superpuesto.",
+        "Verificación: 83 pruebas Python, 56 pruebas Node de simulación Offline, stress de 30 años en cuatro perfiles y pruebas responsive del panel Economía en 390×844 y 1440×900.",
+        "La fase 8 avanza de 95% a 97% orientativo: la escasez presupuestaria ya admite una decisión de priorización con efectos causales. Falta completar un escenario de crisis y recuperación de punta a punta."
+      ]
+    },
     {
       "version": "0.126",
       "date": "2026-11-01",
@@ -1310,8 +1325,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.127 · crisis fiscal recuperable",
-      "detail": "Fase 8: ejecutar escenarios Online/Offline que pasen de superávit a déficit y regresen mediante ajustes de presupuesto, deuda y operación, observando empleo, apoyo y cinco servicios."
+      "title": "Alfa 0.128 · crisis fiscal completa y transición a servicios",
+      "detail": "Fase 8: verificar una crisis recuperable con prioridad de gasto, deuda, presupuesto y continuidad de salud, educación, redes/residuos y transporte; luego ampliar cobertura y capacidad dentro de fase 9."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1399,11 +1414,11 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 95,
+      "progress": 97,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Validar una crisis moderada recuperable de punta a punta con decisiones de impuestos, deuda y programas.",
-        "Comprobar durante la crisis la continuidad y recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
+        "Validar una crisis moderada recuperable de punta a punta con impuestos, deuda, programas y prioridades.",
+        "Comprobar continuidad y recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
         "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },

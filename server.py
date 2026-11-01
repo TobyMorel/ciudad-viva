@@ -305,7 +305,7 @@ def sign_aggregate_forward_contract(plant,need):
               "vendorId":site["business"]["id"],"vendorName":site.get("name"),"quantity":qty,
               "deliveredUnits":0,"refundedUnits":0,"escrow":total,"contractValue":total,
               "paidToSeller":0,"paidToLogistics":0,"refunded":0,"orderedDay":state["day"],
-              "installments":n,"source":[site["x"],site["y"]],"destination":[plant["x"],plant["y"]],"status":"en curso"}
+              "installments":n,"extensionFee":max(20,(total+10)//20),"source":[site["x"],site["y"]],"destination":[plant["x"],plant["y"]],"status":"en curso"}
     supply.setdefault("tradeContracts",[]).append(contract)
     for index,(amount,(product,delivery)) in enumerate(zip(lines,prices)):
         ready=state["day"]+1+index*7
@@ -322,6 +322,34 @@ def sign_aggregate_forward_contract(plant,need):
     buyer["lastMaterialCause"]="Áridos comprometidos a plazo: pago contra entregas"
     ev("Contrato industrial a plazo",f"{plant.get('name','Hormigonera')}: {qty} áridos en {n} remesas; $ {total} en custodia privada.")
     return contract
+
+def renegotiate_aggregate_forward_contract(contract_id):
+    """Una prórroga remunerada ante corte vial, sin modificar inventario ni custodia."""
+    supply=state["supply"]
+    contract=next((c for c in supply.get("tradeContracts",[]) if c.get("id")==str(contract_id)),None)
+    if not contract or contract.get("status")!="en curso" or contract.get("renegotiatedDay") is not None:
+        raise ValueError("El contrato no está vigente o ya fue renegociado.")
+    pending=[o for o in supply.get("marketOrders",[]) if o.get("supplyContractId")==contract["id"] and o.get("status")=="en tránsito" and not o.get("contractSettled")]
+    if not pending or any(state["day"]>int(o.get("deadlineDay",0)) for o in pending):
+        raise ValueError("No quedan remesas vigentes para reprogramar.")
+    buyer=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==contract.get("buyerId")),None)
+    seller=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==contract.get("vendorId")),None)
+    if not buyer or buyer.get("status")!="abierto" or not seller or seller.get("status")!="abierto":
+        raise ValueError("Ambas empresas deben seguir operativas.")
+    if not any(route_between(tuple(o["source"]),(o["x"],o["y"])) is None for o in pending):
+        raise ValueError("La prórroga excepcional requiere un corte vial comprobable.")
+    fee=max(20,(int(contract.get("contractValue",0))+10)//20)
+    if buyer.get("cash",0)<fee:
+        raise ValueError(f"La compradora necesita $ {fee} de caja para compensar la reserva adicional.")
+    buyer["cash"]-=fee
+    seller["cash"]=seller.get("cash",0)+fee
+    for order in pending:
+        order["deadlineDay"]=int(order["deadlineDay"])+14
+        order["statusCause"]="Plazo extendido 14 días por corte vial"
+    contract.update({"renegotiatedDay":state["day"],"extensionDays":14,"extensionFee":fee,"extensionFeePaid":fee})
+    ev("Plazo industrial renegociado",f"{contract.get('buyerName','Compradora')} paga $ {fee} a {contract.get('vendorName','Proveedor')} por mantener {len(pending)} remesas reservadas 14 días más.")
+    return contract
+
 
 def settle_aggregate_contract_line(order,received):
     if not order.get("supplyContractId") or order.get("contractSettled"):return
@@ -4110,6 +4138,10 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action=="renegotiateTradeContract":
+                    try:renegotiate_aggregate_forward_contract(data.get("id"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action=="repairContractGuarantee":
                     guarantee=next((g for g in state.get("contractGuarantees",[]) if g.get("id")==str(data.get("id")) and g.get("status")=="reclamo"),None)
                     if not guarantee:self._send(409,{"error":"La garantía no tiene un reclamo reparable."});return

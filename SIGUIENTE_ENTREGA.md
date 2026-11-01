@@ -231,3 +231,9 @@ El material que compran los promotores de vivienda/fábrica y la inversión come
 Ya hay contratos B2B de áridos por fábrica concreta, inversión de compra real, mercancía reservada, tres remesas escalonadas, espera de ruta, custodia financiera, liquidación al recibir, vencimiento y devolución sin existencias duplicadas. La política respeta la demanda de la hormigonera y su caja empresarial. Economía informa estado, fondos, cumplimientos e incumplimientos. Online/Offline poseen pruebas automatizadas del flujo y validación visual Chromium.
 
 **Continuar mecánicas:** extender acuerdos de plazo a acero, madera, alimentos y clientes constructores; renegociación por rutas cortadas con penalidades al proveedor; ampliar alquileres comerciales y movilidad laboral, y ejecutar/depurar partidas reales a 30 años de fase 33. Fase 17=80%, 18=90%, global sin estimación. LAN física y Vercel no comprobados.
+
+## Continuación después de Alfa 0.98
+
+Nueva decisión ante corte de carretera: renegociar una vez los contratos cantera/hormigonera para añadir 14 días a remesas pendientes. La compensación sale de la caja compradora e ingresa a la vendedora; no modifica reserva física ni custodia financiera. Economía muestra el control y la traza de pago. Pruebas cubren rechazo sin corte, segundo intento, caja y recepción tras plazo original en Online/Offline.
+
+**Próximo contenido:** contratos similares para otras industrias/constructoras con cuotas y rutas, comercio minorista y alquileres efectivos; después pruebas de 30 años en ciudades pequeña, metropolitana, portuaria y turística. Fase 17=80%, 18=90%, global no estimable. LAN y Vercel pendientes.

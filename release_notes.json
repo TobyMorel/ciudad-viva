@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.98",
+  "currentVersion": "0.99",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.99",
+      "date": "2026-11-01",
+      "roadmapPhase": 33,
+      "phaseProgress": 40,
+      "overallProgress": null,
+      "changes": [
+        "Puerto siderúrgico: todos los barcos de acero comparten una capacidad diaria de descarga por puerto. Las remesas que exceden el cupo esperan sin duplicar cargas ni crear inventario.",
+        "Las descargas registran lastUnloadedDay y lastUnloadedUnits, con interpretación conservadora de partidas antiguas; se comprueba el límite a través de llamadas repetidas y de días sucesivos en ambos motores.",
+        "Pruebas Online/Offline para dos buques y cupo siete unidades. El escenario responsive ahora identifica proveedor real y corta la calle de verdad. La fase 33 se conserva en 40%; el avance global permanece no estimado."
+      ]
+    },
     {
       "version": "0.98",
       "date": "2026-10-31",

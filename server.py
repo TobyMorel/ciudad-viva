@@ -3668,13 +3668,13 @@ def tick_one_day():
         for key,amount in REGIONAL_PRODUCTION.items():
             batches=[round(amount*.6),round(amount*.25),round(amount*.15)]
             if key=="steel":
-                available=min(regional_reserve,sum(batches))
-                batches=[min(available,batches[0]),0,0] if available<sum(batches) else batches
-                if available<sum(batches):
-                    remaining=available
-                    batches=[]
-                    for request in [round(amount*.6),round(amount*.25),round(amount*.15)]:
-                        delivered=min(remaining,request);batches.append(delivered);remaining-=delivered
+                remaining=min(regional_reserve,sum(batches))
+                allocated=[]
+                for request in batches:
+                    delivered=min(remaining,request)
+                    allocated.append(delivered)
+                    remaining-=delivered
+                batches=allocated
                 regional_reserve-=sum(batches)
             for name,quantity in zip(("Distribuidora Regional","Corralón del Puerto","Flete Urgente"),batches):
                 supplier_stock[name][key]+=quantity

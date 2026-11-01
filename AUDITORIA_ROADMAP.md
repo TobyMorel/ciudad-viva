@@ -1,3 +1,11 @@
+## Revisión de alcance · Alfa 0.129
+
+### Fase 9 · ampliación escolar recibida en ambos motores
+
+El anexo contratado por `expandSchool` ya se probó desde anticipo hasta inspección usando los ciclos diarios Online y Offline. El proyecto consume la receta de áridos, hormigón, acero, madera y componentes, certifica cuatro hitos con pagos y habilita aulas/vacantes solo después de completar. La inspección conserva balance material, calidad, costo y capacidad en el edificio y agrega la garantía de obra. En Offline se corrigió el fallo terminal de `quality` sin definir y la calificación ahora respeta el contratista. El corte de ruta/stock sigue deteniendo una obra hasta reanudación; las regresiones estables usan stock conectado y sin incidentes para recorrer la recepción completa.
+
+Pruebas: 86 Python, 58 Node Offline y ciclo completo de la mecánica en ambos motores. La pantalla no cambió; su verificación móvil/escritorio ya está en el commit Alfa 0.128. Falta probar la contratación docente y la cobertura en una partida poblada. Fase 9: 70%. Progreso global no estimable sin pesos comunes verificables. Próximo sistema de alcance: protección social conectada con hogares y presupuesto.
+
 ## Revisión de alcance · Alfa 0.128
 
 ### Fase 9 · capacidad educativa ampliable

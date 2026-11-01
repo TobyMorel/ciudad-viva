@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.129
+
+1. En una ciudad poblada, ampliar una escuela y comprobar que docentes identificados cubren nuevas vacantes; los estudiantes solo usan cupos con edad, ruta, servicios y presupuesto compatibles.
+2. Desarrollar protección social con hogares elegibles, partidas presupuestarias y consecuencias observables en vivienda, educación y bienestar. Evitar pagos automáticos sin costo municipal.
+3. Mantener cobertura de las 34 fases; dejar para más tarde los detalles visuales que no mejoren la jugabilidad.
+4. Si se cambia la interfaz, inspeccionar 390×844 y 1440×900; publicar en `main`, comprobar SHA/CI/Vercel y adjuntar ZIP completo.
+
+Fase actual 9, 70% orientativo; próximo hito jugable: plazas educativas atendidas por personal real y apoyo social presupuestado. Global no estimable por falta de ponderación común verificable para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.128
 
 1. Probar un anexo escolar Online y Offline de principio a fin: anticipo, despacho y consumo de materiales, certificaciones, inspección y cambio de capacidad.

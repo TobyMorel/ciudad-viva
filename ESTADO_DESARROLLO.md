@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.129
+
+## Ampliación escolar completa en simulación diaria
+
+- La obra de anexo ahora avanza en Online y Offline por el reloj normal: consume materiales según progreso, certifica hitos, puede esperar por falta de suministro y finaliza con inspección. Las aulas y vacantes aparecen solo al aprobar recepción.
+- Corregido el error Offline que lanzaba `ReferenceError` al inspeccionar el anexo: ahora usa la calidad de la constructora elegida. El historial conserva calidad y balance de materiales; la recepción guarda la garantía contractual.
+- Verificación local: 86 pruebas Python, 58 Node Offline y simulación de principio a fin en ambos motores. No cambió la interfaz en esta versión.
+- Fase actual: 9, 70% orientativo. Próxima: probar asistencia y contratación docente después de ampliar en una partida poblada; luego protección social. Global no estimable sin ponderación verificable para 34 fases; LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.128
 
 ## Ampliación escolar con obra contratada

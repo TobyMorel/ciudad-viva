@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.129
+
+La ampliación escolar existe en `server.py` y `offline.js`; el panel y selección de constructoras permanecen en `game.js`/`style.css` de Alfa 0.128. Este release encontró y arregló un bloqueo real: al completarse un anexo Offline, la recepción llamaba `completeOfflineSchoolExpansion(p, quality)` aunque esa variable no existía dentro de `complete()`. Usa ahora la calidad derivada del contratista; Sur Obras y Delta dan calidades diferentes. La recepción persiste materiales consumidos/requeridos, costo, calidad, plazas y vacantes en `school.expansionHistory` y crea la garantía contractual.
+
+Pruebas de flujo completo: `tests/test_school_expansion.py` avanza la obra Online hasta el último certificado; `tests/test_school_expansion_offline.mjs` avanza días Offline, comprueba perfil Sur Obras, cinco materiales consumidos, cuatro certificados, nuevas plazas e historial. Suite local: 86 Python, 58 Node Offline; sin cambios de interfaz.
+
+Evitar versiones de pulido: la siguiente mecánica debe ser protección social con hogares elegibles, presupuesto real y efectos medibles; comprobar antes que los anexos ya ampliados contraten profesores sin asignación gratuita. Progreso: fase 9=70%, global null por falta de pesos verificables comunes. Mantener `66056611+TobyMorel@users.noreply.github.com`, push a `main`, verificar Vercel/Actions y entregar ZIP.
+
 ## Continuidad inmediata · Alfa 0.128
 
 La acción municipal **Ampliar escuela** vive en `server.py` (`contract_school_expansion`, `complete_school_expansion`) y `offline.js` (`contractOfflineSchoolExpansion`, `completeOfflineSchoolExpansion`). El panel está en `game.js` dentro de `educationPanel()` y sus controles responsive en `style.css`. Agrega hasta dos aulas por contrato, una obra activa por sede y máximo de seis aulas adicionales sobre el modelo inicial. El pago de anticipo no habilita cupos: aulas, vacantes docentes y costo de operación cambian al inspeccionar. El empleo de docentes sigue siendo una decisión de simulación; las vacantes no se cubren mágicamente.

@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.128",
+  "currentVersion": "0.129",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.129",
+      "date": "2026-11-01",
+      "roadmapPhase": 9,
+      "phaseProgress": 70,
+      "overallProgress": null,
+      "changes": [
+        "La ampliación escolar funciona hasta el cierre de obra en Online y Offline: avanza por días, consume las cinco clases de materiales, certifica cuatro hitos y solo abre aulas al aprobar la inspección.",
+        "Corregido un error que impedía completar anexos en Offline: la recepción usaba una calidad no definida y fallaba justo cuando terminaba la obra. Ahora registra la calidad según la constructora; Sur Obras y Delta conservan perfiles distintos.",
+        "El historial de la escuela conserva aulas, plazas, docentes, contratista, calidad, costo y materiales requeridos/consumidos. La recepción también crea la garantía prevista por el sistema de contratos.",
+        "Verificación local: 86 pruebas Python Online y 58 pruebas Node Offline, incluida la simulación diaria completa de ampliación en ambos motores. No hubo cambios visuales en esta versión.",
+        "Fase 9 avanza de 67% a 70% por cerrar la ampliación escolar de punta a punta en los dos motores. Quedan contratación docente y efecto distrital en una partida poblada, educación técnica y protección social. El avance global no es estimable sin ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.128",
       "date": "2026-11-01",
@@ -1339,8 +1353,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.129 · capacidad educativa y contratación de personal",
-      "detail": "Fase 9: seguir la ampliación desde la obra hasta materiales, certificados e inspección; después cubrir nuevas plazas con contratación docente efectiva y demanda educativa por distrito. Mantener las obras existentes y la crisis fiscal en pruebas."
+      "title": "Alfa 0.130 · protección social ligada a hogares y presupuesto",
+      "detail": "Fases 9 y 28: añadir ayudas municipales con elegibilidad visible, cupo y partida presupuestaria; medir si cambian acceso a vivienda/educación y bienestar del hogar sin generar recursos gratis. Priorizar el sistema jugable y verificar Online/Offline."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1439,12 +1453,12 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 67,
-      "summary": "Centros de salud, policía, bomberos, higiene urbana y educación por niveles con cobertura vial; escuelas ampliables por contratos municipales.",
+      "progress": 70,
+      "summary": "Centros de salud, policía, bomberos, higiene urbana y educación por niveles; anexos escolares completan su ciclo de obra y recepción en Online/Offline.",
       "pending": [
-        "Completar y probar en una partida el ciclo de ampliación escolar hasta entrega de materiales e inspección.",
-        "Educación técnica y formación docente; ampliar la capacidad y cobertura por distritos.",
-        "Protección social y especialización profesional del personal."
+        "Verificar plazas, contratación docente y cobertura por distrito en una partida poblada tras ampliar una escuela.",
+        "Educación técnica, formación docente y protección social con efectos presupuestarios en hogares.",
+        "Especialización profesional del personal y cobertura completa de los servicios."
       ]
     },
     {

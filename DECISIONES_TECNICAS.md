@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.129
+
+## Inspección de anexos y balance de materiales
+
+La finalización Offline deriva calidad de `RESTORATION_CONTRACTORS[p.contractor]` y la pasa a `completeOfflineSchoolExpansion`; la ruta de recepción anterior enviaba una variable `quality` inexistente, que solo fallaba cuando terminaba la obra. Online conserva la calidad contractual/penalizaciones existente. Ambos motores anexan al historial del edificio el número de aulas/plazas/docentes, empresa, calidad, costo y copias de `materialsRequired`/`materialsUsed`, porque el proyecto activo se elimina al recibirlo. La garantía común se crea después de la inspección.
+
+Las regresiones ejercitan el avance diario real: producción/stock en patio, demoras por acceso o insumos, hitos certificados, consumo completo, habilitación y garantía. El escenario de laboratorio estabiliza sucesos viales para probar la recepción sin azar; las reglas de interrupciones y reanudación siguen activas en partidas reales.
+
 # Decisiones técnicas · Alfa 0.128
 
 ## Anexos escolares como obra pública

@@ -4473,9 +4473,9 @@ def complete_school_expansion(project,quality):
         ev("Anexo escolar sin destino",f"Se inspeccionó {project.get('label','el anexo')}, pero la escuela objetivo ya no existe.");return False
     classrooms=max(1,int(project.get("classroomsAdded",2)));teachers=max(1,int(project.get("teachersAdded",3)));monthly=max(0,int(project.get("monthlyCostAdded",classrooms*310)))
     school["classrooms"]=max(0,int(school.get("classrooms",4)))+classrooms;school["jobSlots"]=max(0,int(school.get("jobSlots",12)))+teachers;school["monthlyCost"]=max(0,int(school.get("monthlyCost",0)))+monthly
-    school.setdefault("expansionHistory",[]).append({"day":state.get("day",1),"classrooms":classrooms,"teachers":teachers,"contractor":project.get("contractor"),"quality":quality,"cost":project.get("cost",0)})
-    state["jobs"]=max(0,int(state.get("jobs",0)))+teachers;state["monthlyExpenses"]=max(0,int(state.get("monthlyExpenses",0)))+monthly
     seats=max(0,int(project.get("seatsAdded",classrooms*(service_model(school) or {}).get("seatsPerClass",24))))
+    school.setdefault("expansionHistory",[]).append({"day":state.get("day",1),"classrooms":classrooms,"seats":seats,"teachers":teachers,"contractor":project.get("contractor"),"quality":quality,"cost":project.get("cost",0),"materialsRequired":dict(project.get("materialsRequired",{})),"materialsUsed":dict(project.get("materialsUsed",{}))})
+    state["jobs"]=max(0,int(state.get("jobs",0)))+teachers;state["monthlyExpenses"]=max(0,int(state.get("monthlyExpenses",0)))+monthly
     ev("Anexo escolar habilitado",f"{school.get('name','La escuela')} abrió {classrooms} aulas nuevas, {teachers} vacantes docentes y {seats} plazas físicas. Contratación de personal y redes determinan cuántos alumnos puede atender; operación +$ {monthly}/mes.")
     return True
 

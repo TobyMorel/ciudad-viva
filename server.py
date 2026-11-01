@@ -2864,7 +2864,7 @@ def traffic_factor(route, exclude_order=None):
         a=tuple(route[i]);b=tuple(route[i+1]);edge=tuple(sorted((a,b)))
         arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
         background=(_commute_cache or commute_model())["segmentFlow"].get(edge,0)
-        capacity=2.4 if arterial else 1.2
+        capacity=road_traffic_capacity(a,b)
         trucks=0
         for order in active:
             path=order.get("route",[]);idx=min(len(path)-2,max(0,int(order.get("travelledDistance",0))))
@@ -2872,6 +2872,13 @@ def traffic_factor(route, exclude_order=None):
         ratio=(background+trucks)/capacity
         factors.append(1+.35*ratio*ratio+2.4*max(0,ratio-1)**2)
     return sum(factors)/len(factors)
+
+def road_traffic_capacity(a,b):
+    """Capacidad relativa por tramo; calzadas deterioradas admiten menos flujo."""
+    arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
+    assets={(x.get("x"),x.get("y")):float(x.get("quality",82)) for x in state.get("roadAssets",[])}
+    quality=min(assets.get(a,82),assets.get(b,82))
+    return (2.4 if arterial else 1.2)*max(.35,min(1,quality/82))
 
 def order_route_eta(order):
     distance=max(0,order.get("travelDistance",len(order.get("route",[]))-1))

@@ -1,8 +1,8 @@
 # Siguiente entrega · continuidad
 
-## Próximo paso · Alfa 0.112
+## Próximo paso · Alfa 0.113
 
-Fase 7: capacidad vial por tramo/horario, luego accidentes y respuesta municipal. Espera semafórica ya incluida en estimación y asistencia laboral en ambos modos.
+Fase 7: implementar accidentes viales con causas reproducibles, bloqueo de tramos, demoras visibles y respuesta municipal limitada por personal/rutas. Luego ampliar capacidad y colas por franja horaria. Capacidad, estado físico vial, congestión y espera semafórica ya afectan viajes motorizados Online/Offline.
 
 
 ## Punto de continuación después de Alfa 0.110
@@ -16,7 +16,7 @@ Fase 7: capacidad vial por tramo/horario, luego accidentes y respuesta municipal
 ## Punto de continuación después de Alfa 0.109
 
 1. Verificar el despliegue de `main` y una sesión LAN física de dos equipos; la UI no garantiza esa prueba.
-2. Fase 7: incorporar capacidad por tramo y semáforos a tiempos de viaje autoritativos, luego accidentes causales con respuesta municipal. Mantener paridad Online/Offline.
+2. Fase 7: accidentes viales causales con cierre temporal de calle y respuesta municipal limitada. Después, capacidad por franja horaria y colas persistentes. Mantener paridad Online/Offline.
 3. Fase 15: comparar las trece capturas originales de `design_reference/` con móvil/escritorio, refinar arte del mapa y revisar teclado/lector de pantalla. No sustituir sistemas por cifras de maqueta.
 4. Conservar un ZIP completo por entrega, publicar `main` con email Git válido y actualizar historial y progreso por fase. El total del juego sigue sin porcentaje hasta fijar pesos y criterios de aceptación para las 34 fases.
 

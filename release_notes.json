@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.111",
+  "currentVersion": "0.112",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.112",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 80,
+      "overallProgress": null,
+      "changes": [
+        "Las demoras en Online y Offline ahora dependen del flujo de cada tramo frente a su capacidad; las arterias principales admiten el doble de circulación que las calles barriales.",
+        "El desgaste de la calzada reduce la capacidad vial; la congestión recalcula el tiempo y la asistencia de viajes motorizados, incluidos regresos.",
+        "El mapa de tráfico acentúa las calles congestionadas según la demora calculada. Autos, colectivos y viajes cotidianos comparten el flujo vial simulado."
+      ]
+    },
     {
       "version": "0.111",
       "date": "2026-11-01",
@@ -1103,8 +1115,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.112 · capacidad vial y accidentes",
-      "detail": "Aplicar capacidad por tramo a tiempos de viaje y simular accidentes con respuestas municipales."
+      "title": "Alfa 0.113 · accidentes y respuesta vial",
+      "detail": "Crear incidentes viales con causas observables, cierre temporal, demoras y respuesta municipal."
     },
     {
       "title": "Validación de experiencia",
@@ -1182,11 +1194,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 75,
-      "summary": "Semáforos visuales y espera media integrada a viajes en auto/colectivo, empleo y asistencia Online/Offline",
+      "progress": 80,
+      "summary": "Capacidad diferenciada por tramo, deterioro vial y congestión reflejada en viajes, asistencia y mapa Online/Offline",
       "pending": [
-        "Capacidad por tramo en la ruta autoritativa y colas según flujo horario.",
-        "Accidentes con causas, bloqueos y respuesta municipal."
+        "Capacidad y flujo por franja horaria con colas persistentes.",
+        "Accidentes con causas, bloqueo vial y respuesta municipal."
       ]
     },
     {

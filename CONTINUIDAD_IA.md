@@ -1,5 +1,10 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad · Alfa 0.112
+
+La capacidad de cada tramo considera jerarquía vial (eje principal 2.4, barrio 1.2) y baja con la condición de `roadAssets`. `traffic.js` comparte el cálculo Offline y sus pruebas. Online aplica el mismo factor en `traffic_factor`; el mapa amplifica el estrés con `trafficFactor`. Próximo sistema: accidentes viales con causa, bloqueo y respuesta municipal. Pruebas: Python 55 y Offline 40.
+
+
 ## Continuidad · Alfa 0.111
 
 Fase 7 integra 30 s de espera por semáforo en rutas motorizadas para ambos motores; helper `signal_delay_minutes`/`signalDelayMinutes`. Próximo: capacidad por tramo y accidentes.

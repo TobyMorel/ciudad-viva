@@ -1,5 +1,10 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.112 · capacidad vial dependiente del estado de las calles
+
+Online y Offline calculan el flujo por tramo y su demora: avenidas estructurales admiten el doble de flujo que calles barriales y el deterioro reduce esa capacidad. Los tiempos, asistencia laboral y velocidad visual de los viajes motorizados incorporan congestión; también se cubren regresos y viajes cotidianos. Python 55/55 y Offline 40/40 pasan. Fase 7: 80%. Global sin estimar por falta de pesos estables del roadmap.
+
+
 ## Alfa 0.111 · espera semafórica en viajes
 
 Los viajes motorizados agregan 0,5 min por intersección de tres/cuatro accesos; los peatones no. La espera se integra al tiempo estimado, asistencia y puestos efectivos en Online/Offline. Fase 7: 75%. Global sin estimar por falta de pesos estables del roadmap.

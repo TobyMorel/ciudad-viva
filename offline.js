@@ -472,6 +472,36 @@ export async function createOfflineAdapter(){
       else{order.status='cancelado';order.statusCause='Empresa cerrada antes de recibir la carga';settleOfflineAggregateContractLine(order,false)}
     }
   }
+  // Obras escalonadas; misma lógica y alcance que el servidor Online.
+  const SERVICE_MODELS={
+    clinic:{kind:'civic',label:'Consultorio barrial',cost:8000,days:62,radius:6,jobs:12,care:true},
+    medicalCenter:{kind:'civic',label:'Policlínico municipal',cost:14200,days:85,radius:10,jobs:24,care:true},
+    generalHospital:{kind:'civic',label:'Hospital general',cost:25500,days:115,radius:16,jobs:40,care:true,beds:36,ambulances:2},
+    policePost:{kind:'civic',label:'Puesto de vigilancia',cost:9200,days:64,radius:6,jobs:12,police:1},
+    policeStation:{kind:'civic',label:'Comisaría distrital',cost:16500,days:90,radius:11,jobs:22,police:2},
+    policeHQ:{kind:'civic',label:'Central de seguridad',cost:28700,days:124,radius:16,jobs:36,police:3},
+    firePost:{kind:'fireStation',label:'Destacamento de bomberos',cost:11200,days:74,radius:7,jobs:12,engines:1},
+    fireStationPlus:{kind:'fireStation',label:'Cuartel de bomberos',cost:19800,days:96,radius:12,jobs:22,engines:2},
+    fireCommand:{kind:'fireStation',label:'Comando de emergencias',cost:33000,days:132,radius:17,jobs:36,engines:3},
+    wasteYard:{kind:'depot',label:'Base de recolección',cost:5600,days:50,radius:6,jobs:8,trucks:1},
+    wasteDepot:{kind:'depot',label:'Centro de transferencia',cost:12000,days:75,radius:11,jobs:14,trucks:2},
+    wasteComplex:{kind:'depot',label:'Complejo de higiene urbana',cost:22200,days:109,radius:17,jobs:26,trucks:3}
+  };
+  const SERVICE_DEFAULT={civic:'clinic',fireStation:'firePost',depot:'wasteYard'};
+  function offlineServiceModel(b){
+    if(SERVICE_MODELS[b.serviceModel])return SERVICE_MODELS[b.serviceModel];
+    if(b.kind==='civic'){
+      if(b.name==='Municipalidad')return null;
+      if(b.policeUnit&&!b.hospitalWard)return SERVICE_MODELS.policePost;
+    }
+    return SERVICE_MODELS[SERVICE_DEFAULT[b.kind]]||null;
+  }
+  function offlineServiceRoad(b,target,radius){
+    const m=offlineServiceModel(b),max=radius??m?.radius??0;
+    if(!max||!['habilitado','operativo'].includes(b.status))return null;
+    const route=offlineRoadRoute(b,target);
+    return route&&route.length-1<=max?route:null;
+  }
   function offlineMaterialPlan(kind,initialProgress=0){const recipe=MATERIAL_NEEDS[kind]||{};return Object.fromEntries(Object.entries(recipe).map(([k,v])=>[k,v?Math.max(1,Math.round(v*(1-initialProgress))):0]))}
   function offlineMaterialFraction(material,progress){const [start,span]=({aggregate:[0,.45],concrete:[.08,.42],steel:[.15,.5],timber:[.25,.55],components:[.55,.4]})[material]||[0,1];return Math.max(0,Math.min(1,(progress-start)/span))}
   function offlineMaterialDelta(project,nextProgress){return Object.fromEntries(Object.entries(project.materialsRequired||{}).map(([key,amount])=>[key,Math.max(0,Math.ceil(amount*offlineMaterialFraction(key,nextProgress))-(project.materialsUsed?.[key]||0))]))}
@@ -900,11 +930,20 @@ export async function createOfflineAdapter(){
       const b={...q,kind:'shop',name:'Comercio nuevo',occupants:0};b.business={id:`firm-${p.x}-${p.y}`,name:b.name,status:'abierto',cash:1200,jobSlots:12,inventory:0,price:18,inputCost:5,inputInventory:18,wage:10,productivity:.06,fixedCost:40,lastSales:0,lastLocalSales:0,lastRegionalSales:0,lastLocalDemand:0,lastRevenue:0,lastInputs:0,lastInputUnits:0,lastInputSupplier:'Sin compras',lastInputShortage:0,lastProduction:0,lastPayroll:0,lastProfit:0,lastWorkers:0,lastDemand:0};state.buildings.push(b);state.jobs+=12;state.privateCapital=Math.max(0,state.privateCapital-1200);
     }else if(p.kind==='factory'){const industryType=p.industryType||nextOfflineFactoryIndustry(),name=OFFLINE_FACTORY_LABELS[industryType]||OFFLINE_FACTORY_LABELS.food,b={...q,kind:'factory',name,occupants:0,jobSlots:20,monthlyOperatingCost:({quarry:320,concrete:450,sawmill:360,metalworks:420})[industryType]||180};b.business={id:`factory-${p.x}-${p.y}`,name:b.name,industryType,status:'abierto',cash:p.operatingReserve??0,jobSlots:20,wage:12,lastProduction:0,lastLocalSales:0,lastProfit:0,inventory:0,rawMaterialInventory:0,lastMaterialPurchase:0,lastMaterialShortage:0,lastMaterialCause:'',quarryReserve:industryType==='quarry'?2400:0,aggregateStock:0,concreteStock:0,timberStock:0,rawSteelInventory:0,componentStock:0};state.buildings.push(b);state.jobs+=20;event('Industria local habilitada',`${name}: 20 puestos y caja operativa $${b.business.cash}. La producción requiere personal, servicios, insumos y acceso vial.`);
     }else if(p.kind==='civic'){
-      q.monthlyCost=650;state.buildings.push({...q,kind:'civic',name:'Centro de salud',occupants:0,jobSlots:16});state.monthlyExpenses+=650;state.services=Math.min(100,state.services+8);
+      const model=SERVICE_MODELS[p.serviceModel]||SERVICE_MODELS.clinic,monthly=Math.round((320+model.jobs*23)*1.0);
+      const building={...q,kind:'civic',name:model.label,serviceModel:p.serviceModel||'clinic',occupants:0,jobSlots:model.jobs,monthlyCost:monthly};
+      if(model.police)building.policeUnit={vehicles:model.police,priority:'mixto',equippedDay:state.day};
+      if(model.beds)building.hospitalWard={beds:model.beds,ambulances:model.ambulances||0,equippedDay:state.day};
+      state.buildings.push(building);state.monthlyExpenses+=monthly;state.jobs+=model.jobs;
     }else if(p.kind==='school'){state.buildings.push({...q,kind:'school',name:'Escuela primaria municipal',occupants:0,jobSlots:12,classrooms:4,monthlyCost:820});state.jobs+=12;state.monthlyExpenses+=820;
-    }else if(p.kind==='fireStation'){state.buildings.push({...q,kind:'fireStation',name:'Cuartel de bomberos municipal',occupants:0,jobSlots:12,fireEngineCapacity:3,dispatchReadyDay:state.day,monthlyCost:950});state.jobs+=12;state.monthlyExpenses+=950;event('Cuartel de bomberos habilitado','12 puestos y hasta tres dotaciones. Sin cuatro bomberos cualificados y acceso vial no responde; operación $950/mes.');
+    }else if(p.kind==='fireStation'){const model=SERVICE_MODELS[p.serviceModel]||SERVICE_MODELS.firePost,monthly=Math.round(model.cost*.065);
+      state.buildings.push({...q,kind:'fireStation',name:model.label,serviceModel:p.serviceModel||'firePost',occupants:0,jobSlots:model.jobs,fireEngineCapacity:model.engines,dispatchReadyDay:state.day,monthlyCost:monthly});
+      state.jobs+=model.jobs;state.monthlyExpenses+=monthly;event('Cuartel de bomberos habilitado','12 puestos y hasta tres dotaciones. Sin cuatro bomberos cualificados y acceso vial no responde; operación $950/mes.');
     }else if(p.kind==='depot'){
-      state.buildings.push({...q,kind:'depot',name:'Depósito municipal',occupants:0,capacityAdded:500});state.monthlyExpenses+=180;state.supply.storageCapacity+=500;state.supply.depots.push({id:`depot-${p.x}-${p.y}`,x:p.x,y:p.y,capacity:500,label:'Depósito municipal',stocks:Object.fromEntries(Object.keys(state.supply.contractors).map(n=>[n,Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0]))]))});
+      const model=SERVICE_MODELS[p.serviceModel]||SERVICE_MODELS.wasteYard,capacity=500*model.trucks;
+      state.buildings.push({...q,kind:'depot',name:model.label,serviceModel:p.serviceModel||'wasteYard',occupants:0,jobSlots:model.jobs,capacityAdded:capacity});
+      state.monthlyExpenses+=180*model.trucks;state.jobs+=model.jobs;state.supply.storageCapacity+=capacity;
+      state.supply.depots.push({id:`depot-${p.x}-${p.y}`,x:p.x,y:p.y,capacity,label:model.label,stocks:Object.fromEntries(Object.keys(state.supply.contractors).map(n=>[n,Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0]))]))});
     }else if(p.kind==='recyclingPlant'){state.buildings.push({...q,kind:'recyclingPlant',name:'Planta municipal de reciclaje',jobSlots:16,processingTonsDay:1.25,monthlyCost:650});state.jobs+=16;
     }else if(p.kind==='landfill'){state.buildings.push({...q,kind:'landfill',name:'Relleno sanitario municipal',jobSlots:12,capacityAdded:1800,monthlyCost:420});state.jobs+=12;
     }else if(p.kind==='busGarage'){
@@ -1087,7 +1126,10 @@ export async function createOfflineAdapter(){
     if(a==='declinePrivateInvestment'){ensureOfflinePrivateInvestments(state);const book=state.privateInvestments,offer=book.proposal;if(!offer||offer.status!=='disponible'||offer.id!==String(d.investmentId))throw Error('La propuesta de inversión ya no está disponible.');offer.status='rechazada';offer.decisionDay=state.day;book.history.push(clone(offer));book.history=book.history.slice(-24);book.proposal=null;book.nextOfferDay=state.day+90;book.reason='El municipio rechazó la última propuesta; nuevos inversores evaluarán la demanda más adelante.';event('Inversión privada rechazada',`Se descartó la propuesta en parcela ${offer.x+1},${offer.y+1}; la ciudad no gastó fondos ni ocupó el terreno.`);return}
     if(a==='place'){
       ensureOfflinePrivateInvestments(state);const investmentId=String(d.investmentId||''),investmentBook=state.privateInvestments,investmentOffer=investmentBook.proposal;if(investmentId&&(!investmentOffer||investmentOffer.status!=='disponible'||investmentOffer.id!==investmentId||investmentOffer.x!==d.x||investmentOffer.y!==d.y||investmentOffer.contractor!==d.contractor||d.kind!=='shop'||state.day>investmentOffer.expiresDay))throw Error('La oportunidad privada cambió o venció. Revisá la propuesta actual.');
-      const spec=SPECS[d.kind],c=state.contractors[d.contractor];if(!spec||!c)throw Error('Proyecto o constructora inválidos.');const {x,y}=d;
+      const modelId=d.serviceModel||SERVICE_DEFAULT[d.kind],model=SERVICE_MODELS[modelId];
+      if(d.serviceModel&&(!model||model.kind!==d.kind))throw Error('Categoría de servicio incompatible con la obra.');
+      const originalSpec=SPECS[d.kind],spec=model?{...originalSpec,cost:model.cost,days:model.days,label:model.label}:originalSpec,c=state.contractors[d.contractor];
+      if(!spec||!c)throw Error('Proyecto o constructora inválidos.');const {x,y}=d;
       if(x<0||y<0||x>=28||y>=20||(x>=24&&d.kind!=='port')||(y<3&&x>18))throw Error('Parcela fuera del terreno edificable.');
       if(d.kind==='port'&&(x!==23||!state.roads.some(r=>Math.abs(r[0]-x)+Math.abs(r[1]-y)===1)))throw Error('La terminal debe ocupar la costa este en parcela 24 y tener acceso a calle.');
       if(d.kind==='port'&&state.buildings.some(b=>b.kind==='port'))throw Error('La ciudad ya tiene una terminal portuaria.');
@@ -1101,7 +1143,7 @@ export async function createOfflineAdapter(){
       const total=Math.round(spec.cost*c.price),privatePaid=['home','shop','hotel','factory'].includes(d.kind),permit=privatePaid?Math.max(50,Math.round(spec.cost*.12)):0,cost=total-permit,operatingReserve=d.kind==='factory'?4200:0;
       if(state.money<permit+(privatePaid?0:total*.2))throw Error('No alcanza la tesorería para permisos y anticipo.');
       if(privatePaid&&state.privateCapital<cost+operatingReserve)throw Error('Los promotores no tienen capital suficiente para obra y caja operativa.');
-      const advance=Math.round(cost*.2),p={id:`off-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,kind:d.kind,label:spec.label,x,y,contractor:d.contractor,cost,duration:Math.round(spec.days*c.days/30),elapsed:0,progress:0,paid:advance,stages:spec.stages,stageIndex:0,status:'contratada',cause:c.profile,contractedMandate:Number(state.government?.mandate||1),contractedDay:state.day,workersAssigned:NEEDS[d.kind],materialsRequired:offlineMaterialPlan(d.kind),materialsUsed:Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0])),privatePaid,municipalPermitPaid:permit};if(d.kind==='busStop')p.busLineId=busLine.id;if(d.kind==='factory'){p.industryType=nextOfflineFactoryIndustry();p.label=OFFLINE_FACTORY_LABELS[p.industryType];p.operatingReserve=operatingReserve}
+      const advance=Math.round(cost*.2),p={id:`off-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,kind:d.kind,label:spec.label,x,y,contractor:d.contractor,cost,duration:Math.round(spec.days*c.days/30),elapsed:0,progress:0,paid:advance,stages:spec.stages,stageIndex:0,status:'contratada',cause:c.profile,contractedMandate:Number(state.government?.mandate||1),contractedDay:state.day,workersAssigned:NEEDS[d.kind],materialsRequired:offlineMaterialPlan(d.kind),materialsUsed:Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0])),privatePaid,municipalPermitPaid:permit};if(model)p.serviceModel=modelId;if(d.kind==='busStop')p.busLineId=busLine.id;if(d.kind==='factory'){p.industryType=nextOfflineFactoryIndustry();p.label=OFFLINE_FACTORY_LABELS[p.industryType];p.operatingReserve=operatingReserve}
       p.retentionPct=privatePaid?0:.1;state.money-=permit+(privatePaid?0:advance);if(privatePaid)state.privateCapital-=cost+operatingReserve;state.supply.contractorCash[d.contractor]+=advance;state.projects.push(p);event('Contrato adjudicado',`${spec.label} · ${d.contractor} · plazo estimado ${p.duration} días.`);if(investmentId){investmentOffer.status='aceptada';investmentOffer.decisionDay=state.day;investmentOffer.projectId=p.id;investmentBook.history.push(clone(investmentOffer));investmentBook.history=investmentBook.history.slice(-24);investmentBook.nextOfferDay=state.day+90;investmentBook.reason='La obra comercial está contratada; la empresa abrirá después de construcción e inspección.';event('Inversión comercial adjudicada',`El promotor invierte $${p.cost.toLocaleString('es-AR')}; se aprobó el permiso por $${p.municipalPermitPaid}. La apertura depende de materiales, cuadrilla, etapas e inspección.`)}return;
     }
     if(['pauseProject','resumeProject','cancelProject'].includes(a)){

@@ -657,7 +657,7 @@ export async function createOfflineAdapter(){
     const shops=state.buildings.filter(b=>b.kind==='shop'&&b.business?.status==='abierto');
     const homes=state.buildings.filter(b=>b.kind==='home'&&b.occupants>0),allocations=new Map(shops.map(b=>[b.business.id,0])),buyers=new Map(shops.map(b=>[b.business.id,[]]));
     for(const h of homes){
-      const choices=shops.map(b=>({b,weight:(1/(1+Math.abs(h.x-b.x)+Math.abs(h.y-b.y)))**1.4*(18/Math.max(1,b.business.price||18))**2})).sort((a,b)=>b.weight-a.weight);
+      const choices=shops.map(b=>({b,route:offlineRoadRoute(h,b)})).filter(v=>v.route).map(({b,route})=>({b,weight:(1/Math.max(1,route.length))**1.4*(18/Math.max(1,b.business.price||18))**2})).sort((a,b)=>b.weight-a.weight);
       if(!choices.length)continue;const budget=homes.reduce((s,x)=>s+(x.householdCash||0),0);const cheapest=Math.min(...choices.map(x=>Math.max(1,x.b.business.price||18)));
       let units=Math.min(Math.round(h.occupants*.12),Math.floor((h.householdCash||0)/cheapest));const total=choices.reduce((s,x)=>s+x.weight,0);
       const shares=choices.map(x=>units*x.weight/total),counts=shares.map(Math.floor);let rem=units-counts.reduce((s,x)=>s+x,0);

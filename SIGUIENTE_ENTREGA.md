@@ -166,3 +166,7 @@ Fase 19 llegó a 45% con pagos certificados, retención de 10%, inspección de d
 ## Alfa 0.86 · próximo paso
 
 Fase 19 está en 50%: órdenes de cambio con causa técnica y decisión de costo/plazo/calidad Online/Offline. Priorizar ahora otro sistema nuevo: fase 18, cadena local de áridos → hormigón → obras, conectando existencias, plantas, transporte y pedidos, sin extender más la adjudicación salvo correcciones necesarias. Más adelante completar disputa formal/evidencia, multas y rescisión de contratos. LAN en dos equipos y despliegue Vercel permanecen pendientes de prueba externa. Global no estimable sin pesos comparables para las 34 fases.
+
+## Alfa 0.87 · siguiente paso
+
+La fase 18 llegó a 65% con extracción privada de áridos, empleo/servicios, reserva agotable, pedidos pagados y rutas por camión. Próxima mecánica: completar áridos → hormigón → obra, con insumo agregado consumido por planta, personal/utilidades, existencias y entrega que afecte certificados. Después ampliar madera/acero. Llevar las órdenes al adaptador Offline y probar el LAN en equipos físicos continúa pendiente. Priorizar comportamiento e inventarios; no hacer otra versión de pulido. Progreso global no estimable sin pesos comunes para las 34 fases.

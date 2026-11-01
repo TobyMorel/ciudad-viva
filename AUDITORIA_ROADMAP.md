@@ -323,3 +323,7 @@ Evidencia nueva: el contrato municipal reserva 10% en escrow después de la insp
 ## Alfa 0.86 · fase 19, órdenes de cambio
 
 Verificado: al primer 20% de obra municipal, un riesgo técnico reproducible puede detener avance y presentar causa, impacto económico/plazo y penalidad. Aceptar comprueba tesorería libre después de obligaciones, rebasea progreso/plazo sin retroceso y registra decisión; rechazar conserva precio y plazo, pero reduce calidad final y riesgo de garantía. Online (ruta HTTP) y Offline (persistencia local). Fase 19: 50%. Pendiente: disputas formales, multas/terminación, dependencias entre contratos y cobertura de pruebas largas. No se estima global.
+
+## Alfa 0.87 · fase 18, cantera y materiales de obra
+
+Evidencia: fábrica industrial privada adicional puede abrir como cantera. Extracción nominal ≤48/ciclo depende del menor factor de personal y tres servicios; una reserva geológica de 2.400 unidades y patio de 360 limitan salida/stock. Compra de árido local en un contrato paga a la empresa, descuenta su inventario y recorre ruta vial y descarga normal. Pruebas de capacidad, agotamiento parcial de reserva e integración HTTP, más UI Online en móvil/escritorio. Fase 18: 65%. Incompleto: transformación a hormigón, madera/acero, pedidos Offline y comercio exterior completo. Global no estimable.

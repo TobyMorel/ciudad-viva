@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.86",
+  "currentVersion": "0.87",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.87",
+      "date": "2026-11-01",
+      "changes": [
+        "Fase 18: la segunda fábrica privada que se habilita puede especializarse automáticamente como cantera local; no requiere una orden municipal ni sustituye a la planta procesadora de alimentos existente.",
+        "La cantera necesita trabajadores y electricidad, agua y saneamiento; su extracción escala con el personal y los servicios, tiene un patio de 360 unidades y una reserva geológica finita de 2.400. Si salarios y operación superan ingresos, puede cerrar.",
+        "Las constructoras pueden pedir áridos locales desde el inventario de la cantera. El pago llega a la empresa, el stock baja al contratar y los camiones usan la ruta vial desde la planta hasta patio/depósito con descarga habitual. Proveedores regionales siguen disponibles como respaldo.",
+        "Economía muestra la reserva, inventario y límites de producción. Verificado: capacidad con 12 trabajadores, límite de reserva, compra, precio, inventario y ruta; modal de compras revisado a 390×844 y 1440×900 sin overflow ni textos recortados. Fase 18: 65%. Aún faltan hormigón, madera y acero local; progreso global no estimable sin ponderaciones comunes verificables. El nuevo flujo de materiales está conectado a Online/LAN; pedidos Offline siguen pendientes."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 65,
+      "overallProgress": null
+    },
     {
       "version": "0.86",
       "date": "2026-11-01",
@@ -958,10 +971,12 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 60,
-      "summary": "Primer circuito completo: grano regional finito por camión → procesadora con costos, personal, servicios e inventario → compra de alimentos por comercios.",
+      "progress": 65,
+      "summary": "Grano regional → planta procesadora → comercios; cantera privada de áridos con reserva finita, empleados, servicios y pedidos por carretera a obras.",
       "pending": [
-        "Completar áridos→hormigón→obra, madera→aserradero y acero local/importado; escasez, depósitos, mermas y cuello de botella logístico."
+        "Áridos → hormigón con consumo trazable del árido y venta/entrega a obras",
+        "Madera → aserradero → materiales; acero local/importado → construcción",
+        "Logística de materiales Offline, mermas, almacenes, cierres/reaperturas y exportaciones físicas completas"
       ]
     },
     {

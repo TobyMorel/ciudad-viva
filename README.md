@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.86
+# Ciudad Viva · Alfa 0.87
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -252,3 +252,7 @@ En los contratos públicos nuevos se retiene el 10% en una cuenta separada. El c
 ## Alfa 0.86 · cambios de alcance (fase 19)
 
 Las incidencias técnicas ahora pueden detener una obra para que el gobierno cooperativo acepte el costo/plazo adicional o lo rechace con una consecuencia de calidad. Se conserva el avance, los compromisos de tesorería se comprueban en servidor y el registro de contratos guarda la decisión. Online y Offline. Fase 19: 50%; siguiente foco recomendado: cadena de áridos/hormigón en fase 18.
+
+## Alfa 0.87 · cantera privada (fase 18)
+
+Una inversión industrial posterior a la procesadora de alimentos puede abrir una cantera local. Contrata personal, requiere redes eléctricas, agua y saneamiento, consume una reserva geológica finita y vende áridos con stock limitado a contratos de obra. Los pedidos recorren la red vial, ocupan la descarga de constructoras y acreditan ingresos a la cantera. UI de abastecimiento informa stock y reservas. Disponible Online; el pedido de materiales Offline sigue pendiente. Fase 18: 65%. Próximo: hormigonera local y áridos que pasan a losas/obras.

@@ -385,3 +385,7 @@ Three.js añade detalles decorativos y diferenciación a todas las familias, pat
 ### Ajuste Alfa 0.105 · primeros pasos guiados
 
 El panel Ayuda ahora ofrece seis pasos con estado derivado del juego (calles existentes, suelo industrial, fábrica contratada, pedido de materiales y equipamientos). No confundir un permiso amarillo con la obra ni marcar avances sin evidencia: el primer paso es orientación, los restantes dependen de entidades existentes. Tests en cityGuide verifican este comportamiento. Los paneles Avisos y Ayuda son accesibles desde el dock.
+
+### Mejora visual final de Alfa 0.105
+
+Se sustituyen los cubos genéricos de basura por bolsas con silueta y nudo, y las barreras de calles deterioradas usan postes y señalización. Los incendios reales activos reciben una animación sutil de llama y humo en Three.js; sin un incendio emitido por el motor, no aparecen efectos. Mantener consumo de recursos bajo y validar captura responsive.

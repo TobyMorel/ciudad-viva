@@ -15,7 +15,8 @@
         "Guía paso a paso para los materiales, especialmente hormigón: comprar a proveedor mediante Obras → Pedir materiales, o construir Cantera y Hormigonera en dos parcelas industriales. Las tarjetas de obra muestran consumos pendientes y causas de espera.",
         "Las fábricas ahora se eligen por especialidad explícita (cantera, hormigonera, procesadora, aserradero, metalúrgica), con la misma contratación y financiación reales Online/Offline. Se conserva el orden automático anterior cuando no se elige especialidad.",
         "Segunda pasada de fachadas y props 3D en todas las familias de edificios y fábricas por actividad, iluminación y estilo urbano pastel; mantiene los vehículos y la ruta física. Pruebas del flujo industrial, avisos, stock, versión y 390/1440 px.",
-        "Panel Ayuda con seis primeros pasos explicados y progreso calculado por calles, zonas, fábricas, pedidos y edificios existentes; se distingue visualmente lo pendiente de lo preparado."
+        "Panel Ayuda con seis primeros pasos explicados y progreso calculado por calles, zonas, fábricas, pedidos y edificios existentes; se distingue visualmente lo pendiente de lo preparado.",
+        "Detalles de incidentes 3D: llamas animadas solo durante incendios activos, bolsas de residuos con silueta reconocible y barreras de calles deterioradas visiblemente señalizadas."
       ]
     },
     {

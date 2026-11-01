@@ -33,7 +33,7 @@ test('Offline: especialidad industrial se reserva al contratar y paga caja opera
 
 test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por hormigón',async()=>{
   const s=seed();
-  s.day=30;s.lastMonth=0;s.employment=100;
+  s.day=30;s.lastMonth=0;s.employment=100;s.money=1000000;
   const access={powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100};
   const quarry={x:4,y:9,kind:'factory',name:'Cantera de prueba',status:'habilitado',utilityAccess:{...access},monthlyOperatingCost:320,
     business:{id:'quarry-test',name:'Cantera de prueba',industryType:'quarry',status:'abierto',cash:30000,jobSlots:20,wage:12,quarryReserve:100,aggregateStock:0}};
@@ -49,7 +49,7 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     person.monthlyWage=12;assigned++;
   }
   assert.equal(assigned,40,'La semilla debe tener 40 trabajadores elegibles para las dos plantas');
-  await scenario(s,async({tick})=>{
+  await scenario(s,async({tick,adapter})=>{
     let v=await tick();
     const q=v.buildings.find(b=>b.business?.id==='quarry-test').business;
     assert.ok(q.lastProduction>0,'La cantera produce con trabajadores y servicios');
@@ -67,6 +67,38 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     const factory=v.buildings.find(b=>b.business?.id==='concrete-test').business;
     assert.ok(factory.lastProduction>0,'En el siguiente cierre se debe producir hormigón');
     assert.equal(v.supply.suppliers['Hormigonera local'].concrete,factory.concreteStock);
+
     assert.ok(v.localIndustry.concreteProduced>=factory.lastProduction);
+
+    // Venta de cemento local y consumo por una obra pública real.
+    v=await adapter.request('/api/action',{action:'place',kind:'road',x:4,y:11,contractor:'Sur Obras'});
+    const projectId=v.projects.at(-1).id;
+    let stalled=false;
+    for(let day=0;day<20;day++){
+      v=await tick();
+      const project=v.projects.find(p=>p.id===projectId);
+      stalled=project?.status==='suspendida'&&String(project.cause||'').includes('hormigón');
+      if(stalled)break;
+    }
+    assert.ok(stalled,'La obra debe detenerse cuando no tiene hormigón');
+    const before=v.buildings.find(b=>b.business?.id==='concrete-test').business;
+    const beforeStock=before.concreteStock,beforeCash=before.cash;
+    v=await adapter.request('/api/action',{action:'orderMaterials',projectId,supplier:'Hormigonera local',items:{concrete:6},destinationId:'yard'});
+    const order=v.supply.orders.at(-1);
+    assert.equal(order.status,'en tránsito');
+    assert.equal(order.supplier,'Hormigonera local');
+    assert.equal(v.buildings.find(b=>b.business?.id==='concrete-test').business.concreteStock,beforeStock-6);
+    assert.ok(v.buildings.find(b=>b.business?.id==='concrete-test').business.cash>beforeCash);
+    let arrived=false;
+    for(let day=0;day<65;day++){
+      v=await tick();
+      arrived ||=v.supply.orders.find(o=>o.id===order.id)?.status==='entregado';
+      if(!v.projects.some(p=>p.id===projectId))break;
+    }
+    assert.ok(arrived,'El hormigón local debe entregarse por carretera');
+    assert.ok(!v.projects.some(p=>p.id===projectId),'La obra debe superar inspección');
+    assert.ok(v.roads.some(([x,y])=>x===4&&y===11));
+    assert.equal(v.supply.contractors['Sur Obras'].concrete,0,'Se consumen las seis unidades, sin duplicación');
   });
 });
+

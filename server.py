@@ -161,6 +161,27 @@ def settle_industrial_vendor_offer(supplier, material, quantity, offer):
     industrial[metric]=industrial.get(metric,0)+quantity
 
 
+def renew_private_commercial_leases():
+    """Alquileres negocian un ajuste mensual según actividad efectiva; sin transferencias ficticias."""
+    for site in state.get("buildings",[]):
+        if site.get("kind")!="shop" or site.get("business",{}).get("status")!="abierto":continue
+        firm=site["business"]
+        base=50+max(0,12-abs(site["x"]-12)-abs(site["y"]-10))*3
+        old=max(0,int(firm.get("monthlyRent",base)))
+        sales=max(0,int(firm.get("lastSales",0)))
+        demand=max(0,int(firm.get("lastDemand",0)))
+        profit=int(firm.get("lastProfit",0))
+        if sales>=max(8,demand*3//4) and profit>old*2:
+            new=min(180,old+5);cause="Alta actividad comercial"
+        elif sales<=2 and profit<0:
+            new=max(30,old-5);cause="Baja ocupación económica"
+        else:continue
+        if new!=old:
+            firm["monthlyRent"]=new
+            firm["lastLeaseReviewDay"]=state["day"]
+            firm["lastLeaseCause"]=cause
+            ev("Alquiler comercial renegociado",f"{site.get('name','Comercio')}: renta mensual $ {old} → $ {new} por {cause.lower()}.")
+
 def reprice_private_shops():
     """Competencia minorista mensual: precios según demanda, stock y margen real."""
     for site in state.get("buildings",[]):
@@ -3653,6 +3674,7 @@ def tick_one_day():
         public_payroll=pay_public_wages(economic)
         simulate_airport_month(economic)
         tourism_tax=simulate_hotel_month(economic)
+        renew_private_commercial_leases()
         activity=simulate_business_month(economic)
         rebalance_private_staffing(economic)
         reprice_private_shops()

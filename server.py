@@ -2960,12 +2960,13 @@ def advance_traffic_queues(commutes,roads):
 
 def order_route_eta(order):
     distance=max(0,order.get("travelDistance",len(order.get("route",[]))-1))
-    factor=traffic_factor(order.get("route",[]),order)
+    route=order.get("route",[]);index=min(max(0,len(route)-1),max(0,int(math.floor(order.get("travelledDistance",0)))))
+    factor=traffic_factor(route[index:],order)
     remaining=max(0,distance-order.get("travelledDistance",0))
     travel_days=math.ceil(remaining*factor/6)
     ready=max(state["day"],order.get("supplierReadyDay",state["day"]))
     arrival=max(state["day"]+1,max(state["day"],ready)+travel_days)
-    planned=order.get("supplierReadyDay",state["day"])+math.ceil(distance/6)
+    planned=order.get("plannedArrivalDay",order.get("supplierReadyDay",state["day"])+math.ceil(distance/6))
     return factor,max(0,arrival-planned),arrival
 
 def pay_public_wages(workforce):
@@ -3412,6 +3413,11 @@ def process_supply_orders():
         destination=order.get("destinationId","yard")
         location=storage_location(destination)
         origin=tuple(order.get("source",(4,10)))
+        if order["status"]=="en tránsito" and order.get("currentPosition"):
+            origin=tuple(order["currentPosition"])
+        elif order["status"]=="en tránsito" and len(order.get("route",[]))>1:
+            old_route=order["route"];index=min(len(old_route)-1,max(0,int(math.floor(order.get("travelledDistance",0)))))
+            origin=tuple(old_route[index]);order["currentPosition"]=[*origin]
         route=route_between(origin,(location["x"],location["y"])) if location else None
         if route is None:
             if order.get("statusCause")!="Sin acceso de camiones":
@@ -3419,15 +3425,28 @@ def process_supply_orders():
             order["status"]="en tránsito";order["statusCause"]="Sin acceso de camiones";order["arrivalDay"]=state["day"]+1;order["route"]=[]
             order.pop("forkliftId",None);order["unloadWorkers"]=0;order["unloadProgress"]=0
             continue
-        order["route"]=route
         if order["status"]=="en tránsito":
+            order.setdefault("supplierReadyDay",order.get("orderedDay",state["day"]))
+            old_route=order.get("route",[])
+            if old_route and order.get("currentPosition"):
+                index=min(len(old_route)-1,max(0,int(math.floor(order.get("travelledDistance",0)))))
+                suffix=old_route[index:]
+            else:suffix=[]
+            if suffix and route==suffix:
+                route=old_route
+            else:
+                order["travelledDistance"]=0
+                order["travelDistance"]=max(0,len(route)-1)
+                order["currentPosition"]=list(origin)
+            order["route"]=route
             order.setdefault("travelDistance",max(0,len(route)-1))
             order.setdefault("travelledDistance",0)
-            order.setdefault("supplierReadyDay",order.get("orderedDay",state["day"]))
-            order["travelDistance"]=max(0,len(route)-1)
+            order.setdefault("plannedArrivalDay",order["supplierReadyDay"]+math.ceil(max(0,len(route)-1)/6))
             if state["day"]>order["supplierReadyDay"] and order["travelledDistance"]<order["travelDistance"]:
-                factor=traffic_factor(route,order)
+                route_index=min(max(0,len(route)-1),max(0,int(math.floor(order["travelledDistance"]))))
+                factor=traffic_factor(route[route_index:],order)
                 order["travelledDistance"]=min(order["travelDistance"],order["travelledDistance"]+6/max(1,factor))
+            if route:order["currentPosition"]=route[min(len(route)-1,max(0,int(math.floor(order["travelledDistance"]))))]
             factor,delay,arrival=order_route_eta(order)
             order["trafficFactor"]=round(factor,2);order["trafficDelayDays"]=delay;order["arrivalDay"]=arrival
             order["routeProgress"]=1 if not order["travelDistance"] else min(1,order["travelledDistance"]/order["travelDistance"])
@@ -3441,6 +3460,8 @@ def process_supply_orders():
         if order["status"]=="esperando equipo":
             begin_unloading(order)
             continue
+        else:
+            order["route"]=order.get("route") or route
         order["unloadProgress"]=min(1,max(0,(state["day"]-order.get("unloadStartDay",state["day"]))/max(1,order.get("unloadUntilDay",state["day"]+1)-order.get("unloadStartDay",state["day"]))))
         if state["day"]<order.get("unloadUntilDay",state["day"]):continue
         order["status"]="entregado";order["deliveredDay"]=state["day"];order["statusCause"]="";order["unloadWorkers"]=0;order.pop("forkliftId",None)

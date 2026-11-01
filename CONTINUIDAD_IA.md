@@ -1,12 +1,12 @@
 # Continuidad de desarrollo para otra IA
 
-## Continuidad inmediata · Alfa 0.118
+## Continuidad inmediata · Alfa 0.119
 
-La fase 7 incorpora rutas ponderadas en Online (`server.py:route_between`) y Offline (`offline.js:offlineRoadRoute`). El costo compara distancia, cola persistente por tramo/capacidad y una penalización temporal en calles próximas a proyectos viales activos. Sigue excluyendo tramos cerrados por accidentes y calzadas inutilizables. Como los pasajeros y pedidos recalculan el recorrido con el grafo actual, una conexión alternativa redistribuye el tránsito y puede modificar distancia, asistencia laboral y plazo de entrega; al bajar la cola se recupera la ruta directa. Las obras cercanas elevan fricción hasta que finalizan.
+Los desvíos de fase 7 ya afectan el transporte de materiales en ambos motores. Online (`server.py:process_supply_orders`) y Offline (`offline.js:processOfflineMaterialOrders`) conservan `currentPosition`, la última intersección alcanzada. Cada día buscan ruta desde ese punto; si coincide con el sufijo vigente mantienen el avance; si la ruta cambió reinician el progreso solo desde la intersección actual. Al cerrarse el camino el camión espera con su posición guardada, y reanuda desde ahí cuando vuelve a haber conexión. El tiempo previsto usa `plannedArrivalDay` como línea base, sin reiniciar la demora al recalcular la ruta. Online aplica congestión de los tramos aún pendientes; Offline incorpora el aumento real de longitud por el desvío.
 
-Pruebas de esta entrega: 64 tests Python; 46 tests Node no visuales; `py_compile`, `node --check` y stress de 30 años en cuatro perfiles pasan. El chequeo Playwright de marcadores pasó tras instalar Playwright temporalmente; la suite responsive completa excedió 90 segundos con SwiftShader y se interrumpió antes de terminar; el chequeo de UI de utilidades no se alcanzó. La estructura de interfaz no cambió. Fase 7=95% orientativo; el avance global sigue sin porcentaje porque falta ponderación verificable común para las 34 fases. LAN física no comprobada; estado Vercel por verificar tras publicación.
+Regresiones: `tests/test_supply_detour_progress.py` y `tests/test_supply_detour_progress_offline.mjs`; el flujo de compras automáticas Offline conserva su entrega tras el cambio. Antes de la entrega pasaron 65 tests Python, 47 Node no visuales y stress de 30 años/4 perfiles. No se cambió la interfaz. Repetir pruebas responsive cuando haya entorno GPU/de navegador con tiempo suficiente; LAN física no comprobada.
 
-Siguiente mecánica: ampliar el efecto medido de rutas alternativas en logística/obras y probar redes grandes; luego continuar sistemas pendientes de otras fases sin dedicar entregas a pulido menor.
+Fase 7=95% orientativo, no elevar sin medir alivio en redes grandes y fiabilidad de buses. Progreso global no estimable sin pesos comunes verificables para las 34 fases. Próximo sistema: fase 8, previsión presupuestaria móvil de 12 meses, con ingresos, costos, reservas, contratos y deuda conectados al saldo real.
 
 
 ## Continuidad inmediata · Alfa 0.116

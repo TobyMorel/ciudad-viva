@@ -51,7 +51,7 @@ test('Offline: promotor autónomo compra mercancía que llega en camión, no ins
       s=await tick();
       if(orders.every(order=>s.supply.orders.find(o=>o.id===order.id)?.status==='entregado')){arrived=true;break}
     }
-    assert.ok(arrived,'La carga debe llegar por una ruta vial');
+    assert.ok(arrived,'La carga debe llegar por una ruta vial: '+JSON.stringify(s.supply.orders.filter(o=>o.projectId===project.id).map(o=>({id:o.id,status:o.status,cause:o.statusCause,pos:o.currentPosition,progress:o.travelledDistance,arrival:o.arrivalDay}))));
     const projected=s.projects.find(p=>p.id===project.id);
     assert.ok(!projected||projected.elapsed>=0);
     assert.ok(s.supply.orders.filter(o=>o.projectId===project.id).every(o=>o.deliveredDay),

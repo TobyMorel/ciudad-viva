@@ -1,12 +1,12 @@
 # Siguiente entrega
 
-## Punto exacto · después de Alfa 0.118
+## Punto exacto · después de Alfa 0.119
 
-1. Fase 7 queda en 95% orientativo. Medir cuánto cambian viajes, asistencia laboral y llegada de suministros con congestión, obras activas y aperturas de accesos en ambos motores; optimizar el cálculo para redes grandes.
-2. Después seguir con el sistema jugable pendiente de mayor impacto en fases F, manteniendo mecánicas Online/Offline y sus pruebas de regresión.
-3. Publicar cada entrega a `main`, revisar SHA/estado Vercel, actualizar historial y continuidad, y dejar un ZIP integral. LAN física entre dos equipos sigue pendiente.
+1. Fase 7=95% orientativo. Falta medir el alivio de tráfico en redes densas al abrir accesos alternativos y mejorar la fiabilidad por horario de buses.
+2. Continuar fase 8 con una previsión móvil de 12 meses basada en ingreso municipal, operación, mantenimiento, nómina, contratos reservados y pagos de deuda. Toda proyección debe usar reglas económicas existentes y no alterar la caja hasta que ocurran los cargos.
+3. Publicar a `main`, comprobar estado Vercel, mantener la nota de versión y generar un ZIP integral. La LAN física entre dos equipos y la suite responsive completa siguen pendientes.
 
-Progreso global sin porcentaje: hace falta una matriz estable de pesos y criterios verificables para las 34 fases. Hito actual F; próximo hito: completar la simulación vial de fase 7 y continuar con los sistemas pendientes.
+Progreso global sin porcentaje: falta una ponderación verificable común para las 34 fases. Hito actual F, movilidad y logística; próximo: fase 8, planificación presupuestaria conectada con la economía real.
 
 
 ## Punto exacto · después de Alfa 0.116

@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.118",
+  "currentVersion": "0.119",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.119",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Los pedidos Online y Offline ahora guardan la última intersección alcanzada por cada camión. Cuando una cola u obra cambia el recorrido, el vehículo continúa desde ese punto y no reaparece en otro tramo ni vuelve al proveedor.",
+        "La nueva ruta recalcula distancia restante y hora estimada de llegada. Online usa la demora de tráfico de los tramos pendientes; Offline refleja el recorrido alternativo y su longitud en los días de entrega.",
+        "Se añadieron regresiones de desvío y continuidad física del camión en ambos motores. También se conserva el ETA planeado original para informar la demora acumulada sin reiniciar el calendario al cambiar de camino.",
+        "Verificación: 65 pruebas Python, 47 pruebas Node no visuales, validación sintáctica y estrés de 30 años en cuatro perfiles pasan. No se cambió la interfaz; la última inspección responsive sigue pendiente por el timeout local de SwiftShader. LAN física pendiente.",
+        "Fase 7 permanece en 95% orientativo. Falta completar medición de alivio en ciudades densas y efecto sobre fiabilidad del transporte público. El progreso global sigue sin estimarse porque no hay pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.118",
       "date": "2026-11-01",
@@ -1197,12 +1211,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.116 · desvíos y perturbaciones de movilidad",
-      "detail": "Hacer que obras/cierres viales cambien rutas, tiempos de camiones y alternativas de transporte; verificar alivio de congestión al abrir un acceso alternativo en Online y Offline."
+      "title": "Alfa 0.120 · presupuesto municipal proyectado",
+      "detail": "Fase 8: exponer previsión móvil de 12 meses con ingresos, gastos operativos, contratos, reservas y cuotas de deuda; mostrar cómo una decisión actual cambia el saldo futuro sin crear dinero."
     },
     {
-      "title": "Validación de experiencia",
-      "detail": "Comprobar el panel de tráfico en móvil y escritorio, rendimiento con ciudades densas, sesión LAN física entre dos equipos y contraste visual."
+      "title": "Validación de experiencia y red",
+      "detail": "Revisar pantallas en móvil/escritorio, rendimiento de ciudades densas y conectividad LAN física entre dos equipos."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1276,11 +1290,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 90,
-      "summary": "Viajes laborales y cotidianos, jerarquía y condición vial, semáforos, colectivos, incidentes y colas persistentes por nueve franjas que afectan viajes Online/Offline.",
+      "progress": 95,
+      "summary": "Viajes, jerarquía vial, buses, incidentes, colas por franja, desvíos ponderados y entrega logística desde la posición real del camión.",
       "pending": [
-        "Desvíos y alivio verificable al abrir rutas alternativas; perturbaciones por obras integradas al flujo.",
-        "Completar efecto de colas en entregas y fiabilidad del transporte público; integrar movilidad multimodal posterior."
+        "Medir alivio del tráfico y puntualidad en ciudades densas al abrir accesos alternativos.",
+        "Extender fiabilidad horaria del transporte público y completar criterios restantes de movilidad."
       ]
     },
     {

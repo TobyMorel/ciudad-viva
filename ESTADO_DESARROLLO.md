@@ -1,5 +1,11 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.119 · continuidad de camiones en rutas recalculadas
+
+Los pedidos de materiales conservan su coordenada vial actual en `currentPosition`. Al recalcular el camino, ambos motores detectan si la nueva ruta coincide con el resto del camino anterior; si es igual, el avance se conserva. Si hay un desvío, la ruta nueva parte de la última intersección alcanzada y el contador se reinicia únicamente para ese tramo pendiente. Durante un corte sin ruta, el pedido queda esperando y guarda la última posición. `plannedArrivalDay` conserva el plazo original para calcular demora acumulada aunque la ruta se alargue; la ETA diaria se recalcula con la distancia restante. Online considera congestión en la porción pendiente; Offline representa el desvío mediante sus tramos adicionales. Así los cierres y colas causan demoras logísticas sin teletransportar camiones.
+
+Pruebas: 65 Python, 47 Node no visuales, compilación sintáctica y stress de 30 años × cuatro perfiles pasan. La prueba automática anterior de inversión privada Offline volvió a pasar tras corregir la conversión de coordenadas guardadas. No se cambió la estructura UI. Fase 7=95% orientativo; el global sigue no estimado. La revisión responsive local sigue incompleta por timeout de SwiftShader; LAN física y Vercel se revisarán tras publicar.
+
 ## Alfa 0.118 · desvíos según colas y obras viales
 
 Los motores Online y Offline ya no eligen siempre la ruta con menos tramos: el algoritmo de costo mínimo pondera la distancia, la cola persistente respecto a la capacidad de cada segmento y una penalización temporal en calles cercanas a obras viales activas. Los cortes por choque y los tramos deteriorados continúan cerrados. Los recorridos laborales, respuestas de emergencia y camiones de suministro usan la misma red; por eso un desvío puede cambiar longitud de viaje y fecha estimada de entrega. Una ruta alternativa abierta recibe tránsito al recalcularse la demanda, y una vez despejada la cola el algoritmo vuelve al corredor directo. No se añadieron controles ni textos de interfaz.

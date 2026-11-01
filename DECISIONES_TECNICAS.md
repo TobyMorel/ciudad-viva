@@ -1,5 +1,9 @@
 # Decisiones técnicas · Ciudad Viva
 
+## Alfa 0.119 · continuidad física de carga durante desvíos
+
+Cada pedido en tránsito persiste `currentPosition` como la última intersección alcanzada. Al cambiar el camino, se busca desde allí y se compara con el sufijo anterior. Un camino sin cambios mantiene `travelledDistance`; un camino nuevo vuelve a cero solo para el segmento restante. Esto evita reiniciar el trayecto en el proveedor o mover el vehículo a otra calle. Un cierre sin alternativa conserva ubicación y espera. `plannedArrivalDay` se fija al salir y no se altera cuando se recalcula, para comparar la ETA actual contra el compromiso original. La lógica se replica en Online/Offline; Online incluye el factor de flujo de las calles restantes y Offline usa la distancia física recalculada.
+
 ## Alfa 0.118 · selección de rutas considerando congestión y obras
 
 Online y Offline usan Dijkstra determinista con costo por tramo: una unidad base de distancia, más penalización acotada por la cola persistente/capacidad, y fricción temporal cuando una obra vial activa está junto al tramo. Los desempates siguen coordenadas estables para que una misma partida genere los mismos recorridos. Las calles cerradas por incidentes o deterioro se filtran antes de buscar la ruta. Se aplica el mismo criterio a pasajeros, emergencias y logística para evitar redes de transporte incompatibles. La interfaz no cambia; la ruta alimenta los tiempos y reportes existentes. Fase 7 avanza a 95% por alternativa dinámica funcional; falta medición de impacto integral y rendimiento sobre redes grandes. El progreso global sigue sin base ponderada verificable.

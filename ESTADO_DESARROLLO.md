@@ -668,3 +668,11 @@ Implementados en ambos motores acuerdos cantera/hormigonera que inmovilizan stoc
 ## Alfa 0.98 · renegociación de vencimientos industriales
 
 Online y Offline admiten `renegotiateTradeContract` para acuerdos activos, una vez, cuando hay remesas pendientes con plazo vigente y corte vial comprobado, ambas firmas abiertas y dinero de compensación. La extensión de 14 días exige pago directo del 5% del contrato (mínimo $20) entre empresas, sin modificar lotes reservados ni fondos en custodia. Se persisten causa, fecha, días y compensación; el panel Economía permite decidir. Tests Online/Offline y verificación responsive integrados al CI. La cobertura de fase 17 sigue en 80% y 18 en 90%; el global carece de ponderación. LAN física/Vercel sin probar.
+
+## Alfa 0.99 · descarga siderúrgica compartida
+
+En ambos motores, el cupo diario `unloadingCapacity` de un puerto se comparte entre **todos** los embarques de acero que llegaron al mismo muelle: si dos barcos traen 5 y 8 unidades y el puerto solo admite 7 al día, se entregan 5+2 el primer día y las 6 restantes al siguiente. La regla conserva el tiempo de navegación, la necesidad de puerto operativo, el acceso vial y los costos ya pagados. `lastUnloadedUnits` guarda el volumen diario por remesa y evita superar el límite en reintentos o al reabrir un guardado. Para remesas heredadas sin volumen diario registrado, el motor utiliza una estimación conservadora, sin migración obligatoria del esquema.
+
+Se añadieron regresiones Online y Offline con dos cargamentos en el mismo puerto y comprobaciones de idempotencia; el workflow `validation.yml` incorpora el nuevo test Offline. Se corrigió el escenario responsive de prórrogas: la orden tenía un proveedor ausente y se cancelaba por insolvencia ficticia; ahora tiene comprador y vendedor existentes, materia identificable y corte de calles real. El CI debe confirmar el resultado después de publicar. Se conserva fase 33 en 40% y fase 17 en 80%; el progreso global sigue sin estimación verificable. Las verificaciones LAN física y Vercel no se realizaron.
+
+**Próximo trabajo:** verificar el resultado CI de Alfa 0.99; completar contratos industriales a plazo en otras cadenas y ampliar observabilidad anual del estrés de 30 años para detectar pérdidas de capital, migración extrema y cuellos de botella portuarios.

@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.126
+
+La previsión fiscal ahora expone `earlyWarning` Online (`municipal_finance_forecast`) y Offline (`offlineMunicipalForecast`) con primer mes de `fundingGap`: etiqueta/offset, faltante, presiones del mes y sugerencias. Es solo proyección; no toca caja ni asignaciones. `game.js` lo muestra fuera del acordeón mensual para que sea visible sin abrirlo. `tests/test_municipal_forecast_ui.mjs` carga una ciudad insolvente y mide aviso/textos/overflow/solapamientos en 390×844 y 1440×900.
+
+Fase 8=95% orientativo; falta escenario fiscal recuperable punta a punta y prueba de cinco servicios. Global no estimable sin pesos comunes verificables; LAN física pendiente. Suite: 80 Python, 54 Node, stress 30 años × 4 perfiles y aviso responsive pasan.
+
+**Siguiente:** ensayar déficit moderado, mora, decisiones y recuperación de cinco servicios en ambos motores.
+
 ## Continuidad inmediata · Alfa 0.125
 
 La fase 8 ahora mide `taxes.lastReport.pressure` (ambos motores): tributos pagados / salarios de hogares + ventas empresariales + tributos. La barra “Presión impositiva” existente en Economía consume este dato. Sobre 5%, cada tramo completo adicional de 5 puntos resta un punto de apoyo distrital y un candidato mensual a la migración (máximo cinco). La presión alta solo usa pagos reales; los impagos siguen con sus efectos de mora. Los helpers Online son `tax_pressure_penalty` y `tax_adjusted_migration_demand`; Offline exporta `taxPressurePenalty` y `taxAdjustedMigrationDemand`.

@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.125",
+  "currentVersion": "0.126",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.126",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "La previsión de 12 meses ahora genera una advertencia anticipada al detectar el primer mes en que la caja y la reserva no cubren los compromisos proyectados.",
+        "El aviso muestra el mes, el faltante estimado y las presiones presentes: costos operativos, mora de programas, pagos de obras y cuotas. Sugiere revisar partidas, reprogramar compromisos y revisar impuestos/reserva.",
+        "Online y Offline calculan y muestran el mismo aviso sin cambiar la caja real. El panel de Economía lo deja visible antes de abrir el detalle mensual.",
+        "Verificación: 80 pruebas Python, 54 Node Offline, stress de 30 años en cuatro perfiles y Playwright del aviso de Economía en 390×844 y 1440×900; se comprueban textos, ancho y solapamientos.",
+        "La fase 8 avanza de 90% a 95% por advertencia preventiva accionable basada en insolvencia proyectada. Falta demostrar un escenario recuperable completo y probar la continuidad de cinco servicios en una crisis fiscal de punta a punta."
+      ]
+    },
     {
       "version": "0.125",
       "date": "2026-11-01",
@@ -1296,8 +1310,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.126 · crisis fiscal jugable",
-      "detail": "Fase 8: ejecutar una crisis moderada de punta a punta y comprobar los efectos en caja, impuestos, deuda, empleo, hogares, apoyo y cinco servicios, con decisiones de recuperación."
+      "title": "Alfa 0.127 · crisis fiscal recuperable",
+      "detail": "Fase 8: ejecutar escenarios Online/Offline que pasen de superávit a déficit y regresen mediante ajustes de presupuesto, deuda y operación, observando empleo, apoyo y cinco servicios."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1385,11 +1399,11 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 90,
+      "progress": 95,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Completar y medir un escenario integral donde cambios fiscales desencadenen consecuencias económicas y políticas graduales.",
-        "Validar en una crisis de punta a punta la recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
+        "Validar una crisis moderada recuperable de punta a punta con decisiones de impuestos, deuda y programas.",
+        "Comprobar durante la crisis la continuidad y recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
         "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },

@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.126
+
+## Advertencia anticipada de insolvencia
+
+- La previsión mensual alerta por primera vez el mes donde caja/reserva no alcanzan, informa faltante, costos operativos, obras, mora de programas y cuotas, y ofrece medidas revisables. La consulta no cambia el estado real.
+- El aviso queda visible en Economía con la previsión cerrada; Online y Offline usan el mismo criterio.
+- Playwright comprobó en 390×844 y 1440×900 el texto del aviso, sus límites, la previsión de 12 meses y la ausencia de recortes/solapamientos. Pasan 80 Python, 54 Node y stress de 30 años × 4 perfiles.
+- Fase actual: 8, 95% orientativo. Falta ejecutar y medir una crisis recuperable que conserve salud, educación, residuos, redes y transporte. Global no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.125
 
 ## Presión tributaria y atractivo urbano

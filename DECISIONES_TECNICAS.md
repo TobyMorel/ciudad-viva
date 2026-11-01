@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.126
+
+## Advertencia de caja insuficiente proyectada
+
+`municipal_finance_forecast` y `offlineMunicipalForecast` toman el primer registro de los 12 meses con `fundingGap > 0`. Devuelven `earlyWarning` con número/etiqueta de mes, mayor faltante entre el hueco de caja y el saldo libre negativo, causas observadas del mes y tres opciones de gestión. Solo es información proyectada: no cobra, recorta ni pausa nada. Se muestra encima del acordeón fiscal para que el riesgo no requiera abrir el calendario.
+
+El aviso distingue operación mayor que ingresos, certificados de obras, mora presupuestaria y cuotas no cubiertas. Ambos motores conservan los mismos nombres de campo y decisión; el test UI cubre el caso de advertencia en móvil y escritorio.
+
 # Decisiones técnicas · Alfa 0.125
 
 ## Presión fiscal sobre población y apoyo

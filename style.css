@@ -308,3 +308,6 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .forecast-month>div span,.forecast-month>div b{min-width:0;overflow-wrap:anywhere}
 .forecast-month .forecast-free{padding-top:5px;border-top:1px solid var(--line,#d8e2db);font-weight:700}
 @media(max-width:600px){.forecast-months{grid-template-columns:minmax(0,1fr)}.forecast-month{padding:10px}.municipal-forecast{padding:8px}.forecast-obligations{grid-template-columns:minmax(0,1fr)}}
+
+.finance-early-warning{box-sizing:border-box;width:100%;min-width:0;margin:9px 0;overflow-wrap:anywhere}
+.finance-early-warning>*{min-width:0;overflow-wrap:anywhere}

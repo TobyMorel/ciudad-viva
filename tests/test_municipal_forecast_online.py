@@ -46,6 +46,10 @@ class MunicipalForecast(unittest.TestCase):
         forecast=server.municipal_finance_report(0,100000)["forecastMonths"]
         self.assertTrue(forecast["months"][0]["debtDefault"])
         self.assertEqual(forecast["months"][0]["debtArrears"],500)
+        self.assertIsNotNone(forecast['earlyWarning'])
+        self.assertEqual(forecast['earlyWarning']['month'],1)
+        self.assertGreater(forecast['earlyWarning']['shortfall'],0)
+        self.assertTrue(forecast['earlyWarning']['causes'])
         self.s["money"]=1000000;self.s["monthlyIncome"]=1000000;loan["paymentArrears"]=500
         recovered=server.municipal_finance_report(1000000,0)["forecastMonths"]
         self.assertGreaterEqual(recovered["months"][0]["debtService"],1000)

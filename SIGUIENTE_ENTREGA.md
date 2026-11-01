@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.126
+
+1. Probar una crisis fiscal recuperable completa Online/Offline: iniciar estable, presionar caja mediante compromisos o ingresos menores, recibir la advertencia, entrar en mora y tomar medidas.
+2. Medir cómo sostener o recuperar salud, educación, residuos, redes y colectivos, junto con empleos, migración y apoyo ciudadano.
+3. Validar que la advertencia llega antes del cierre, muestra causas reales y deja al jugador decidir entre ajustes/reprogramación/reserva.
+4. Priorizar contenido del roadmap. Si se cambia la interfaz, inspeccionar 390×844 y 1440×900. Publicar en `main`, verificar SHA/CI/Vercel y entregar ZIP.
+
+Fase actual: 8, 95% orientativo; próximo: escenario fiscal integral y recuperación de cinco servicios. Progreso global no estimable por falta de pesos comunes verificables para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.125
 
 1. Construir una prueba jugable de crisis fiscal moderada: subir tasas o reducir presupuesto, seguir cobros reales, mora, solvencia comercial y operación de servicios; la presión impositiva frena llegadas, no expulsa residentes por sí sola.

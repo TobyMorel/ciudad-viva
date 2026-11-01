@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.112",
+  "currentVersion": "0.113",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.113",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 85,
+      "overallProgress": null,
+      "changes": [
+        "Los iconos de avisos del mapa se reproyectan por frame durante el arrastre y el zoom, también en los controles de cámara; Playwright verifica movimiento antes de soltar en móvil y escritorio.",
+        "Accidentes viales deterministas surgen de calzada deteriorada, congestión o lluvia; cierran temporalmente un tramo, afectan rutas y muestran causa en los avisos.",
+        "Bomberos disponibles responden por una ruta vial y el vehículo de rescate es visible. Sin unidad o ruta, el cierre dura más y deja costos/efectos municipales al resolverse; Online y Offline comparten el ciclo."
+      ]
+    },
     {
       "version": "0.112",
       "date": "2026-11-01",
@@ -1115,8 +1127,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.113 · accidentes y respuesta vial",
-      "detail": "Crear incidentes viales con causas observables, cierre temporal, demoras y respuesta municipal."
+      "title": "Alfa 0.114 · capacidad por horario y colas",
+      "detail": "Añadir variación horaria reproducible de demanda, colas persistentes y su efecto en viajes laborales y transporte colectivo."
     },
     {
       "title": "Validación de experiencia",
@@ -1194,11 +1206,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 80,
-      "summary": "Capacidad diferenciada por tramo, deterioro vial y congestión reflejada en viajes, asistencia y mapa Online/Offline",
+      "progress": 85,
+      "summary": "Capacidad diferenciada por tramo, congestión y accidentes con cierre, causa y respuesta municipal Online/Offline",
       "pending": [
         "Capacidad y flujo por franja horaria con colas persistentes.",
-        "Accidentes con causas, bloqueo vial y respuesta municipal."
+        "Incidentes adicionales de movilidad y transporte multimodal con capacidad y servicio integrados."
       ]
     },
     {

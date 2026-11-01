@@ -1,5 +1,13 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.113 · iconos de cámara e incidentes viales
+
+Los iconos flotantes del mapa se reproyectan por frame mientras se arrastra o cambia zoom/rotación; el test Playwright verifica el desplazamiento antes de soltar a 390×844 y 1440×900. Los incidentes viales tienen causa por deterioro, congestión o lluvia, cierran el tramo afectado, modifican rutas y generan alerta localizada. Bomberos con dotación/ruta pueden responder; sin respuesta, la calle permanece cerrada más tiempo y el servicio/costo refleja la demora. Online y Offline implementan el ciclo. Fase 7: 85% orientativo. Progreso total sin estimar por falta de pesos verificables estables para las 34 fases.
+
+Pendiente de verificación de esta versión: suites completas y publicación; la prueba física entre equipos LAN queda pendiente.
+
+# Estado de desarrollo · Ciudad Viva
+
 ## Alfa 0.112 · capacidad vial dependiente del estado de las calles
 
 Online y Offline calculan el flujo por tramo y su demora: avenidas estructurales admiten el doble de flujo que calles barriales y el deterioro reduce esa capacidad. Los tiempos, asistencia laboral y velocidad visual de los viajes motorizados incorporan congestión; también se cubren regresos y viajes cotidianos. Python 55/55 y Offline 40/40 pasan. Fase 7: 80%. Global sin estimar por falta de pesos estables del roadmap.

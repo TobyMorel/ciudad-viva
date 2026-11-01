@@ -1640,7 +1640,8 @@ def is_water(x,y):
 
 def route_between(start_coord, destination_coord):
     condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}
-    roads={tuple(r) for r in state["roads"] if condition.get(tuple(r),82)>=25}
+    accident_closures={(i.get("x"),i.get("y")) for i in state.get("roadIncidents",{}).get("events",[]) if i.get("closed") and i.get("status") in ("en_respuesta","sin_respuesta")}
+    roads={tuple(r) for r in state["roads"] if condition.get(tuple(r),82)>=25 and tuple(r) not in accident_closures}
     adjacent=lambda point:{(point[0]+dx,point[1]+dy) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))}
     starts={start_coord} if start_coord in roads else adjacent(start_coord)&roads
     goals={destination_coord} if destination_coord in roads else adjacent(destination_coord)&roads
@@ -3870,7 +3871,8 @@ def tick_one_day():
     advance_urban_renewals()
     advance_adaptive_reuse()
     advance_utility_repairs()
-    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True);fire_service_report(advance=True)
+    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
+    daily_economy=commute_model();fire_service_report(daily_economy["workplaces"],advance=True);road_incident_report(daily_economy,advance=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
         police_service_report(advance=True)
@@ -4510,6 +4512,55 @@ def education_service_report(workplaces=None,advance=False):
     return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,
             "coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(supplies)}
 
+def road_incident_report(traffic=None,advance=False):
+    """Choques en tramos congestionados/deteriorados; cierres y rescate no son instantáneos."""
+    global _commute_cache_key,_commute_cache
+    report=state.setdefault("roadIncidents",{"events":[],"lastCheckedDay":0,"generated":0,"responded":0,"unanswered":0})
+    events=report.setdefault("events",[]);day=int(state.get("day",1));active=[i for i in events if i.get("status") in ("en_respuesta","sin_respuesta")]
+    if advance:
+        for incident in active:
+            incident["remainingDays"]=max(0,int(incident.get("remainingDays",1))-1)
+            if incident["remainingDays"]:continue
+            asset=next((a for a in state.setdefault("roadAssets",[]) if a.get("x")==incident["x"] and a.get("y")==incident["y"]),None)
+            if asset:asset["accidentClosed"]=False;asset["quality"]=max(0,float(asset.get("quality",82))-2)
+            _commute_cache_key=None;_commute_cache=None
+            cost=450 if incident.get("responseStatus")=="despachada" else 900
+            state["money"]=max(0,int(state.get("money",0))-cost)
+            if incident.get("responseStatus")=="despachada":
+                incident.update({"status":"despejado","clearedDay":day});report["responded"]+=1
+                ev("Accidente despejado",f"La unidad vial liberó calle {incident['x']+1},{incident['y']+1} tras una jornada. Costo de limpieza: ${cost}.")
+            else:
+                incident.update({"status":"despejado sin respuesta","clearedDay":day});report["unanswered"]+=1;state["services"]=max(0,state.get("services",0)-1)
+                ev("Calle despejada sin asistencia",f"El choque de calle {incident['x']+1},{incident['y']+1} quedó sin dotación municipal; la demora subió y el mantenimiento vial asume ${cost}.")
+        report["lastCheckedDay"]=day
+        active=[i for i in events if i.get("status") in ("en_respuesta","sin_respuesta")]
+        if day%15==8 and not active and len(state.get("roads",[]))>2:
+            traffic=traffic or commute_model();flows=traffic.get("segmentFlow",{});assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])};drainage=state.get("utilities",{}).get("report",{}).get("drainage",{});rain=float(drainage.get("rainfallMm",0));candidates=[];road_set={tuple(r) for r in state.get("roads",[])}
+            for x,y in road_set:
+                asset=assets.get((x,y),{});quality=float(asset.get("quality",82));
+                if quality<25 or asset.get("accidentClosed"):continue
+                flow=max((flows.get(tuple(sorted(((x,y),(x+dx,y+dy)))),0) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)) if (x+dx,y+dy) in road_set),default=0)
+                capacity=road_traffic_capacity((x,y),(x+1,y) if (x+1,y) in road_set else (x,y+1))
+                ratio=flow/max(.1,capacity);risk=max(0,min(65,(ratio-.35)*24+(50-quality)*.8+max(0,rain-10)*.6))
+                if risk>=5 and stable_skill(f"{day}:{x}:{y}","accidente vial")%100<risk:candidates.append((risk,ratio,quality,x,y))
+            if candidates:
+                risk,ratio,quality,x,y=max(candidates,key=lambda c:(c[0],-c[3],-c[4]));cause="calzada deteriorada" if quality<45 else "pavimento mojado" if rain>=18 else "tránsito congestionado" if ratio>=.85 else "maniobra de emergencia";workplaces=traffic.get("workplaces",[])
+                fire=fire_service_report(workplaces);choices=[]
+                for station in fire.get("stations",[]):
+                    if station["firefighters"]<4 or station["readyDay"]>day:continue
+                    building=next((b for b in state["buildings"] if b.get("kind")=="fireStation" and b.get("x")==station["x"] and b.get("y")==station["y"]),None);path=route_between((station["x"],station["y"]),(x,y)) if building else None
+                    if path:choices.append((len(path),station,building,path))
+                response=None
+                if choices:
+                    _,unit,building,path=min(choices,key=lambda c:(c[0],c[1]["x"],c[1]["y"]));building["dispatchReadyDay"]=day+1;response={"status":"despachada","station":unit["name"],"stationX":unit["x"],"stationY":unit["y"],"route":path,"responseMinutes":round(5+max(0,len(path)-1)*2.5)}
+                asset=assets.get((x,y))
+                if not asset:asset={"x":x,"y":y,"quality":quality,"monthlyCost":15};state.setdefault("roadAssets",[]).append(asset)
+                asset["accidentClosed"]=True;incident={"id":f"road-{day}-{x}-{y}","x":x,"y":y,"day":day,"cause":cause,"flowRatio":round(ratio,2),"roadQuality":round(quality,1),"status":"en_respuesta" if response else "sin_respuesta","responseStatus":"despachada" if response else "sin dotación o ruta","remainingDays":1 if response else 3,"closed":True,"cleanupCost":450 if response else 900,**(response or {})};events.append(incident);events[:]=events[-40:];report["generated"]+=1
+                _commute_cache_key=None;_commute_cache=None
+                ev("Choque vial: calle cerrada",f"Colisión en calle {x+1},{y+1} por {cause}. Flujo/capacidad {ratio:.2f}; calidad vial {quality:.0f}%. {('Responde '+response['station']+'; limpieza en una jornada.' ) if response else 'Sin cuadrilla alcanzable: el cierre puede durar tres jornadas.'}")
+    return {"day":day,"activeIncidents":[dict(i) for i in events if i.get("status") in ("en_respuesta","sin_respuesta")],"recentIncidents":[dict(i) for i in events[-8:][::-1]],"generated":report.get("generated",0),"responded":report.get("responded",0),"unanswered":report.get("unanswered",0)}
+
+
 def fire_service_report(workplaces=None,advance=False):
     """Incendios urbanos deterministas: cobertura, despacho y daño dependen de personal y calles."""
     fire=state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
@@ -4613,7 +4664,7 @@ def public_state(player_id=None):
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
     view["trainingCatalog"]=training_catalog()
-    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"]);view["policeReport"]=police_service_report(commute["workplaces"])
+    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"]);view["policeReport"]=police_service_report(commute["workplaces"]);view["roadIncidentReport"]=road_incident_report()
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")

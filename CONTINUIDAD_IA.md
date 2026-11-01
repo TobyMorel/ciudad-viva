@@ -1,5 +1,15 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.113
+
+Cambio de cámara: en `game.js`, las rutas de arrastre, rueda, zoom, rotación y teclado llaman `setCameraView()`, que agrupa un `requestAnimationFrame` y ejecuta `renderAlertMarkers()` mientras el gesto sigue activo. No volver a actualizar solo en `pointerup`/`wheel` terminado. `tests/test_camera_markers.mjs` comprueba coordenadas cambiantes antes de `mouseup` en móvil y escritorio.
+
+Fase 7: `server.py:road_incident_report` y `offline.js:calculateOfflineRoadIncidents` generan choques deterministas con causas y consecuencias, bloqueo vial, duración, costo/servicio, respuesta de bomberos y ruta animada en `world3d.js`. `cityGuide.js` informa del motivo. Preservar la paridad Offline/Online y probar los bloqueos; no mostrar iconos solo por decoración. Siguiente mecánica: capacidad y colas persistentes por horario para tráfico, manteniendo el foco del usuario en contenido de sistemas y no varias versiones de detalle.
+
+Progreso global no estimable: siguen faltando pesos globales verificables para las 34 fases. Fase 7 orientativa 85%. Verificar la publicación `main` y estado Vercel después del commit; LAN física no verificada.
+
+# Continuidad de desarrollo para otra IA
+
 ## Continuidad · Alfa 0.112
 
 La capacidad de cada tramo considera jerarquía vial (eje principal 2.4, barrio 1.2) y baja con la condición de `roadAssets`. `traffic.js` comparte el cálculo Offline y sus pruebas. Online aplica el mismo factor en `traffic_factor`; el mapa amplifica el estrés con `trafficFactor`. Próximo sistema: accidentes viales con causa, bloqueo y respuesta municipal. Pruebas: Python 55 y Offline 40.

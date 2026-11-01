@@ -38,6 +38,11 @@ export function collectCityAlerts(state){
    `${f.affectedBuildings||0} edificios afectados. ${working?`${urgent?'Respuesta urgente':'Reparación programada'}: ${f.remainingDays||0} día(s) restantes.`:`Avería por ${f.reason||'daño de infraestructura'}. Reparación normal $${Number(f.repairCost)||0} (3 días); urgente $${(Number(f.repairCost)||0)*2} (1 día)${f.emergencyRouteAvailable===false?'; falta ruta vial para despacho urgente':''}.`}`,
    working?'Seguí la reparación en Ciudad → Servicios.':'Abrí Ciudad → Servicios para elegir cuadrilla normal o respuesta urgente y comprobar ruta y presupuesto.',f.x,f.y,f.day,f.id||`utility-${f.network}-${f.x}-${f.y}`,working?1:0));
  }
+ for(const v of [...(state.roadIncidentReport?.activeIncidents||[]),...(state.roadIncidentReport?.recentIncidents||[])]){
+  if(!v||!site(v.x,v.y)||now-(v.day||0)>7)continue;
+  const active=v.closed===true,title=active?'Choque vial: calle cerrada':'Accidente vial despejado';
+  push(item('road','🚧',title,`Causa: ${v.cause||'tránsito'}. Condición de la calzada ${Math.round(v.roadQuality??82)}%. ${active?`${v.station?'Responde '+v.station:'Sin unidad disponible'}; cierre estimado ${v.remainingDays||0} día(s).`:`Se despejó el día ${v.clearedDay||'reciente'}; la unidad y limpieza costaron $${v.cleanupCost||0}.`}`,active?'La calle queda fuera de las rutas hasta terminar la respuesta municipal. Revisá Tráfico para ver los desvíos.':'Revisá Ciudad → Mantenimiento; una calzada dañada eleva el riesgo de nuevos choques.',v.x,v.y,v.day,v.id||`road-crash-${v.x}-${v.y}-${v.day}`,active?0:2));
+ }
  const police=state.policeReport?.recentIncidents||[];
  for(const v of police){
   if(!site(v.x,v.y)||now-(v.day||0)>35||now<(v.day||0))continue;

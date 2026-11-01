@@ -1,3 +1,14 @@
+# Siguiente entrega
+
+## Punto exacto · después de Alfa 0.113
+
+1. Fase 7: demanda vial por horario, colas persistentes y tiempos que cambian según hora, capacidad y deterioro; hacer que colectivos, coches y asistencia laboral compartan su efecto en Online/Offline.
+2. Mantener visibles las causas/efectos en mapa y avisos. El test `tests/test_camera_markers.mjs` protege la actualización de iconos durante el gesto de cámara.
+3. Mantener y ampliar incidentes viales: rutas de emergencia, reapertura, registros y efectos económicos ya iniciados.
+4. Ejecutar regresiones Online, Offline, stress y revisión responsive antes de publicar. Publicar en `main`, validar SHA y despliegue Vercel; empaquetar ZIP integral.
+
+El progreso global continúa sin porcentaje: hace falta una matriz estable de pesos y criterios verificables para las 34 fases. Fase actual: 7, movilidad (85% orientativo). Próximo alcance: flujo por franja horaria y colas.
+
 # Siguiente entrega · continuidad
 
 ## Próximo paso · Alfa 0.113

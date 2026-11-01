@@ -39,6 +39,20 @@ try{
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
     await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
+    // Ayuda y avisos deben funcionar también en móvil, sin depender del motor Online.
+    await page.locator('[data-popup="guide"]').click();
+    await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
+    const instructions=await page.locator('#popupContent').innerText();
+    assert.ok(instructions.includes('Primeros pasos en tu ciudad')&&instructions.includes('Hormigón')&&instructions.includes('Hormigonera'),
+      name+': la guía de construcción no explica el hormigón ni la progresión.');
+    assert.equal(await page.locator('#popupContent .quick-start-step').count(),6);
+    await page.locator('#popupClose').click();
+    await page.locator('[data-popup="alerts"]').click();
+    await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
+    const alertsIntro=await page.locator('#popupContent').innerText();
+    assert.ok(alertsIntro.includes('avisos')||alertsIntro.includes('Avisos'),
+      name+': el panel de eventos urbanos no está disponible.');
+    await page.locator('#popupClose').click();
     await page.locator('[data-popup="build"]').click();
     const catalog=await page.evaluate(()=>{
       const pane=document.querySelector('#panelPopup:not(.hidden)'),buttons=[...pane.querySelectorAll('[data-model]')];

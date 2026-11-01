@@ -128,6 +128,50 @@ try{
 
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));
     await page.close();
+
+    // Escena Three.js: un vehículo 3D real por base/dotación, rutas registradas y
+    // posición variable en el tiempo. Se conserva acceso a la ciudad en ambos tamaños.
+    const live=await browser.newPage({viewport:{width,height}});
+    const threeErrors=[];live.on('pageerror',e=>threeErrors.push(e.message));
+    await live.goto('http://127.0.0.1:18765/',{waitUntil:'domcontentloaded'});
+    await live.evaluate(async()=>{
+      const city=await fetch('/offline_seed.json').then(r=>r.json());
+      city.paused=true;city.day=31;city.lastMonth=1;
+      const civic=city.buildings.find(b=>b.kind==='civic');
+      civic.hospitalWard={beds:20,ambulances:1};
+      civic.policeUnit={vehicles:1,priority:'mixto'};
+      civic.utilityAccess={powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100};
+      city.buildings.push({kind:'fireStation',name:'Cuartel de pruebas',x:12,y:11,status:'operativo',dispatchReadyDay:31});
+      city.workplaces.push({kind:'fireStation',name:'Cuartel de pruebas',x:12,y:11,staffedJobs:8,workersAssigned:8,jobSlots:8});
+      const route=[[9,11],[9,10],[8,10],[7,10],[6,10],[5,10],[5,9]];
+      const fireRoute=[[12,11],[12,10],[11,10],[10,10],[9,10],[8,10],[7,10],[6,10],[5,10],[5,9]];
+      city.police={lastProcessedMonth:1,recentIncidents:[{id:'p3d',day:31,month:1,x:5,y:9,location:'Sector viviendas',status:'atendido',station:'Municipalidad',stationX:9,stationY:11,route}]};
+      city.health={lastHospitalDay:31,hospitalBacklog:0,ambulanceDispatches:[{id:'m3d',day:31,x:5,y:9,station:'Municipalidad',stationX:9,stationY:11,patients:1,status:'traslado',route}]};
+      city.fireService={lastGeneratedMonth:1,incidents:[{id:'f3d',x:5,y:9,name:'Viviendas del sector',startDay:30,resolvedDay:31,status:'controlado',station:'Cuartel de pruebas',stationX:12,stationY:11,route:fireRoute,damage:2}],dispatches:1,resolved:1,unanswered:0};
+      localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
+    });
+    await live.locator('#offlineMode').click();
+    await live.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+    await live.waitForFunction(()=>typeof window.__ciudadViva3D==='function'&&window.__ciudadViva3D().length>=3,{timeout:30000});
+    const before=await live.evaluate(()=>window.__ciudadViva3D());
+    const required=['Policía','Ambulancia','Bomberos'];
+    for(const role of required){
+      const actor=before.find(a=>a.type===role);
+      assert.ok(actor&&actor.inScene&&actor.visible&&actor.moving&&actor.routeLength>1,
+        name+': el vehículo '+role+' no circula por ruta 3D real '+JSON.stringify(before));
+    }
+    await live.waitForTimeout(1150);
+    const after=await live.evaluate(()=>window.__ciudadViva3D());
+    for(const role of required){
+      const a=before.find(x=>x.type===role),b=after.find(x=>x.type===role);
+      assert.ok(b&&Math.hypot(a.position[0]-b.position[0],a.position[1]-b.position[1])>.12,
+        name+': el vehículo '+role+' no se animó sobre la calzada '+JSON.stringify({a,b}));
+    }
+    const overflow3D=await live.evaluate(()=>({document:document.documentElement.scrollWidth,viewport:innerWidth,canvas:document.querySelector('#city').getBoundingClientRect().width}));
+    assert.ok(overflow3D.document<=overflow3D.viewport+2&&overflow3D.canvas>100,name+': la escena 3D generó desborde');
+    await live.screenshot({path:'ui-captures/'+name+'-emergencias-3d.png'});
+    assert.deepEqual(threeErrors,[],name+': errores Three.js '+threeErrors.join('; '));
+    await live.close();
   }
 }finally{
   await browser.close();

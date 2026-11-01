@@ -847,7 +847,9 @@ def government_districts():
         services=max(0,min(100,float(state.get("services",0))))
         employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
         housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
-        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23))
+        tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
+        tax_penalty=tax_pressure_penalty(tax_pressure)
+        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23-tax_penalty))
         active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
         overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
         complaint_pressure=min(12,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints)+len(overdue_agreements)*2)
@@ -857,7 +859,7 @@ def government_districts():
         if housing<65:issues.append("vivienda")
         if services<55:issues.append("servicios")
         if base_score<45:issues.append("confianza")
-        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Gestión estable"})
+        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"taxPressure":tax_pressure,"taxPenalty":tax_penalty,"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Gestión estable"})
     return rows
 
 def government_plan_metrics():
@@ -1141,12 +1143,24 @@ def collect_municipal_taxes():
         firm["taxAdjustedCreditLimit"]=business_credit_limit_after_tax(firm)
         business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
     taxes["lastProcessedMonth"]=month
-    report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":property_paid+business_paid,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
+    household_income=sum(max(0,h.get("monthlyWageIncome",0)) for h in state.get("buildings",[]) if h.get("kind")=="home")
+    business_sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto")
+    collected=property_paid+business_paid;pressure=round(100*collected/max(1,household_income+business_sales+collected))
+    report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":business_sales,"householdWageIncome":household_income,"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":collected,"pressure":pressure,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
     taxes["lastReport"]=report;taxes.setdefault("history",[]).append(report.copy());del taxes["history"][:-12]
     if report["collected"]:ev("Recaudación municipal",f"Se cobraron $ {report['collected']:,} de impuestos sobre viviendas y ventas; $ {report['arrears']:,} quedan en mora.".replace(",","."))
     if late_homes and late_homes>=max(3,round(sum(1 for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0)*.35)):
         state["approval"]=max(0,state.get("approval",0)-1);ev("Mora tributaria extendida",f"{late_homes} hogares no pudieron pagar el impuesto completo; la confianza municipal cae un punto.")
     return report
+
+def tax_pressure_penalty(pressure):
+    """Each 5 percentage points above a 5% cash-flow burden costs one support/demand point."""
+    return min(5,max(0,(max(0,int(pressure))-5)//5))
+
+def tax_adjusted_migration_demand(approval,pressure):
+    base=round((float(approval)-45)/8)
+    if base<=0:return max(-5,base)
+    return max(0,min(12,base-tax_pressure_penalty(pressure)))
 
 def municipal_finance_forecast(monthly_income, monthly_expenses):
     finance=state.get("finance",{});loans=[dict(x) for x in finance.get("municipalLoans",[]) if x.get("status")=="active"]
@@ -3801,7 +3815,8 @@ def advance_zoned_development():
 
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
-    desired=max(-5,min(12,round((state.get("approval",0)-45)/8)))
+    tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
+    desired=tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)
     demand_state=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))

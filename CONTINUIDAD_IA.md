@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.125
+
+La fase 8 ahora mide `taxes.lastReport.pressure` (ambos motores): tributos pagados / salarios de hogares + ventas empresariales + tributos. La barra “Presión impositiva” existente en Economía consume este dato. Sobre 5%, cada tramo completo adicional de 5 puntos resta un punto de apoyo distrital y un candidato mensual a la migración (máximo cinco). La presión alta solo usa pagos reales; los impagos siguen con sus efectos de mora. Los helpers Online son `tax_pressure_penalty` y `tax_adjusted_migration_demand`; Offline exporta `taxPressurePenalty` y `taxAdjustedMigrationDemand`.
+
+Tests: 80 Python / 54 Offline; stress 30 años × cuatro perfiles pasó. Fase 8 sigue 90%: falta escenario integral crisis-recuperación incluyendo cinco servicios. Global no estimable por falta de pesos verificables comunes. Playwright de Economía pasó en 390×844 y 1440×900, sin desbordes ni solapamientos. LAN física pendiente.
+
+**Siguiente:** probar la crisis moderada de punta a punta y medir servicios; no hacer una entrega de pulido.
+
 ## Continuidad inmediata · Alfa 0.124
 
 La mora tributaria de una empresa reduce su línea de crédito: `business_credit_limit_after_tax` en `server.py` y `taxAdjustedBusinessCreditLimit` en `offline.js` restan los atrasos del límite comercial. Con tres cierres seguidos impagos los nuevos giros se congelan; la deuda bancaria existente sigue su calendario. Al quedar al día, vuelve el límite disponible. La regla se usa al financiar caja y compras, no solo para mostrar el dato. El cobro emite eventos al tercer impago y al regularizarse. Tests: Online cubre cálculo, giros y ciclo de mora; Offline cubre límites equivalentes. Sin cambios de interfaz.

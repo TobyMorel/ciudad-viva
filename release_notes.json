@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.124",
+  "currentVersion": "0.125",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.125",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 90,
+      "overallProgress": null,
+      "changes": [
+        "La tesorería calcula presión impositiva como la proporción de tributos efectivamente pagados sobre salarios de hogares y ventas empresariales observados; no se basa solo en la tasa nominal.",
+        "Una presión superior al 5% reduce gradualmente el apoyo distrital y la llegada de hogares: cada 5 puntos adicionales resta un candidato mensual, hasta cinco. Este factor no provoca salidas; los impuestos impagos siguen usando la ruta existente de mora y caída de aprobación.",
+        "El indicador alimenta la barra de Presión impositiva en Economía. La mora empresarial sigue afectando crédito, compras, producción y empleo, así que la medida fiscal puede producir efectos de población y actividad por separado.",
+        "Verificación: 80 pruebas Python, 54 Node Offline, checks de sintaxis/JSON, stress de 30 años en cuatro perfiles y Playwright para Economía en 390×844 y 1440×900. Sin desbordes ni solapamientos; no cambió la estructura visual.",
+        "Fase 8 permanece en 90%: ya enlaza caja tributaria, solvencia empresarial, demanda residencial y apoyo con reglas verificables. No sube hasta completar escenarios integrales que prueben impuestos, presupuesto, crisis moderada y recuperación de cinco servicios Online/Offline."
+      ]
+    },
     {
       "version": "0.124",
       "date": "2026-11-01",
@@ -1282,8 +1296,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.125 · escenario fiscal completo",
-      "detail": "Fase 8: ejecutar una crisis recuperable donde impuestos, caja, deuda, mora, empleo, demanda, apoyo ciudadano y los cinco servicios reaccionen juntos y queden medidos en Online y Offline."
+      "title": "Alfa 0.126 · crisis fiscal jugable",
+      "detail": "Fase 8: ejecutar una crisis moderada de punta a punta y comprobar los efectos en caja, impuestos, deuda, empleo, hogares, apoyo y cinco servicios, con decisiones de recuperación."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1374,8 +1388,8 @@
       "progress": 90,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Escenarios integrales que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
-        "Validar en una crisis de punta a punta la recuperación de salud, educación, residuos, redes y transporte.",
+        "Completar y medir un escenario integral donde cambios fiscales desencadenen consecuencias económicas y políticas graduales.",
+        "Validar en una crisis de punta a punta la recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
         "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },

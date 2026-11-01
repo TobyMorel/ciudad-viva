@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.125
+
+## Presión fiscal sobre población y apoyo
+
+La presión se calcula como impuestos efectivamente cobrados dividido por la suma de salarios observados en hogares, ventas de comercios e impuestos cobrados. Se redondea a porcentaje entero y se guarda en `taxes.lastReport.pressure`, por lo que las ciudades anteriores empiezan con 0 hasta su próximo cierre. La métrica usa pagos, no deuda facturada ni tasa nominal.
+
+A partir de 5%, cada tramo completo de 5 puntos reduce en uno (máximo cinco) la puntuación base de apoyo y el flujo mensual de potenciales migrantes, sin crear migraciones forzadas de salida. La aprobación general no se modifica por esta regla: los distritos reflejan apoyo, y la demanda residencial retiene sus límites por empleo y viviendas. La mora impaga continúa reduciendo aprobación por las reglas existentes. Fórmulas equivalentes viven en `server.py` y `offline.js`; la sección Economía ya tiene una barra para la presión fiscal.
+
 # Decisiones técnicas · Alfa 0.124
 
 ## Crédito empresarial bajo mora tributaria

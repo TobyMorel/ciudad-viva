@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.125
+
+## Presión tributaria y atractivo urbano
+
+- Online y Offline miden impuestos pagados como parte del flujo observado de salarios domésticos y ventas empresariales. La barra de presión fiscal existente en Economía ya recibe ese dato.
+- Cuando la carga supera 5% del flujo mensual, cada 5 puntos adicionales quita un punto de apoyo en los distritos y reduce el flujo mensual de candidatos a mudarse sin forzar salidas, hasta cinco. La mora no pagada conserva sus efectos separados.
+- Tests cubren cálculo del indicador, demanda residencial y apoyo en ambos motores. No se alteró la estructura de la UI; Playwright revisó Economía en 390×844 y 1440×900 sin desbordes ni solapamientos.
+- Fase actual: 8, 90% orientativo; falta probar un escenario fiscal completo y la recuperación de cinco servicios. Avance global no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.124
 
 ## Impuestos empresariales y solvencia

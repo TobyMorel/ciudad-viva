@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.125
+
+1. Construir una prueba jugable de crisis fiscal moderada: subir tasas o reducir presupuesto, seguir cobros reales, mora, solvencia comercial y operación de servicios; la presión impositiva frena llegadas, no expulsa residentes por sí sola.
+2. Dejar que esos efectos modifiquen nómina/empleo, migración, apoyo distrital y coberturas observables sin sumar sanciones duplicadas.
+3. Recuperar la crisis con decisiones de presupuesto y comprobar salud, educación, residuos, redes y transporte en Online y Offline.
+4. Priorizar contenido del roadmap. Si cambia el layout, correr mediciones responsivas; publicar en `main`, verificar GitHub/Vercel y generar ZIP.
+
+Fase actual: 8, 90% orientativo; próximo: escenario fiscal integral y recuperación medida de cinco servicios. Global no estimable por falta de ponderación común verificable para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.124
 
 1. Completar fase 8 con escenario fiscal reproducible: cambiar impuestos/presupuestos, observar caja, mora, crédito empresarial, empleo, demanda y apoyo, y luego recuperar la ciudad.

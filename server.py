@@ -599,6 +599,8 @@ def ensure_person_work_profile(person):
 
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
+    if site.get("kind")=="civic" and (service_model(site) or {}).get("police"):
+        category,label,minimum="administracion","Seguridad municipal",48
     firm=site.get("business",{}) if site.get("kind") in ("shop","hotel","factory") else {}
     wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel","factory") else 14 if site.get("kind") in ("powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school","fireStation") else 8))
     return category,label,minimum,wage
@@ -4112,7 +4114,7 @@ HOSPITAL_COSTS={"openHospitalWard":7200,"expandHospitalWard":4600,"addAmbulance"
 
 def invest_hospital_care(action,x,y):
     center=next((b for b in state.get("buildings",[]) if b.get("kind")=="civic" and b.get("x")==x and b.get("y")==y and b.get("status") in ("operativo","habilitado")),None)
-    if center is None:raise ValueError("La ampliación requiere un centro de salud municipal habilitado.")
+    if center is None or not (service_model(center) or {}).get("care"):raise ValueError("La ampliación requiere un centro sanitario construido y habilitado.")
     if route_between((4,10),(x,y)) is None:raise ValueError("El centro necesita acceso vial para recibir equipos y ambulancias.")
     ward=center.get("hospitalWard")
     if action=="openHospitalWard" and ward:raise ValueError("Este centro ya dispone de internación.")
@@ -4225,7 +4227,7 @@ def police_staff_reserved(building,workplaces):
 
 def invest_police_unit(action,x,y,priority=None):
     building=next((b for b in state.get("buildings",[]) if b.get("kind")=="civic" and b.get("x")==x and b.get("y")==y and b.get("status") in ("operativo","habilitado")),None)
-    if not building:raise ValueError("Elegí un centro cívico municipal habilitado.")
+    if not building or not (service_model(building) or {}).get("police"):raise ValueError("Primero construí una comisaría o puesto de seguridad.")
     if action=="setPolicePriority":
         if not building.get("policeUnit"):raise ValueError("Primero equipá una base de seguridad.")
         if priority not in POLICE_PRIORITIES:raise ValueError("Prioridad de patrullaje inválida.")

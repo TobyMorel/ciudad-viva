@@ -1,13 +1,13 @@
 import {chromium} from 'playwright';
-import {spawn} from 'node:child_process';
+import {startUiTestServer} from './ui_test_server.mjs';
 import assert from 'node:assert/strict';
 
-const server=spawn('python',['-m','http.server','18766','--bind','127.0.0.1'],{stdio:'ignore'});
+const server=await startUiTestServer(18766);
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
 try{
  for(const viewport of [{width:390,height:844},{width:1440,height:900}]){
   const page=await browser.newPage({viewport});
-  await page.goto('http://127.0.0.1:18766/');
+  await page.goto('http://127.0.0.1:18766/',{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{
    const city=await fetch('/offline_seed.json').then(r=>r.json());
    city.paused=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'atendido',station:'Comisaría',route:[[10,10],[10,9]]}]};

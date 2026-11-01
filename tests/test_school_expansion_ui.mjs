@@ -1,8 +1,8 @@
 import {chromium} from 'playwright';
-import {spawn} from 'node:child_process';
+import {startUiTestServer} from './ui_test_server.mjs';
 import assert from 'node:assert/strict';
 
-const port=18769,server=spawn('python',['-m','http.server',String(port),'--bind','127.0.0.1'],{stdio:'ignore'});
+const port=18769,server=await startUiTestServer(port);
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
 try{
  for(const {name,width,height} of [{name:'móvil',width:390,height:844},{name:'escritorio',width:1440,height:900}]){

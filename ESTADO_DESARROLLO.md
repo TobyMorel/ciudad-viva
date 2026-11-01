@@ -1,5 +1,11 @@
 # Estado de desarrollo · Alfa 0.130
 
+## Corrección de estabilidad de las pruebas de interfaz (hotfix 0.130)
+
+- Las pruebas de navegador ahora esperan una respuesta HTTP del servidor estático local antes de abrir el juego; evitan el fallo intermitente `ERR_CONNECTION_REFUSED` de Actions.
+- La prueba de cámara espera `domcontentloaded`, porque la escena Three.js continúa cargándose mientras los controles de prueba ya pueden usarse. Se reutiliza la espera común en las verificaciones responsive.
+- La batería responsive completa y Actions deben volver a ejecutarse tras este hotfix; no se cambia la jugabilidad ni el alcance/progreso de Alfa 0.130.
+
 ## Ayuda habitacional con cupo y pago municipal
 
 - Economía permite fijar una apropiación mensual de $0–$5.000, en pasos de $250, para cubrir parte del alquiler vencido de hogares vulnerables en viviendas privadas reconvertidas. Se prioriza menor ingreso por residente; cada pago queda limitado a la mora y a un mes de renta.

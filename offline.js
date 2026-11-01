@@ -348,7 +348,7 @@ export async function createOfflineAdapter(){
     if(material!==expected||firm.status!=='abierto'||firm.industryType!==type||(firm[field]||0)<quantity)throw Error('La planta seleccionada perdió el lote.');
     firm[field]-=quantity;firm.cash=(firm.cash||0)+quote.productCost;
     firm.lastLocalSales=(firm.lastLocalSales||0)+quantity;
-    firm.lifetimeIndustrialSales=(firm.lifetimeIndustrialSales||0)+quantity;
+    firm.lifetimeIndustrialSales=(firm.lifetimeIndustrialSales||0)+quantity;firm.industrialSalesSincePricing=(firm.industrialSalesSincePricing||0)+quantity;
     firm.lastWinningPriceFactor=quote.factor;
     state.localIndustry[metric]=(state.localIndustry[metric]||0)+quantity;
   }

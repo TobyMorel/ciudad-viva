@@ -25,6 +25,7 @@ try{
           business:{id:'rival-'+x,industryType:'metalworks',status:'abierto',
             materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
       }
+      city.supply.tradeContracts=[{id:'ui-contract',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
     });
     await page.locator('#offlineMode').click();
@@ -55,6 +56,20 @@ try{
           missing:parts.some(p=>{const r=p.getBoundingClientRect();return r.width<2||r.height<2||getComputedStyle(p).visibility==='hidden'})};
       });
     });
+    const contractLayout=await page.evaluate(()=>{
+      const nodes=[...document.querySelectorAll('#popupContent .supply-line')]
+        .filter(el=>el.textContent.includes('custodia')&&el.textContent.includes('Cantera del corredor'));
+      return nodes.map(el=>{
+        const visible=[...el.querySelectorAll('span,b,small')].every(n=>{
+          const r=n.getBoundingClientRect();
+          return r.width>1&&r.height>1&&getComputedStyle(n).visibility!=='hidden'
+        });
+        return {visible,overflow:el.scrollWidth>el.clientWidth+3};
+      });
+    });
+    assert.equal(contractLayout.length,1,name+': contrato privado visible en Economía');
+    assert.ok(contractLayout.every(v=>v.visible&&!v.overflow),
+      name+': texto contractual solapado u oculto '+JSON.stringify(contractLayout));
     assert.equal(vendorLayout.length,2,name+': las ofertas de dos metalúrgicas deben aparecer');
     assert.ok(vendorLayout.every(v=>!v.overflowing&&!v.missing),
       name+': precio o texto industrial oculto o desbordado '+JSON.stringify(vendorLayout));

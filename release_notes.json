@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.94",
+  "currentVersion": "0.95",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.95",
+      "date": "2026-10-31",
+      "roadmapPhase": 17,
+      "phaseProgress": 70,
+      "overallProgress": null,
+      "changes": [
+        "Nuevo mercado industrial competitivo en Online y Offline: varias canteras, hormigoneras, aserraderos o metalúrgicas cotizan cada una con stock, precio y ruta propios. Las constructoras adjudican el lote completo al menor costo puesto en depósito, incluido el transporte. Si ninguna fábrica conectada tiene el lote, se rechaza sin debitar recursos; otros proveedores externos siguen disponibles.",
+        "Las hormigoneras compran automáticamente áridos a la cantera que ofrece menor costo de insumo y transporte, no a la primera planta del mapa. El pago de la mercancía acredita solo a la firma ganadora, el costo de flete a logística y el inventario sale exactamente del vendedor elegido. Las órdenes guardan proveedor específico, precio, origen y ruta.",
+        "Las fábricas ajustan su precio mensual por ventas acumuladas y existencia ociosa, con límites para evitar oscilaciones descontroladas. Economía muestra precios y existencias de firmas rivales y la compra sugiere hasta el lote máximo de una única planta. Pruebas Online/Offline de competencia, costo, inventario, ruta y UI responsive. Fase 17 al 70%; fase 18 al 90%, global no estimable."
+      ]
+    },
     {
       "version": "0.94",
       "date": "2026-10-31",
@@ -1050,11 +1062,11 @@
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 65,
-      "summary": "Empresas privadas autofinancian viviendas, comercio e industria; cierres por insolvencia y promotores rehabilitan plantas cerradas con capital, plazo, empleo, servicios y nueva empresa.",
+      "progress": 70,
+      "summary": "Inversión y quiebra privadas, rehabilitación de plantas y competencia por pedidos industriales entre firmas con precios, existencias, rutas y balances de caja propios.",
       "pending": [
-        "Competencia y expansión entre varias industrias con presupuestos reales, reajuste de plantillas y precios; recuperación por terceros de comercios y hoteles cerrados.",
-        "Probar cierres y reaperturas en escenarios de décadas sin capital gratuito."
+        "Competencia minorista de varias firmas con expansión/reducción de plantilla y alquiler; inversión privada en varios sectores.",
+        "Negociación y contratos a plazo de grandes clientes, cierre de mercado y reubicación laboral en escenarios plurianuales."
       ]
     },
     {

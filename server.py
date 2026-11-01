@@ -378,6 +378,12 @@ def settle_aggregate_contract_line(order,received):
         if buyer:buyer["cash"]=buyer.get("cash",0)+amount
         else:supply["unclaimedContractRefunds"]=supply.get("unclaimedContractRefunds",0)+amount
         contract["refunded"]+=amount;contract["refundedUnits"]+=units
+        # La demora imputable al proveedor paga indemnización desde su caja, nunca desde el escrow.
+        if buyer and buyer.get("status")=="abierto" and seller and seller.get("status")=="abierto" and order.get("statusCause")=="Plazo contractual vencido":
+            penalty=min(max(0,int(seller.get("cash",0))),max(1,(product+19)//20))
+            seller["cash"]-=penalty;buyer["cash"]=buyer.get("cash",0)+penalty
+            order["defaultPenaltyPaid"]=penalty
+            contract["defaultPenaltyPaid"]=contract.get("defaultPenaltyPaid",0)+penalty
         ev("Contrato incumplido",f"Remesa de {units} áridos cancelada; devolución $ {amount} al comprador.")
     related=[o for o in supply["marketOrders"] if o.get("supplyContractId")==contract["id"]]
     if related and all(o.get("contractSettled") for o in related):

@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.91",
+  "currentVersion": "0.92",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.92",
+      "date": "2026-10-31",
+      "changes": [
+        "La simulación Offline separa industria de materiales de producción alimentaria: cantera, hormigonera, aserradero y metalúrgica ya no liquidan gastos por segunda vez ni crean falsos proveedores de alimentos.",
+        "Pruebas automáticas Online y Offline cubren un caso controlado de suspensión por falta de componentes, compra a metalúrgica, transporte, recepción, reanudación, inspección, cobro e inventario único. Incluye regresión para evitar alimentos ficticios en una metalúrgica.",
+        "GitHub Actions comprueba sintaxis, JSON y regresiones en main. No se comprobó LAN física, Vercel ni presentación en Chromium. Fase 18 permanece en 85%; progreso global no estimable."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 85,
+      "overallProgress": null
+    },
     {
       "version": "0.91",
       "date": "2026-11-01",

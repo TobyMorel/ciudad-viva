@@ -3663,10 +3663,22 @@ def tick_one_day():
             if home.get("kind")=="home":home["monthlyWageIncome"]=0
         supplier_stock=state["supply"]["suppliers"]
         refill_market_suppliers()
+        # Mineral regional finito: la reposición de acero no puede crear materia de la nada.
+        regional_reserve=max(0,int(state["supply"].setdefault("regionalSteelReserve",30000)))
         for key,amount in REGIONAL_PRODUCTION.items():
-            supplier_stock["Distribuidora Regional"][key]+=round(amount*.6)
-            supplier_stock["Corralón del Puerto"][key]+=round(amount*.25)
-            supplier_stock["Flete Urgente"][key]+=round(amount*.15)
+            batches=[round(amount*.6),round(amount*.25),round(amount*.15)]
+            if key=="steel":
+                available=min(regional_reserve,sum(batches))
+                batches=[min(available,batches[0]),0,0] if available<sum(batches) else batches
+                if available<sum(batches):
+                    remaining=available
+                    batches=[]
+                    for request in [round(amount*.6),round(amount*.25),round(amount*.15)]:
+                        delivered=min(remaining,request);batches.append(delivered);remaining-=delivered
+                regional_reserve-=sum(batches)
+            for name,quantity in zip(("Distribuidora Regional","Corralón del Puerto","Flete Urgente"),batches):
+                supplier_stock[name][key]+=quantity
+        state["supply"]["regionalSteelReserve"]=regional_reserve
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)

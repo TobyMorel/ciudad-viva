@@ -224,3 +224,10 @@ Competencia operativa entre canteras, hormigoneras, aserraderos y metalúrgicas 
 El material que compran los promotores de vivienda/fábrica y la inversión comercial delegada necesita camión, fecha, flete, capacidad de patio, ruta desde un proveedor con stock y ruta desde el depósito hasta la obra. No se acredita antes de entrega. Las firmas privadas ajustan plantilla y producción según demanda y caja y pagan nuevo equipamiento para crecer; despidos registrados sobre residentes reales. Los dos motores incorporan estas reglas, con pruebas de no-teletransporte, falta de almacenamiento y cierre económico.
 
 **Siguiente sistema jugable:** contratos de suministro entre empresas (reserva de lotes, plazos, incumplimientos, renegociación y pagos sin caja gratuita); competencia minorista con alquiler comercial y cambio de trabajadores; luego simulaciones de 30 años de fase 33. No subir porcentajes de fase 18 sin demostrar acero local/terminales completas. Fase 17=75%, fase 18=90%, global sin ponderación. Chromium automatizado, LAN física y Vercel siguen siendo verificaciones distintas.
+
+
+## Continuación después de Alfa 0.97
+
+Ya hay contratos B2B de áridos por fábrica concreta, inversión de compra real, mercancía reservada, tres remesas escalonadas, espera de ruta, custodia financiera, liquidación al recibir, vencimiento y devolución sin existencias duplicadas. La política respeta la demanda de la hormigonera y su caja empresarial. Economía informa estado, fondos, cumplimientos e incumplimientos. Online/Offline poseen pruebas automatizadas del flujo y validación visual Chromium.
+
+**Continuar mecánicas:** extender acuerdos de plazo a acero, madera, alimentos y clientes constructores; renegociación por rutas cortadas con penalidades al proveedor; ampliar alquileres comerciales y movilidad laboral, y ejecutar/depurar partidas reales a 30 años de fase 33. Fase 17=80%, 18=90%, global sin estimación. LAN física y Vercel no comprobados.

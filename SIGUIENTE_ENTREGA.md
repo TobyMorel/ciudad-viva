@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.130
+
+1. Validar el nuevo panel de Economía en Chromium a 390×844 y 1440×900, además del flujo ya integrado en `tests/test_ui_layout.mjs`.
+2. Abrir la fase de refugio/atención a hogares sin vivienda: plazas físicas, personal identificable, acceso vial, gasto mensual y admisión/espera/salida de residentes. No convertirlo en una barra abstracta.
+3. Después ampliar protección social a desplazamiento y personas mayores; mantener educación técnica y asistencia escolar como frentes pendientes de fase 28.
+4. Publicar Alfa 0.131 en `main`, comprobar SHA y checks, y entregar archivo ZIP completo.
+
+Fase actual 28, 78% orientativo; global no estimable sin ponderación común verificable para 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.129
 
 1. En una ciudad poblada, ampliar una escuela y comprobar que docentes identificados cubren nuevas vacantes; los estudiantes solo usan cupos con edad, ruta, servicios y presupuesto compatibles.

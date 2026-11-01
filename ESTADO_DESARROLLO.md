@@ -1,3 +1,13 @@
+# Estado de desarrollo · Alfa 0.130
+
+## Ayuda habitacional con cupo y pago municipal
+
+- Economía permite fijar una apropiación mensual de $0–$5.000, en pasos de $250, para cubrir parte del alquiler vencido de hogares vulnerables en viviendas privadas reconvertidas. Se prioriza menor ingreso por residente; cada pago queda limitado a la mora y a un mes de renta.
+- El municipio paga directamente al propietario; baja la mora real del hogar, aumenta el ingreso del arrendador y no se entrega efectivo libre ni se genera dinero. El costo integra Servicios públicos y se reduce según el financiamiento efectivo.
+- Online/Offline comparten el ciclo de elegibilidad, cierre fiscal, pago y registro: cupo, solicitudes, transferencias, hogares atendidos y saldo sin cubrir. Economía informa cómo funciona.
+- Verificación local: 89 pruebas Python, 59 Offline y stress 30 años × 4 perfiles. `tests/test_ui_layout.mjs` pasó en Chromium a 390×844 y 1440×900: panel desplazable, textos/controles visibles, sin overflow horizontal ni controles fuera del popup.
+- Fase actual: 28, 78% orientativo. Próximo sistema: refugio para hogares sin vivienda, con plazas, personal, acceso y costo operativo. Global no estimable sin ponderación verificable para 34 fases; LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.129
 
 ## Ampliación escolar completa en simulación diaria

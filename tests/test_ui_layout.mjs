@@ -132,6 +132,17 @@ try{
     assert.ok(popup.left>=-2&&popup.right<=width+2,name+': popup de Economía fuera de pantalla '+JSON.stringify(popup));
     assert.ok(popup.scrollWidth<=popup.width+2,name+': overflow horizontal en Economía '+JSON.stringify(popup));
     assert.ok(popup.scrollable,name+': el contenido largo no se puede desplazar');
+    const aidLayout=await page.evaluate(()=>{
+      const card=[...document.querySelectorAll('#popupContent details')].find(el=>el.textContent.includes('Ayuda de alquiler'));
+      if(!card)return {found:false};card.open=true;card.scrollIntoView({block:'center'});
+      const buttons=[...card.querySelectorAll('[data-housing-aid]')],bounds=card.getBoundingClientRect(),content=document.querySelector('#popupContent');
+      return {found:true,buttons:buttons.length,within:bounds.left>=-2&&bounds.right<=innerWidth+2,
+        noOverflow:card.scrollWidth<=card.clientWidth+3&&content.scrollWidth<=content.clientWidth+3,
+        labels:card.textContent.includes('deuda de alquiler comprobada')&&card.textContent.includes('no entrega dinero libre al hogar'),
+        controls:buttons.every(b=>{const r=b.getBoundingClientRect();return r.width>36&&r.height>24&&r.left>=-2&&r.right<=innerWidth+2&&b.textContent.trim().length>2})};
+    });
+    assert.ok(aidLayout.found&&aidLayout.buttons===2&&aidLayout.within&&aidLayout.noOverflow&&aidLayout.labels&&aidLayout.controls,
+      name+': control o explicación de ayuda de alquiler oculto/desbordado '+JSON.stringify(aidLayout));
     await page.locator('#popupClose').evaluate(button=>button.click());
     await page.locator('[data-popup="city"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});

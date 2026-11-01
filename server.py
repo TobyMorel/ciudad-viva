@@ -662,6 +662,9 @@ def process_training_programs():
 def new_finance():
     return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
+def new_social_services():
+    return {"housingAidBudget":0,"lastReport":{},"history":[]}
+
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
 
@@ -1095,6 +1098,40 @@ def collect_adaptive_rents():
     if paid_total:ev("Alquileres de viviendas reconvertidas",f"Propietarios cobraron ${paid_total} por {sum(1 for b in state['buildings'] if b.get('adaptiveReuseDay') and b.get('occupants',0)>0)} inmuebles; deuda de alquiler pendiente ${arrears}.")
     if arrears>=600:state["approval"]=max(0,state.get("approval",0)-1);ev("Presión por alquileres",f"Quedaron ${arrears} de alquiler sin pagar en inmuebles reconvertidos; los hogares pierden margen y baja la aprobación.")
 
+def plan_housing_aid():
+    social=state.setdefault("socialServices",new_social_services());budget=max(0,int(social.get("housingAidBudget",0)));candidates=[]
+    for home in state.get("buildings",[]):
+        arrears=max(0,int(home.get("rentArrears",0)))
+        if home.get("kind")!="home" or not home.get("adaptiveReuseDay") or home.get("occupants",0)<=0 or arrears<=0:continue
+        occupants=max(1,int(home.get("occupants",1)));income=max(0,int(home.get("monthlyWageIncome",0)));rent=max(1,int(home.get("rentalPricePerResident",24))*occupants)
+        # La elegibilidad exige deuda efectiva; prioridad a menor ingreso por residente y mayor carga de alquiler.
+        if income/occupants>max(90,rent/occupants*4):continue
+        amount=min(arrears,rent,budget)
+        if amount:candidates.append((income/occupants,-arrears,home,amount))
+    candidates.sort(key=lambda row:(row[0],row[1],row[2].get("x",0),row[2].get("y",0)))
+    social["plannedEligibleCount"]=len(candidates);allocations=[];remaining=budget
+    for _,__,home,wanted in candidates:
+        amount=min(wanted,remaining)
+        if amount<=0:break
+        allocations.append({"x":home["x"],"y":home["y"],"name":home.get("name","Vivienda alquilada"),"amount":amount});remaining-=amount
+    return allocations
+
+def settle_housing_aid(allocations,funding_pct):
+    social=state.setdefault("socialServices",new_social_services());requested=sum(x["amount"] for x in allocations);remaining=round(requested*max(0,min(100,funding_pct))/100);paid=0;recipients=[]
+    for item in allocations:
+        if remaining<=0:break
+        home=next((b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("x")==item["x"] and b.get("y")==item["y"]),None)
+        if not home:continue
+        amount=min(remaining,item["amount"],max(0,int(home.get("rentArrears",0))))
+        if amount<=0:continue
+        home["rentArrears"]=max(0,int(home.get("rentArrears",0))-amount);home["rentalOwnerCash"]=max(0,int(home.get("rentalOwnerCash",0)))+amount;home["lastHousingAid"]=amount;home["lastHousingAidDay"]=state.get("day",1)
+        recipients.append({"name":item["name"],"x":item["x"],"y":item["y"],"amount":amount});paid+=amount;remaining-=amount
+    report={"month":(state.get("day",1)-1)//30,"budget":max(0,int(social.get("housingAidBudget",0))),"eligible":int(social.pop("plannedEligibleCount",len(allocations))),"requested":requested,"paid":paid,"recipients":recipients,"unserved":max(0,requested-paid)}
+    social["lastReport"]=report;social.setdefault("history",[]).append(report.copy());del social["history"][:-24]
+    if paid:ev("Ayuda de alquiler entregada",f"El municipio pagó $ {paid:,} a {len(recipients)} hogar(es) con mora comprobada; la deuda de alquiler se redujo directamente. Cupo mensual autorizado $ {report['budget']:,}.".replace(",","."))
+    elif report["budget"] and report["eligible"]==0:ev("Ayuda de alquiler sin beneficiarios",f"Cupo $ {report['budget']:,}; ningún hogar elegible registra deuda de alquiler activa.".replace(",","."))
+    return report
+
 def advance_heritage_works():
     day=int(state.get("day",1))
     if day>1 and (day-1)%360==0:
@@ -1389,7 +1426,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -1621,6 +1658,8 @@ def ensure_supply_state():
     state.setdefault("recoveryNeeds",[])
     state.setdefault("recoveryContracts",[])
     state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
+    social=state.setdefault("socialServices",new_social_services())
+    for key,value in new_social_services().items():social.setdefault(key,value.copy() if isinstance(value,(dict,list)) else value)
     state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
     state.setdefault("trainingPrograms",[])
     state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
@@ -4221,11 +4260,15 @@ def tick_one_day():
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_summary=health_service_report(economic["workplaces"]);health_cost=health_summary.get("monthlySupplyCost",0)+health_summary.get("hospital",{}).get("monthlyOperatingCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0),"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
+        # Cobrar alquileres antes de planificar ayuda; la transferencia solo atiende deuda vigente.
+        collect_adaptive_rents()
+        aid_allocations=plan_housing_aid();aid_requested=sum(x["amount"] for x in aid_allocations)
+        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
         available=state["money"]+monthly_income
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
+        settle_housing_aid(aid_allocations,budget_report["programs"]["services"]["fundingPct"])
         road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
         advance_utility_line_conditions(budget_report["programs"]["networks"]["fundingPct"]/100)
         road_report=state.get("roadMaintenanceReport",{});poor=road_report.get("poorSegments",0);total=road_report.get("segments",0)
@@ -4262,7 +4305,6 @@ def tick_one_day():
         move_households()
         advance_zoned_development()
         consider_industrial_reopenings()
-        collect_adaptive_rents()
         update_government_cycle()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
     process_government_election()
@@ -5196,6 +5238,10 @@ class Handler(BaseHTTPRequestHandler):
                     if new==old:self._send(409,{"error":"La alícuota ya está en su límite."});return
                     taxes[key]=new;ev("Política tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
                     self._send(200,public_state(pid));return
+                if action=="adjustHousingAidBudget":
+                    social=state.setdefault("socialServices",new_social_services());delta=int(data.get("delta",0));old=max(0,int(social.get("housingAidBudget",0)));new=max(0,min(5000,old+delta))
+                    if delta not in (-250,250) or new==old:self._send(409,{"error":"El cupo cambia en pasos de $250, entre $0 y $5.000 por mes."});return
+                    social["housingAidBudget"]=new;ev("Cupo de ayuda de alquiler actualizado",f"El programa podrá destinar hasta $ {new:,} por cierre mensual a mora de alquiler comprobada; el pago depende de la caja de servicios.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="municipalDebtReserve":
                     ensure_finance_state();finance=state["finance"];direction=str(data.get("direction",""));amount=int(data.get("amount",0))
                     if direction not in ("deposit","withdraw") or amount not in (500,1000,2500):self._send(409,{"error":"Elegí un movimiento válido de $500, $1.000 o $2.500."});return

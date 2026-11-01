@@ -1,3 +1,13 @@
+# Decisiones técnicas · Alfa 0.130
+
+## Subsidio directo de alquiler con apropiación mensual
+
+`socialServices.housingAidBudget` persiste el cupo autorizado (0–5.000, pasos de 250). La selección mensual exige vivienda `home` resultante de `adaptiveReuse`, ocupación y `rentArrears` positivos; ordena por ingreso mensual por residente y luego por deuda. Cada unidad no recibe más que la mora existente ni más que una renta mensual. Se calcula después de `collect_adaptive_rents`, por lo que responde al impago observado del período.
+
+El costo propuesto se añade al programa fiscal `services` antes de liquidar caja; la ayuda efectivamente abonada se escala por `fundingPct` de Servicios. La liquidación aumenta `rentalOwnerCash`, reduce `rentArrears` y registra día/importe en la casa. No altera `householdCash`, no crea efectivo y no promete pagos cuando la apropiación o la caja no alcanzan. El último informe guarda elegibles, demanda, pago, beneficiarios y no cubierto.
+
+La UI queda en Economía, junto al presupuesto municipal, con límites y últimos resultados. Se mantiene acotada a vivienda de alquiler reconvertida porque ese es el modelo de renta/arrears existente; refugios y otras prestaciones quedan pendientes.
+
 # Decisiones técnicas · Alfa 0.129
 
 ## Inspección de anexos y balance de materiales

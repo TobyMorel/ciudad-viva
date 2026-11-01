@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.129",
+  "currentVersion": "0.130",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.130",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 78,
+      "overallProgress": null,
+      "changes": [
+        "Nuevo programa municipal de ayuda de alquiler: se puede asignar un cupo mensual de $0 a $5.000 en pasos de $250 desde Economía.",
+        "Solo califica vivienda privada reconvertida con alquiler vencido; prioriza hogares de menor ingreso por residente y limita el pago a deuda y un mes de renta. La transferencia va al propietario, reduce mora y no crea efectivo libre para el hogar.",
+        "El costo entra en Servicios públicos y solo se entrega según la financiación y caja efectivas del cierre. El informe registra elegibles, cupo, solicitudes, pagos, hogares atendidos y saldo no cubierto. Online y Offline comparten el modelo.",
+        "Economía ahora explica criterios, beneficiarios y balance reciente. La geometría responsive se valida en el flujo de 390×844 y 1440×900; pruebas locales: 89 Python, 59 Offline, stress de 30 años en cuatro perfiles.",
+        "Fase 28 avanza de 76% a 78% por añadir asistencia habitacional con elegibilidad, costo, capacidad mensual y pago auditado. Quedan asistencia a desplazados y personas sin vivienda, educación técnica y cobertura longitudinal. El avance global no se estima sin pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.129",
       "date": "2026-11-01",
@@ -1353,8 +1367,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.130 · protección social ligada a hogares y presupuesto",
-      "detail": "Fases 9 y 28: añadir ayudas municipales con elegibilidad visible, cupo y partida presupuestaria; medir si cambian acceso a vivienda/educación y bienestar del hogar sin generar recursos gratis. Priorizar el sistema jugable y verificar Online/Offline."
+      "title": "Alfa 0.131 · refugio y atención a hogares sin vivienda",
+      "detail": "Fases 28 y 30: conectar edificios/refugios, personal, plazas disponibles, accesibilidad vial y gasto operativo con hogares en riesgo de quedar sin vivienda. Medir admisiones, espera y salidas sin crear capacidad automática."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1635,11 +1649,12 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 76,
-      "summary": "Infraestructura de servicios independiente y cuatro niveles educativos construibles con puestos, aulas, costos y radios viales.",
+      "progress": 78,
+      "summary": "Salud, seguridad y cuatro niveles educativos; suma ayuda de alquiler con elegibilidad, cupo fiscal y pago trazable.",
       "pending": [
-        "Protección social con presupuestos y hogares, educación técnica, carreras profesionales y desplazamientos estudiantiles visibles.",
-        "Iconos de incidentes disponibles; aún falta despacho interactivo y una simulación longitudinal más profunda."
+        "Ampliar la protección a hogares desplazados, personas sin vivienda y adultos mayores con capacidad y costos reales.",
+        "Educación técnica, carreras profesionales y desplazamientos estudiantiles visibles.",
+        "Despacho interactivo de incidentes y medición longitudinal de equidad y cobertura."
       ]
     },
     {

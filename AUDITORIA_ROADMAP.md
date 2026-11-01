@@ -1,3 +1,13 @@
+# Auditoría del roadmap · Alfa 0.130
+
+## Revisión de alcance · Alfa 0.130
+
+### Fase 28 · asistencia de alquiler con costo y hogares elegibles
+
+La primera política de protección social ya cuenta con cupo mensual modificable por el gobierno, hogares elegibles por mora y orden de prioridad por ingreso por residente. El programa propone una renta mensual pendiente por vivienda, limita su alcance al presupuesto y a Servicios financiados y transfiere directamente al propietario. Las casas actualizan mora e ingreso de alquiler; el informe conserva solicitudes, pagos, beneficiarios y saldo sin cubrir. Online/Offline, cierre mensual. No crea efectivo al hogar.
+
+Pruebas funcionales: 89 Python y 59 Offline; stress 30 años × cuatro perfiles. La interfaz de Economía cambió; `test_ui_layout.mjs` ahora mide la tarjeta en 390×844 y 1440×900. Fase 28: 78% orientativo, quedan refugio, desplazados, mayores, educación técnica y cobertura longitudinal. Avance global no estimable sin pesos verificables para las 34 fases.
+
 ## Revisión de alcance · Alfa 0.129
 
 ### Fase 9 · ampliación escolar recibida en ambos motores

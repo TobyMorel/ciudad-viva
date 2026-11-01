@@ -1,3 +1,9 @@
+# Continuidad inmediata · Alfa 0.130
+
+Implementado primer programa jugable de protección social: cupo de ayuda de alquiler por mes, priorización por ingreso/habitante, elegibilidad solo con mora real en vivienda convertida por reconversión privada y transferencia directa al propietario. Tope $5.000, ajuste $250; el gasto se suma a Servicios y la financiación fiscal determina cuánto llega. Se registra balance en `socialServices.lastReport/history` y en cada hogar. No entregamos cash indiscriminado. `game.js` expone el ajuste y el resultado dentro de Economía; `server.py` y `offline.js` aplican el mismo cierre.
+
+Pruebas: `tests/test_social_housing_aid.py`, `tests/test_social_housing_aid_offline.mjs`; 89 Python, 59 Offline y stress de cuatro perfiles × 30 años pasan. Se añadió comprobación responsive de la nueva tarjeta a `tests/test_ui_layout.mjs`; Chromium pasó a 390×844 y 1440×900, sin recorte/overflow y con ambos controles visibles. Próxima mecánica prioritaria: refugios con personal, cupos, acceso y resultados. Fase 28=78%, global `null` por falta de pesos comunes verificables. Conservar autor Git `66056611+TobyMorel@users.noreply.github.com`; publicar en `main`, comprobar GitHub/Vercel/Actions y hacer ZIP.
+
 ## Continuidad inmediata · Alfa 0.129
 
 La ampliación escolar existe en `server.py` y `offline.js`; el panel y selección de constructoras permanecen en `game.js`/`style.css` de Alfa 0.128. Este release encontró y arregló un bloqueo real: al completarse un anexo Offline, la recepción llamaba `completeOfflineSchoolExpansion(p, quality)` aunque esa variable no existía dentro de `complete()`. Usa ahora la calidad derivada del contratista; Sur Obras y Delta dan calidades diferentes. La recepción persiste materiales consumidos/requeridos, costo, calidad, plazas y vacantes en `school.expansionHistory` y crea la garantía contractual.

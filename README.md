@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.90
+# Ciudad Viva · Alfa 0.92
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -275,3 +275,8 @@ El modo Offline ya ofrece la misma cadena básica de materiales de construcción
 ## Alfa 0.90 · aserradero y madera local (fase 18)
 
 Un nuevo emprendimiento industrial puede especializarse como aserradero. Mantiene caja privada y puestos, paga salarios y operación, y transforma dos troncos en una tabla según personal, redes urbanas, reserva forestal y espacio de acopio. El bosque regenera 18 troncos por mes hasta su límite. Las tablas aparecen en el proveedor local y se pueden comprar desde una obra: la entrega sale de la ubicación del aserradero, se descuenta de su inventario, acredita ventas a la empresa y llega al patio o depósito por carretera. Offline ofrece esta especialidad en la segunda fábrica y usa la misma transacción logística. Economía muestra reserva forestal, stock, producción y estado operativo. Chromium revisó el panel en 390×844 y 1440×900 sin desbordes. La construcción y apertura de la fábrica, y el ciclo de escasez/reanudación de obra, siguen pendientes de una prueba completa. Fase 18: 80%; el progreso global no se estima por falta de pesos comunes verificables.
+
+
+## Alfa 0.92 · paridad industrial y regresión de suministro
+
+Las fábricas especializadas dejaron de ingresar al proceso alimentario mensual Offline, evitando una doble operación y un proveedor ficticio. Se añadieron pruebas de integración para materiales de obra (bloqueo, pedido, transporte, recepción, consumo e inspección) en Online/Offline. GitHub Actions ejecuta las regresiones de ambos motores y sintaxis. Todavía falta validar la apertura de la metalúrgica desde obra industrial, producción con empleados y escasez prolongada. El progreso de fase 18 sigue al 85% y el global no es estimable.

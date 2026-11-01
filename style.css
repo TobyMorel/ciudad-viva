@@ -300,6 +300,17 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .cash-ledger>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
 .cash-ledger-entries{display:grid;gap:6px;min-width:0;margin-top:8px}
 .cash-ledger-entries .supply-line{min-width:0;overflow-wrap:anywhere}
+.municipal-scenarios{min-width:0;max-width:100%;margin:10px 0;padding:9px;border:1px solid var(--line,#d8e2db);border-radius:10px;background:var(--panel,#fff)}
+.municipal-scenarios>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
+.finance-scenario-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0;margin-top:9px}
+.finance-scenario{min-width:0;padding:10px;border:1px solid var(--line,#d8e2db);border-radius:9px;background:var(--panel,#fff);overflow-wrap:anywhere}
+.finance-scenario h4{margin:0 0 5px;font-size:14px}
+.finance-scenario>small{display:block;line-height:1.4}
+.finance-scenario>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:5px 0;border-top:1px solid var(--line,#d8e2db);font-size:11px;line-height:1.35}
+.finance-scenario>div span{overflow-wrap:anywhere}
+.finance-scenario>div b{text-align:right;overflow-wrap:anywhere}
+.finance-scenario-base h4{color:#356a67}.finance-scenario-favorable h4{color:#3d8051}.finance-scenario-adverso h4{color:#aa5b43}
+.scenario-caveat,.scenario-cause{display:block;margin-top:7px;line-height:1.45;overflow-wrap:anywhere}
 .municipal-forecast>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
 .forecast-note{margin:8px 0;color:var(--muted,#68756e);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .forecast-obligations{margin:8px 0}
@@ -312,6 +323,7 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .forecast-month>div span,.forecast-month>div b{min-width:0;overflow-wrap:anywhere}
 .forecast-month .forecast-free{padding-top:5px;border-top:1px solid var(--line,#d8e2db);font-weight:700}
 @media(max-width:600px){.forecast-months{grid-template-columns:minmax(0,1fr)}.forecast-month{padding:10px}.municipal-forecast{padding:8px}.forecast-obligations{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.finance-scenario-list{grid-template-columns:minmax(0,1fr)}.finance-scenario{padding:9px}}
 
 .finance-early-warning{box-sizing:border-box;width:100%;min-width:0;margin:9px 0;overflow-wrap:anywhere}
 .finance-early-warning>*{min-width:0;overflow-wrap:anywhere}

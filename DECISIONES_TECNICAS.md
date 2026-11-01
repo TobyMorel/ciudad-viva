@@ -571,3 +571,10 @@ Oferta fija, visible y determinista: tomar saldo principal más mora, amortizar 
 `finance.cashLedger` se persiste en los estados Online/Offline. `openingBalance + receipts - payments` se contrasta con el efectivo actual; las diferencias se exponen en Hacienda. Se agrega una fila solamente al variar el saldo entre límites de operación/API, con día, cantidad, referencia del evento reciente y saldos anterior/posterior. La interfaz muestra los últimos 12; el estado guarda hasta 120 y conserva acumulados totales para conciliar aunque rote el detalle.
 
 Un guardado anterior inicia el libro con el efectivo actual y sin entradas inventadas. El dato describe variación neta por límite de operación/cierre; no implica clasificación contable completa ni partida doble. Cambiar efectivo hacia la reserva de deuda es salida de la caja disponible, aunque no sea gasto consolidado. Se mantiene fase 29 en 40% (100/50/50/0/0) mientras este bloque de auditoría esté incompleto.
+
+
+## Alfa 0.137 · sensibilidad fiscal a doce meses
+
+`municipal_finance_scenarios` y `offlineMunicipalScenarios` reutilizan el motor existente de caja, obras y deuda en tres casos paralelos: base 0/0, favorable +10% ingresos y −5% gastos, adverso −15% ingresos y +10% gastos. Cada motor copia las cuotas; no descuenta efectivo, no cambia obligaciones ni guarda la hipótesis. El resultado mantiene contratos, prioridades, reservas y condiciones tributarias actuales; esa limitación se muestra al jugador. El caché usa los campos que afectan a proyección y se invalida ante cambios relevantes.
+
+`municipal-scenarios` es plegable para no saturar Economía; muestra supuestos, ingreso/gasto aplicado, caja y mora al mes 12, déficit y primer impago. La fase 29 pasa a 50% porque el bloque de escenarios se considera parcial (cinco bloques iguales; 100/50/50/0/50). El alcance plurianual, inflación, población, salarios y demanda queda explícitamente pendiente.

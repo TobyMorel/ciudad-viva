@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.136
+# Estado de desarrollo · Alfa 0.137
+
+## Escenarios fiscales comparados · fase 29
+
+Hacienda simula doce cierres consecutivos bajo tres casos: base (ingresos/gastos actuales), favorable (+10% ingreso, −5% gasto mensual) y adverso (−15% ingreso, +10% gasto). Cada caso usa los mismos proyectos, hitos de pago, reserva, prioridades municipales, deuda y mora que el pronóstico actual; informa caja final, fondos libres, atrasos, primer déficit y primer impago. Online y Offline presentan iguales supuestos. No modifica ni persiste la caja, deudas o proyectos reales. El cálculo se reutiliza mientras sus datos de entrada no cambien para evitar trabajo repetido en cada consulta.
+
+Son escenarios de sensibilidad, no predicciones; mantienen población, impuestos y contratos fijos, y no proyectan más de 12 meses. Verificado: 99 pruebas Python, 66 Node Offline, stress 30 años × cuatro perfiles y Chromium responsive del panel financiero a 390×844 y 1440×900; supuestos, tres tarjetas, caja final y mora visibles, sin desborde horizontal ni solapamiento. CI en GitHub pendiente al momento de la publicación.
+
+Fase 29: 50% orientativo mediante los cinco bloques estables de igual peso (20 puntos): caja/compromisos 100%, auditoría contable 50%, presupuestos/prioridades 50%, ciclo de vida 0%, escenarios 50% (100/50/50/0/50; promedio 50%). El bloque de escenarios permanece parcial hasta cubrir 1, 4, 10 y 20 años con inflación/población/demanda trazables. Global no estimable: faltan pesos verificables comunes para las 34 fases.
 
 ## Libro de caja municipal y conciliación neta
 

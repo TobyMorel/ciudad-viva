@@ -1,11 +1,11 @@
-# Siguiente entrega · después de Alfa 0.136
+# Siguiente entrega · después de Alfa 0.137
 
-1. Fase 29: extender el libro de caja de snapshots netos a asientos clasificados por concepto/origen/destino, con conciliación contra caja y compromisos sin registrar dos veces la misma operación.
-2. Implementar escenarios presupuestarios base, favorable y adverso con fórmulas visibles, compromisos a varios años y resultados que ayuden a decidir políticas municipales.
-3. Añadir costo de ciclo de vida al aprobar infraestructura: inversión inicial, operación, mantenimiento, reposición y financiamiento; conectarlo con el pronóstico y la caja real.
+1. Fase 29: llevar los escenarios de 12 meses a 1, 4, 10 y 20 años; modelar población, inflación ficticia, salarios, impuestos, demanda y compromisos sin cambiar la caja real.
+2. Incorporar costo total de ciclo de vida antes de confirmar infraestructura: suelo, diseño, obra, operación, personal, mantenimiento, renovación, cierre y financiamiento; enlazar cada rubro con un sistema real del juego.
+3. Completar el libro de caja con conceptos tipados y contrapartidas para separar gasto, ingreso, transferencia y fondo reservado, y conciliarlo con compromisos.
 4. Ejecutar regresiones Online/Offline, stress de 30 años y Chromium responsive de Hacienda; publicar en `main`, comprobar SHA/Actions/Vercel y adjuntar ZIP completo.
 
-Fase actual: 29 (40% orientativo y parcial; método estable de cinco bloques iguales en `ESTADO_DESARROLLO.md`). Próximo hito: movimientos contables clasificados, escenarios fiscales y costo plurianual de infraestructura. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
+Fase actual: 29 (50% orientativo y parcial; bloques estables 100/50/50/0/50 en `ESTADO_DESARROLLO.md`). Próximo hito: costo de ciclo de vida y escenarios a 1/4/10/20 años. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
 
 # Siguiente entrega · después de Alfa 0.134
 

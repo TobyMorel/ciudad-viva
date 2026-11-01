@@ -25,6 +25,18 @@ class MunicipalForecast(unittest.TestCase):
         self.assertEqual(forecast['months'][0]['closingCash'],forecast['months'][0]['openingCash']+forecast['months'][0]['net'])
         self.assertEqual(before,(self.s['money'],self.s['projects'],self.s['finance']['municipalLoans']))
 
+    def test_fiscal_scenarios_apply_visible_shocks_without_changing_saved_city(self):
+        before=copy.deepcopy((self.s['money'],self.s['finance'],self.s['projects']))
+        scenarios=server.municipal_finance_report(12000,8000)['scenarios12']
+        base,favorable,adverse=scenarios['scenarios']
+        self.assertEqual([x['id'] for x in scenarios['scenarios']],['base','favorable','adverso'])
+        self.assertEqual((favorable['incomeChangePct'],favorable['expenseChangePct']),(10,-5))
+        self.assertEqual((adverse['incomeChangePct'],adverse['expenseChangePct']),(-15,10))
+        self.assertEqual(base['closingCash'],server.municipal_finance_report(12000,8000)['forecastMonths']['closingCash'])
+        self.assertGreater(favorable['closingCash'],base['closingCash'])
+        self.assertLess(adverse['closingCash'],base['closingCash'])
+        self.assertEqual(before,(self.s['money'],self.s['finance'],self.s['projects']))
+
     def test_tax_rate_changes_the_projected_income(self):
         self.s['taxes']['lastReport']={'collected':100,'propertyBilled':1000,'propertyCollected':500,'businessBilled':500,'businessCollected':250}
         self.s['taxes']['propertyRateBp']=60

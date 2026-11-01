@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.136",
+  "currentVersion": "0.137",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.137",
+      "date": "2026-11-01",
+      "roadmapPhase": 29,
+      "phaseProgress": 50,
+      "overallProgress": null,
+      "changes": [
+        "Hacienda compara escenarios base, favorable y adverso con proyección mensual de 12 cierres. Los tres pasan por el modelo de contratos, prioridades de programas, reserva de deuda, cuotas, mora y caja ya disponible.",
+        "Los supuestos se muestran junto al resultado: base 0%/0%; favorable ingresos +10% y gastos −5%; adverso ingresos −15% y gastos +10%. Cada escenario informa caja final, caja libre, mora, primer déficit y primer impago.",
+        "Online y Offline ejecutan las mismas reglas de previsión sin alterar dinero, préstamos ni proyectos guardados. El cálculo se reutiliza hasta que cambian los datos fiscales que lo afectan.",
+        "Economía incorpora un panel plegable, con tarjetas separadas en móvil y escritorio. Verificado: pruebas Python/Offline, stress de 30 años y Chromium responsive 390×844/1440×900; supuestos visibles, texto dentro de pantalla y sin solapamientos.",
+        "Fase 29 avanza de 40% a 50% por el primer comparador operativo de escenarios; el bloque permanece parcial porque aún no proyecta 1/4/10/20 años ni incorpora cambios demográficos/regionales. Progreso global no estimable sin pesos verificables para 34 fases."
+      ]
+    },
     {
       "version": "0.136",
       "date": "2026-11-01",
@@ -1451,16 +1465,16 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 29 · escenarios fiscales explícitos",
-      "detail": "Comparar escenarios base, favorable y adverso con supuestos visibles, eventos de caja y compromisos a varios años; conectar el resultado con decisiones municipales."
+      "title": "Fase 29 · costo de ciclo de vida",
+      "detail": "Estimar diseño, suelo, obra, operación, personal, mantenimiento, reposición, cierre y financiamiento de infraestructuras; contrastar los costos con escenarios a 1, 4, 10 y 20 años."
     },
     {
-      "title": "Fase 29 · costo de ciclo de vida",
-      "detail": "Incorporar construcción, operación, mantenimiento, reposición y financiamiento a la evaluación de infraestructura; extender el libro con conceptos atribuibles."
+      "title": "Fase 29 · libro contable clasificado",
+      "detail": "Desglosar los movimientos netos existentes por concepto y origen/destino; conciliar transferencias, compromisos y caja sin duplicar operaciones."
     },
     {
       "title": "Verificación integral y red local",
-      "detail": "Mantener batería Online/Offline, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
+      "detail": "Mantener pruebas de motores, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1749,10 +1763,12 @@
     {
       "phase": 29,
       "title": "Hacienda municipal, deuda, crédito y planificación plurianual",
-      "progress": 55,
-      "summary": "Créditos, impuestos/mora, reserva de deuda y presupuestos por programa",
+      "progress": 50,
+      "summary": "Hacienda compara proyección base, favorable y adversa a 12 meses; mantiene créditos, impuestos, caja, reservas y prioridades de programas.",
       "pending": [
-        "Escenarios, refinanciación y compromisos plurianuales."
+        "Escenarios de 1, 4, 10 y 20 años con población, salarios, inflación y demanda trazables.",
+        "Costo de ciclo de vida de infraestructura ligado a operación, personal, mantenimiento, reposición, cierre y financiamiento.",
+        "Libro de caja con clasificación por concepto y origen/destino."
       ]
     },
     {

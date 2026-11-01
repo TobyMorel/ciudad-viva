@@ -16,6 +16,14 @@ test('Offline: la previsión móvil muestra doce cierres e integra compromisos m
   }finally{globalThis.fetch=oldFetch;Date.now=oldNow;if(oldStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=oldStorage;}
 });
 
+test('Offline: los escenarios fiscales miden tensión sin escribir en la caja guardada',async()=>{
+  const oldFetch=globalThis.fetch,oldStorage=globalThis.localStorage,oldNow=Date.now,storage=new Map(),city=structuredClone(seed);
+  city.paused=true;city.money=25000;city.monthlyIncome=12000;city.baseMonthlyGross=12000;city.grossMonthlyIncome=12000;city.monthlyExpenses=8000;storage.set('ciudad-viva-offline-v1',JSON.stringify(city));
+  globalThis.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};globalThis.fetch=async()=>({ok:true,json:async()=>structuredClone(seed)});Date.now=()=>5000;
+  try{const adapter=await createOfflineAdapter();adapter.setRealtimeClock(false);const before=JSON.parse(storage.get('ciudad-viva-offline-v1')),report=(await adapter.request('/api/state')).municipalFinance.scenarios12,[base,favorable,adverse]=report.scenarios;assert.equal(report.horizonMonths,12);assert.deepEqual([base.id,favorable.id,adverse.id],['base','favorable','adverso']);assert.deepEqual([favorable.incomeChangePct,favorable.expenseChangePct],[10,-5]);assert.deepEqual([adverse.incomeChangePct,adverse.expenseChangePct],[-15,10]);assert.ok(favorable.closingCash>base.closingCash);assert.ok(adverse.closingCash<base.closingCash);assert.equal(JSON.parse(storage.get('ciudad-viva-offline-v1')).money,before.money)}
+  finally{globalThis.fetch=oldFetch;Date.now=oldNow;if(oldStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=oldStorage}
+});
+
 test('Offline: la previsión contabiliza mora de cuotas y su recuperación cuando hay caja',async()=>{
   const oldFetch=globalThis.fetch,oldStorage=globalThis.localStorage,oldNow=Date.now,storage=new Map(),city=structuredClone(seed);
   city.paused=true;city.money=25000;city.day=121;city.finance=city.finance||{};city.finance.municipalLoans=[{id:'arrears-offline',status:'active',balance:10000,payment:500,monthsRemaining:4,monthlyRate:.01,paymentArrears:500,delinquentMonths:1}];

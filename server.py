@@ -1385,7 +1385,40 @@ def refinance_municipal_loan(loan_id):
     ev("Crédito municipal refinanciado",f"La cuota bajó de $ {old_payment:,} a $ {payment:,}/mes por 72 meses. Se incorporaron $ {arrears:,} de mora al saldo. El costo futuro sube de $ {record['oldRemainingScheduled']:,} a $ {record['newTotalScheduled']:,}; no ingresa dinero a caja.".replace(",","."))
     return record
 
-def municipal_finance_report(monthly_income=None, monthly_expenses=None):
+_MUNICIPAL_SCENARIO_CACHE=(None,None)
+
+def municipal_finance_scenarios(monthly_income, monthly_expenses, base_forecast=None):
+    """Pruebas de estrés de 12 cierres; supuestos explícitos y sin mutar la partida."""
+    global _MUNICIPAL_SCENARIO_CACHE
+    finance=state.get("finance",{});taxes=state.get("taxes",{})
+    project_basis=[[p.get(k) for k in ("id","cost","paid","duration","elapsed","status","privatePaid")] for p in state.get("projects",[])]
+    tax_basis={k:taxes.get(k) for k in ("propertyRateBp","businessRateBp","lastReport")}
+    asset_basis=[[b.get("kind"),b.get("occupants"),b.get("status"),b.get("business",{}).get("lastRevenue"),b.get("business",{}).get("status")] for b in state.get("buildings",[]) if b.get("kind") in ("home","shop")]
+    cache_basis={"day":state.get("day"),"cash":state.get("money"),"income":monthly_income,"expenses":monthly_expenses,
+        "loans":finance.get("municipalLoans",[]),"reserve":finance.get("debtReserve"),"programs":finance.get("programBudgets",{}),
+        "escrow":finance.get("contractEscrow",{}),"projects":project_basis,"taxes":tax_basis,"taxAccounts":taxes.get("arrearsByAsset",{}),"assets":asset_basis}
+    key=json.dumps(cache_basis,sort_keys=True,separators=(",",":"),default=str)
+    if key==_MUNICIPAL_SCENARIO_CACHE[0]:return _MUNICIPAL_SCENARIO_CACHE[1]
+    presets=(
+        ("base", "Base", 0, 0, base_forecast),
+        ("favorable", "Favorable", 10, -5, None),
+        ("adverso", "Adverso", -15, 10, None),
+    )
+    results=[]
+    for key,label,income_pct,expense_pct,known in presets:
+        income=max(0,round(monthly_income*(1+income_pct/100)))
+        expenses=max(0,round(monthly_expenses*(1+expense_pct/100)))
+        forecast=known or municipal_finance_forecast(income,expenses)
+        results.append({"id":key,"label":label,"incomeChangePct":income_pct,"expenseChangePct":expense_pct,
+            "monthlyIncome":income,"monthlyExpenses":expenses,"closingCash":forecast["closingCash"],
+            "closingFreeCash":forecast["closingFreeCash"],"closingProgramArrears":forecast["closingProgramArrears"],
+            "closingDebtArrears":forecast["closingDebtArrears"],"firstFundingGapMonth":forecast["firstFundingGapMonth"],
+            "firstDebtDefaultMonth":forecast["firstDebtDefaultMonth"],"earlyWarning":forecast["earlyWarning"]})
+    report={"horizonMonths":12,"basis":"Prueba indicativa: mantiene población, impuestos, contratos, prioridades y deuda actuales; aplica los cambios mensuales indicados a ingresos y gastos. No modifica caja ni guarda el escenario.","scenarios":results}
+    _MUNICIPAL_SCENARIO_CACHE=(key,report)
+    return report
+
+def municipal_finance_report(monthly_income=None, monthly_expenses=None, include_scenarios=True):
     finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
     debt_arrears=round(sum(max(0,x.get("paymentArrears",0)) for x in loans if x.get("status")=="active"))
@@ -1401,7 +1434,9 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
     municipal_program_priority(budgets)
     forecast=municipal_finance_forecast(income,expenses)
-    return {"cash":round(state.get("money",0)),"cashLedger":municipal_cash_ledger_report(),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+forecast["debtReserve"]),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
+    report={"cash":round(state.get("money",0)),"cashLedger":municipal_cash_ledger_report(),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+debt_reserve),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
+    if include_scenarios:report["scenarios12"]=municipal_finance_scenarios(income,expenses,forecast)
+    return report
 
 def municipal_program_priority(budgets=None):
     if budgets is None:
@@ -4441,7 +4476,7 @@ def tick_one_day():
         aid_allocations=plan_housing_aid();aid_requested=sum(x["amount"] for x in aid_allocations)
         operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
-        debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
+        debt_due=municipal_finance_report(monthly_income,full_operating_cost,include_scenarios=False)["monthlyDebtService"]
         available=state["money"]+monthly_income
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
         settle_housing_aid(aid_allocations,budget_report["programs"]["services"]["fundingPct"])
@@ -5158,7 +5193,6 @@ def public_state(player_id=None):
     view["stateRevision"]=STATE_REVISION
     view["governmentReport"]=government_report()
     view["municipalTeam"]=municipal_team_report(player_id)
-    view["municipalFinance"]=municipal_finance_report()
     view["heritageReport"]=heritage_report()
     view["urbanEvolutionReport"]=urban_evolution_report()
     view["regionalMarketReport"]=state.get("regionalMarketReport",state.get("regionalMarket",{}).get("lastReport",{}))
@@ -5467,7 +5501,7 @@ class Handler(BaseHTTPRequestHandler):
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action=="municipalLoan":
-                    ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report()
+                    ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report(include_scenarios=False)
                     if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return
                     if amount>report["creditLimit"]:self._send(409,{"error":f"El límite de solvencia actual es $ {report['creditLimit']:,}.".replace(",",".")});return
                     rate=.01;monthly=amount*rate*(1+rate)**term/((1+rate)**term-1);gross=max(1,report["monthlyIncome"]);existing=report["monthlyDebtService"]

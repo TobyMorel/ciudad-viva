@@ -3098,12 +3098,13 @@ def simulate_business_month(workforce):
         # Renta del local: pago real a propietarios privados, independiente de impuestos.
         rent=max(0,int(firm.get("monthlyRent",50+max(0,12-abs(shop["x"]-12)-abs(shop["y"]-10))*3)))
         overhead+=rent
-        firm["lastRentPaid"]=rent
-        state["supply"]["propertyRentalCash"]=state["supply"].get("propertyRentalCash",0)+rent
         firm["inputInventory"]=input_inventory-production
         cash_before_orders=firm.get("cash",0)+revenue-overhead
         if cash_before_orders<0:
             draw_business_credit(firm,-cash_before_orders);cash_before_orders=firm.get("cash",0)+revenue-overhead
+        paid_rent=min(rent,max(0,int(cash_before_orders+rent)))
+        firm["lastRentPaid"]=paid_rent
+        state["supply"]["propertyRentalCash"]=state["supply"].get("propertyRentalCash",0)+paid_rent
         if cash_before_orders<0:
             firm["cash"]=round(cash_before_orders);close_business(shop,workforce,"las ventas no cubrieron gastos fijos y agotó su línea de crédito");closed+=1;continue
         target_inputs=min(110,max(12,round(staffed*firm.get("productivity",.06)*30*1.15)))

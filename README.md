@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.94
+# Ciudad Viva · Alfa 0.95
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -290,3 +290,8 @@ La cadena industrial de áridos→hormigón→obra funciona en ambos motores: ex
 ## Alfa 0.94 · recuperación autónoma de fábricas quebradas
 
 Una fábrica cerrada por insolvencia puede tener un nuevo operador tras 90 días, si conserva suelo industrial compatible, existe demanda solvente por sus materiales o alimentos, y tiene ruta vial, electricidad, agua y tratamiento de cloacas suficientes. Un inversor privado aporta $5.300: $4.200 de capital operativo para la nueva firma, $900 para rehabilitación y $200 por permiso municipal. La constructora emplea cinco trabajadores durante siete días, después se inspeccionan servicios y acceso; una instalación sin cobertura permanece detenida. La nueva empresa abre con 20 vacantes, pero debe volver a contratar empleados y comprar insumos. El capital se transfiere, no se crea; los materiales de la empresa anterior no reaparecen. La ficha de parcela y Economía informan plazos, fondos, trabajadores y causas. Disponible Online y Offline, con pruebas integradas y Chromium.
+
+
+## Alfa 0.95 · mercado de proveedores industriales competidores
+
+El simulador conecta competencia entre fábricas a la compra efectiva de materiales en ambas modalidades. Cada cantera, hormigonera, aserradero o metalúrgica tiene un precio relativo dinámico, inventario propio, posición vial y caja propia. Al comprar para una obra se elige una planta conectada que tenga todo el lote, con mínimo costo de producto más flete; no basta con que varias plantas sumen inventario suficiente. Solo el vendedor ganador recibe el pago y pierde existencias. Una parte separada del costo se contabiliza como ingreso logístico, sin duplicar la caja empresarial. Las hormigoneras también adjudican automáticamente sus compras de áridos entre canteras rivales. Precio y stock por fábrica aparecen en Economía; la interfaz de pedido limita el lote a lo disponible en una planta individual y explica el criterio de adjudicación. Tests Python/Node y Chromium cubren los dos motores y las vistas 390×844/1440×900. Fase 17: 70%; fase 18: 90%; global sin estimación.

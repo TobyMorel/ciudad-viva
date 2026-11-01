@@ -3679,6 +3679,15 @@ def tick_one_day():
                 regional_reserve-=sum(batches)
             for name,quantity in zip(("Distribuidora Regional","Corralón del Puerto","Flete Urgente"),batches):
                 supplier_stock[name][key]+=quantity
+        # Prospección geológica privada: inversión real y depósitos sin explotar finitos.
+        unexplored=max(0,int(state["supply"].setdefault("unexploredSteelOre",12000)))
+        if regional_reserve<900 and unexplored>=300 and int(state.get("privateCapital",0))>=4500:
+            state["privateCapital"]-=4500
+            state["supply"]["geologicalExplorationSpend"]=state["supply"].get("geologicalExplorationSpend",0)+4500
+            regional_reserve+=300
+            unexplored-=300
+            state["supply"]["unexploredSteelOre"]=unexplored
+            ev("Prospección minera regional","Capital privado financió $4500 para habilitar 300 unidades de mineral siderúrgico verificado.")
         state["supply"]["regionalSteelReserve"]=regional_reserve
         # Recuperación industrial con masa y presupuesto: la chatarra reciclada es el insumo.
         scrap=max(0,float(state.get("waste",{}).get("scrapSteelTons",0)))

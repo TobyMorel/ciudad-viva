@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.96",
+  "currentVersion": "0.97",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.97",
+      "date": "2026-10-31",
+      "roadmapPhase": 17,
+      "phaseProgress": 80,
+      "overallProgress": null,
+      "changes": [
+        "Contratos industriales a plazo entre canteras y hormigoneras en Online y Offline: el comprador elige cantera por precio, ruta, stock y caja, reserva unidades realmente extraídas y financia tres remesas escalonadas cuando el lote lo permite. La cantera no cobra por reservar: los importes quedan en custodia privada y se liquidan al productor y al transportista únicamente con la llegada.",
+        "Incumplimiento comercial verificable: cierre del comprador o vencimiento del plazo sin ruta cancela solo las remesas pendientes, devuelve su anticipo y, si la cantera sigue operativa, libera las unidades reservadas sin duplicarlas. Se registra por contrato el material entregado, cancelado, pagos, devolución y saldo de custodia.",
+        "Economía incorpora resumen de contratos, entregas y fondos retenidos. Pruebas de tres remesas, caja y stock, congestión/corte vial e insolvencia en ambos motores; comprobación Chromium de textos largos en móvil y escritorio. Fase 17: 80% (enfocado en esta cadena B2B; contratos de otros sectores aún pendientes). Fase 18: 90%. Progreso global no estimado."
+      ]
+    },
     {
       "version": "0.96",
       "date": "2026-10-31",
@@ -905,12 +917,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 17 · contratos de suministro a plazo y competencia minorista",
-      "detail": "Reservas, fechas de entrega y pagos entre empresas; impuestos, alquileres y crecimiento ante rivales, sin producir mercadería gratis."
+      "title": "Fase 17 · contratos comerciales multisectoriales",
+      "detail": "Extender acuerdos a madera, alimentos y componentes con plazos, sanciones, financiación privada y rutas."
     },
     {
-      "title": "Fase 33 · escenarios de 30 años",
-      "detail": "Simulaciones pequeña, metropolitana, portuaria y turística; detectar fallos de empleo, vivienda, energía, logística y presupuesto."
+      "title": "Fase 33 · partidas de estrés multidecenales",
+      "detail": "Validar cuatro perfiles de ciudad a 30 años y eliminar desequilibrios emergentes de presupuesto, servicios, empleo y logística."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1074,11 +1086,11 @@
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 75,
-      "summary": "Empresas privadas compiten, se financian y pueden quebrar/reabrir; promotores pagan transporte de materiales y firmas expanden/reducen sus puestos por resultados económicos, con residentes desempleados identificables.",
+      "progress": 80,
+      "summary": "Empresas privadas con balances, competencia, quiebras y plantillas variables; contrato de áridos cantera-hormigonera con reserva, custodia, tres remesas, pagos contra entrega y devolución ante incumplimiento.",
       "pending": [
-        "Consolidar competencia minorista, alquileres comerciales y supervivencia empresarial con expansión/relocalización entre parcelas.",
-        "Contratos de largo plazo entre proveedores y clientes; estrés por recursos y desempleo sostenido durante partidas de 30 años."
+        "Extender contratos a plazo a alimentos, madera y acero; reprogramación negociada y penalidades al vendedor, contratos de obra y exportación.",
+        "Profundizar competencia minorista, alquiler comercial, financiación y relocalización ante quiebras."
       ]
     },
     {

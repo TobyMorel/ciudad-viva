@@ -108,8 +108,8 @@ test('Offline: plazo vencido devuelve depósitos y paga multa sin duplicación',
   s.supply.marketOrders=Array.from({length:3},(_,i)=>({
     id:'contract-test-'+i,businessId:'concrete-beta',vendorId:'quarry-alfa',
     supplyContractId:'contract-test',commodity:'áridos',type:'industrial_raw',quantity:10,
-    productCost:300,freight:0,orderedDay:30,supplierReadyDay:31+i*7,deadlineDay:45+i*7,
-    arrivalDay:32+i*7,source:[4,9],x:6,y:9,status:'en tránsito'
+    productCost:300,freight:0,orderedDay:30,supplierReadyDay:31+i*2,deadlineDay:35+i*2,
+    arrivalDay:32+i*2,source:[4,9],x:6,y:9,status:'en tránsito'
   }));
   await play(s,async({tick})=>{
     const city=await tick();

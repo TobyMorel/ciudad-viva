@@ -10,7 +10,7 @@ async function play(s,fn){
  globalThis.fetch=async()=>({ok:true,json:async()=>seed()});
  globalThis.localStorage={getItem:()=>saved,setItem:(_,value)=>{saved=value}};
  Date.now=()=>now;
- try{const adapter=await createOfflineAdapter();await fn({adapter,advance:async()=>{now+=1000;return adapter.request('/api/state')}})}
+ try{const adapter=await createOfflineAdapter();await fn({adapter,advance:async()=>{now+=1000;return adapter.request('/api/state')},changeSave:fn=>{saved=JSON.stringify(fn(JSON.parse(saved)))}})}
  finally{globalThis.fetch=previous.fetch;globalThis.localStorage=previous.localStorage;Date.now=previous.now}
 }
 test('Offline: feria se contrata una sola vez y liquida visitantes separados',async()=>{
@@ -33,11 +33,18 @@ test('Offline: feria se contrata una sola vez y liquida visitantes separados',as
    assert.equal(same.tourism.events[0].retailSpend,spend);
  });
 });
-test('Offline: una feria contratada se cancela si pierde todas las calles',async()=>{
+test('Offline: si la feria pierde las calles se cancela sin reembolso',async()=>{
  const s=seed();s.day=30;s.lastMonth=0;s.paused=false;s.speed=1;s.money=100000;
- await play(s,async({adapter,advance})=>{
+ await play(s,async({adapter,advance,changeSave})=>{
    let city=await adapter.request('/api/action',{action:'scheduleTourismEvent',kind:'feria'});
-   // Los cortes se prueban reabriendo una partida sin carreteras en otro adaptador.
    assert.equal(city.tourism.events[0].status,'programado');
+   const balance=city.money;
+   changeSave(s=>{s.roads=[];return s});
+   await adapter.request('/api/load');
+   city=await advance();
+   assert.equal(city.tourism.events[0].status,'cancelado');
+   assert.equal(city.tourism.events[0].visitors,0);
+   assert.equal(city.tourism.eventRetailSpend,0);
+   assert.ok(city.money<=balance,'La organización contratada no se reembolsa');
  });
 });

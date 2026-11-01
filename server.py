@@ -1813,7 +1813,10 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
     routed_bin_ids=set(routed_by_id)
     for container in containers:container["routeId"]=routed_by_id.get(container.get("id",f"bin-{container['x']}-{container['y']}"),{}).get("id")
-    collection_capacity=(trucks*.75+len(routed_bin_ids)*.15)*collection_factor
+    households=[b for b in buildings if b.get("kind")=="home" and b.get("occupants",0)>0]
+    reachable_people=sum(max(0,int(h.get("occupants",0))) for h in households if any(service_route_within(d,h) for d in active_depot_buildings))
+    covered_ratio=reachable_people/max(1,sum(max(0,int(h.get("occupants",0))) for h in households))
+    collection_capacity=(trucks*.75*covered_ratio+len(routed_bin_ids)*.15)*collection_factor
     transfer_capacity=active_depots*12
     transfer_dispatch=active_depots*1.5
     landfills=[b for b in buildings if b.get("kind")=="landfill" and b.get("status","habilitado") not in ("cerrado","abandonado")]
@@ -1843,7 +1846,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
             container["lastPickedTons"]=round(picked,3);container["routeId"]=route["id"] if route else None
             bin_picked+=picked;bin_overflow+=overflow
         curb_generated=max(0,generated-bin_generation)
-        curb_capacity=trucks*.75*collection_factor
+        curb_capacity=trucks*.75*covered_ratio*collection_factor
         curb_picked=min(backlog+curb_generated,curb_capacity)
         picked=curb_picked+bin_picked
         accepted=min(picked,max(0,transfer_capacity-transfer_stored)) if active_depots else picked

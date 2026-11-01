@@ -130,7 +130,7 @@ def advance_local_metalworks(workplaces,employees):
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
                 if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         if firm["cash"]<0:
-            firm["status"]="cerrado";plant["status"]="cerrado";supplier["components"]=max(0,supplier["components"]-int(firm.get("componentStock",0)));state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
+            firm["status"]="cerrado";plant["status"]="cerrado";supplier["components"]=max(0,supplier["components"]-int(firm.get("componentStock",0)));firm["componentStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Metalúrgica insolvente",f"{plant.get('name','Metalúrgica')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
         raw=max(0,int(firm.get("rawSteelInventory",0)));potential=max(0,min(24,round(staff*1.2)));capacity=max(0,round(potential*services));output=min(capacity,raw,max(0,180-supplier["components"]))
         firm["rawSteelInventory"]=raw-output;firm["componentStock"]=max(0,int(firm.get("componentStock",0)))+output;supplier["components"]+=output;firm["lastProduction"]=output;firm["lastProductionPotential"]=potential;firm["lastMaterialShortage"]=max(0,potential-output);firm["lastLocalSales"]=0;industry["componentsProduced"]+=output
@@ -159,7 +159,7 @@ def advance_local_concrete_plants(workplaces,employees):
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
                 if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         if firm["cash"]<0:
-            firm["status"]="cerrado";plant["status"]="cerrado";supply["concrete"]=max(0,supply["concrete"]-int(firm.get("concreteStock",0)));state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
+            firm["status"]="cerrado";plant["status"]="cerrado";supply["concrete"]=max(0,supply["concrete"]-int(firm.get("concreteStock",0)));firm["concreteStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Hormigonera insolvente",f"{plant.get('name','Hormigonera')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.")
             continue
         capacity=max(0,min(36,round(staff*1.25*services)));raw=max(0,int(firm.get("rawMaterialInventory",0)))
@@ -204,7 +204,7 @@ def advance_local_sawmills(workplaces,employees):
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
                 if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         if firm["cash"]<0:
-            firm["status"]="cerrado";mill["status"]="cerrado";supplier["timber"]=max(0,supplier["timber"]-int(firm.get("timberStock",0)));state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
+            firm["status"]="cerrado";mill["status"]="cerrado";supplier["timber"]=max(0,supplier["timber"]-int(firm.get("timberStock",0)));firm["timberStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Aserradero insolvente",f"{mill.get('name','Aserradero')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
         potential=max(0,min(30,round(staff*1.25)));capacity=max(0,round(potential*services));logs=max(0,int(industry["timberReserve"]))
         output=min(capacity,logs//2,max(0,240-supplier["timber"]));industry["timberReserve"]-=output*2;supplier["timber"]+=output;firm["timberStock"]=max(0,int(firm.get("timberStock",0)))+output;firm["lastProduction"]=output;firm["lastProductionPotential"]=potential;firm["lastMaterialShortage"]=max(0,potential-output);firm["lastLocalSales"]=0
@@ -232,7 +232,7 @@ def advance_local_quarries(workplaces, employees):
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee["home"]
                 home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
         if firm["cash"]<0:
-            firm["status"]="cerrado";quarry["status"]="cerrado";stock["aggregate"]=max(0,stock["aggregate"]-output);state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
+            firm["status"]="cerrado";quarry["status"]="cerrado";stock["aggregate"]=max(0,stock["aggregate"]-int(firm.get("aggregateStock",0)));firm["aggregateStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Cantera local insolvente",f"{quarry.get('name','Cantera')}: el ingreso por áridos no cubrió nómina y operación. La producción local se detuvo y se liberaron {firm.get('jobSlots',20)} puestos.")
     industry["quarryReserveRemaining"]=sum(max(0,int(b.get("business",{}).get("quarryReserve",0))) for b in quarries if b.get("business",{}).get("status")=="abierto")
 

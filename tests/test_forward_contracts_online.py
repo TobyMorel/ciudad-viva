@@ -63,6 +63,39 @@ class AggregateForwardContracts(unittest.TestCase):
         self.assertEqual(buyer["rawMaterialInventory"],0)
         self.assertEqual(self.s["supply"].get("logisticsCash",0),0)
 
+    def test_renegotiation_after_road_cut_preserves_stock_and_escrow(self):
+        buyer=self.plant["business"];seller=self.quarry["business"]
+        contract=server.sign_aggregate_forward_contract(self.plant,30)
+        with self.assertRaisesRegex(ValueError,"corte vial"):
+            server.renegotiate_aggregate_forward_contract(contract["id"])
+        roads=self.s["roads"][:]
+        self.s["roads"]=[]
+        lines=[o for o in self.s["supply"]["marketOrders"] if o.get("supplyContractId")==contract["id"]]
+        old_deadlines=[o["deadlineDay"] for o in lines]
+        fee=max(20,(contract["contractValue"]+10)//20)
+        original_escrow=contract["escrow"];original_stock=seller["aggregateStock"]
+        original_buyer_cash=buyer["cash"];original_seller_cash=seller["cash"]
+        self.s["day"]=2
+        server.renegotiate_aggregate_forward_contract(contract["id"])
+        self.assertEqual([o["deadlineDay"] for o in lines],[d+14 for d in old_deadlines])
+        self.assertEqual((buyer["cash"],seller["cash"]),(original_buyer_cash-fee,original_seller_cash+fee))
+        self.assertEqual(contract["escrow"],original_escrow)
+        self.assertEqual(seller["aggregateStock"],original_stock)
+        with self.assertRaisesRegex(ValueError,"renegociado"):
+            server.renegotiate_aggregate_forward_contract(contract["id"])
+        for day in range(3,20):
+            self.s["day"]=day;server.process_market_orders()
+        self.assertTrue(all(o["status"]=="en tránsito" for o in lines))
+        self.s["roads"]=roads
+        for day in range(20,42):
+            self.s["day"]=day;server.process_market_orders()
+        self.assertEqual(contract["status"],"cumplido")
+        self.assertEqual(contract["escrow"],0)
+        self.assertEqual(contract["refunded"],0)
+        self.assertEqual(buyer["rawMaterialInventory"],30)
+        self.assertEqual(seller["cash"],original_seller_cash+fee+contract["paidToSeller"])
+        self.assertEqual(self.s["supply"]["logisticsCash"],contract["paidToLogistics"])
+
     def test_financing_and_stock_shortage_prevent_contract(self):
         self.plant["business"]["cash"]=500
         self.assertIsNone(server.sign_aggregate_forward_contract(self.plant,30))

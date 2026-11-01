@@ -217,3 +217,10 @@ La recuperación industrial autónoma ya cubre insolvencia→90 días de espera�
 Competencia operativa entre canteras, hormigoneras, aserraderos y metalúrgicas en ambos motores. Cada orden manual de obra compra stock de una fábrica conectada por ruta, clasificada por producto + flete, con caja y existencias únicas y rastro de adjudicación. Las compras industriales automáticas de áridos siguen la misma lógica. Una fábrica con ventas suficientes puede subir su precio gradualmente; inventario ocioso obliga a rebajarlo, con límites de 80%–135% de tarifa. Economía expone cotizaciones rivales y la ventana de compras evita pedir un lote mayor al de cualquier planta.
 
 **Próximo sistema:** introducir contratos a plazo con inventario reservado, entregas físicas por transportistas y competencia también para la obra privada automática; ampliar dinámica de plantillas y demanda de comercios y fábricas sin crear capital ni empleo. Implementar después escenarios de estrés de 30 años de fase 33. Pruebas LAN físicas y Vercel aún pendientes. Fase 17=70%, 18=90%, global sin estimación.
+
+
+## Continuación después de Alfa 0.96
+
+El material que compran los promotores de vivienda/fábrica y la inversión comercial delegada necesita camión, fecha, flete, capacidad de patio, ruta desde un proveedor con stock y ruta desde el depósito hasta la obra. No se acredita antes de entrega. Las firmas privadas ajustan plantilla y producción según demanda y caja y pagan nuevo equipamiento para crecer; despidos registrados sobre residentes reales. Los dos motores incorporan estas reglas, con pruebas de no-teletransporte, falta de almacenamiento y cierre económico.
+
+**Siguiente sistema jugable:** contratos de suministro entre empresas (reserva de lotes, plazos, incumplimientos, renegociación y pagos sin caja gratuita); competencia minorista con alquiler comercial y cambio de trabajadores; luego simulaciones de 30 años de fase 33. No subir porcentajes de fase 18 sin demostrar acero local/terminales completas. Fase 17=75%, fase 18=90%, global sin ponderación. Chromium automatizado, LAN física y Vercel siguen siendo verificaciones distintas.

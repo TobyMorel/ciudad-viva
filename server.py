@@ -1272,12 +1272,14 @@ def contractor_has_capacity(name):
     assigned=sum(p["contractor"]==name and p.get("status")!="pausada" for p in state["projects"])
     assigned+=sum(p.get("contractor")==name and p.get("status")=="en obra" for p in state.get("recoveryContracts",[]))
     assigned+=sum(g.get("contractor")==name and g.get("status")=="reparacion" for g in state.get("contractGuarantees",[]))
+    assigned+=sum(b.get("industrialRecovery",{}).get("contractor")==name and b.get("industrialRecovery",{}).get("status")=="en obra" for b in state.get("buildings",[]))
     return assigned<CONTRACTORS[name]["capacity"]
 
 def contractor_free_workers(name):
     assigned=sum(p.get("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
                  for p in state["projects"] if p["contractor"]==name)
     assigned+=sum(p.get("workers",4) for p in state.get("recoveryContracts",[]) if p.get("contractor")==name and p.get("status")=="en obra")
+    assigned+=sum(b.get("industrialRecovery",{}).get("workersAssigned",5) for b in state.get("buildings",[]) if b.get("industrialRecovery",{}).get("contractor")==name and b.get("industrialRecovery",{}).get("status")=="en obra")
     assigned+=sum(g.get("workersAssigned",3) for g in state.get("contractGuarantees",[]) if g.get("contractor")==name and g.get("status")=="reparacion")
     assigned+=sum(o.get("unloadWorkers",0) for o in state["supply"].get("orders",[]) if o.get("contractor")==name and o.get("status")=="descargando")
     return CONTRACTORS[name]["workers"]-assigned
@@ -3013,6 +3015,90 @@ def collect_bus_fares(workforce):
             home["householdCash"]=home.get("householdCash",0)-paid
             line["monthlyFareRevenue"]+=paid;line["fareCollectedDay"]=state["day"]
 
+
+INDUSTRIAL_REOPENING_COST = {"operating":4200,"rehabilitation":900,"permit":200,"workers":5,"days":7}
+
+def industrial_reopening_demand(kind):
+    if kind=="food":
+        return any(b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and
+                   (b["business"].get("lastSales",0)>0 or b["business"].get("lastInputUnits",0)>0)
+                   for b in state.get("buildings",[]))
+    material={"quarry":"aggregate","concrete":"concrete","sawmill":"timber","metalworks":"components"}.get(kind)
+    if not material:return False
+    needs=any(p.get("status") not in ("pausada","cancelada") and
+              p.get("materialsRequired",{}).get(material,0)>p.get("materialsUsed",{}).get(material,0)
+              for p in state.get("projects",[]))
+    if kind=="quarry":
+        needs=needs or any(b.get("kind")=="factory" and b.get("business",{}).get("industryType")=="concrete"
+                           and b.get("business",{}).get("status")=="abierto" for b in state.get("buildings",[]))
+    return needs
+
+def consider_industrial_reopenings():
+    """Promotores rehabilitan plantas cerradas con capital propio, demanda y cuadrilla real."""
+    cost=INDUSTRIAL_REOPENING_COST
+    for site in state.get("buildings",[]):
+        if site.get("kind")!="factory" or site.get("business",{}).get("status")!="cerrado":continue
+        firm=site["business"]
+        firm.setdefault("closedDay",state["day"])
+        if site.get("industrialRecovery",{}).get("status")=="en obra":continue
+        if state["day"]-firm["closedDay"]<90:continue
+        if not any(z.get("kind")=="factory" and z.get("x")==site["x"] and z.get("y")==site["y"] for z in state.get("zones",[])):continue
+        if not industrial_reopening_demand(firm.get("industryType","food")):continue
+        if not route_between((4,10),(site["x"],site["y"])):continue
+        utility=site.get("utilityAccess",{})
+        if min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))<65:continue
+        amount=cost["operating"]+cost["rehabilitation"]+cost["permit"]
+        if state.get("privateCapital",0)<amount+1500:continue
+        eligible=[name for name in CONTRACTORS if contractor_has_capacity(name) and contractor_free_workers(name)>=cost["workers"]]
+        if not eligible:continue
+        contractor=min(eligible,key=lambda name:(CONTRACTORS[name]["price"],name))
+        state["privateCapital"]-=amount
+        state["money"]+=cost["permit"]
+        state["supply"]["contractorCash"][contractor]+=cost["rehabilitation"]
+        site["industrialRecovery"]={"status":"en obra","contractor":contractor,
+            "workersAssigned":cost["workers"],"contractedDay":state["day"],
+            "readyDay":state["day"]+cost["days"],"cost":amount,
+            "operatingReserve":cost["operating"],"permitPaid":cost["permit"],"workPaid":cost["rehabilitation"],
+            "statusCause":"Rehabilitación y revisión de servicios"}
+        ev("Rehabilitación industrial adjudicada",f"{site['name']} será reacondicionada por {contractor} durante 7 días: 5 trabajadores, inversión privada $ {amount:,} y permiso municipal $ 200. La reapertura exige accesos y servicios.".replace(",","."))
+        break
+
+def advance_industrial_reopenings():
+    for site in state.get("buildings",[]):
+        recovery=site.get("industrialRecovery",{})
+        if recovery.get("status")!="en obra" or state["day"]<recovery.get("readyDay",0):continue
+        utility=site.get("utilityAccess",{})
+        if not route_between((4,10),(site["x"],site["y"])):
+            recovery["statusCause"]="Inspección suspendida: falta acceso vial";continue
+        if min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))<65:
+            recovery["statusCause"]="Inspección suspendida: faltan servicios";continue
+        old=site["business"];kind=old.get("industryType","food")
+        key={"quarry":("Cantera local","aggregateStock","aggregate"),
+             "concrete":("Hormigonera local","concreteStock","concrete"),
+             "sawmill":("Aserradero local","timberStock","timber"),
+             "metalworks":("Metalúrgica local","componentStock","components")}.get(kind)
+        if key:
+            supplier,field,material=key
+            stock=state["supply"]["suppliers"].get(supplier,{})
+            stock[material]=max(0,int(stock.get(material,0))-max(0,int(old.get(field,0))))
+        else:
+            state["supply"].setdefault("market",{}).get(f"Fábrica local {site['x']+1}-{site['y']+1}",{}).update({"stock":0})
+        site.setdefault("industrialRecoveryHistory",[]).append({"day":state["day"],"oldFirmId":old.get("id"),
+            "oldCash":old.get("cash",0),"industryType":kind,"contractor":recovery["contractor"],
+            "investment":recovery["cost"]})
+        site["industrialRecoveryHistory"]=site["industrialRecoveryHistory"][-8:]
+        firm={"id":f"factory-{site['x']}-{site['y']}-re-{state['day']}",
+              "name":site.get("name",FACTORY_LABELS.get(kind,"Fábrica")), "industryType":kind,
+              "status":"abierto","cash":recovery["operatingReserve"],"jobSlots":20,"wage":12,
+              "lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,
+              "rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,
+              "lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"",
+              "quarryReserve":max(0,int(old.get("quarryReserve",0))) if kind=="quarry" else 0,
+              "aggregateStock":0,"concreteStock":0,"timberStock":0}
+        site["business"]=firm;site["status"]="habilitado";state["jobs"]+=20
+        recovery["status"]="completada";recovery["completedDay"]=state["day"];recovery["statusCause"]="Inspección aprobada y nueva firma habilitada"
+        ev("Fábrica recuperada",f"{site['name']} reabrió con nuevo operador, 20 puestos y $ {firm['cash']:,} de caja privada ya reservada. La producción debe volver a conseguir insumos y personal.".replace(",","."))
+
 def advance_zoned_development():
     """Promoters spend real capital and buy the materials for approved projects."""
     demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
@@ -3204,6 +3290,7 @@ def tick_one_day():
     state["day"] += 1
     day=state["day"]
     advance_contract_guarantees()
+    advance_industrial_reopenings()
     advance_heritage_works()
     advance_urban_evolution()
     advance_urban_renewals()
@@ -3284,6 +3371,7 @@ def tick_one_day():
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
         move_households()
         advance_zoned_development()
+        consider_industrial_reopenings()
         collect_adaptive_rents()
         update_government_cycle()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")

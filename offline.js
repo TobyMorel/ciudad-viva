@@ -421,14 +421,28 @@ export async function createOfflineAdapter(){
       f.rawMaterialInventory=raw-out*2;f.concreteStock=(f.concreteStock||0)+out;supplier.concrete=(supplier.concrete||0)+out;f.lastProduction=out;f.lastProductionPotential=potential;f.lastMaterialShortage=Math.max(0,potential-out);f.lastLocalSales=0;industry.concreteProduced=(industry.concreteProduced||0)+out;
       f.lastMaterialCause=out<potential?(raw<2?'Faltan áridos':service<1?'Faltan servicios':'Almacén sin espacio'):'Producción normal';
       const pending=orders.filter(o=>o.type==='industrial_raw'&&o.commodity==='áridos'&&o.businessId===f.id&&o.status==='en tránsito').reduce((n,o)=>n+o.quantity,0),need=Math.max(0,Math.min(72,Math.max(24,capacity*2))-f.rawMaterialInventory-pending);
-      const choices=(state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='quarry'&&b.business.status==='abierto'&&b.business.aggregateStock>0).map(b=>({b,route:offlineRoadRoute(b,plant)})).filter(x=>x.route).sort((a,b)=>a.route.length-b.route.length||a.b.x-b.b.x||a.b.y-b.b.y),choice=choices[0];
       if(!need)continue;
-      if(!choice){f.lastMaterialCause='Sin cantera conectada y con stock';continue}
-      const distance=Math.max(0,choice.route.length-1),unitCost=MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price+distance*.08,qty=Math.min(need,aggregate.aggregate||0,choice.b.business.aggregateStock||0,Math.max(0,Math.floor(Math.max(0,f.cash-500)/unitCost)));
-      if(!qty){f.lastMaterialCause='Sin áridos disponibles o capital de compra';continue}
-      const cost=Math.round(qty*unitCost);aggregate.aggregate-=qty;settleOfflineLocalMaterialSale('Cantera local','aggregate',qty);f.cash-=cost;
-      orders.push({id:'quarry-'+state.day+'-'+plant.x+'-'+plant.y,type:'industrial_raw',commodity:'áridos',businessId:f.id,businessName:plant.name,supplier:'Cantera local',quantity:qty,unitCost,cost,orderedDay:state.day,supplierReadyDay:state.day+1,arrivalDay:state.day+1+Math.max(1,Math.ceil(distance/6)),travelDistance:distance,travelledDistance:0,source:[choice.b.x,choice.b.y],x:plant.x,y:plant.y,route:choice.route,status:'en tránsito'});
-      f.lastMaterialCause='Áridos locales en tránsito';event('Áridos encargados',plant.name+': '+qty+' unidades por $'+cost+'.');
+      const available=(state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='quarry'&&b.business.status==='abierto'&&b.business.aggregateStock>0)
+        .map(b=>{const route=offlineRoadRoute(b,plant),factor=Math.max(.8,Math.min(1.35,b.business.materialPriceFactor||1));
+          if(!route)return null;const distance=Math.max(0,route.length-1),unitCost=MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price*factor+distance*.08,
+          qty=Math.min(need,aggregate.aggregate||0,b.business.aggregateStock||0,Math.max(0,Math.floor(Math.max(0,f.cash-500)/unitCost)));
+          return qty?{b,route,distance,unitCost,qty,factor}:null}).filter(Boolean)
+        .sort((a,b)=>a.unitCost-b.unitCost||a.distance-b.distance||a.b.x-b.b.x||a.b.y-b.b.y);
+      const choice=available[0];
+      if(!choice){f.lastMaterialCause='Sin cantera conectada con stock y caja suficiente';continue}
+      const {b,route,distance,unitCost,qty,factor}=choice,
+        productCost=Math.round(qty*MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price*factor),
+        cost=Math.round(qty*unitCost);
+      aggregate.aggregate-=qty;
+      settleOfflineIndustrialOffer('Cantera local','aggregate',qty,{site:b,productCost,factor});
+      f.cash-=cost;
+      orders.push({id:'quarry-'+state.day+'-'+plant.x+'-'+plant.y,type:'industrial_raw',commodity:'áridos',
+        businessId:f.id,businessName:plant.name,supplier:'Cantera local',vendorId:b.business.id,vendorName:b.name,
+        quantity:qty,unitCost,cost,productCost,orderedDay:state.day,supplierReadyDay:state.day+1,
+        arrivalDay:state.day+1+Math.max(1,Math.ceil(distance/6)),travelDistance:distance,travelledDistance:0,
+        source:[b.x,b.y],x:plant.x,y:plant.y,route,status:'en tránsito'});
+      f.lastMaterialCause='Áridos de '+b.name+' en tránsito';
+      event('Áridos encargados',plant.name+': '+qty+' unidades a '+b.name+' por $'+cost+'.');
     }
   }
   function advanceOfflineSawmills(){const industry=state.localIndustry,stock=state.supply.suppliers['Aserradero local'];industry.timberReserve=Math.min(2400,Math.max(0,industry.timberReserve||0)+18);const workplaceBySite=new Map((state.workplaces||[]).map(w=>[`${w.x},${w.y}`,w]));for(const mill of (state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='sawmill'&&b.business.status==='abierto')){const firm=mill.business,work=workplaceBySite.get(`${mill.x},${mill.y}`)||{},staffed=Math.max(0,work.staffedJobs||0),access=mill.utilityAccess||{},service=Math.min(access.powerServedPct||0,access.waterServedPct||0,access.wastewaterTreatedPct||0)/100,potential=Math.max(0,Math.min(30,Math.round(staffed*1.25))),capacity=Math.max(0,Math.round(potential*service)),operating=mill.monthlyOperatingCost||360;firm.cash=(firm.cash||0)-(work.payroll||0)-operating;if(firm.cash<0){firm.status='cerrado';mill.status='cerrado';stock.timber=Math.max(0,stock.timber-(firm.timberStock||0));firm.timberStock=0;firm.closedDay=state.day;state.jobs=Math.max(0,state.jobs-(firm.jobSlots||20));event('Aserradero insolvente',`${mill.name}: no alcanzó para salarios y operación; se cerraron ${firm.jobSlots||20} puestos.`);continue}const output=Math.min(capacity,Math.floor(industry.timberReserve/2),Math.max(0,240-(stock.timber||0)));industry.timberReserve-=output*2;stock.timber=(stock.timber||0)+output;firm.timberStock=(firm.timberStock||0)+output;firm.lastProduction=output;firm.lastProductionPotential=potential;firm.lastMaterialShortage=Math.max(0,potential-output);firm.lastLocalSales=0;industry.timberProduced=(industry.timberProduced||0)+output;firm.lastMaterialCause=output<potential?(industry.timberReserve<2?'Reserva forestal agotada':service<1?'Faltan electricidad, agua o saneamiento':staffed<20?'Faltan trabajadores cualificados':'Patio de madera lleno'):'Producción normal';if(output)event('Madera producida localmente',`${mill.name}: ${output} tablas; consume ${output*2} troncos. Reserva forestal ${industry.timberReserve} troncos.`)}}

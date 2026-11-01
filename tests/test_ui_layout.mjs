@@ -68,7 +68,8 @@ try{
         return {visible,overflow:el.scrollWidth>el.clientWidth+3};
       });
     });
-    assert.equal(await page.locator('[data-renegotiate-contract="ui-contract"]').count(),1,name+': prórroga por corte vial accesible');
+    const extensionCount=await page.locator('[data-renegotiate-contract="ui-contract"]').count();
+    assert.equal(extensionCount,1,name+': prórroga por corte vial accesible · '+(await page.locator('#popupContent').innerText()).slice(0,1200));
     assert.equal(contractLayout.length,1,name+': contrato privado visible en Economía');
     assert.ok(contractLayout.every(v=>v.visible&&!v.overflow),
       name+': texto contractual solapado u oculto '+JSON.stringify(contractLayout));

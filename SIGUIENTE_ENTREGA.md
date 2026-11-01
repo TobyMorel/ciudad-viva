@@ -1,8 +1,8 @@
 # Siguiente entrega
 
-## Punto exacto · después de Alfa 0.121
+## Punto exacto · después de Alfa 0.122
 
-1. Completar fase 8 con escenarios de estrés fiscal que se resuelvan mediante decisiones de gobierno: déficit moderado recuperable, mora, priorización presupuestaria y consecuencias visibles en salud, educación, residuos, redes y colectivos.
+1. Completar fase 8 con una crisis fiscal jugable: priorizar impuestos y presupuestos, observar mora/deuda y recuperar de forma gradual salud, educación, residuos, redes y colectivos.
 2. Añadir alertas accionables del mes del faltante y partidas causantes, sin simular cargos antes de su fecha.
 3. Medir efectos de impuestos y presupuestos sobre demanda, actividad empresarial y apoyo ciudadano para conectar la previsión con jugabilidad.
 4. Mantener verificación responsive 390×844 y 1440×900, regresiones Online/Offline y stress. Publicar cada entrega en `main`, verificar SHA/estado Vercel y generar ZIP integral.

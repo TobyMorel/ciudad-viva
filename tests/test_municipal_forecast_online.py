@@ -38,3 +38,15 @@ class MunicipalForecast(unittest.TestCase):
         months=server.municipal_finance_report(12000,8000)['forecastMonths']['months']
         self.assertGreater(months[0]['debtService'],0)
         self.assertEqual(months[1]['debtService'],0)
+
+    def test_forecast_accumulates_unpaid_installments_then_recovers_arrears(self):
+        self.s["money"]=0;self.s["monthlyIncome"]=0;self.s["monthlyExpenses"]=100000
+        loan={"id":"arrears-loan","status":"active","balance":10000,"payment":500,"monthsRemaining":4,"monthlyRate":.01,"paymentArrears":0}
+        self.s["finance"]["municipalLoans"]=[loan]
+        forecast=server.municipal_finance_report(0,100000)["forecastMonths"]
+        self.assertTrue(forecast["months"][0]["debtDefault"])
+        self.assertEqual(forecast["months"][0]["debtArrears"],500)
+        self.s["money"]=1000000;self.s["monthlyIncome"]=1000000;loan["paymentArrears"]=500
+        recovered=server.municipal_finance_report(1000000,0)["forecastMonths"]
+        self.assertGreaterEqual(recovered["months"][0]["debtService"],1000)
+        self.assertLess(recovered["months"][0]["debtArrears"],500)

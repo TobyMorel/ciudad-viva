@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.122
+
+## Cuotas municipales impagas
+
+Cada cierre liquida la cuota actual y, si existe mora, hasta una cuota contractual vencida adicional. Si caja y reserva no cubren el importe total, no se amortiza principal; solo se registra la cuota corriente como mora nueva, sin duplicar mora previa. El servicio de deuda y el límite de crédito cuentan las cuotas vencidas. El principal permanece en activo hasta que principal y mora lleguen a cero; el último vencimiento liquida el saldo restante por redondeos. La previsión usa una copia de préstamos y no modifica la ciudad.
+
+La lógica es paralela en servidor y navegador. Las pruebas cubren default, calendario, acumulación, recuperación parcial, límite de plazo y cierre mensual offline.
+
 # Decisiones técnicas · Alfa 0.121
 
 ## CI responsive

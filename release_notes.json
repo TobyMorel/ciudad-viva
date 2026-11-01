@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.121",
+  "currentVersion": "0.122",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.122",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 80,
+      "overallProgress": null,
+      "changes": [
+        "La mora de los créditos municipales persiste: si la caja y la reserva no alcanzan, la cuota se registra como vencida, se conserva el principal y avanza el atraso. El mes siguiente no desaparece la deuda impaga.",
+        "Al recuperarse la tesorería, el gobierno paga la cuota actual y hasta una cuota vencida adicional por crédito. La deuda recuperada no vuelve a amortizar principal; el calendario termina solo cuando se liquidan el principal y las cuotas vencidas.",
+        "La previsión de 12 meses ahora reproduce impagos, uso del fondo reservado, monto acumulado de cuotas vencidas y primer mes con incumplimiento. El límite de nuevos créditos descuenta la mora.",
+        "Hacienda muestra mora actual, cuotas previstas y pagadas, primer impago proyectado y saldo vencido. Se comprobó en móvil y escritorio que los textos y tarjetas no se recortan ni solapan.",
+        "Verificación: 73 pruebas Python, suite Node Offline, checks sintácticos, escenario de incumplimiento y recuperación Online/Offline, inspección responsive de Hacienda y stress de 30 años × 4 perfiles pasan.",
+        "La fase 8 avanza de 75% a 80% por persistencia, costo y recuperación explícita de impagos municipales. Falta completar crisis fiscales jugables con efectos conectados en servicios, impuestos, demanda y apoyo ciudadano. El avance global no es estimable sin ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.121",
       "date": "2026-11-01",
@@ -1239,12 +1254,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.121 · estrés fiscal y continuidad de servicios",
-      "detail": "Fase 8: comprobar déficits moderados recuperables, pagos prioritarios, atrasos y efectos en salud, educación, redes, residuos y colectivos; añadir causas y alertas accionables."
+      "title": "Alfa 0.123 · recuperación de servicios tras una crisis fiscal",
+      "detail": "Fase 8: al estabilizar pagos y reducir atrasos, verificar continuidad y recuperación gradual de servicios municipales, transporte y redes; ligar decisiones fiscales con demanda y apoyo ciudadano."
     },
     {
       "title": "Validación de experiencia y red",
-      "detail": "Mantener inspección móvil/escritorio, rendimiento de ciudades densas y prueba LAN física entre dos equipos."
+      "detail": "Mantener pruebas de UI móvil/escritorio, rendimiento de ciudades densas y conectividad LAN física entre dos equipos."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1328,12 +1343,12 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 75,
+      "progress": 80,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Escenarios económicos con cambios de empleo, demanda y costos a lo largo del horizonte.",
-        "Pruebas jugables de déficits recuperables, impago y continuidad de cinco servicios públicos.",
-        "Presupuesto plurianual y control de calendario completo para inversiones y operaciones."
+        "Escenarios jugables de crisis que relacionen impuestos, empleo, demanda, apoyo ciudadano y continuidad de servicios.",
+        "Pruebas de recuperación de un déficit moderado mediante decisiones y resultados visibles en cinco servicios.",
+        "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
       ]
     },
     {

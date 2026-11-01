@@ -1,3 +1,13 @@
+# Estado de desarrollo · Alfa 0.122
+
+## Mecánica fiscal y verificación
+
+- Cuotas municipales impagas quedan como mora persistente y detienen la amortización del principal; la recuperación de caja cubre la cuota corriente más hasta una cuota vencida adicional por crédito.
+- La previsión de 12 meses muestra el primer impago, pagos diferidos y saldo vencido; la capacidad de nuevos créditos descuenta cuotas impagas.
+- Hacienda comprobado en 390×844 y 1440×900 con mora activa de prueba: etiquetas y cifras visibles, sin recortes ni solapamientos.
+- 73 pruebas Python, suite Node Offline, sintaxis y stress 30 años en cuatro perfiles pasaron. La batería visual responsive también pasó localmente; el job ya no captura el canvas completo y conserva un informe texto como artefacto.
+- Fase actual: 8, 80% orientativo. Falta la crisis fiscal completa conectada a cinco servicios, impuestos, demanda y apoyo. Avance global no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.121
 
 ## Corrección de validación responsive

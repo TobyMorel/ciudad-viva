@@ -1,5 +1,11 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.122
+
+Fase 8 añade mora persistente en créditos municipales Online (`server.py`) y Offline (`offline.js`). Un mes sin fondos suficientes para la cuota, incluso contando la reserva utilizable, agrega esa cuota a `paymentArrears`, conserva principal y plazo sin amortizar y aumenta `delinquentMonths`. En recuperación se cobra la cuota corriente más hasta una cuota vencida por crédito; el registro vencido se reduce, pero no se suma otra vez al principal. Los préstamos no se cierran hasta saldar principal y mora; el mes final ajusta la liquidación al saldo restante. La capacidad de crédito descuenta mora.
+
+La previsión móvil simula los mismos impagos, el uso de reservas, mora de cuotas y recuperación. Economía muestra la mora y el calendario previsto. Chromium pasó Hacienda con mora de prueba en 390×844 y 1440×900, incluyendo textos, límites, desbordes y solapamientos. El workflow omitirá screenshots del canvas 3D por SwiftShader, pero conserva un artefacto texto con el resultado de las comprobaciones. Suite de esta entrega: 73 pruebas Python, todas las pruebas Node Offline, inspección responsive de finanzas, checks sintácticos y stress 30 años × 4 perfiles. Fase 8=80% orientativo; falta enlazar una crisis fiscal completa con recuperación real de cinco servicios, empleo/demanda y apoyo ciudadano. Avance global no estimable por falta de pesos verificables comunes para 34 fases.
+
 ## Continuidad inmediata · Alfa 0.121
 
 Corrección del workflow responsive reportado por GitHub: Playwright capturaba páginas completas repetidamente mientras el navegador dibujaba Three.js en software; el screenshot del panel turístico excedió los 30 segundos. `tests/test_ui_layout.mjs` ya no hace screenshots. Conserva las comprobaciones del DOM y límites de viewport para Economía, turismo, salud, seguridad, tráfico y vehículos de emergencia a 390×844 y 1440×900. Se quitó el paso de subir capturas que ya no se generan. La suite responsive completa local (camera markers + layout + respuesta de servicios + previsión financiera) pasó en el orden configurado por CI. El progreso jugable no cambia: fase 8=75% orientativo; avance global no estimable. Próximo sistema sigue siendo estrés fiscal y continuidad de servicios.

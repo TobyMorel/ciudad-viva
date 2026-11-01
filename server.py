@@ -1170,31 +1170,50 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
     cash=float(state.get("money",0));reserve=max(0,round(finance.get("debtReserve",0)))
     arrears=sum(max(0,round(v)) for v in finance.get("programBudgets",{}).get("arrears",{}).values())
     escrow=max(0,round(finance.get("contractEscrow",{}).get("balance",0)))
-    rows=[];remaining_commitments=commitments
+    rows=[];remaining_commitments=commitments;remaining_reserve=reserve;first_debt_default=None
     for offset in range(12):
-        debt_service=0
-        for loan in loans:
-            if loan.get("status")!="active" or loan.get("monthsRemaining",0)<offset+1:continue
-            balance=max(0,float(loan.get("balance",0)));rate=max(0,float(loan.get("monthlyRate",float(loan.get("annualRate",.12))/12)))
-            interest=round(balance*rate);payment=min(balance+interest,max(0,round(loan.get("payment",0))))
-            principal=max(0,round(payment-interest));loan["balance"]=max(0,balance-principal);loan["monthsRemaining"]=max(0,int(loan.get("monthsRemaining",0))-1)
-            if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan["status"]="paid"
-            debt_service+=payment
         contract_payment=min(remaining_commitments,schedule[offset]);remaining_commitments-=contract_payment
         program_payment=0
         for key in program_names:
             cost=program_costs[key];due=program_arrears[key]+cost;scheduled=min(due,round(cost*program_rates[key]/100));program_payment+=scheduled;program_arrears[key]=max(0,due-scheduled)
-        income=projected_income;operating=max(0,round(monthly_expenses)-program_cost_total+program_payment)
-        opening=round(cash);net=income-operating-contract_payment-debt_service;cash+=net
-        calendar_month=start_month+offset+1
         program_arrears_total=sum(program_arrears.values())
-        rows.append({"offset":offset+1,"label":f"Año {calendar_month//12+1} · Mes {calendar_month%12+1}","openingCash":opening,"income":income,"taxIncome":projected_tax,"operatingExpenses":operating,"programPayments":program_payment,"programArrears":program_arrears_total,"contractPayments":contract_payment,"debtService":debt_service,"net":net,"closingCash":round(cash),"fundingGap":max(0,round(-cash)),"remainingCommitments":remaining_commitments,"freeAfterCommitments":round(cash-remaining_commitments-program_arrears_total),"debtReserve":reserve})
-    return {"months":rows,"basis":"Ingresos y gastos operativos al ritmo actual; actualiza impuestos según tasas y proyecta pagos de programas, obras y deuda vigentes.","committedProjects":commitments,"programArrears":arrears,"closingProgramArrears":rows[-1]["programArrears"],"contractEscrow":escrow,"debtReserve":reserve,"projectedTaxIncome":projected_tax,"closingCash":rows[-1]["closingCash"],"closingFreeCash":rows[-1]["freeAfterCommitments"],"firstFundingGapMonth":next((r["offset"] for r in rows if r["fundingGap"]>0),None)}
+        income=projected_income;operating=max(0,round(monthly_expenses)-program_cost_total+program_payment)
+        opening=round(cash);before_debt=cash+income-operating-contract_payment
+        obligations=[];scheduled_debt=0
+        for loan in loans:
+            if loan.get("status")!="active":continue
+            balance=max(0,float(loan.get("balance",0)));regular=municipal_loan_regular_due(loan)
+            recovery=min(max(0,round(loan.get("payment",0))),max(0,round(loan.get("paymentArrears",0))))
+            interest=round(balance*max(0,float(loan.get("monthlyRate",float(loan.get("annualRate",.12))/12)))) if regular else 0
+            obligations.append((loan,regular,recovery,interest));scheduled_debt+=regular+recovery
+        available=max(0,round(before_debt));reserve_before=remaining_reserve;reserve_needed=max(0,scheduled_debt-available)
+        can_pay=scheduled_debt==0 or available>=scheduled_debt or (reserve_needed>0 and reserve_before>=reserve_needed)
+        debt_service=scheduled_debt if can_pay else 0
+        if can_pay:
+            if reserve_needed:remaining_reserve-=reserve_needed
+            cash=max(0,before_debt+reserve_needed-debt_service)
+            for loan,regular,recovery,interest in obligations:
+                principal=max(0,regular-interest);loan["balance"]=max(0,float(loan.get("balance",0))-min(float(loan.get("balance",0)),principal))
+                loan["paymentArrears"]=max(0,int(loan.get("paymentArrears",0))-recovery)
+                loan["monthsRemaining"]=max(0,int(loan.get("monthsRemaining",0))-(1 if regular else 0))
+                loan["delinquentMonths"]=max(0,int(loan.get("delinquentMonths",0))-1) if loan["paymentArrears"] else 0
+                if loan["balance"]<=0 and loan["paymentArrears"]<=0:loan["status"]="paid"
+        else:
+            cash=0
+            if first_debt_default is None:first_debt_default=offset+1
+            for loan,regular,recovery,interest in obligations:
+                if regular:loan["paymentArrears"]=max(0,int(loan.get("paymentArrears",0)))+regular
+                loan["delinquentMonths"]=int(loan.get("delinquentMonths",0))+1
+        debt_arrears=sum(max(0,int(x.get("paymentArrears",0))) for x in loans if x.get("status")=="active")
+        net=round(cash-opening);calendar_month=start_month+offset+1
+        rows.append({"offset":offset+1,"label":f"Año {calendar_month//12+1} · Mes {calendar_month%12+1}","openingCash":opening,"income":income,"taxIncome":projected_tax,"operatingExpenses":operating,"programPayments":program_payment,"programArrears":program_arrears_total,"contractPayments":contract_payment,"scheduledDebtService":scheduled_debt,"debtService":debt_service,"debtArrears":debt_arrears,"debtDefault":not can_pay and scheduled_debt>0,"net":net,"closingCash":round(cash),"fundingGap":max(0,round(scheduled_debt-max(0,before_debt)-reserve_before),round(-before_debt)),"remainingCommitments":remaining_commitments,"freeAfterCommitments":round(cash-remaining_commitments-program_arrears_total-debt_arrears),"debtReserve":remaining_reserve})
+    return {"months":rows,"basis":"Ingresos y gastos operativos al ritmo actual; proyecta programas, obras y cuotas. Si caja y reserva no alcanzan, la cuota pasa a mora sin amortizar principal; al recuperarse se paga hasta una cuota vencida adicional.","committedProjects":commitments,"programArrears":arrears,"closingProgramArrears":rows[-1]["programArrears"],"closingDebtArrears":rows[-1]["debtArrears"],"firstDebtDefaultMonth":first_debt_default,"contractEscrow":escrow,"debtReserve":remaining_reserve,"projectedTaxIncome":projected_tax,"closingCash":rows[-1]["closingCash"],"closingFreeCash":rows[-1]["freeAfterCommitments"],"firstFundingGapMonth":next((r["offset"] for r in rows if r["fundingGap"]>0),None)}
 
 def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
-    service=round(sum(max(0,x.get("payment",0)) for x in loans if x.get("status")=="active"))
+    debt_arrears=round(sum(max(0,x.get("paymentArrears",0)) for x in loans if x.get("status")=="active"))
+    service=round(sum(municipal_loan_due(x) for x in loans if x.get("status")=="active"))
     income=max(0,round(monthly_income if monthly_income is not None else state.get("monthlyIncome",0)))
     expenses=max(0,round(monthly_expenses if monthly_expenses is not None else state.get("monthlyExpenses",0)))
     net=income-expenses-service
@@ -1205,18 +1224,47 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     for name in ("services","mobility","networks"):
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
     forecast=municipal_finance_forecast(income,expenses)
-    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(forecast["closingCash"]+debt_reserve),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
+    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+forecast["debtReserve"]),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
 
 def municipal_debt_payment():
     finance=state.setdefault("finance",new_finance());total=0
     for loan in finance.setdefault("municipalLoans",[]):
         if loan.get("status")!="active":continue
-        balance=max(0,loan.get("balance",0));payment=min(balance+balance*loan.get("monthlyRate",.01),max(0,loan.get("payment",0)))
-        interest=round(balance*loan.get("monthlyRate",.01));principal=max(0,round(payment-interest))
-        loan["lastInterest"]=interest;loan["lastPrincipal"]=min(balance,principal);loan["lastPayment"]=round(payment)
-        loan["balance"]=max(0,round(balance-loan["lastPrincipal"]));loan["monthsRemaining"]=max(0,loan.get("monthsRemaining",0)-1);loan["delinquentMonths"]=0;total+=round(payment)
-        if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan.update({"balance":0,"status":"paid","paidDay":state.get("day",1)});ev("Crédito municipal cancelado",f"El municipio terminó de pagar {loan.get('label','el préstamo')}.")
+        balance=max(0,loan.get("balance",0));scheduled=municipal_loan_regular_due(loan)
+        arrears=max(0,round(loan.get("paymentArrears",0)));arrears_payment=min(max(0,round(loan.get("payment",0))),arrears)
+        rate=max(0,float(loan.get("monthlyRate",.01)));payment=min(balance+balance*rate,scheduled)
+        interest=round(balance*rate) if scheduled else 0;principal=max(0,round(payment-interest))
+        loan["lastInterest"]=interest;loan["lastPrincipal"]=min(balance,principal);loan["lastScheduledPayment"]=round(payment);loan["lastArrearsPayment"]=arrears_payment;loan["lastPayment"]=round(payment)+arrears_payment
+        loan["paymentArrears"]=max(0,arrears-arrears_payment)
+        loan["balance"]=max(0,round(balance-loan["lastPrincipal"]));loan["monthsRemaining"]=max(0,loan.get("monthsRemaining",0)-(1 if scheduled else 0));loan["delinquentMonths"]=max(0,loan.get("delinquentMonths",0)-1) if loan["paymentArrears"] else 0;total+=round(payment)+arrears_payment
+        if loan["balance"]<=0 and loan["paymentArrears"]<=0:loan.update({"balance":0,"status":"paid","paidDay":state.get("day",1)});ev("Crédito municipal cancelado",f"El municipio terminó de pagar {loan.get('label','el préstamo')}.")
     return total
+
+def municipal_loan_regular_due(loan):
+    """Cuota ordinaria, con liquidación final del principal restante al vencimiento."""
+    payment=max(0,round(loan.get("payment",0)))
+    if loan.get("monthsRemaining",0)<=0:return 0
+    balance=max(0,float(loan.get("balance",0)));rate=max(0,float(loan.get("monthlyRate",.01)));interest=round(balance*rate)
+    if loan.get("monthsRemaining")==1:payment=max(payment,round(balance)+interest)
+    return max(0,min(round(balance+balance*rate),payment))
+
+def municipal_loan_due(loan):
+    """Cuota vigente más hasta una cuota de recuperación de la mora."""
+    payment=max(0,round(loan.get("payment",0)))
+    return municipal_loan_regular_due(loan)+min(payment,max(0,round(loan.get("paymentArrears",0))))
+
+def municipal_debt_missed_payment():
+    """Traslada solo la cuota del mes a mora, sin amortizar principal."""
+    loans=state.setdefault("finance",new_finance()).setdefault("municipalLoans",[]);missed=0
+    for loan in loans:
+        if loan.get("status")!="active":continue
+        scheduled=municipal_loan_regular_due(loan)
+        if not scheduled and not loan.get("paymentArrears",0):continue
+        loan["paymentArrears"]=max(0,round(loan.get("paymentArrears",0)))+scheduled
+        loan["lastMissedPayment"]=scheduled;loan["lastArrearsPayment"]=0
+        loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1;missed+=scheduled
+    if missed:ev("Cuota municipal impaga",f"No se cubrieron $ {missed:,} en cuotas; pasan a mora y se detiene la amortización. El mes siguiente se podrá recuperar hasta una cuota adicional por crédito.".replace(",","."))
+    return missed
 
 def settle_municipal_program_budgets(costs,available):
     """Paga primero servicios, redes y movilidad según apropiaciones; lo pendiente queda en mora fiscal."""
@@ -4138,10 +4186,9 @@ def tick_one_day():
                 loss=max(1,min(8,round(shortfall/900)))
                 state["services"]=max(5,state["services"]-loss)
                 state["approval"]=max(5,state["approval"]-max(1,loss//2))
+                municipal_debt_missed_payment()
                 for loan in state.get("finance",{}).get("municipalLoans",[]):
-                    if loan.get("status")=="active":
-                        loan["delinquentMonths"]=loan.get("delinquentMonths",0)+1
-                        if loan["delinquentMonths"]>=2:state["services"]=max(5,state["services"]-1)
+                    if loan.get("status")=="active" and loan.get("delinquentMonths",0)>=2:state["services"]=max(5,state["services"]-1)
                 ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))

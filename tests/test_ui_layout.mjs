@@ -1,5 +1,6 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 const server=spawn('python',['-m','http.server','18765','--bind','127.0.0.1'],{stdio:'ignore'});
@@ -237,6 +238,8 @@ try{
     assert.deepEqual(threeErrors,[],name+': errores Three.js '+threeErrors.join('; '));
     await live.close();
   }
+  mkdirSync('ui-captures',{recursive:true});
+  writeFileSync('ui-captures/responsive-report.txt','UI responsive: Chromium checks passed at 390×844 and 1440×900. Text visibility, control containment, horizontal overflow and overlap assertions passed. Full-page screenshots are intentionally omitted for the software-rendered 3D canvas.\n');
 }finally{
   await browser.close();
   server.kill();

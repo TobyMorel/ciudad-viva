@@ -40,7 +40,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.121
+          name: ciudad-viva-alfa-0.122
           path: |
             .
             !.git/**
@@ -66,3 +66,11 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Comprobar UI y panel Economía (390/1440 px)
         run: node tests/test_camera_markers.mjs && node tests/test_ui_layout.mjs && node tests/test_utility_response_ui.mjs && node tests/test_municipal_forecast_ui.mjs
+      - name: Informe responsive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciudad-viva-alfa-0.122-responsive
+          path: ui-captures/
+          if-no-files-found: ignore
+          retention-days: 30

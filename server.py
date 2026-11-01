@@ -3603,9 +3603,112 @@ def simulate_airport_month(workforce):
         elif airport.get("monthlyPassengers",0):ev("Ruta aérea suspendida",f"La ruta requiere acceso, personal y demanda suficientes para cubrir sus costos.")
     return state["airportVisitorsThisMonth"]
 
+# Fase 25: las ferias se contratan con dinero municipal y demandan aforo real.
+TOURISM_EVENT_TYPES = {
+    "feria": {"name":"Feria de productores","cost":1200,"visitors":110,"cleaning":3,"shopMinimum":1,"retailBudget":30},
+    "festival": {"name":"Festival cultural","cost":3500,"visitors":320,"cleaning":5,"shopMinimum":2,"retailBudget":38},
+    "congreso": {"name":"Congreso regional","cost":5200,"visitors":190,"cleaning":4,"shopMinimum":2,"retailBudget":46},
+}
+
+def tourism_event_access():
+    """Instalaciones físicas conectadas para visitantes y servicios."""
+    venues=[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status") in ("operativo","habilitado") and route_between((4,10),(b["x"],b["y"]))]
+    if not venues:return None,[]
+    venue=venues[0]
+    shops=[b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and route_between((venue["x"],venue["y"]),(b["x"],b["y"]))]
+    return venue,shops
+
+def schedule_tourism_event(kind):
+    spec=TOURISM_EVENT_TYPES.get(str(kind))
+    if spec is None:raise ValueError("Elegí un evento turístico válido.")
+    target=int(state.get("lastMonth",0))+1
+    events=state.setdefault("tourismEvents",[])
+    if any(x.get("targetMonth")==target and x.get("status")=="programado" for x in events):
+        raise ValueError("Ya existe un evento contratado para el próximo cierre mensual.")
+    venue,shops=tourism_event_access()
+    if venue is None or len(shops)<spec["shopMinimum"]:
+        raise ValueError("Se necesitan un centro cívico y comercios abiertos con acceso vial.")
+    if kind=="congreso" and not any(b.get("kind")=="hotel" and b.get("business",{}).get("status")=="abierto" and route_between((venue["x"],venue["y"]),(b["x"],b["y"])) for b in state["buildings"]):
+        raise ValueError("El congreso necesita un hotel abierto y accesible.")
+    reserved=sum(max(0,int(p["cost"]-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    if state.get("money",0)-reserved<spec["cost"]:
+        raise ValueError("No hay fondos libres suficientes después de los compromisos de obra.")
+    state["money"]-=spec["cost"]
+    item={"id":uuid.uuid4().hex,"type":kind,"name":spec["name"],"targetMonth":target,"bookedDay":state["day"],"organizationCost":spec["cost"],"status":"programado","visitors":0,"retailSpend":0,"cleanupSpend":0}
+    events.append(item)
+    state["tourismEvents"]=events[-24:]
+    ev("Evento turístico contratado",f"{spec['name']} para el próximo mes: organización $ {spec['cost']}, con visitantes y limpieza sujetos a accesibilidad y servicios.")
+    return item
+
+def prepare_tourism_event_month(month):
+    state["eventVisitorsThisMonth"]=0
+    state["eventRetailSpendThisMonth"]=0
+    state["eventCleanupSpendThisMonth"]=0
+    state["eventWaterM3ThisMonth"]=0
+    state["eventWasteTonsThisMonth"]=0
+    for item in state.setdefault("tourismEvents",[]):
+        if item.get("status")!="programado" or item.get("targetMonth",0)>month:continue
+        spec=TOURISM_EVENT_TYPES.get(item.get("type"))
+        venue,shops=tourism_event_access()
+        problem=None
+        if spec is None or venue is None or len(shops)<spec["shopMinimum"]:
+            problem="Sin recinto cívico o comercios conectados al realizar el evento"
+        elif item["type"]=="congreso" and not any(b.get("kind")=="hotel" and b.get("business",{}).get("status")=="abierto" and route_between((venue["x"],venue["y"]),(b["x"],b["y"])) for b in state["buildings"]):
+            problem="Sin alojamiento accesible para el congreso"
+        if problem:
+            item.update({"status":"cancelado","statusCause":problem,"completedDay":state["day"]})
+            ev("Evento turístico cancelado",f"{item['name']}: {problem}. La organización contratada ya se pagó.")
+            continue
+        utilities=venue.get("utilityAccess",{})
+        quality=min(utilities.get("powerServedPct",100),utilities.get("waterServedPct",100),utilities.get("wastewaterTreatedPct",100))/100
+        if quality<.5:
+            item.update({"status":"cancelado","statusCause":"Servicios de agua, energía o saneamiento insuficientes","completedDay":state["day"]})
+            ev("Evento turístico cancelado",f"{item['name']}: servicios insuficientes. El gasto inicial no se recupera.")
+            continue
+        # 70 asistentes por comercio conectado; aforo y limpieza tienen límites físicos/financieros.
+        cap=min(spec["visitors"],len(shops)*70)
+        attendees=min(max(0,int(cap*quality)),max(0,int(state.get("money",0)//spec["cleaning"])))
+        cleanup=attendees*spec["cleaning"]
+        state["money"]-=cleanup
+        item.update({"status":"realizado","statusCause":"Aforo limitado por comercios, servicios y presupuesto de limpieza","completedDay":state["day"],"visitors":attendees,"cleanupSpend":cleanup})
+        state["eventVisitorsThisMonth"]+=attendees
+        state["eventCleanupSpendThisMonth"]+=cleanup
+        state["eventWaterM3ThisMonth"]+=round(attendees*.08,2)
+        state["eventWasteTonsThisMonth"]+=round(attendees*.002,3)
+        ev("Evento turístico realizado",f"{item['name']}: {attendees} visitantes, limpieza municipal $ {cleanup}; la ocupación y las compras dependen del stock y acceso.")
+    state["tourismEvents"]=state["tourismEvents"][-24:]
+
+def settle_tourism_event_retail():
+    """Los turistas externos compran mercadería existente; no crean stock ni residentes."""
+    events=[e for e in state.get("tourismEvents",[]) if e.get("completedDay")==state["day"] and e.get("status")=="realizado"]
+    if not events:return
+    venue,shops=tourism_event_access()
+    shops=sorted(shops,key=lambda b:(b["x"],b["y"]))
+    for item in events:
+        spec=TOURISM_EVENT_TYPES[item["type"]]
+        budget=item["visitors"]*spec["retailBudget"]
+        for shop in shops:
+            if budget<=0:break
+            firm=shop["business"];price=max(1,int(firm.get("price",18)))
+            stock=max(0,int(firm.get("inventory",0)))
+            units=min(stock,budget//price)
+            if units<=0:continue
+            sale=units*price
+            firm["inventory"]-=units
+            firm["cash"]=firm.get("cash",0)+sale
+            firm["lastRevenue"]=firm.get("lastRevenue",0)+sale
+            firm["lastProfit"]=firm.get("lastProfit",0)+sale
+            firm["eventSalesThisMonth"]=firm.get("eventSalesThisMonth",0)+sale
+            budget-=sale
+            item["retailSpend"]+=sale
+            state["eventRetailSpendThisMonth"]+=sale
+    if state["eventRetailSpendThisMonth"]:
+        ev("Compras de visitantes",f"Los turistas gastaron $ {state['eventRetailSpendThisMonth']} en existencias reales de comercios conectados.")
+
 def simulate_hotel_month(workforce):
     hotels=[b for b in state["buildings"] if b.get("kind")=="hotel" and b.get("business")]
     arrivals=state.get("airportVisitorsThisMonth",0)
+    event_arrivals=state.get("eventVisitorsThisMonth",0)
     open_count=max(1,sum(1 for h in hotels if h.get("business",{}).get("status")=="abierto" and route_between((4,10),(h["x"],h["y"]))))
     for hotel in hotels:
         firm=hotel["business"]
@@ -3615,7 +3718,7 @@ def simulate_hotel_month(workforce):
         connected=bool(route_between((4,10),(hotel["x"],hotel["y"])))
         has_airport=any(a.get("kind")=="airport" and a.get("operational") and route_between((a["x"],a["y"]),(hotel["x"],hotel["y"])) for a in state["buildings"])
         utility_factor=min(hotel.get("utilityAccess",{}).get("powerServedPct",100),hotel.get("utilityAccess",{}).get("waterServedPct",100),hotel.get("utilityAccess",{}).get("wastewaterTreatedPct",100))/100
-        guests=min(hotel.get("beds",48),math.floor(arrivals*.45/open_count*utility_factor)) if connected and has_airport and utility_factor>=.5 else 0
+        guests=min(hotel.get("beds",48),math.floor(((arrivals*.45 if has_airport else 0)+event_arrivals*.24)/open_count*utility_factor)) if connected and utility_factor>=.5 else 0
         nights=guests*2;capacity=max(1,hotel.get("beds",48)*30);occupancy=round(nights/capacity*100)
         revenue=guests*max(50,hotel.get("nightlyRate",90));workplace=next((w for w in workforce.get("workplaces",[]) if w.get("x")==hotel["x"] and w.get("y")==hotel["y"]),{})
         payroll=max(0,int(workplace.get("payroll",0)));costs=payroll+guests*18+260;profit=revenue-costs;tax=round(revenue*.05)
@@ -3752,9 +3855,11 @@ def tick_one_day():
         economic=commute_model()
         public_payroll=pay_public_wages(economic)
         simulate_airport_month(economic)
+        prepare_tourism_event_month(month)
         tourism_tax=simulate_hotel_month(economic)
         renew_private_commercial_leases()
         activity=simulate_business_month(economic)
+        settle_tourism_event_retail()
         rebalance_private_staffing(economic)
         reprice_private_shops()
         price_industrial_competition()
@@ -4155,7 +4260,7 @@ def public_state(player_id=None):
     view["supply"]={**state["supply"],"orders":order_views}
     view["airports"]=[{**p,"accessConnected":bool(route_between((4,10),(p["x"],p["y"]))) } for p in state["buildings"] if p.get("kind")=="airport"]
     view["hotels"]=[b for b in state["buildings"] if b.get("kind")=="hotel"]
-    view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
+    view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"eventVisitors":state.get("eventVisitorsThisMonth",0),"eventRetailSpend":state.get("eventRetailSpendThisMonth",0),"eventCleanupSpend":state.get("eventCleanupSpendThisMonth",0),"events":state.get("tourismEvents",[])[-6:],"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
     view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
@@ -4272,6 +4377,10 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action=="scheduleTourismEvent":
+                    try:schedule_tourism_event(data.get("kind"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action=="renegotiateTradeContract":
                     try:renegotiate_aggregate_forward_contract(data.get("id"))
                     except ValueError as error:self._send(409,{"error":str(error)});return

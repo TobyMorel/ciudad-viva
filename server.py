@@ -1153,7 +1153,7 @@ def update_social_shelters(workplaces=None, funding_pct=None):
         staffed_beds=min(max(0,int(shelter.get("beds",0))),workers*3)
         capacity=max(0,math.floor(staffed_beds*utilities/100*max(0,min(100,funding_pct))/100)) if connected else 0
         facilities.append({"building":building,"id":f"shelter-{building['x']}-{building['y']}","name":building.get("name","Centro de acogida"),"capacity":capacity,"beds":max(0,int(shelter.get("beds",0))),"staff":workers,"utilities":utilities,"connected":connected,"monthlyCost":max(0,int(building.get("monthlyCost",0)))})
-    residents.sort(key=lambda person:(person.get("admittedDay",0),person.get("id","")))
+    residents.sort(key=lambda person:(0 if person.get("displacedBy") else 1,person.get("admittedDay",0),person.get("id","")))
     for person in residents:person["shelterId"]=None
     for facility in facilities:
         assigned=[person for person in residents if person.get("shelterId") is None][:facility["capacity"]]
@@ -1161,9 +1161,28 @@ def update_social_shelters(workplaces=None, funding_pct=None):
         facility["occupied"]=len(assigned);facility["available"]=max(0,facility["capacity"]-len(assigned))
         facility["building"]["socialShelter"]["occupied"]=len(assigned)
         facility["building"]["socialShelter"]["operationalCapacity"]=facility["capacity"]
-    report={"residents":len(residents),"sheltered":sum(bool(p.get("shelterId")) for p in residents),"waiting":sum(not p.get("shelterId") for p in residents),"capacity":sum(x["capacity"] for x in facilities),"available":sum(x.get("available",0) for x in facilities),"monthlyCost":sum(x["monthlyCost"] for x in facilities),"fundingPct":round(max(0,min(100,funding_pct))),"facilities":[{k:v for k,v in x.items() if k!="building"} for x in facilities]}
+    report={"residents":len(residents),"displaced":sum(bool(p.get("displacedBy")) for p in residents),"migrationResidents":sum(not p.get("displacedBy") for p in residents),"sheltered":sum(bool(p.get("shelterId")) for p in residents),"waiting":sum(not p.get("shelterId") for p in residents),"capacity":sum(x["capacity"] for x in facilities),"available":sum(x.get("available",0) for x in facilities),"monthlyCost":sum(x["monthlyCost"] for x in facilities),"fundingPct":round(max(0,min(100,funding_pct))),"facilities":[{k:v for k,v in x.items() if k!="building"} for x in facilities]}
     social["shelterReport"]=report
     return report
+
+def displace_home_residents(home, reason, days=7):
+    """Move a disaster-hit household into the public shelter queue without changing population."""
+    if not home or home.get("kind")!="home" or home.get("emergencyReturnDay",0)>state.get("day",1):return 0
+    if home.get("occupants",0)<=0:return 0
+    ensure_resident_roster()
+    members=home.setdefault("residents",[]);count=min(int(home.get("occupants",0)),len(members))
+    if not count:return 0
+    social=state.setdefault("socialServices",new_social_services());shelter=social.setdefault("shelterResidents",[])
+    selected=members[:count];del members[:count]
+    for person in selected:
+        person.update({"status":"refugio por emergencia","displacedBy":reason,"originHomeX":home["x"],"originHomeY":home["y"],"displacedDay":state.get("day",1),"plannedReturnDay":state.get("day",1)+days,"admittedDay":state.get("day",1)})
+        shelter.append(person)
+    summary=social.setdefault("shelterReport",{});summary["residents"]=len(shelter);summary["displaced"]=sum(bool(p.get("displacedBy")) for p in shelter);summary["migrationResidents"]=len(shelter)-summary["displaced"]
+    home["occupants"]=max(0,int(home.get("occupants",0))-count);home["emergencyReturnDay"]=state.get("day",1)+days
+    ev("Hogar evacuado por emergencia",f"{count} residentes de {home.get('name','una vivienda')} pasan al refugio durante la limpieza y revisión. La población no cambia.")
+    update_social_shelters()
+    return count
+
 
 def advance_heritage_works():
     day=int(state.get("day",1))
@@ -2487,6 +2506,7 @@ def apply_drainage_impacts():
         cost=int(row["repairCost"]);building["floodEvents"]=building.get("floodEvents",0)+1;building["lastFloodDay"]=day;building["floodRepairCost"]=building.get("floodRepairCost",0)+cost;building["quality"]=max(35,int(building.get("quality",75))-2)
         if building.get("kind")=="home":
             homes_affected+=max(0,int(building.get("occupants",0)));building["householdCash"]=max(0,building.get("householdCash",0)-cost)
+            if building.get("occupants",0)>0 and (building["floodEvents"]>=2 or row.get("runoffM3",0)>=75):displace_home_residents(building,"inundación",7)
         elif building.get("business"):
             firm=building["business"];firm["cash"]=firm.get("cash",0)-cost;firm["lastFloodRepairCost"]=firm.get("lastFloodRepairCost",0)+cost;private_cost+=cost
         else:
@@ -3927,25 +3947,38 @@ def move_households():
     social=state.setdefault("socialServices",new_social_services());temporary=social.setdefault("shelterResidents",[])
     rehoused=0
     for person in temporary[:]:
-        available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0)]
-        if not available:break
+        if person.get("displacedBy"):
+            if state.get("day",1)<person.get("plannedReturnDay",10**9):continue
+            origin=next((b for b in homes if b.get("x")==person.get("originHomeX") and b.get("y")==person.get("originHomeY")),None)
+            if origin and origin.get("quality",75)>=35 and origin.get("emergencyReturnDay",0)<=state.get("day",1):home=origin
+            else:
+                options=[b for b in homes if b is not origin and b.get("quality",75)>=35 and b.get("emergencyReturnDay",0)<=state.get("day",1) and b.get("occupants",0)<b.get("capacity",0)]
+                if not options:continue
+                home=min(options,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
+            home["occupants"]=home.get("occupants",0)+1;home.setdefault("residents",[]).append(person)
+            if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
+            for key in ("shelterId","admittedDay","displacedBy","originHomeX","originHomeY","displacedDay","plannedReturnDay"):person.pop(key,None)
+            person["status"]="buscando" if person.get("workerEligible") else "inactivo";ensure_person_work_profile(person)
+            temporary.remove(person);rehoused+=1;continue
+        available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0) and b.get("emergencyReturnDay",0)<=state.get("day",1)]
+        if not available:continue
         home=min(available,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
         home["occupants"]=home.get("occupants",0)+1
         if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
         person.pop("shelterId",None);person.pop("admittedDay",None);person["status"]="buscando" if person.get("workerEligible") else "inactivo"
         ensure_person_work_profile(person);home.setdefault("residents",[]).append(person);temporary.remove(person);demand_state["unmet"]=max(0,int(demand_state.get("unmet",0))-1);rehoused+=1
-    if rehoused:ev("Personas reubicadas desde el refugio",f"{rehoused} residentes encontraron vivienda permanente vacante; vuelven a buscar trabajo desde su nuevo hogar.")
+    if rehoused:ev("Personas reubicadas desde el refugio",f"{rehoused} residentes volvieron a su vivienda reparada o accedieron a una casa disponible.")
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
         generated=min(desired,jobs_room)
         demand_state["unmet"]=min(600,max(0,int(demand_state.get("unmet",0)))+generated)
         demand_state["lastGenerated"]=generated;demand_state["lastFilled"]=0
-        vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes)
+        vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes if b.get("emergencyReturnDay",0)<=state.get("day",1))
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
-        awaiting_home=max(0,int(demand_state.get("unmet",0))-len(temporary))
+        awaiting_home=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
         arrivals=min(awaiting_home,vacancies,jobs_room);placed=0
         for index in range(arrivals):
-            available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0)]
+            available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0) and b.get("emergencyReturnDay",0)<=state.get("day",1)]
             if not available:break
             home=min(available,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
             home["occupants"]=home.get("occupants",0)+1
@@ -3981,7 +4014,7 @@ def move_households():
         state["population"]=max(0,state.get("population",0)-left);state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-left*3)
         if left:ev("Salida de residentes",f"{left} residentes dejaron hogares con menor calidad; sus perfiles laborales y plazas ocupadas se liberaron y los ingresos tributarios futuros bajan $ {left*3}/mes.")
     report=update_social_shelters()
-    pending=max(0,int(demand_state.get("unmet",0))-len(temporary))
+    pending=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
     jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
     admitted=min(pending,report.get("available",0),jobs_room)
     for index in range(admitted):
@@ -3993,7 +4026,7 @@ def move_households():
         state["population"]=state.get("population",0)+admitted;state["monthlyIncome"]=state.get("monthlyIncome",0)+admitted*3
         ev("Alojamiento temporal asignado",f"{admitted} personas de la lista migratoria fueron recibidas en plazas municipales; siguen necesitando vivienda permanente.")
     report=update_social_shelters()
-    report.update({"housingDemand":max(0,int(demand_state.get("unmet",0))-len(temporary)),"rehousedThisMonth":rehoused,"admittedThisMonth":admitted})
+    report.update({"housingDemand":max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary)),"rehousedThisMonth":rehoused,"admittedThisMonth":admitted})
     social["shelterReport"]=report
 
 def process_port_logistics():
@@ -4998,7 +5031,9 @@ def fire_service_report(workplaces=None,advance=False):
                 damage=max(1,min(18,round(minutes/5)))
                 if target:
                     target["quality"]=max(20,target.get("quality",75)-damage)
-                    if target.get("kind")=="home":target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
+                    if target.get("kind")=="home":
+                        target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
+                        if target["quality"]<=35:displace_home_residents(target,"incendio",7)
                     elif target.get("business"):target["business"]["cash"]=max(0,target["business"].get("cash",0)-damage*45)
                 station["building"]["dispatchReadyDay"]=day+2;incident.update({"status":"controlado","responseMinutes":round(minutes),"station":station["building"].get("name","Cuartel municipal"),"stationX":station["building"]["x"],"stationY":station["building"]["y"],"route":path,"damage":damage,"resolvedDay":day})
                 fire["dispatches"]+=1;fire["resolved"]+=1
@@ -5007,7 +5042,9 @@ def fire_service_report(workplaces=None,advance=False):
             else:
                 incident["burningDays"]=incident.get("burningDays",0)+1
                 target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
-                if target:target["quality"]=max(20,target.get("quality",75)-2)
+                if target:
+                    target["quality"]=max(20,target.get("quality",75)-2)
+                    if target.get("kind")=="home" and target["quality"]<=35:displace_home_residents(target,"incendio",7)
                 if incident["burningDays"]>=5:
                     incident.update({"status":"extinguido sin dotación","resolvedDay":day,"damage":10});fire["unanswered"]+=1
                     state["services"]=max(0,state.get("services",0)-2);state["approval"]=max(0,state.get("approval",0)-1)

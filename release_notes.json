@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.131",
+  "currentVersion": "0.132",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.132",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 85,
+      "overallProgress": null,
+      "changes": [
+        "Los cierres de inundación y los incendios graves pueden evacuar un hogar existente al refugio: preservan las personas, empleos asociados e identidad; no crean ni quitan población.",
+        "La evacuación requiere una vivienda dañada por anegamiento intenso o repetido, o condición estructural crítica por incendio. Se conserva el hogar de origen; tras siete días de limpieza y revisión, sus residentes regresan cuando la condición permite, antes de recibir nuevos migrantes en ese lote.",
+        "El refugio prioriza hogares evacuados frente a migrantes sin vivienda; personal, camas, redes, calle y presupuesto continúan limitando la capacidad. La demanda de vivienda de migración permanece separada de la evacuación.",
+        "Economía informa cuántas personas están desplazadas por emergencias. Online/Offline tienen regresiones de tormenta, evacuación, retorno, cuota poblacional y convivencia con demanda migratoria; Playwright comprueba el nuevo dato en 390×844 y 1440×900.",
+        "La fase 28 avanza de 83% a 85% orientativo. Adultos mayores, educación técnica y seguimiento longitudinal siguen pendientes; no se estima el avance global sin ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.131",
       "date": "2026-11-01",
@@ -1382,12 +1396,16 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.132 · hogares desplazados y acceso a servicios",
-      "detail": "Extender protección a residentes desplazados por emergencias y hogares vulnerables con elegibilidad, plazas, tiempos, fondos y salida hacia viviendas disponibles; mantener Offline/Online equivalentes."
+      "title": "Alfa 0.133 · atención a adultos mayores",
+      "detail": "Enlazar envejecimiento individual, accesibilidad, atención primaria y cupos de cuidado con personal, transporte, presupuesto y vivienda; integrar necesidades a los ciclos de hogar."
+    },
+    {
+      "title": "Fase 28 · educación técnica y continuidad social",
+      "detail": "Añadir recorridos de formación técnica conectados con empleos y revisar efectos acumulados de desastres en hogares y acceso a servicios."
     },
     {
       "title": "Verificación integral y red local",
-      "detail": "Completar la batería responsive y de economía para cada entrega; probar LAN entre dos equipos físicos cuando haya entorno disponible."
+      "detail": "Mantener batería de motores, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1664,12 +1682,12 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 83,
-      "summary": "Salud, seguridad y cuatro niveles educativos; ayuda de alquiler y refugios temporales integrados con vivienda, empleo, personal, redes y presupuesto.",
+      "progress": 85,
+      "summary": "Salud, seguridad y educación en cuatro niveles; ayudas de alquiler, refugio temporal y evacuación/retorno tras desastres integrados con vivienda, empleo, personal, redes y presupuesto.",
       "pending": [
-        "Atender desplazamiento por desastres, hogares vulnerables y personas mayores con capacidad y costos medibles.",
+        "Atención accesible a adultos mayores enlazada con cupos, personal, transporte y salud.",
         "Educación técnica, carreras profesionales y desplazamientos estudiantiles visibles.",
-        "Integrar residentes temporales al empleo, servicios individuales y medición longitudinal de equidad y cobertura."
+        "Cobertura y efectos de la protección social a lo largo del tiempo; despacho interactivo de incidentes."
       ]
     },
     {

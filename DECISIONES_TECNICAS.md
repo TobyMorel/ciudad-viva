@@ -1,3 +1,13 @@
+# Decisiones técnicas · Alfa 0.132
+
+## Desplazamiento temporal por desastres
+
+- Solo evacuamos cuando la vivienda es afectada en la rutina autoritativa de daño: inundación con al menos 75 m³ de escorrentía sobre el edificio o segundo anegamiento, o incendio que deja la condición en 35% o menos.
+- Residentes existentes se trasladan como los mismos registros en `socialServices.shelterResidents`; población y `housingDemand.unmet` no cambian. La clase `displacedBy` permite priorizarlos sobre la migración nueva.
+- El hogar original queda marcado con `emergencyReturnDay` durante siete días. Se excluye de nuevas colocaciones; al siguiente cierre mensual a partir de la fecha, las personas regresan si existe y mantiene calidad habitable. Aún no hay una licitación privada automática de reconstrucción para viviendas arrasadas.
+- Si falta cama, mantienen su identidad en la espera municipal; el límite fiscal, personal y de redes sigue vigente. El reporte separa desplazados de migrantes para que no se resten de la demanda residencial pendiente.
+- Online/Offline son equivalentes. La elegibilidad concreta se basa en las reglas de daño ya existentes, sin eventos aleatorios adicionales.
+
 # Decisiones técnicas · Alfa 0.131
 
 ## Refugio social

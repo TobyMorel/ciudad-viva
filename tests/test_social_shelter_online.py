@@ -44,6 +44,29 @@ class SocialShelter(unittest.TestCase):
             self.assertEqual(server.state["population"], 4, "el traslado de cama a vivienda no duplica población")
             self.assertEqual(server.state["housingDemand"]["unmet"], 0)
 
+    def test_storm_displaces_household_temporarily_and_returns_same_people(self):
+        person=self.home["residents"][0]
+        server.state["day"]=18
+        server.state["population"]=1
+        server.state["utilities"]["lastDrainageImpactDay"]=None
+        server.state["utilities"]["report"]={"drainage":{"rainfallMm":18,"standingWaterM3Day":80,
+            "floodedTiles":[[4,11]],"floodedBuildings":[{"x":4,"y":11,"kind":"home","name":"Vivienda completa","runoffM3":80,"repairCost":60}],"repairCostEstimate":60}}
+        server.apply_drainage_impacts()
+        social=server.state["socialServices"]
+        self.assertEqual(self.home["occupants"],0)
+        self.assertEqual(social["shelterResidents"],[person])
+        self.assertEqual(social["shelterReport"]["displaced"],1)
+        self.assertEqual(server.state["population"],1,"evacuar no cambia el padrón")
+        server.state["day"]=self.home["emergencyReturnDay"]
+        with patch.object(server,"route_between",return_value=[[4,10],[5,10]]), \
+             patch.object(server,"commute_model",return_value={"workplaces":[{"kind":"civic","x":5,"y":10,"staffedJobs":10}]}), \
+             patch.object(server,"tax_adjusted_migration_demand",return_value=0):
+            server.move_households()
+        self.assertEqual(self.home["occupants"],1)
+        self.assertIs(self.home["residents"][0],person)
+        self.assertEqual(social["shelterResidents"],[])
+        self.assertEqual(server.state["population"],1)
+
     def test_staff_utilities_access_and_service_funding_limit_beds(self):
         workplaces = [{"kind": "civic", "x": 5, "y": 10, "staffedJobs": 6}]
         with patch.object(server, "route_between", return_value=[[4, 10], [5, 10]]):

@@ -1,3 +1,13 @@
+# Estado de desarrollo · Alfa 0.132
+
+## Evacuación y retorno de hogares por inundación o incendio
+
+La protección social ahora incluye a residentes ya empadronados. Una inundación intensa (escorrentía ≥75 m³ por edificio) o una inundación repetida puede evacuar una vivienda al superar el daño; incendios con condición estructural crítica hacen lo mismo. Se preservan personas, perfiles e identidades, y no cambia el padrón ni la demanda de migración. Los hogares evacuados reciben prioridad sobre migrantes en las plazas del refugio. El lote original queda reservado, y tras siete días de limpieza y revisión sus residentes regresan allí cuando la condición es habitable. Los migrantes no pueden ocupar el hogar temporalmente vacío.
+
+Economía muestra las personas desplazadas por emergencias. Online y Offline comparten las reglas y guardan los datos en residentes temporales; la capacidad sigue dependiendo de camas, personal, ruta, redes y gasto financiado. Pruebas funcionales cubren evento de inundación, evacuación, retorno con las mismas identidades y población constante en ambos motores. Pasaron 92 regresiones Python, 62 pruebas Node Offline, estrés de 30 años × cuatro perfiles y batería visual responsive (marcadores, Economía, servicios, previsión financiera y ampliación escolar) en 390×844 y 1440×900.
+
+Fase 28: 85% orientativo. Restan necesidades de adultos mayores, educación técnica y medidas de impacto/protección longitudinales. Progreso global no estimable: falta ponderación común verificable de las 34 fases. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.131
 
 ## Refugio municipal temporal con cupos y realojamiento

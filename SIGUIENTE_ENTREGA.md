@@ -1,3 +1,12 @@
+# Siguiente entrega · después de Alfa 0.132
+
+1. Fase 28: añadir cuidado de adultos mayores basado en los perfiles individuales y el envejecimiento, con cupos y costos limitados por personal, accesibilidad, salud, rutas y financiamiento. Hacer que impacte hogares concretos.
+2. Conectar más servicios a residentes desplazados durante su estadía y probar pérdida/rehabilitación real de viviendas, incluyendo cuando el hogar no puede cubrir su reparación.
+3. Incorporar formación técnica con oferta educativa real, población elegible y destinos laborales; evitar barras aisladas.
+4. Ejecutar Online, Offline, estrés a décadas y la UI móvil/escritorio si cambia; publicar a `main`, verificar SHA, Actions y Vercel y adjuntar un ZIP integral desde el commit publicado.
+
+Fase actual: 28 (85% orientativo; parcial). Próximo sistema: cuidado a adultos mayores enlazado a hogares/servicios. Progreso global no estimable: no existe una ponderación estable y verificable común para las 34 fases. LAN física pendiente.
+
 # Siguiente entrega · después de Alfa 0.131
 
 1. Fase 28: integrar hogares ya residentes desplazados por desastre a la red de refugios, con prioridad según vulnerabilidad, plazas limitadas, costos y restauración de vivienda; asegurar que evacuación y realojamiento no creen ni borren población.

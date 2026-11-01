@@ -1,3 +1,13 @@
+# Auditoría del roadmap · Alfa 0.132
+
+## Revisión de alcance · Alfa 0.132
+
+### Fase 28 · evacuación de residentes existentes y retorno a su hogar
+
+La atención temporal se amplía desde migrantes sin casa a hogares ya establecidos. Inundación intensa o repetida e incendio estructuralmente grave trasladan la misma cohorte de residentes a la lista municipal, sin modificar el padrón. Tienen prioridad en refugios sobre las nuevas llegadas, pero siguen sujetos a capacidad física, personal, conectividad, redes y fondos. El lote permanece reservado siete días; tras limpieza/revisión, el primer cierre mensual posterior devuelve a la familia a su casa si la condición es habitable. La lista de migración y las vacantes cuentan sin tratar como recién llegado a quien está evacuado. Economía revela cuántos residentes fueron desplazados.
+
+Se verificaron las transiciones Online y Offline: evento causal, pérdida de ocupación temporal, identidad/censo constantes, protección del lote y retorno. Pasaron 92 pruebas Python, 62 Node Offline, stress de 30 años × cuatro perfiles y Playwright para marcadores, Economía, servicios, previsión y anexos escolares en 390×844/1440×900; el indicador de desplazados quedó dentro del panel. Esta entrega no implementa todavía reparación integral de casa arrasada, refugios móviles, ni atención geriátrica y formación técnica. Fase 28: 85% orientativo. Progreso global sin estimar por falta de pesos comunes verificables para 34 fases. LAN física pendiente.
+
 # Auditoría del roadmap · Alfa 0.131
 
 ## Revisión de alcance · Alfa 0.131

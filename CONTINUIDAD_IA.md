@@ -1,3 +1,13 @@
+# Continuidad inmediata · Alfa 0.132
+
+Mantener el objetivo del usuario: añadir mecánicas del roadmap en cada entrega, no encadenar varias versiones de pulido. Cada cambio se publica en `main`; si hay UI, comprobar móvil y escritorio sin textos ocultos/solapados. Entregar ZIP del `HEAD` publicado. Autor Git: `66056611+TobyMorel@users.noreply.github.com`.
+
+La mecánica de refugio de Alfa 0.131 ahora también ampara hogares establecidos afectados por desastres. `server.py:displace_home_residents` y `offline.js:displaceOfflineHomeResidents` mueven residentes conservando identidad, empleo y padrón. Tormenta fuerte (runoff >=75 m³) o inundación repetida; incendios con calidad <=35. Reserva el lote original siete días, prioriza esas familias en camas y permite regreso si la vivienda está habitable. La migración mantiene una cola independiente; un evacuado no reduce demanda pendiente ni convierte en vaga una casa reservada. Economía identifica personas evacuadas.
+
+Regresiones añadidas: `tests/test_social_shelter_online.py` incluye inundación/retorno; `tests/test_disaster_displacement_offline.mjs` recorre una tormenta real del calendario Offline y el retorno luego de reabrir la partida. El patrón `tests/*_offline.mjs` ya las incorpora al workflow. `tests/test_ui_layout.mjs` revisa la tarjeta de desplazados en Economía a 390×844/1440×900. Verificado en esta entrega: 92 pruebas Python, 62 Node Offline, stress de 30 años × cuatro perfiles, batería UI completa y checks de sintaxis/diff limpios.
+
+Siguiente mecánica: fase 28, cuidado de adultos mayores ligado a población que envejece, capacidad sanitaria/accesibilidad, personal y transporte. Después educación técnica vinculada con puestos. Fase actual 28=85% orientativo; global sin estimar por falta de ponderación común. LAN física pendiente. Verificar Actions/Vercel y generar ZIP desde el commit confirmado.
+
 # Continuidad inmediata · Alfa 0.131
 
 Objetivo de trabajo actual: ampliar mecánicas del roadmap con alcance útil por entrega; no encadenar varias versiones de detalle visual. El usuario espera que cada cambio llegue a GitHub `main`, UI revisada si se modifica, y ZIP completo para continuar en otra sesión. Mantener el autor `66056611+TobyMorel@users.noreply.github.com`.

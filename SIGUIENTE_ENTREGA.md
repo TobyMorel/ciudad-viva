@@ -203,3 +203,10 @@ GitHub Actions verifica pruebas Online/Offline de escasez de componentes, pedido
 Se cerró la brecha cantera→hormigonera en Offline: reserva finita, 2 áridos por hormigón, pedidos pagados desde caja empresarial y recepción por ruta antes de producción. Contratos industriales especifican `industryType` desde el inicio, impiden reasignación fortuita de una obra e incorporan caja operativa pagada; Online y Offline usan el mismo orden de especialidades sin duplicar las comprometidas. Pruebas automáticas cubren contratación, materia prima, conversión y disponibilidad para construir, con snapshots responsive en Chromium.
 
 Priorizar mecánica de **fase 17** de empresa industrial que pierde trabajadores o quiebra y posibilidad de reocupación o compra por otro promotor, con oferta/demanda y cuentas reales; también competencia industrial por materias primas locales y expansión condicionada a pedidos. Tras ella ejecutar partidas estables de 30 años de fase 33 con escenarios pequeño, metropolitano, portuario y turístico. LAN física y Vercel pendientes. Fase 18=90%; total global sin estimación por ausencia de pesos.
+
+
+## Continuación después de Alfa 0.94
+
+La recuperación industrial autónoma ya cubre insolvencia→90 días de espera→demanda y terreno compatibles→financiación privada real ($5.300)→contratista con cinco trabajadores siete días→inspección de servicios/calle→nueva firma, 20 puestos, caja inicial pagada, inventarios sin duplicar y reserva geológica residual. Los dos motores registran origen, causa de bloqueo, contrato e historial. Nuevos tests automatizados comprueban financiación, idempotencia y ausencia de inversión sin demanda; el popup Economía muestra causas y períodos. Fase 17=65%, 18=90%, avance global no estimable.
+
+**Próxima mecánica:** negociación y competencia entre empresas proveedoras de materias primas bajo escasez con precios/contratos pagados; reempleo con efectos demográficos y recuperación con supervivencia económica. Luego estrés de 30 años con escenarios del roadmap. No lanzar iteraciones de pulido visual aislado. LAN física y Vercel siguen pendientes.

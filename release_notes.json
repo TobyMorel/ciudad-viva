@@ -1,9 +1,9 @@
 {
-  "currentVersion": "1.01",
+  "currentVersion": "0.101",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
     {
-      "version": "1.01",
+      "version": "0.101",
       "date": "2026-11-01",
       "roadmapPhase": 28,
       "phaseProgress": 60,
@@ -16,7 +16,7 @@
       ]
     },
     {
-      "version": "1.00",
+      "version": "0.100",
       "date": "2026-11-01",
       "roadmapPhase": 25,
       "phaseProgress": 40,

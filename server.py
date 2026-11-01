@@ -169,13 +169,14 @@ def price_industrial_competition():
         if not stock_key or firm.get("status")!="abierto":continue
         stock=max(0,int(firm.get(stock_key,0)))
         produced=max(0,int(firm.get("lastProduction",0)))
-        sold=max(0,int(firm.get("lastLocalSales",0)))
+        sold=max(0,int(firm.get("industrialSalesSincePricing",firm.get("lastLocalSales",0))))
         factor=float(firm.get("materialPriceFactor",1))
         if sold>=max(4,produced//2) and stock<=max(8,produced):
             factor=min(1.35,round(factor+.04,2))
         elif sold==0 and stock>max(12,produced):
             factor=max(.8,round(factor-.05,2))
         firm["materialPriceFactor"]=factor
+        firm["industrialSalesSincePricing"]=0
 
 
 def advance_local_metalworks(workplaces,employees):

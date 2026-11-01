@@ -235,3 +235,8 @@ Si una cantera proveedora cierra mientras mantiene remesas reservadas para una h
 ## Continuación · competencia minorista adaptativa
 
 Nueva mecánica de fase 17 en ambos motores: tras las ventas mensuales los comercios ajustan su precio hasta un peso por mes en respuesta al volumen vendido, inventario, demanda y beneficio reales. Con ventas suficientes y existencias bajas pero no agotadas pueden subir; con stock inmóvil o margen negativo bajan. Banda inicial $8–$36. Los compradores ya ponderan precio y distancia en el siguiente período, por lo que la decisión modifica competencia y caja futura, pero no crea dinero inmediatamente. Cada empresa registra `lastPriceChangeDay` y `lastPriceCause`; hay eventos verificables. Pruebas unitarias Online agregadas; validar integración Offline y resultados CI antes de dar por probada esa ruta. Interfaz no modificada; porcentajes sin cambios. Próximo: contratos entre otras cadenas y campañas de 30 años.
+
+
+## Continuación · alquiler comercial operativo
+
+Comercios abiertos asumen una renta mensual según localización y `monthlyRent` opcional; el costo reduce caja/beneficio y puede llevar a cierre por insolvencia. Los pagos efectivamente cubiertos quedan en `supply.propertyRentalCash` como recaudación de propietarios, no ingreso del municipio ni capital generado. Se implementó en Online y Offline sin modificar UI; Online eliminó además el ajuste minorista anterior duplicado para mantener una sola decisión de precios por cierre. Pendiente validar resultados de CI y ajustar pruebas de rentas en escenarios largos. Fases sin cambiar; próximo sistema: contratos B2B ampliados y escenarios de 30 años.

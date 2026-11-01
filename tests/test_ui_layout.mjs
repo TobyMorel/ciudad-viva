@@ -26,7 +26,9 @@ try{
             materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
       }
       city.supply.tradeContracts=[{id:'ui-contract',buyerId:'rival-4',vendorId:'rival-6',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0,contractValue:700,extensionFee:35}];
-      city.buildings.push({x:7,y:11,kind:'civic',name:'Hospital del corredor periurbano del Puerto Claro',status:'operativo',hospitalWard:{beds:20,ambulances:1},policeUnit:{vehicles:2,priority:'mixto'},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({x:7,y:11,kind:'civic',serviceModel:'clinic',name:'Consultorio del Barrio Oeste',status:'operativo',jobSlots:12,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({x:10,y:11,kind:'civic',serviceModel:'generalHospital',name:'Hospital del corredor periurbano del Puerto Claro',status:'operativo',jobSlots:40,hospitalWard:{beds:20,ambulances:1},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({x:11,y:11,kind:'civic',serviceModel:'policeStation',name:'Comisaría Distrital Norte de Puerto Claro',status:'operativo',jobSlots:22,policeUnit:{vehicles:2,priority:'mixto'},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.roads=[]; // Corte real de las vías, con proveedor contractual existente.
       city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',vendorId:'rival-6',type:'industrial_raw',commodity:'áridos',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,productCost:280,freight:0,source:[6,9],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
@@ -37,6 +39,17 @@ try{
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
     await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
+    await page.locator('[data-popup="build"]').click();
+    const catalog=await page.evaluate(()=>{
+      const pane=document.querySelector('#panelPopup:not(.hidden)'),buttons=[...pane.querySelectorAll('[data-model]')];
+      return {count:buttons.length,categories:[...pane.querySelectorAll('.tool-category')].map(x=>x.textContent.trim()),
+        noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
+        noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
+    });
+    assert.ok(catalog.count===12&&catalog.categories.length===4&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+      name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
+    await page.locator('#popupClose').click();
+
     await page.locator('[data-popup="supply"]').click();
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
     await page.waitForFunction(()=>document.querySelector('#popupContent')?.textContent?.includes('Contratos privados de materias primas'),{timeout:10000});
@@ -119,9 +132,9 @@ try{
       return {visible:!section.hidden,count:buttons.length,overlap,
         contained:rects.every(r=>r.left>=selection.left-2&&r.right<=selection.right+2&&r.width>25&&r.height>20&&!r.hidden&&r.scroll<=r.client+3),
         overflow:section.scrollWidth>section.clientWidth+3,
-        validLabels:section.textContent.includes('BASES MUNICIPALES')&&section.textContent.includes('Equipar base')&&section.textContent.includes('Comprar móvil')};
+        validLabels:section.textContent.includes('BASES MUNICIPALES')&&section.textContent.includes('Comisaría Distrital')&&section.textContent.includes('Comprar móvil')};
     });
-    assert.ok(policeUI.visible&&policeUI.count===5&&policeUI.contained&&!policeUI.overlap&&!policeUI.overflow&&policeUI.validLabels,
+    assert.ok(policeUI.visible&&policeUI.count===4&&policeUI.contained&&!policeUI.overlap&&!policeUI.overflow&&policeUI.validLabels,
       name+': controles policiales ocultos, solapados o desbordados '+JSON.stringify(policeUI));
     await page.screenshot({path:'ui-captures/'+name+'-seguridad.png'});
     await page.locator('#popupClose').click();
@@ -137,16 +150,18 @@ try{
     await live.evaluate(async()=>{
       const city=await fetch('/offline_seed.json').then(r=>r.json());
       city.paused=true;city.day=31;city.lastMonth=1;
-      const civic=city.buildings.find(b=>b.kind==='civic');
-      civic.hospitalWard={beds:20,ambulances:1};
-      civic.policeUnit={vehicles:1,priority:'mixto'};
-      civic.utilityAccess={powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100};
-      city.buildings.push({kind:'fireStation',name:'Cuartel de pruebas',x:12,y:11,status:'operativo',dispatchReadyDay:31});
+      city.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Comisaría visual de prueba',x:10,y:11,status:'operativo',
+        policeUnit:{vehicles:1,priority:'mixto'},jobSlots:22,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({kind:'civic',serviceModel:'generalHospital',name:'Hospital visual de prueba',x:11,y:11,status:'operativo',
+        hospitalWard:{beds:20,ambulances:1},jobSlots:40,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.workplaces.push({kind:'civic',name:'Comisaría visual de prueba',x:10,y:11,staffedJobs:16,workersAssigned:16,jobSlots:22});
+      city.workplaces.push({kind:'civic',name:'Hospital visual de prueba',x:11,y:11,staffedJobs:20,workersAssigned:20,jobSlots:40});
+      city.buildings.push({kind:'fireStation',serviceModel:'firePost',name:'Cuartel de pruebas',x:12,y:11,status:'operativo',fireEngineCapacity:1,dispatchReadyDay:31});
       city.workplaces.push({kind:'fireStation',name:'Cuartel de pruebas',x:12,y:11,staffedJobs:8,workersAssigned:8,jobSlots:8});
       const route=[[9,11],[9,10],[8,10],[7,10],[6,10],[5,10],[5,9]];
       const fireRoute=[[12,11],[12,10],[11,10],[10,10],[9,10],[8,10],[7,10],[6,10],[5,10],[5,9]];
-      city.police={lastProcessedMonth:1,recentIncidents:[{id:'p3d',day:31,month:1,x:5,y:9,location:'Sector viviendas',status:'atendido',station:'Municipalidad',stationX:9,stationY:11,route}]};
-      city.health={lastHospitalDay:31,hospitalBacklog:0,ambulanceDispatches:[{id:'m3d',day:31,x:5,y:9,station:'Municipalidad',stationX:9,stationY:11,patients:1,status:'traslado',route}]};
+      city.police={lastProcessedMonth:1,recentIncidents:[{id:'p3d',day:31,month:1,x:5,y:9,location:'Sector viviendas',status:'atendido',station:'Municipalidad',stationX:10,stationY:11,route}]};
+      city.health={lastHospitalDay:31,hospitalBacklog:0,ambulanceDispatches:[{id:'m3d',day:31,x:5,y:9,station:'Municipalidad',stationX:11,stationY:11,patients:1,status:'traslado',route}]};
       city.fireService={lastGeneratedMonth:1,incidents:[{id:'f3d',x:5,y:9,name:'Viviendas del sector',startDay:30,resolvedDay:31,status:'controlado',station:'Cuartel de pruebas',stationX:12,stationY:11,route:fireRoute,damage:2}],dispatches:1,resolved:1,unanswered:0};
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
     });
@@ -169,6 +184,14 @@ try{
     }
     const overflow3D=await live.evaluate(()=>({document:document.documentElement.scrollWidth,viewport:innerWidth,canvas:document.querySelector('#city').getBoundingClientRect().width}));
     assert.ok(overflow3D.document<=overflow3D.viewport+2&&overflow3D.canvas>100,name+': la escena 3D generó desborde');
+    // Cobertura verde visible en calles reales, mayor en hospitales de nivel superior.
+    const coverage=await live.evaluate(()=>{
+      const small=window.__ciudadVivaCoverage(11,11,'clinic');
+      const large=window.__ciudadVivaCoverage(11,11,'generalHospital');
+      return {small:small.length,large:large.length,allGreen:large.every(x=>x.radius===16)};
+    });
+    assert.ok(coverage.small>0&&coverage.large>=coverage.small&&coverage.allGreen,
+      name+': el radio verde no respeta niveles y calles '+JSON.stringify(coverage));
     await live.screenshot({path:'ui-captures/'+name+'-emergencias-3d.png'});
     assert.deepEqual(threeErrors,[],name+': errores Three.js '+threeErrors.join('; '));
     await live.close();

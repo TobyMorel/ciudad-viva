@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.93",
+  "currentVersion": "0.94",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.94",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 17 incorpora recuperación de fábricas privadas insolventes Online/Offline: el promotor observa demanda de obras y mercados, espera al menos 90 días desde el cierre, exige zona industrial, acceso vial, tres servicios y capacidad real de una constructora para rehabilitar el edificio.",
+        "La rehabilitación cuesta $5.300 de capital privado ($4.200 de operación de la firma, $900 de obra, $200 de permiso), inmoviliza cinco trabajadores durante siete días y exige inspección de accesos/servicios. Reabre con operador nuevo y veinte puestos; no recupera insumos o existencias de la empresa quebrada ni regenera la reserva geológica.",
+        "La insolvencia registra fecha, retira existencias de proveedores y libera capacidad. Se añade cartera visible de recuperación en Economía y ficha de planta con recetas industriales específicas; las pruebas de motor y vista Chromium forman parte de GitHub Actions. Fase 17 pasa a 65%; fase 18 permanece en 90%; progreso global no estimable."
+      ],
+      "roadmapPhase": 17,
+      "phaseProgress": 65,
+      "overallProgress": null
+    },
     {
       "version": "0.93",
       "date": "2026-10-31",
@@ -1038,10 +1050,11 @@
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 60,
-      "summary": "Hogares compran a comercios; la demanda local/regional activa inversión y fábricas locales autónomas.",
+      "progress": 65,
+      "summary": "Empresas privadas autofinancian viviendas, comercio e industria; cierres por insolvencia y promotores rehabilitan plantas cerradas con capital, plazo, empleo, servicios y nueva empresa.",
       "pending": [
-        "Competencia empresarial completa, expansión y quiebra industrial; costes de producción extensos."
+        "Competencia y expansión entre varias industrias con presupuestos reales, reajuste de plantillas y precios; recuperación por terceros de comercios y hoteles cerrados.",
+        "Probar cierres y reaperturas en escenarios de décadas sin capital gratuito."
       ]
     },
     {

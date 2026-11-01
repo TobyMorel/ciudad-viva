@@ -174,7 +174,12 @@ try{
     await live.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     await live.waitForFunction(()=>typeof window.__ciudadViva3D==='function'&&window.__ciudadViva3D().length>=3,{timeout:30000});
     const before=await live.evaluate(()=>window.__ciudadViva3D());
-    const required=['Policía','Ambulancia','Bomberos'];
+    const required=['Ambulancia','Bomberos'];
+    // Una patrulla sin dotación real debe quedarse en su base; exigir movimiento
+    // forzaría a mostrar móviles operativos sin personal y redes disponibles.
+    const police=before.find(a=>a.type==='Policía');
+    assert.ok(police&&police.inScene&&police.visible&&(police.moving?police.routeLength>1:police.routeLength===0),
+      name+': la patrulla no respeta su estado de operación '+JSON.stringify(before));
     for(const role of required){
       const actor=before.find(a=>a.type===role);
       assert.ok(actor&&actor.inScene&&actor.visible&&actor.moving&&actor.routeLength>1,
@@ -182,6 +187,10 @@ try{
     }
     await live.waitForTimeout(1150);
     const after=await live.evaluate(()=>window.__ciudadViva3D());
+    const policeAfter=after.find(a=>a.type==='Policía');
+    const policeDistance=policeAfter?Math.hypot(police.position[0]-policeAfter.position[0],police.position[1]-policeAfter.position[1]):Infinity;
+    assert.ok(policeAfter&&(police.moving?policeDistance>.12:policeDistance<.02),
+      name+': la patrulla no coincide con su movimiento o estacionamiento '+JSON.stringify({police,policeAfter}));
     for(const role of required){
       const a=before.find(x=>x.type===role),b=after.find(x=>x.type===role);
       assert.ok(b&&Math.hypot(a.position[0]-b.position[0],a.position[1]-b.position[1])>.12,

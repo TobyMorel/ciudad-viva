@@ -34,6 +34,10 @@ def run_profile(name, population, funds, ore):
         assert supply.get("unexploredSteelOre",12000)>=0,(name,month,"yacimiento negativo")
         assert s.get("waste",{}).get("scrapSteelTons",0)>=0,(name,month,"chatarra negativa")
         assert all(v.get("steel",0)>=0 for v in supply.get("suppliers",{}).values()),(name,month,"inventario negativo")
+        assert s.get("money",0)==s.get("money",0),(name,month,"caja municipal NaN")
+        assert s.get("privateCapital",0)==s.get("privateCapital",0),(name,month,"capital privado NaN")
+        assert supply.get("steelImportedUnits",0)>=0 and supply.get("steelRecyclingSpend",0)>=0,(name,month,"contabilidad siderúrgica inválida")
+        assert supply.get("geologicalExplorationSpend",0)>=0,(name,month,"prospección inválida")
         assert all(b.get("business",{}).get("cash",0)==b.get("business",{}).get("cash",0) for b in s.get("buildings",[])),(name,month,"NaN")
         if month%12==11:history.append((month//12+1,s.get("population",0),s.get("money",0),supply.get("regionalSteelReserve",0)))
     return history

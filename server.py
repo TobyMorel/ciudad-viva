@@ -3694,9 +3694,10 @@ def tick_one_day():
         depot=supplier_stock["Corralón del Puerto"]
         if int(depot.get("steel",0))<30:
             ports=[b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("operational")]
-            viable=any(route_between((b["x"],b["y"]),(4,10)) is not None for b in ports)
+            viable=[b for b in ports if route_between((b["x"],b["y"]),(4,10)) is not None]
             if viable:
-                units=min(60,240-max(0,int(depot.get("steel",0))),max(0,int(state.get("money",0)//280)))
+                port_capacity=sum(max(0,min(int(b.get("shipCapacity",180)),int(b.get("cargoCapacity",500))-int(b.get("cargoStored",0)))) for b in viable)
+                units=min(60,port_capacity,240-max(0,int(depot.get("steel",0))),max(0,int(state.get("money",0)//280)))
                 if units>0:
                     cost=units*280
                     state["money"]-=cost

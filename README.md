@@ -1,5 +1,10 @@
 # Ciudad Viva · Alfa 0.97
 
+## Alfa 0.109 · interfaz según referencias del usuario
+
+El nuevo diseño sigue las trece pantallas entregadas por el usuario, guardadas en `design_reference/`. Conserva la simulación y los controles originales con paneles adaptados para móvil y escritorio. `reference.css` y `reference-ui.js` implementan las vistas; los indicadores muestran datos reales de cada partida. El render 3D adapta su resolución para mantener la interacción. El porcentaje de desarrollo global todavía no puede estimarse de forma responsable sin pesos estables para las 34 fases del roadmap.
+
+
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
 ## Roadmap

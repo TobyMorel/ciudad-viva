@@ -1,5 +1,10 @@
 # Decisiones técnicas · Ciudad Viva
 
+## Alfa 0.109 · implementación de las referencias visuales
+
+El usuario aportó trece PNG como especificación visual. Los archivos `reference.css` y `reference-ui.js` implementan el nuevo lenguaje de forma adaptable y mantienen los paneles originales como `ref-source`, evitando perder acciones de mecánicas existentes. Las tarjetas nuevas leen `S` y nunca copian números de las imágenes. Los PNG permanecen en `design_reference/` para continuidad. El render de Three.js limita resolución y detalle lejano en pantallas grandes para sostener la respuesta del navegador. La fase 15 pasa de 70% a 75%; el porcentaje total sigue sin base ponderada.
+
+
 - **Servidor LAN:** Python 3.9+ y `ThreadingHTTPServer`, sin paquetes Python. El anfitrión conserva el estado único; acciones se serializan bajo bloqueo y clientes consultan cada segundo. La API y los archivos gráficos se sirven desde el mismo origen. Solo los archivos públicos del juego se exponen.
 - **Multijugador:** el primer ID de cliente se vuelve anfitrión. Solo el anfitrión puede pausar, cambiar velocidad, iniciar partida nueva y cargar/guardar. Los demás jugadores comparten caja y pueden planificar. El ID es una identidad ligera de alfa; aún no hay cuentas, autenticación robusta ni roles municipales.
 - **Inicio y archivos:** doble clic en el lanzador inicia servidor y navegador. Three.js 0.171.0 está empaquetado bajo `vendor/` con su licencia MIT; no se usa CDN ni se requiere npm en el juego. Python atiende `index.html`, `game.js`, `world3d.js`, `style.css`, `favicon.svg` y los dos módulos Three.js.

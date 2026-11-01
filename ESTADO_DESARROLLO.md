@@ -1,5 +1,13 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.109 · interfaz según las trece referencias del usuario (2026-11-01)
+
+- `reference.css` y `reference-ui.js` implementan cabecera, indicadores, barra de mapa, navegación y ventanas de las referencias, en claro y oscuro. Las vistas de Ciudad, Economía, Obras, Avisos, Ayuda, Registro, Cambios y Construir usan datos reales y mantienen los controles existentes en secciones desplazables.
+- Se renovaron inicio, licitación y pedido de materiales; se preservaron entradas, acciones y guardado. Las trece imágenes originales están en `design_reference/` para comparación y continuidad.
+- Las capturas de 390 y 1440 px muestran el nuevo diseño sin desborde horizontal en las pantallas inspeccionadas. La prueba LAN entre equipos físicos y la revisión de accesibilidad con lectores de pantalla siguen pendientes.
+- Fase 15: 75% orientativo por evidencia visual y funcional. Progreso global sin estimar: faltan pesos y criterios de aceptación estables para las 34 fases. Hito actual y siguiente: F, comenzando por tiempos de tráfico autoritativos y accidentes.
+
+
 **Entrega:** Alfa 0.91 · 1 de noviembre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.108",
+  "currentVersion": "0.109",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.109",
+      "date": "2026-11-01",
+      "roadmapPhase": 15,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Rediseño visual basado en las trece pantallas de referencia aportadas: cabecera azul petróleo, cinco indicadores, barra clara del mapa, navegación inferior en cápsula, ventanas marfil y tarjetas con jerarquía visual coherente.",
+        "Pantallas de inicio, Avisos, Ayuda, Construir, Ciudad, Economía, Obras, Registro, Cambios, licitación y pedido de materiales adaptadas para móvil y escritorio; pestañas internas y accesos conservan las acciones originales.",
+        "Los indicadores y listas del nuevo diseño muestran el estado real de la partida; las cifras de las referencias no se copiaron como datos simulados. La vista inicial muestra el mapa de la ciudad semilla hasta elegir modo.",
+        "Se redujo la densidad de decoración lejana y se ajustó la resolución de render en pantallas grandes para sostener la interacción del mapa. Tema claro y oscuro conservados."
+      ]
+    },
     {
       "version": "0.108",
       "date": "2026-11-01",
@@ -1065,8 +1078,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.109 · capacidad vial y accidentes",
-      "detail": "Llevar los semáforos y la capacidad por tramo al cálculo principal de tiempos; introducir accidentes y respuesta municipal."
+      "title": "Alfa 0.110 · capacidad vial y accidentes",
+      "detail": "Integrar capacidad y espera semafórica en tiempos de viaje; crear accidentes causales y respuesta municipal."
     },
     {
       "title": "Validación de experiencia",
@@ -1218,8 +1231,8 @@
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 70,
-      "summary": "Interfaz Atlas municipal, grupos de construcción y economía, navegación vertical, tema claro/oscuro, historial y controles",
+      "progress": 75,
+      "summary": "Interfaz basada en trece referencias visuales: inicio, indicadores, mapa, ventanas, formularios, navegación y temas claro/oscuro; sistemas y datos originales conservados",
       "pending": [
         "Pruebas de usabilidad con jugadores y revisión de contraste con tecnologías de asistencia.",
         "Equilibrio de experiencia y rendimiento en sesiones largas y ciudades extensas."

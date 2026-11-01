@@ -1,5 +1,10 @@
 # Auditoría del roadmap · Alfa 0.84
 
+## Revisión de alcance · Alfa 0.109
+
+La entrega de las trece referencias avanza la fase 15 (experiencia de juego) de 70% a 75%. No cierra fases de simulación: faltan tiempo semafórico autoritativo, accidentes, muchos sistemas profundos y validación LAN física. La cobertura global no se convierte en porcentaje porque las 34 fases carecen de pesos de aceptación comparables y estables. Hito actual F; próximo paso dentro de F: tráfico y respuesta a incidentes.
+
+
 Esta revisión compara la implementación presente con las 34 fases del roadmap. “Parcial” indica que existe un circuito jugable comprobado en alguna entrega, pero faltan criterios de aceptación de la fase. No se asignan porcentajes porque faltan pesos estables por sistema y criterios finales para toda la obra.
 
 | Fases | Estado comprobable | Brecha principal |

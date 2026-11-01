@@ -24,6 +24,7 @@ jobs:
           node --experimental-default-type=module --check game.js
           node --experimental-default-type=module --check world3d.js
           node --experimental-default-type=module --check cityGuide.js
+          node --experimental-default-type=module --check reference-ui.js
           python -m json.tool release_notes.json > /dev/null
           python -m json.tool offline_seed.json > /dev/null
       - name: Regresión Online
@@ -35,7 +36,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.108
+          name: ciudad-viva-alfa-0.109
           path: |
             .
             !.git/**
@@ -65,7 +66,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.108-responsive
+          name: ciudad-viva-alfa-0.109-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

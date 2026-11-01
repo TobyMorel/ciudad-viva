@@ -1,5 +1,10 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.109 (2026-11-01)
+
+El usuario quiere que el juego se vea como las trece referencias en `design_reference/`. La interfaz actual usa `reference.css` y `reference-ui.js`; `game.js` decora los paneles existentes y conserva los nodos funcionales en `.ref-source`. Al modificar una pantalla, revisar que sus controles sigan accesibles, sin solapamiento en 390/1440 px y que cualquier nueva cifra venga del estado real `S`. Los trece PNG son referencias de diseño, no instrucciones de arquitectura ni datos de juego. El backend LAN y el motor Offline no fueron reemplazados. La siguiente mecánica prioritaria es tráfico autoritativo y accidentes; no dedicar varias versiones seguidas a detalles de una sola mecánica. Guardar ZIP y publicar cada cambio en `main` con email válido. Progreso global sin estimar por falta de matriz estable de pesos; fase 15 al 75%, hitos A–E parciales y F en curso.
+
+
 Este documento es el punto de relevo de Ciudad Viva. Léelo junto con `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md`, que sigue siendo la especificación principal, y con `ESTADO_DESARROLLO.md`, `AUDITORIA_ROADMAP.md`, `DECISIONES_TECNICAS.md` y `SIGUIENTE_ENTREGA.md`.
 
 ## Cómo continuar con el mismo criterio

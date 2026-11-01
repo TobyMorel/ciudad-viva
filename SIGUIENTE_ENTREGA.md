@@ -1,5 +1,13 @@
 # Siguiente entrega · continuidad
 
+## Punto de continuación después de Alfa 0.109
+
+1. Verificar el despliegue de `main` y una sesión LAN física de dos equipos; la UI no garantiza esa prueba.
+2. Fase 7: incorporar capacidad por tramo y semáforos a tiempos de viaje autoritativos, luego accidentes causales con respuesta municipal. Mantener paridad Online/Offline.
+3. Fase 15: comparar las trece capturas originales de `design_reference/` con móvil/escritorio, refinar arte del mapa y revisar teclado/lector de pantalla. No sustituir sistemas por cifras de maqueta.
+4. Conservar un ZIP completo por entrega, publicar `main` con email Git válido y actualizar historial y progreso por fase. El total del juego sigue sin porcentaje hasta fijar pesos y criterios de aceptación para las 34 fases.
+
+
 Roadmap fuente: `ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md` (34 fases). Priorizar sistemas jugables con causas, costos y consecuencias; evitar dedicar entregas a detalles mientras quedan mecánicas vacías.
 
 ## Histórico: estado al cerrar Alfa 0.84

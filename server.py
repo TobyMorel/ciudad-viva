@@ -394,8 +394,12 @@ def expire_aggregate_contract_lines():
     for order in state["supply"].get("marketOrders",[]):
         if order.get("status")!="en tránsito" or not order.get("supplyContractId"):continue
         buyer=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==order["businessId"]),None)
-        if not buyer or buyer.get("status")!="abierto" or state["day"]>order["deadlineDay"]:
-            order["status"]="cancelado";order["statusCause"]="Comprador cerrado" if not buyer or buyer.get("status")!="abierto" else "Plazo contractual vencido"
+        seller=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==order.get("vendorId")),None)
+        buyer_closed=not buyer or buyer.get("status")!="abierto"
+        seller_closed=not seller or seller.get("status")!="abierto"
+        if buyer_closed or seller_closed or state["day"]>order["deadlineDay"]:
+            order["status"]="cancelado"
+            order["statusCause"]="Comprador cerrado" if buyer_closed else "Proveedor insolvente" if seller_closed else "Plazo contractual vencido"
             settle_aggregate_contract_line(order,False)
 
 def advance_local_concrete_plants(workplaces,employees):

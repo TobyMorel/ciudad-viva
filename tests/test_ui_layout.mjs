@@ -18,7 +18,7 @@ try{
     }
     assert.ok(loaded,'El servidor estático debe responder.');
     await page.locator('#offlineMode').click();
-    await page.locator('#modeBackdrop.hidden').waitFor({timeout:30000});
+    await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     await page.waitForTimeout(400);
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));

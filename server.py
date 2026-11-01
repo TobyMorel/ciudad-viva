@@ -3645,11 +3645,28 @@ def advance_utility_backup_fuel():
             if building["backupFuelKwh"]<=0:
                 ev("Grupo electrógeno sin combustible",f"{building.get('name','Servicio crítico')} agotó su reserva. Reabastecer para recuperar el respaldo eléctrico.")
 
+def advance_maritime_steel_shipments():
+    """Cargamentos prepagados llegan después del viaje; la ruta y el puerto siguen siendo requisitos."""
+    supply=state["supply"]
+    for shipment in supply.setdefault("steelShipments",[]):
+        if shipment.get("status")!="en viaje" or state["day"]<shipment["arrivalDay"]:continue
+        port=next((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("x")==shipment["port"][0] and b.get("y")==shipment["port"][1] and b.get("operational")),None)
+        if not port or route_between(tuple(shipment["port"]),(4,10)) is None:
+            shipment["statusCause"]="Puerto inhabilitado o conexión vial interrumpida"
+            continue
+        supply["suppliers"]["Corralón del Puerto"]["steel"]+=shipment["quantity"]
+        shipment["status"]="entregado"
+        shipment["deliveredDay"]=state["day"]
+        shipment["statusCause"]=""
+        supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+shipment["quantity"]
+        ev("Acero desembarcado",f"{shipment['quantity']} unidades arribaron al Corralón del Puerto después del viaje marítimo.")
+
 def tick_one_day():
     if state["paused"]: return
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    advance_maritime_steel_shipments()
     advance_contract_guarantees()
     advance_industrial_reopenings()
     advance_heritage_works()
@@ -3701,19 +3718,20 @@ def tick_one_day():
             ev("Acero reciclado",f"Recuperadas {recycled_units} unidades desde chatarra municipal; procesamiento $ {cost}.")
         # Importación marítima excepcional: requiere puerto operativo, acceso vial y fondos.
         depot=supplier_stock["Corralón del Puerto"]
-        if int(depot.get("steel",0))<30:
+        inbound=sum(o["quantity"] for o in state["supply"].get("steelShipments",[]) if o.get("status")=="en viaje")
+        if int(depot.get("steel",0))+inbound<30:
             ports=[b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("operational")]
             viable=[b for b in ports if route_between((b["x"],b["y"]),(4,10)) is not None]
             if viable:
+                port=viable[0]
                 port_capacity=sum(max(0,min(int(b.get("shipCapacity",180)),int(b.get("cargoCapacity",500))-int(b.get("cargoStored",0)))) for b in viable)
-                units=min(60,port_capacity,240-max(0,int(depot.get("steel",0))),max(0,int(state.get("money",0)//280)))
+                units=min(60,max(0,port_capacity-inbound),240-max(0,int(depot.get("steel",0)))-inbound,max(0,int(state.get("money",0)//280)))
                 if units>0:
                     cost=units*280
                     state["money"]-=cost
-                    depot["steel"]=int(depot.get("steel",0))+units
+                    state["supply"].setdefault("steelShipments",[]).append({"quantity":units,"port":[port["x"],port["y"]],"orderedDay":state["day"],"arrivalDay":state["day"]+12,"cost":cost,"status":"en viaje"})
                     state["supply"]["steelImportSpend"]=state["supply"].get("steelImportSpend",0)+cost
-                    state["supply"]["steelImportedUnits"]=state["supply"].get("steelImportedUnits",0)+units
-                    ev("Acero importado por puerto",f"{units} unidades de acero desembarcaron; costo de divisas y flete $ {cost}.")
+                    ev("Acero contratado por puerto",f"{units} unidades zarparon; anticipo $ {cost}, llegada prevista en 12 días.")
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)

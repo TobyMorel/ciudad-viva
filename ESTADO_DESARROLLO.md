@@ -4,7 +4,7 @@
 
 Los motores Online y Offline ya no eligen siempre la ruta con menos tramos: el algoritmo de costo mínimo pondera la distancia, la cola persistente respecto a la capacidad de cada segmento y una penalización temporal en calles cercanas a obras viales activas. Los cortes por choque y los tramos deteriorados continúan cerrados. Los recorridos laborales, respuestas de emergencia y camiones de suministro usan la misma red; por eso un desvío puede cambiar longitud de viaje y fecha estimada de entrega. Una ruta alternativa abierta recibe tránsito al recalcularse la demanda, y una vez despejada la cola el algoritmo vuelve al corredor directo. No se añadieron controles ni textos de interfaz.
 
-Pruebas: 64 pruebas Python; 46 Node no visuales; `python -m py_compile server.py`, `node --check offline.js` y `tests/stress_30_years.py` pasan (30 años en cuatro perfiles). Las pruebas de navegador no se ejecutaron: Playwright no está instalado en este entorno. Fase 7=95% orientativo. Global sin estimar por ausencia de pesos estables verificables para las 34 fases. LAN física pendiente; confirmar Vercel después del push.
+Pruebas: 64 pruebas Python; 46 Node no visuales; `python -m py_compile server.py`, `node --check offline.js` y `tests/stress_30_years.py` pasan (30 años en cuatro perfiles). Playwright se instaló temporalmente: pasó el chequeo de marcadores; la batería responsive excedió 90 segundos con SwiftShader y se interrumpió antes de acabar, por lo que la prueba visual integral queda pendiente. El test de UI de utilidades no se alcanzó. Fase 7=95% orientativo. Global sin estimar por ausencia de pesos estables verificables para las 34 fases. LAN física pendiente; confirmar Vercel después del push.
 
 ## Alfa 0.117 · quitar los tirones al cambiar el día
 

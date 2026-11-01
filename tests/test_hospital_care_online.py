@@ -9,7 +9,8 @@ class HospitalCareOnline(unittest.TestCase):
         server.ensure_finance_state()
         self.s=server.state
         self.s["money"]=60000
-        self.center=next(b for b in self.s["buildings"] if b["kind"]=="civic")
+        self.center={"kind":"civic","name":"Hospital de ensayo","serviceModel":"generalHospital","x":12,"y":12,"status":"habilitado","jobSlots":40}
+        self.s["buildings"].append(self.center)
         self.center["utilityAccess"]={"powerServedPct":100,"waterServedPct":100,"wastewaterTreatedPct":100}
         for h in self.s["buildings"]:
             if h["kind"]=="home":

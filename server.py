@@ -117,6 +117,66 @@ def settle_local_material_sale(supplier,items):
     elif supplier=="Aserradero local":settle_sawmill_sale(items.get("timber",0))
     elif supplier=="Metalúrgica local":settle_metalworks_sale(items.get("components",0))
 
+INDUSTRIAL_VENDOR_GOODS = {
+    "Cantera local":("quarry","aggregate","aggregateStock","materialSold"),
+    "Hormigonera local":("concrete","concrete","concreteStock","concreteSold"),
+    "Aserradero local":("sawmill","timber","timberStock","timberSold"),
+    "Metalúrgica local":("metalworks","components","componentStock","componentsSold"),
+}
+
+def industrial_vendor_offers(supplier, material, quantity, destination):
+    """Cotizaciones por planta conectada: caja y existencias pertenecen a cada firma."""
+    spec=INDUSTRIAL_VENDOR_GOODS.get(supplier)
+    if not spec or material!=spec[1] or quantity<=0:return []
+    kind,_,stock_key,_=spec
+    offers=[]
+    for site in state.get("buildings",[]):
+        firm=site.get("business",{})
+        if site.get("kind")!="factory" or firm.get("industryType")!=kind or firm.get("status")!="abierto":continue
+        if int(firm.get(stock_key,0))<quantity:continue
+        route=route_between((site["x"],site["y"]),(destination[0],destination[1]))
+        if not route:continue
+        distance=max(0,len(route)-1)
+        factor=max(.8,min(1.35,float(firm.get("materialPriceFactor",1))))
+        product_cost=round(quantity*MATERIAL_PRICE[material]*SUPPLIERS[supplier]["price"]*factor)
+        freight=max(0,distance-4)*5
+        offers.append({"site":site,"route":route,"distance":distance,"factor":factor,
+                       "productCost":product_cost,"freight":freight,"total":product_cost+freight})
+    return sorted(offers,key=lambda o:(o["total"],o["distance"],o["site"]["x"],o["site"]["y"]))
+
+def settle_industrial_vendor_offer(supplier, material, quantity, offer):
+    """Liquidar exactamente una venta, sin confundir la ruta con otra fábrica."""
+    kind,expected,stock_key,metric=INDUSTRIAL_VENDOR_GOODS[supplier]
+    if material!=expected or quantity<=0:raise ValueError("Mercadería industrial inválida")
+    firm=offer["site"]["business"]
+    if firm.get("status")!="abierto" or firm.get("industryType")!=kind or int(firm.get(stock_key,0))<quantity:
+        raise ValueError("La fábrica elegida ya no tiene este lote")
+    firm[stock_key]-=quantity
+    firm["cash"]=round(firm.get("cash",0)+offer["productCost"])
+    firm["lastLocalSales"]=firm.get("lastLocalSales",0)+quantity
+    firm["lifetimeIndustrialSales"]=firm.get("lifetimeIndustrialSales",0)+quantity
+    firm["lastWinningPriceFactor"]=offer["factor"]
+    industrial=state.setdefault("localIndustry",{})
+    industrial[metric]=industrial.get(metric,0)+quantity
+
+def price_industrial_competition():
+    """Reajuste al cierre mensual: precio cae con stock ocioso, sube con ventas."""
+    for site in state.get("buildings",[]):
+        firm=site.get("business",{})
+        kind=firm.get("industryType")
+        stock_key=next((v[2] for v in INDUSTRIAL_VENDOR_GOODS.values() if v[0]==kind),None)
+        if not stock_key or firm.get("status")!="abierto":continue
+        stock=max(0,int(firm.get(stock_key,0)))
+        produced=max(0,int(firm.get("lastProduction",0)))
+        sold=max(0,int(firm.get("lastLocalSales",0)))
+        factor=float(firm.get("materialPriceFactor",1))
+        if sold>=max(4,produced//2) and stock<=max(8,produced):
+            factor=min(1.35,round(factor+.04,2))
+        elif sold==0 and stock>max(12,produced):
+            factor=max(.8,round(factor-.05,2))
+        firm["materialPriceFactor"]=factor
+
+
 def advance_local_metalworks(workplaces,employees):
     industry=state.setdefault("localIndustry",{});industry.setdefault("componentsProduced",0);industry.setdefault("componentsSold",0)
     supplier=state["supply"]["suppliers"].setdefault("Metalúrgica local",SUPPLIER_STOCK["Metalúrgica local"].copy());supplier["components"]=max(0,int(supplier.get("components",0)))
@@ -3315,6 +3375,7 @@ def tick_one_day():
         simulate_airport_month(economic)
         tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
+        price_industrial_competition()
         tax_report=collect_municipal_taxes()
         economic=commute_model()
         collect_bus_fares(economic)
@@ -4116,14 +4177,20 @@ class Handler(BaseHTTPRequestHandler):
                     priority=str(data.get("priority","normal"))
                     if priority not in ("normal","alta"):self._send(400,{"error":"Prioridad de descarga inválida."});return
                     if not location:self._send(400,{"error":"Depósito de destino inválido."});return
-                    source_building=None
-                    local_type={"Cantera local":"quarry","Hormigonera local":"concrete","Aserradero local":"sawmill","Metalúrgica local":"metalworks"}.get(supplier)
-                    if local_type:
-                        candidates=[b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")==local_type and b.get("business",{}).get("status")=="abierto"]
-                        candidates.sort(key=lambda b:(len(route_between((b["x"],b["y"]),(location["x"],location["y"])) or [10**6]),b["x"],b["y"]))
-                        source_building=candidates[0] if candidates else None
-                    origin=(source_building["x"],source_building["y"]) if source_building else (4,10)
-                    route=route_between(origin,(location["x"],location["y"]))
+                    vendor_offer=None
+                    if supplier in INDUSTRIAL_VENDOR_GOODS:
+                        expected=INDUSTRIAL_VENDOR_GOODS[supplier][1]
+                        if set(clean)!={expected}:
+                            self._send(409,{"error":"Este proveedor industrial solo vende "+MATERIAL_NAMES[expected]+"."});return
+                        offers=industrial_vendor_offers(supplier,expected,clean[expected],(location["x"],location["y"]))
+                        if not offers:
+                            self._send(409,{"error":"Ninguna planta ofrece el lote completo con acceso vial. Probá otra fábrica o dividí el pedido."});return
+                        vendor_offer=offers[0]
+                        origin=(vendor_offer["site"]["x"],vendor_offer["site"]["y"])
+                        route=vendor_offer["route"]
+                    else:
+                        origin=(4,10)
+                        route=route_between(origin,(location["x"],location["y"]))
                     if route is None:self._send(409,{"error":"El depósito elegido no tiene acceso de camiones por la red vial."});return
                     free=max(0,location["capacity"]-storage_used(destination_id)-storage_reserved(destination_id))
                     if sum(clean.values())>free:
@@ -4132,7 +4199,7 @@ class Handler(BaseHTTPRequestHandler):
                     missing=[MATERIAL_NAMES[k] for k,q in clean.items() if inventory[k]<q]
                     if missing:self._send(409,{"error":"El proveedor no tiene stock de "+", ".join(missing)+"."});return
                     freight=max(0,distance-4)*5
-                    cost=round(sum(q*MATERIAL_PRICE[k]*provider["price"] for k,q in clean.items())+freight)
+                    cost=vendor_offer["total"] if vendor_offer else round(sum(q*MATERIAL_PRICE[k]*provider["price"] for k,q in clean.items())+freight)
                     cash=state["supply"]["contractorCash"][project["contractor"]]
                     if cash<cost:self._send(409,{"error":f"{project['contractor']} tiene $ {cash:,} de caja de obra; el pedido cuesta $ {cost:,}.".replace(",",".")});return
                     eta=provider["days"]+math.ceil(distance/6)
@@ -4140,7 +4207,15 @@ class Handler(BaseHTTPRequestHandler):
                     state["supply"]["contractorCash"][project["contractor"]]-=cost
                     order={"id":uuid.uuid4().hex,"projectId":project["id"],"label":project["label"],"contractor":project["contractor"],"supplier":supplier,"items":clean,"cost":cost,"destinationId":destination_id,"destinationLabel":location.get("label",f"Depósito municipal {location['x']+1},{location['y']+1}"),"priority":priority,"orderedDay":state["day"],"supplierReadyDay":state["day"]+provider["days"],"travelDistance":distance,"travelledDistance":0,"routeProgress":0,"arrivalDay":state["day"]+eta,"progress":0,"status":"en tránsito","statusCause":"Preparación en proveedor","route":route,"source":list(origin)}
                     state["supply"]["orders"].append(order)
-                    settle_local_material_sale(supplier,clean)
+                    if vendor_offer:
+                        material=INDUSTRIAL_VENDOR_GOODS[supplier][1]
+                        settle_industrial_vendor_offer(supplier,material,clean[material],vendor_offer)
+                        order["vendorId"]=vendor_offer["site"]["business"].get("id")
+                        order["vendorName"]=vendor_offer["site"].get("name")
+                        order["productCost"]=vendor_offer["productCost"]
+                        order["freight"]=vendor_offer["freight"]
+                        order["quotedFactor"]=vendor_offer["factor"]
+                    else:settle_local_material_sale(supplier,clean)
                     order["trafficFactor"]=round(traffic_factor(route,order),2)
                     order["arrivalDay"]=order_route_eta(order)[2]
                     detail=" · ".join(f"{MATERIAL_NAMES[k]} {v}" for k,v in clean.items())

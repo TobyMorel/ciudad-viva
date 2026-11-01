@@ -216,7 +216,7 @@ export async function createOfflineAdapter(){
   const HOSPITAL_COSTS={openHospitalWard:7200,expandHospitalWard:4600,addAmbulance:2800};
   function investOfflineHospitalCare(action,x,y){
     const b=state.buildings.find(o=>o.kind==='civic'&&o.x===x&&o.y===y&&['operativo','habilitado'].includes(o.status));
-    if(!b)throw Error('La ampliación requiere un centro de salud municipal habilitado.');
+    if(!b||!offlineServiceModel(b)?.care)throw Error('La ampliación requiere un centro sanitario construido y habilitado.');
     if(!offlineRoadRoute({x:4,y:10},b))throw Error('El centro necesita acceso vial para recibir equipos y ambulancias.');
     const ward=b.hospitalWard;
     if(action==='openHospitalWard'&&ward)throw Error('Este centro ya dispone de internación.');
@@ -293,7 +293,7 @@ export async function createOfflineAdapter(){
   }
   function investOfflinePolice(action,x,y,priority){
     const b=state.buildings.find(o=>o.kind==='civic'&&o.x===x&&o.y===y&&['operativo','habilitado'].includes(o.status));
-    if(!b)throw Error('Elegí un centro cívico municipal habilitado.');
+    if(!b||!offlineServiceModel(b)?.police)throw Error('Primero construí una comisaría o puesto de seguridad.');
     if(action==='setPolicePriority'){
       if(!b.policeUnit)throw Error('Primero equipá una base de seguridad.');
       if(!POLICE_PRIORITIES.includes(priority))throw Error('Prioridad de patrullaje inválida.');

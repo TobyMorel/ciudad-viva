@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.96
+# Ciudad Viva · Alfa 0.97
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -302,3 +302,8 @@ El simulador conecta competencia entre fábricas a la compra efectiva de materia
 Los promotores que inician viviendas y fábricas desde suelo zonificado, así como las inversiones comerciales delegadas, pagan materiales con capital privado y esperan envíos reales a los patios o depósitos. El motor selecciona lotes con stock suficiente, precio de cada fábrica, flete, rutas abiertas y espacio de descarga. La mercancía se descuenta al reservar y solo aparece en los almacenes tras el viaje; construir sin suministros conectados ya no es posible. Los contratos guardan el vendedor, el trayecto, los costos y el día previsto de llegada. Online y Offline funcionan con la misma lógica de caja y logística.
 
 Las empresas además ajustan sus puestos de trabajo mensualmente. Abrir una vacante requiere ventas, liquidez y compra de equipamiento; mantener exceso de inventario y pérdidas durante períodos consecutivos puede obligarlas a recortar vacantes y despedir trabajadores reales, que vuelven a buscar empleo. Las metalúrgicas amplían la capacidad productiva al incorporar personal a equipos nuevos. Nuevas pruebas verifican suministro diferido, falta de capacidad, inversión productiva y despidos. Fases 17=75%, 18=90%; avance global no estimado.
+
+
+## Alfa 0.97 · contratos industriales privados de suministro a plazo
+
+Las hormigoneras pueden firmar automáticamente contratos de aprovisionamiento de áridos con una cantera operativa y conectada. Se adjudican por precio, distancia, inventario disponible y capacidad de pago; las unidades se apartan de la cantera en la firma y el dinero se mantiene en custodia. Un lote suficiente se distribuye en tres remesas escalonadas, que solo generan ingresos para la cantera y la logística cuando los camiones llegan. El corte de una calle posterga entregas; tras vencerse el plazo, las unidades no recibidas se reintegran a la cantera activa y el dinero pendiente vuelve al comprador. El contrato conserva historia de pagos, devoluciones, remesas entregadas e incumplimientos. Misma mecánica en Online y Offline, con resumen en Economía. No se simulan todavía contratos a plazo de madera, acero ni alimentación. Fase 17: 80%; fase 18: 90%; progreso global sin estimación.

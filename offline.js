@@ -41,7 +41,7 @@ export async function createOfflineAdapter(){
   ensureOfflineHeritage(state);ensureOfflineUrbanEvolution(state);ensureOfflineRegionalMarket(state);ensureOfflinePrivateInvestments(state);
   state.supply=state.supply||clone(seed.supply);
   if(!state.supply.market)state.supply.market=clone(seed.supply.market||{});
-  state.supply.marketOrders=state.supply.marketOrders||[];state.supply.market['Cooperativa Agrícola Regional']||={unitCost:3.4,stock:320,maxStock:600,monthlyOutput:180,leadDays:2,profile:'Grano regional · cuota finita y entrega por carretera',cash:18000,lastSales:0,source:[21,10],commodity:'grano'};state.supply.orders=state.supply.orders||[];state.supply.contractors=state.supply.contractors||{};state.supply.contractorCash=state.supply.contractorCash||{};state.supply.suppliers=state.supply.suppliers||{};state.supply.yardCapacity=state.supply.yardCapacity||240;state.supply.depots=state.supply.depots||[];for(const [name,cash] of Object.entries({'Sur Obras':5000,'Constructora Delta':9000,'Estudio y Obra Norte':14000})){state.supply.contractors[name]=state.supply.contractors[name]||{...CONTRACTOR_STOCK};state.supply.contractorCash[name]??=cash;for(const key of Object.keys(MATERIAL_NAMES))state.supply.contractors[name][key]??=CONTRACTOR_STOCK[key]||0}for(const [name,stock] of Object.entries(MATERIAL_STOCK)){state.supply.suppliers[name]=state.supply.suppliers[name]||{...stock};for(const key of Object.keys(MATERIAL_NAMES))state.supply.suppliers[name][key]??=stock[key]||0;state.supply.suppliers[name].cash??=18000;state.supply.suppliers[name].lastSales??=0}for(const depot of state.supply.depots){depot.stocks=depot.stocks||{};for(const name of ['Sur Obras','Constructora Delta','Estudio y Obra Norte']){depot.stocks[name]=depot.stocks[name]||{};for(const key of Object.keys(MATERIAL_NAMES))depot.stocks[name][key]??=0}}ensureOfflineRegionalMarket(state);state.localIndustry=state.localIndustry||{unitsProduced:0,unitsSold:0,unitsImported:0,history:[]};state.localIndustry.timberReserve??=1800;state.localIndustry.timberProduced??=0;state.localIndustry.timberSold??=0;state.localIndustry.componentsProduced??=0;state.localIndustry.componentsSold??=0;for(const p of state.projects||[]){if(!p.materialsRequired)p.materialsRequired=offlineMaterialPlan(p.kind,Math.max(0,Math.min(.95,p.progress||0)));p.materialsUsed=p.materialsUsed||Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0]));for(const k of Object.keys(MATERIAL_NAMES)){p.materialsRequired[k]??=0;p.materialsUsed[k]??=0}}
+  state.supply.marketOrders=state.supply.marketOrders||[];state.supply.tradeContracts=state.supply.tradeContracts||[];state.supply.market['Cooperativa Agrícola Regional']||={unitCost:3.4,stock:320,maxStock:600,monthlyOutput:180,leadDays:2,profile:'Grano regional · cuota finita y entrega por carretera',cash:18000,lastSales:0,source:[21,10],commodity:'grano'};state.supply.orders=state.supply.orders||[];state.supply.contractors=state.supply.contractors||{};state.supply.contractorCash=state.supply.contractorCash||{};state.supply.suppliers=state.supply.suppliers||{};state.supply.yardCapacity=state.supply.yardCapacity||240;state.supply.depots=state.supply.depots||[];for(const [name,cash] of Object.entries({'Sur Obras':5000,'Constructora Delta':9000,'Estudio y Obra Norte':14000})){state.supply.contractors[name]=state.supply.contractors[name]||{...CONTRACTOR_STOCK};state.supply.contractorCash[name]??=cash;for(const key of Object.keys(MATERIAL_NAMES))state.supply.contractors[name][key]??=CONTRACTOR_STOCK[key]||0}for(const [name,stock] of Object.entries(MATERIAL_STOCK)){state.supply.suppliers[name]=state.supply.suppliers[name]||{...stock};for(const key of Object.keys(MATERIAL_NAMES))state.supply.suppliers[name][key]??=stock[key]||0;state.supply.suppliers[name].cash??=18000;state.supply.suppliers[name].lastSales??=0}for(const depot of state.supply.depots){depot.stocks=depot.stocks||{};for(const name of ['Sur Obras','Constructora Delta','Estudio y Obra Norte']){depot.stocks[name]=depot.stocks[name]||{};for(const key of Object.keys(MATERIAL_NAMES))depot.stocks[name][key]??=0}}ensureOfflineRegionalMarket(state);state.localIndustry=state.localIndustry||{unitsProduced:0,unitsSold:0,unitsImported:0,history:[]};state.localIndustry.timberReserve??=1800;state.localIndustry.timberProduced??=0;state.localIndustry.timberSold??=0;state.localIndustry.componentsProduced??=0;state.localIndustry.componentsSold??=0;for(const p of state.projects||[]){if(!p.materialsRequired)p.materialsRequired=offlineMaterialPlan(p.kind,Math.max(0,Math.min(.95,p.progress||0)));p.materialsUsed=p.materialsUsed||Object.fromEntries(Object.keys(MATERIAL_NAMES).map(k=>[k,0]));for(const k of Object.keys(MATERIAL_NAMES)){p.materialsRequired[k]??=0;p.materialsUsed[k]??=0}}
   for(const b of state.buildings||[])if(b.kind==='shop'&&b.business){const current=b.business,template=seed.buildings.find(x=>x.kind==='shop'&&x.x===b.x&&x.y===b.y)?.business||{};for(const [key,value] of Object.entries(template))if(current[key]===undefined)current[key]=value}
   state.finance=state.finance||clone(seed.finance||{businessBank:{name:'Banco Cooperativo',liquidity:42000,maxLiquidity:42000,annualRate:.24}});state.finance.businessBank=state.finance.businessBank||{name:'Banco Cooperativo',liquidity:42000,maxLiquidity:42000,annualRate:.24};state.finance.municipalLoans=state.finance.municipalLoans||[];state.finance.debtReserve=Math.max(0,Math.round(state.finance.debtReserve||0));state.finance.debtReserveHistory=state.finance.debtReserveHistory||[];state.finance.contractEscrow=state.finance.contractEscrow||{balance:0};state.contractGuarantees=state.contractGuarantees||[];state.contractChangeHistory=state.contractChangeHistory||[];const defaultProgramBudgets={servicesPct:100,mobilityPct:100,networksPct:100,arrears:{services:0,mobility:0,networks:0},underfundedMonths:{services:0,mobility:0,networks:0},lastReport:{},history:[]};state.finance.programBudgets=state.finance.programBudgets||clone(defaultProgramBudgets);for(const [key,value] of Object.entries(defaultProgramBudgets))state.finance.programBudgets[key]=state.finance.programBudgets[key]??clone(value);for(const name of ['services','mobility','networks']){state.finance.programBudgets.arrears[name]=state.finance.programBudgets.arrears[name]||0;state.finance.programBudgets.underfundedMonths[name]=state.finance.programBudgets.underfundedMonths[name]||0}state.taxes=state.taxes||{propertyRateBp:60,businessRateBp:200,arrearsByAsset:{},lastReport:{},lastProcessedMonth:Math.floor(((state.day||1)-1)/30),history:[]};state.taxes.arrearsByAsset=state.taxes.arrearsByAsset||{};state.taxes.history=state.taxes.history||[];
   state.trainingPrograms=state.trainingPrograms||[];state.fireService=state.fireService||{incidents:[],lastGeneratedMonth:-1,dispatches:0,resolved:0,unanswered:0};state.fireService.incidents=state.fireService.incidents||[];state.busRoutes=state.busRoutes||[];state.supply=state.supply||{};state.supply.portOrders=state.supply.portOrders||[];state.supply.portVoyages=state.supply.portVoyages||[];state.baseMonthlyGross=state.baseMonthlyGross??state.grossMonthlyIncome??state.monthlyIncome;
@@ -308,11 +308,12 @@ export async function createOfflineAdapter(){
     for(const line of state.busRoutes||[]){line.monthlyFareRevenue=0;if(!line.operational)continue;for(const home of state.buildings.filter(b=>b.kind==='home'))for(const person of home.residents||[]){if(person.status!=='empleado')continue;const cost=person.monthlyBusFareByLine?.[line.id]||0;if(!cost)continue;const paid=Math.min(Math.max(0,home.householdCash||0),cost);home.householdCash=Math.max(0,(home.householdCash||0)-paid);line.monthlyFareRevenue+=paid}}
   }
   function receiveMarketDeliveries(){
+    expireOfflineAggregateContractLines();
     for(const order of state.supply.marketOrders||[]){
       if(order.status!=='en tránsito'||state.day<order.arrivalDay)continue;
       const building=state.buildings.find(b=>['shop','factory'].includes(b.kind)&&b.business?.id===order.businessId),firm=building?.business;
-      if(firm?.status==='abierto'){if(order.type==='industrial_raw'&&!offlineRoadRoute({x:order.source?.[0]??4,y:order.source?.[1]??10},building)){order.arrivalDay=state.day+1;order.statusCause='Sin acceso vial';continue}if(order.type==='industrial_raw'&&building.kind==='factory'&&order.commodity==='áridos'){firm.rawMaterialInventory=(firm.rawMaterialInventory||0)+order.quantity;firm.lastMaterialCause='Áridos recibidos';event('Áridos recibidos en hormigonera',`${building.name}: ${order.quantity} áridos entregados por carretera.`)}else if(order.type==='industrial_raw'&&building.kind==='factory'&&order.commodity==='acero'){firm.rawSteelInventory=(firm.rawSteelInventory||0)+order.quantity;firm.lastMaterialCause='Acero regional recibido';event('Acero recibido en metalúrgica',`${building.name}: ${order.quantity} unidades para fabricar componentes.`)}else if(order.type==='industrial_raw'&&building.kind==='factory'){firm.rawMaterialInventory=(firm.rawMaterialInventory||0)+order.quantity;state.localIndustry.unitsImported=(state.localIndustry.unitsImported||0)+order.quantity;firm.lastMaterialCause='Entrega recibida';event('Grano recibido en fábrica',`${building.name}: ${order.quantity} unidades entregadas por carretera.`)}else firm.inputInventory=(firm.inputInventory||0)+order.quantity;order.status='entregado';order.deliveredDay=state.day}
-      else{order.status='cancelado';order.statusCause='Empresa cerrada antes de recibir la carga'}
+      if(firm?.status==='abierto'){if(order.type==='industrial_raw'&&!offlineRoadRoute({x:order.source?.[0]??4,y:order.source?.[1]??10},building)){order.arrivalDay=state.day+1;order.statusCause='Sin acceso vial';continue}if(order.type==='industrial_raw'&&building.kind==='factory'&&order.commodity==='áridos'){firm.rawMaterialInventory=(firm.rawMaterialInventory||0)+order.quantity;firm.lastMaterialCause='Áridos recibidos';event('Áridos recibidos en hormigonera',`${building.name}: ${order.quantity} áridos entregados por carretera.`)}else if(order.type==='industrial_raw'&&building.kind==='factory'&&order.commodity==='acero'){firm.rawSteelInventory=(firm.rawSteelInventory||0)+order.quantity;firm.lastMaterialCause='Acero regional recibido';event('Acero recibido en metalúrgica',`${building.name}: ${order.quantity} unidades para fabricar componentes.`)}else if(order.type==='industrial_raw'&&building.kind==='factory'){firm.rawMaterialInventory=(firm.rawMaterialInventory||0)+order.quantity;state.localIndustry.unitsImported=(state.localIndustry.unitsImported||0)+order.quantity;firm.lastMaterialCause='Entrega recibida';event('Grano recibido en fábrica',`${building.name}: ${order.quantity} unidades entregadas por carretera.`)}else firm.inputInventory=(firm.inputInventory||0)+order.quantity;order.status='entregado';order.deliveredDay=state.day;settleOfflineAggregateContractLine(order,true)}
+      else{order.status='cancelado';order.statusCause='Empresa cerrada antes de recibir la carga';settleOfflineAggregateContractLine(order,false)}
     }
   }
   function offlineMaterialPlan(kind,initialProgress=0){const recipe=MATERIAL_NEEDS[kind]||{};return Object.fromEntries(Object.entries(recipe).map(([k,v])=>[k,v?Math.max(1,Math.round(v*(1-initialProgress))):0]))}
@@ -516,6 +517,87 @@ export async function createOfflineAdapter(){
     }
     industry.quarryReserveRemaining=(state.buildings||[]).filter(b=>b.business?.industryType==='quarry'&&b.business.status==='abierto').reduce((n,b)=>n+(b.business.quarryReserve||0),0);
   }
+
+  function signOfflineAggregateForwardContract(plant,need){
+    const buyer=plant.business,supply=state.supply,aggregate=supply.suppliers['Cantera local'];
+    const offers=(state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='quarry'&&b.business.status==='abierto')
+      .map(site=>{const route=offlineRoadRoute(site,plant);if(!route)return null;
+        const distance=Math.max(0,route.length-1),factor=Math.max(.8,Math.min(1.35,site.business.materialPriceFactor||1)),
+        unit=MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price*factor,freight=Math.max(0,distance-4)*5,
+        qty=Math.min(need,aggregate.aggregate||0,site.business.aggregateStock||0,
+          Math.max(0,Math.floor(((buyer.cash||0)-500)/Math.max(1,unit+freight))));
+        return qty>0?{site,route,distance,factor,unit,freight,qty}:null}).filter(Boolean)
+      .sort((a,b)=>(a.unit+a.freight/a.qty)-(b.unit+b.freight/b.qty)||a.distance-b.distance||a.site.x-b.site.x||a.site.y-b.site.y);
+    if(!offers.length)return null;
+    const pick=offers[0],n=pick.qty>=9?3:1,quantities=Array.from({length:n},(_,i)=>Math.floor(pick.qty/n)+(i<pick.qty%n?1:0)),
+      prices=quantities.map(q=>({product:Math.round(q*pick.unit),freight:pick.freight})),
+      cost=prices.reduce((sum,x)=>sum+x.product+x.freight,0);
+    if((buyer.cash||0)<cost+500)return null;
+    buyer.cash-=cost;aggregate.aggregate-=pick.qty;pick.site.business.aggregateStock-=pick.qty;
+    const id='trade-'+state.day+'-'+plant.x+'-'+plant.y+'-'+(supply.tradeContracts?.length||0);
+    const contract={id,commodity:'áridos',buyerId:buyer.id,buyerName:plant.name,
+      vendorId:pick.site.business.id,vendorName:pick.site.name,quantity:pick.qty,
+      deliveredUnits:0,refundedUnits:0,escrow:cost,contractValue:cost,paidToSeller:0,
+      paidToLogistics:0,refunded:0,orderedDay:state.day,installments:n,
+      source:[pick.site.x,pick.site.y],destination:[plant.x,plant.y],status:'en curso'};
+    (supply.tradeContracts||(supply.tradeContracts=[])).push(contract);
+    quantities.forEach((qty,index)=>{
+      const ready=state.day+1+index*7,price=prices[index];
+      supply.marketOrders.push({id:id+'-'+index,type:'industrial_raw',commodity:'áridos',businessId:buyer.id,
+        businessName:plant.name,supplier:'Cantera local',vendorId:pick.site.business.id,vendorName:pick.site.name,
+        supplyContractId:id,installment:index+1,installments:n,quantity:qty,unitCost:pick.unit,
+        productCost:price.product,freight:price.freight,cost:price.product+price.freight,
+        orderedDay:state.day,supplierReadyDay:ready,deadlineDay:ready+14,
+        arrivalDay:ready+Math.max(1,Math.ceil(pick.distance/6)),travelDistance:pick.distance,travelledDistance:0,
+        source:[pick.site.x,pick.site.y],x:plant.x,y:plant.y,route:pick.route,status:'en tránsito',
+        statusCause:'Lote reservado; pago en custodia'});
+    });
+    buyer.lastMaterialPurchase=pick.qty;buyer.lastMaterialCause='Contrato de áridos con pago contra remesa';
+    event('Contrato industrial a plazo',plant.name+': '+pick.qty+' áridos en '+n+' remesas; $'+cost+' en custodia privada.');
+    return contract;
+  }
+  function settleOfflineAggregateContractLine(order,delivered){
+    if(!order.supplyContractId||order.contractSettled)return;
+    const supply=state.supply,contract=(supply.tradeContracts||[]).find(c=>c.id===order.supplyContractId);
+    if(!contract)return;
+    const units=order.quantity,product=order.productCost,freight=order.freight,amount=product+freight;
+    contract.escrow=Math.max(0,contract.escrow-amount);order.contractSettled=true;
+    const seller=(state.buildings||[]).find(b=>b.business?.id===order.vendorId)?.business;
+    if(delivered){
+      if(seller){
+        seller.cash=(seller.cash||0)+product;seller.lastLocalSales=(seller.lastLocalSales||0)+units;
+        seller.lifetimeIndustrialSales=(seller.lifetimeIndustrialSales||0)+units;
+        seller.industrialSalesSincePricing=(seller.industrialSalesSincePricing||0)+units;
+      }else supply.unclaimedIndustrialReceipts=(supply.unclaimedIndustrialReceipts||0)+product;
+      supply.logisticsCash=(supply.logisticsCash||0)+freight;
+      contract.deliveredUnits+=units;contract.paidToSeller+=product;contract.paidToLogistics+=freight;
+      state.localIndustry.materialSold=(state.localIndustry.materialSold||0)+units;
+    }else{
+      if(seller?.status==='abierto'){
+        seller.aggregateStock=(seller.aggregateStock||0)+units;
+        supply.suppliers['Cantera local'].aggregate+=units;
+      }else contract.lostReservedUnits=(contract.lostReservedUnits||0)+units;
+      const buyer=(state.buildings||[]).find(b=>b.business?.id===order.businessId)?.business;
+      if(buyer)buyer.cash=(buyer.cash||0)+amount;
+      else supply.unclaimedContractRefunds=(supply.unclaimedContractRefunds||0)+amount;
+      contract.refunded+=amount;contract.refundedUnits+=units;
+      event('Contrato incumplido',contract.vendorName+': entrega cancelada; devolución $'+amount+'.');
+    }
+    const lines=(supply.marketOrders||[]).filter(o=>o.supplyContractId===contract.id);
+    if(lines.length&&lines.every(o=>o.contractSettled)){
+      contract.status=contract.refundedUnits?'incumplido':'cumplido';contract.closedDay=state.day;
+    }
+  }
+  function expireOfflineAggregateContractLines(){
+    for(const order of state.supply.marketOrders||[]){
+      if(!order.supplyContractId||order.status!=='en tránsito')continue;
+      const buyer=(state.buildings||[]).find(b=>b.business?.id===order.businessId)?.business;
+      if(!buyer||buyer.status!=='abierto'||state.day>order.deadlineDay){
+        order.status='cancelado';order.statusCause=!buyer||buyer.status!=='abierto'?'Comprador cerrado':'Plazo contractual vencido';
+        settleOfflineAggregateContractLine(order,false);
+      }
+    }
+  }
   function advanceOfflineConcretePlants(){
     const supplier=state.supply.suppliers['Hormigonera local'],aggregate=state.supply.suppliers['Cantera local'],industry=state.localIndustry,orders=state.supply.marketOrders||(state.supply.marketOrders=[]);
     for(const plant of (state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='concrete'&&b.business.status==='abierto')){
@@ -527,28 +609,8 @@ export async function createOfflineAdapter(){
       f.lastMaterialCause=out<potential?(raw<2?'Faltan áridos':service<1?'Faltan servicios':'Almacén sin espacio'):'Producción normal';
       const pending=orders.filter(o=>o.type==='industrial_raw'&&o.commodity==='áridos'&&o.businessId===f.id&&o.status==='en tránsito').reduce((n,o)=>n+o.quantity,0),need=Math.max(0,Math.min(72,Math.max(24,capacity*2))-f.rawMaterialInventory-pending);
       if(!need)continue;
-      const available=(state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='quarry'&&b.business.status==='abierto'&&b.business.aggregateStock>0)
-        .map(b=>{const route=offlineRoadRoute(b,plant),factor=Math.max(.8,Math.min(1.35,b.business.materialPriceFactor||1));
-          if(!route)return null;const distance=Math.max(0,route.length-1),unitCost=MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price*factor+distance*.08,
-          qty=Math.min(need,aggregate.aggregate||0,b.business.aggregateStock||0,Math.max(0,Math.floor(Math.max(0,f.cash-500)/unitCost)));
-          return qty?{b,route,distance,unitCost,qty,factor}:null}).filter(Boolean)
-        .sort((a,b)=>a.unitCost-b.unitCost||a.distance-b.distance||a.b.x-b.b.x||a.b.y-b.b.y);
-      const choice=available[0];
-      if(!choice){f.lastMaterialCause='Sin cantera conectada con stock y caja suficiente';continue}
-      const {b,route,distance,unitCost,qty,factor}=choice,
-        productCost=Math.round(qty*MATERIAL_PRICES.aggregate*MATERIAL_SUPPLIERS['Cantera local'].price*factor),
-        cost=Math.round(qty*unitCost);
-      aggregate.aggregate-=qty;
-      settleOfflineIndustrialOffer('Cantera local','aggregate',qty,{site:b,productCost,factor});
-      state.supply.logisticsCash=(state.supply.logisticsCash||0)+Math.max(0,cost-productCost);
-      f.cash-=cost;
-      orders.push({id:'quarry-'+state.day+'-'+plant.x+'-'+plant.y,type:'industrial_raw',commodity:'áridos',
-        businessId:f.id,businessName:plant.name,supplier:'Cantera local',vendorId:b.business.id,vendorName:b.name,
-        quantity:qty,unitCost,cost,productCost,orderedDay:state.day,supplierReadyDay:state.day+1,
-        arrivalDay:state.day+1+Math.max(1,Math.ceil(distance/6)),travelDistance:distance,travelledDistance:0,
-        source:[b.x,b.y],x:plant.x,y:plant.y,route,status:'en tránsito'});
-      f.lastMaterialCause='Áridos de '+b.name+' en tránsito';
-      event('Áridos encargados',plant.name+': '+qty+' unidades a '+b.name+' por $'+cost+'.');
+      if(!signOfflineAggregateForwardContract(plant,need))
+        f.lastMaterialCause='Sin cantera con lotes, calle y capital suficientes';
     }
   }
   function advanceOfflineSawmills(){const industry=state.localIndustry,stock=state.supply.suppliers['Aserradero local'];industry.timberReserve=Math.min(2400,Math.max(0,industry.timberReserve||0)+18);const workplaceBySite=new Map((state.workplaces||[]).map(w=>[`${w.x},${w.y}`,w]));for(const mill of (state.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='sawmill'&&b.business.status==='abierto')){const firm=mill.business,work=workplaceBySite.get(`${mill.x},${mill.y}`)||{},staffed=Math.max(0,work.staffedJobs||0),access=mill.utilityAccess||{},service=Math.min(access.powerServedPct||0,access.waterServedPct||0,access.wastewaterTreatedPct||0)/100,potential=Math.max(0,Math.min(30,Math.round(staffed*1.25))),capacity=Math.max(0,Math.round(potential*service)),operating=mill.monthlyOperatingCost||360;firm.cash=(firm.cash||0)-(work.payroll||0)-operating;if(firm.cash<0){firm.status='cerrado';mill.status='cerrado';stock.timber=Math.max(0,stock.timber-(firm.timberStock||0));firm.timberStock=0;firm.closedDay=state.day;state.jobs=Math.max(0,state.jobs-(firm.jobSlots||20));event('Aserradero insolvente',`${mill.name}: no alcanzó para salarios y operación; se cerraron ${firm.jobSlots||20} puestos.`);continue}const output=Math.min(capacity,Math.floor(industry.timberReserve/2),Math.max(0,240-(stock.timber||0)));industry.timberReserve-=output*2;stock.timber=(stock.timber||0)+output;firm.timberStock=(firm.timberStock||0)+output;firm.lastProduction=output;firm.lastProductionPotential=potential;firm.lastMaterialShortage=Math.max(0,potential-output);firm.lastLocalSales=0;industry.timberProduced=(industry.timberProduced||0)+output;firm.lastMaterialCause=output<potential?(industry.timberReserve<2?'Reserva forestal agotada':service<1?'Faltan electricidad, agua o saneamiento':staffed<20?'Faltan trabajadores cualificados':'Patio de madera lleno'):'Producción normal';if(output)event('Madera producida localmente',`${mill.name}: ${output} tablas; consume ${output*2} troncos. Reserva forestal ${industry.timberReserve} troncos.`)}}

@@ -156,3 +156,12 @@ Verificado: test de motor Online produjo 25 tablas usando 50 troncos y pagó $69
 ## Alfa 0.91 · continuación de la cadena industrial
 
 La metalúrgica implementa acero regional → componentes de construcción: `industryType=metalworks`, proveedor `Metalúrgica local`, orden industrial de acero desde Corralón con ruta/ETA, inventario de materia prima y producción condicionada por personal, servicios, caja y espacio. `settle_metalworks_sale` reduce stock privado y acredita la firma en Online; Offline usa `advanceOfflineMetalworks`, entrega vial y venta al pedir materiales. El orden industrial objetivo queda alimentos → cantera → hormigonera → aserradero → metalúrgica. El próximo trabajo debe verificar una obra suspendida por escasez de componentes, pedir a la metalúrgica, recibir, reanudar y no duplicar inventario/pago en ambos motores. Revisar tarjeta Economía en Chromium (390×844, 1440×900), actualizar progreso y registrar prueba real. No gastar otra entrega en detalles de cantera ni atribuir pruebas LAN/Vercel que no se hayan hecho.
+
+
+## Alfa 0.92 · paridad industrial y regresiones (actual)
+
+El mercado mensual Offline ya excluye cantera, hormigonera, aserradero y metalúrgica de la producción de alimentos, como Online. La misma planta no debe registrar una segunda nómina ni producir stock alimentario ficticio. Se agregaron pruebas automatizadas que fuerzan una obra a suspenderse por componentes, encargar a una metalúrgica local, esperar camión/descarga, recibir y consumir el material una sola vez, inspeccionar la obra y no duplicar el pago. Un test adicional verifica que la metalúrgica no aparece como procesadora alimentaria. En el workflow de GitHub Actions se completaron con éxito sintaxis/JSON y los tests Online/Offline (run 41260659327).
+
+Fase 18 permanece al 85%; avance global sin estimación. No se hizo prueba LAN física, Vercel ni visual con Chromium en esta entrega. Estas pruebas usan una fábrica y una obra controladas, no acreditan todo el ciclo de permiso, obra industrial y habilitación.
+
+**Próxima tarea:** comprobar la cadena completa de metalúrgica nacida de un permiso y contratista, luego inspección, puestos, servicios, acero regional, producción real, pedido y consumo por una obra. Revisar y corregir diferencias de secuencia de especialidades industriales Online/Offline. Luego escasez entre meses y escenarios de 30 años.

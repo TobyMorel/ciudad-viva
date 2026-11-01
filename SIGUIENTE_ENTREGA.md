@@ -267,3 +267,8 @@ El Corralón del Puerto aplica cotización por existencias al abastecer metalúr
 ## Continuación · accesibilidad comercial real en Offline
 
 La asignación de demanda minorista de hogares utiliza ahora `offlineRoadRoute`, con conectividad y calidad vial, en lugar de una distancia Manhattan que admitía compras a través de barrios incomunicados. Solo comercios alcanzables compiten por precio y distancia efectiva de ruta; un corte puede suprimir ventas, ingresos y, en cierres posteriores, provocar reducción de empleos o insolvencia. Online ya exigía `route_between` y conserva la misma condición. Nueva regresión Node compara demanda con calles conectadas frente a una red completamente retirada, incluida en CI. No hubo cambio de interfaz. Siguiente tarea: escenarios largos de fase 33 y contratos B2B restantes; no aumentar porcentajes sin resultados CI.
+
+
+## Continuación · negociación automática de alquileres comerciales
+
+Los comercios privados abiertos renegocian la renta mensual en los dos motores antes de liquidar ventas: con demanda efectivamente atendida y beneficios suficientes sube $5 hasta $180; con hasta dos ventas y pérdidas cae $5 hasta $30. No mueve dinero al renegociar; la renta efectiva sigue pagándose mediante el costo operativo existente y las entradas en `supply.propertyRentalCash`. Persisten `monthlyRent`, `lastLeaseReviewDay` y `lastLeaseCause`, sin migración obligatoria. La ubicación conserva el precio inicial. Se agregó prueba Online y se mantiene pendiente comprobar CI para integración Offline. Sin modificación de interfaz ni porcentajes. Próximo: contratos industriales adicionales y escenarios de 30 años.

@@ -1,11 +1,9 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 
 const server=spawn('python',['-m','http.server','18765','--bind','127.0.0.1'],{stdio:'ignore'});
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
-mkdirSync('ui-captures',{recursive:true});
 try{
   for(const {name,width,height} of [{name:'movil',width:390,height:844},{name:'escritorio',width:1440,height:900}]){
     const page=await browser.newPage({viewport:{width,height}});
@@ -50,7 +48,6 @@ try{
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
     const clockLayout=await page.evaluate(()=>{const clock=document.querySelector('#mapTime'),toolbar=document.querySelector('.world-toolbar'),r=clock.getBoundingClientRect(),t=toolbar.getBoundingClientRect();return {text:clock.textContent,night:clock.dataset.night,visible:r.width>1&&r.height>1,inside:r.left>=t.left&&r.right<=t.right,toolbarOverflow:toolbar.scrollWidth>toolbar.clientWidth+2}});
     assert.ok((clockLayout.text.includes('21:')||clockLayout.text.includes('22:')||clockLayout.text.includes('23:'))&&clockLayout.night==='true'&&clockLayout.visible&&clockLayout.inside&&!clockLayout.toolbarOverflow,name+': hora nocturna oculta o barra de mapa desbordada '+JSON.stringify(clockLayout));
-    await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
     await page.locator('[data-popup="traffic"]').evaluate(button=>button.click());
     assert.equal(await page.locator('#trafficPanel').isVisible(),true,name+': Tráfico debe quedar sobre el mapa sin taparlo');
     assert.equal(await page.locator('#panelPopup').isVisible(),false,name+': la capa vial no debe abrir el popup borroso');
@@ -134,7 +131,6 @@ try{
     assert.ok(popup.left>=-2&&popup.right<=width+2,name+': popup de Economía fuera de pantalla '+JSON.stringify(popup));
     assert.ok(popup.scrollWidth<=popup.width+2,name+': overflow horizontal en Economía '+JSON.stringify(popup));
     assert.ok(popup.scrollable,name+': el contenido largo no se puede desplazar');
-    await page.screenshot({path:'ui-captures/'+name+'-economia.png'});
     await page.locator('#popupClose').evaluate(button=>button.click());
     await page.locator('[data-popup="city"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
@@ -149,7 +145,6 @@ try{
     });
     assert.ok(eventUI.present&&eventUI.buttons===3&&eventUI.within&&eventUI.noOverflow&&eventUI.hasExplanations,
       name+': eventos turísticos recortados u ocultos '+JSON.stringify(eventUI));
-    await page.screenshot({path:'ui-captures/'+name+'-turismo.png'});
     await page.locator('[data-city-section-button="health"]').evaluate(button=>button.click());
     await page.waitForFunction(()=>!document.querySelector('[data-city-section="health"]')?.hidden,{timeout:10000});
     const hospitalUI=await page.evaluate(()=>{
@@ -162,7 +157,6 @@ try{
     });
     assert.ok(hospitalUI.visible&&hospitalUI.count===3&&hospitalUI.contained&&!hospitalUI.overlap&&!hospitalUI.overflow&&hospitalUI.validLabels,
       name+': panel hospitalario con controles o textos solapados/ocultos '+JSON.stringify(hospitalUI));
-    await page.screenshot({path:'ui-captures/'+name+'-salud.png'});
     await page.locator('[data-city-section-button="security"]').evaluate(button=>button.click());
     await page.waitForFunction(()=>!document.querySelector('[data-city-section="security"]')?.hidden,{timeout:10000});
     const policeUI=await page.evaluate(()=>{
@@ -177,7 +171,6 @@ try{
     });
     assert.ok(policeUI.visible&&policeUI.count===4&&policeUI.contained&&!policeUI.overlap&&!policeUI.overflow&&policeUI.validLabels,
       name+': controles policiales ocultos, solapados o desbordados '+JSON.stringify(policeUI));
-    await page.screenshot({path:'ui-captures/'+name+'-seguridad.png'});
     await page.locator('#popupClose').evaluate(button=>button.click());
 
     assert.deepEqual(errors,[],name+': errores JS '+errors.join('; '));
@@ -241,7 +234,6 @@ try{
     });
     assert.ok(coverage.small>0&&coverage.large>=coverage.small&&coverage.allGreen,
       name+': el radio verde no respeta niveles y calles '+JSON.stringify(coverage));
-    await live.screenshot({path:'ui-captures/'+name+'-emergencias-3d.png'});
     assert.deepEqual(threeErrors,[],name+': errores Three.js '+threeErrors.join('; '));
     await live.close();
   }

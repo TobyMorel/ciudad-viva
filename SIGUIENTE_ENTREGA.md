@@ -1,6 +1,6 @@
 # Siguiente entrega
 
-## Punto exacto · después de Alfa 0.120
+## Punto exacto · después de Alfa 0.121
 
 1. Completar fase 8 con escenarios de estrés fiscal que se resuelvan mediante decisiones de gobierno: déficit moderado recuperable, mora, priorización presupuestaria y consecuencias visibles en salud, educación, residuos, redes y colectivos.
 2. Añadir alertas accionables del mes del faltante y partidas causantes, sin simular cargos antes de su fecha.

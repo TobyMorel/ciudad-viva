@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.121
+
+## Corrección de validación responsive
+
+- Eliminadas las capturas de página completa que colgaban Chromium/SwiftShader en el workflow; permanecen verificaciones de textos visibles, contención, desbordes y solapamientos en móvil y escritorio.
+- Quitado el artefacto de screenshots, ya que el workflow ya no los genera.
+- Suite responsive completa local pasada: marcadores, paneles principales, servicios y previsión financiera.
+- La mecánica de Hacienda y su avance (fase 8, 75% orientativo) no cambiaron. Progreso global sigue no estimable por falta de ponderación común verificable. LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.120
 
 ## Sistemas y verificación

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.120",
+  "currentVersion": "0.121",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.121",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Se corrigió el bloqueo del workflow responsive: la suite tomaba capturas de página completa mientras Chromium renderizaba el mapa 3D con aceleración por software; una captura agotaba su timeout de 30 segundos.",
+        "La validación sigue comprobando en 390×844 y 1440×900 el contenido, visibilidad, medidas, desbordes y solapamientos de Economía, turismo, salud, seguridad y vehículos de emergencia. Se quitaron las capturas costosas y el paso de subirlas como artefacto.",
+        "Verificación local: camera markers, layout responsive, respuesta de servicios y previsión financiera responsive pasaron en el mismo orden del workflow.",
+        "Es una corrección de CI; no cambia las mecánicas ni el progreso de fase 8 (75% orientativo). El progreso global sigue sin estimarse por falta de una ponderación común verificable para las 34 fases."
+      ]
+    },
     {
       "version": "0.120",
       "date": "2026-11-01",

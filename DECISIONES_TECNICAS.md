@@ -1,3 +1,9 @@
+# Decisiones técnicas · Alfa 0.121
+
+## CI responsive
+
+No usar capturas de página completa del mapa 3D con SwiftShader en el job de layout: Chromium excedía el límite interno de 30 s esperando la captura. La suite conserva mediciones y asserts DOM de dimensiones, visibilidad, desbordes y solapamientos en 390×844 y 1440×900. No se sube un artefacto de capturas vacío. Las pruebas funcionales de escenas y vehículos siguen activas.
+
 # Decisiones técnicas · Alfa 0.120
 
 ## Previsión de tesorería municipal

@@ -1,5 +1,9 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.121
+
+Corrección del workflow responsive reportado por GitHub: Playwright capturaba páginas completas repetidamente mientras el navegador dibujaba Three.js en software; el screenshot del panel turístico excedió los 30 segundos. `tests/test_ui_layout.mjs` ya no hace screenshots. Conserva las comprobaciones del DOM y límites de viewport para Economía, turismo, salud, seguridad, tráfico y vehículos de emergencia a 390×844 y 1440×900. Se quitó el paso de subir capturas que ya no se generan. La suite responsive completa local (camera markers + layout + respuesta de servicios + previsión financiera) pasó en el orden configurado por CI. El progreso jugable no cambia: fase 8=75% orientativo; avance global no estimable. Próximo sistema sigue siendo estrés fiscal y continuidad de servicios.
+
 ## Continuidad inmediata · Alfa 0.120
 
 La fase 8 suma una previsión fiscal móvil de doce meses en Online (`server.py:municipal_finance_forecast`) y Offline (`offline.js:offlineMunicipalForecast`). Recalcula impuestos con las tasas vigentes y la cobranza observada; conserva ingresos no tributarios y costos operativos al nivel actual; aplica partidas presupuestarias y acumula atrasos; agenda obligaciones de obras dentro del plazo pendiente; amortiza créditos mes a mes. Informa el primer mes con caja negativa, compromisos, garantías y caja libre después de obras y mora. Es una consulta, no modifica el saldo real. La tarjeta “Previsión móvil” está en Economía/Hacienda y despliega los doce meses.

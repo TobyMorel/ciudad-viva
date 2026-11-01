@@ -270,3 +270,8 @@ El sistema de residuos acumula `waste.scrapSteelTons` a razón de 0,2 toneladas 
 ## Continuación · abastecimiento marítimo de acero
 
 El stock del Corralón del Puerto por debajo de 30 unidades permite una compra marítima extraordinaria de hasta 60 unidades por mes **solo si existe un puerto operativo con ruta hasta el depósito**. Cada unidad importada cuesta $280 municipales (divisas y flete); se descuentan fondos efectivos y se registran `supply.steelImportSpend` y `supply.steelImportedUnits`. El acero físico aparece en el proveedor regional, donde las metalúrgicas deben comprarlo y recibirlo mediante su logística ordinaria. No se utiliza la reserva mineral regional ni se duplica chatarra. Implementado Online/Offline; nueva regresión Python de importación. Validar CI. Interfaz intacta. Siguiente: escenarios largos de fase 33 y control de balances.
+
+
+## Continuación · límite logístico a importaciones de acero
+
+El acero marítimo requiere ahora capacidad física adicional del puerto: el lote mensual está limitado por `shipCapacity` y por el espacio libre `cargoCapacity - cargoStored`, además de stock, fondos y conectividad. Se agrega capacidad de puertos operativos conectados; sin espacio portuario no hay importación. Online y Offline implementados, prueba de límite de 4 unidades incorporada. Se corrigió el día de cierre mensual en dos regresiones Online y se amplió el diagnóstico del test responsive, que aún se investiga; no afirmar CI aprobado hasta verificarlo. Sin modificaciones de interfaz. Siguiente prioridad: ensayos largos de 30 años e integración con el transporte portuario.

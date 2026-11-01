@@ -9,7 +9,8 @@ class PoliceUrbanOnline(unittest.TestCase):
         server.ensure_finance_state()
         self.s=server.state
         self.s["money"]=50000
-        self.center=next(b for b in self.s["buildings"] if b["kind"]=="civic")
+        self.center={"kind":"civic","name":"Comisaría de ensayo","serviceModel":"policePost","x":12,"y":12,"status":"habilitado","jobSlots":16}
+        self.s["buildings"].append(self.center)
         self.center["utilityAccess"]={"powerServedPct":100,"waterServedPct":100,"wastewaterTreatedPct":100}
         for b in self.s["buildings"]:
             if b["kind"] in ("home","shop"):
@@ -24,7 +25,7 @@ class PoliceUrbanOnline(unittest.TestCase):
             self.assertEqual(self.s["money"],before-4000)
             self.assertEqual(server.police_staff_reserved(self.center,self.staff),3)
             after=server.health_service_report(self.staff)["primary"]["capacityPerDay"]
-            self.assertLess(after,base,"Asignar patrullas reduce consultas de salud.")
+            self.assertEqual(after,base,"Una comisaría no es un consultorio ni atiende pacientes.")
             with self.assertRaisesRegex(ValueError,"ya cuenta"):
                 server.invest_police_unit("openPoliceUnit",self.center["x"],self.center["y"])
             server.invest_police_unit("addPoliceVehicle",self.center["x"],self.center["y"])

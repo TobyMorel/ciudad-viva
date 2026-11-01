@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.102",
+  "currentVersion": "0.103",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.103",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 72,
+      "overallProgress": null,
+      "changes": [
+        "Nuevo catálogo de 12 edificios públicos construibles: tres centros sanitarios, tres comisarías, tres cuarteles de bomberos y tres bases de recolección. Cada tipología tiene precio, plazo, consumo real de materiales, empleos, vehículos/camas y alcance vial crecientes; se contrata por las mismas constructoras.",
+        "El centro cívico de Municipalidad no proporciona atención médica, patrullaje ni basureros automáticos. Es obligatorio construir instalaciones especializadas para prestar dichos servicios; las unidades solo operan con ruta, personal, equipos, financiación y redes.",
+        "La asistencia de salud, la atención de incidentes policiales y las salidas de bomberos respetan radios máximos por calles conectadas (6 a 17 tramos). Cada base de residuos proporciona flota física propia, limitada por radio y residentes alcanzados. Sin bases, no existe capacidad de recogida municipal.",
+        "La ciudad Three.js diferencia tipologías e indica en verde, sobre calles, el radio de servicio efectivo al seleccionar el edificio construido o previsualizar un proyecto. La cobertura no atraviesa calles cerradas. Paridad Online/Offline, conservación de partidas existentes y controles responsive."
+      ]
+    },
     {
       "version": "0.102",
       "date": "2026-11-01",
@@ -1077,10 +1090,10 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 55,
-      "summary": "Servicios públicos con internación y ambulancias, más patrullaje urbano y eventos de convivencia vinculados a infraestructura",
+      "progress": 65,
+      "summary": "Clínicas, hospitales, comisarías, cuarteles y bases de higiene urbana con tres niveles de obras y cobertura limitada por calles",
       "pending": [
-        "Policía independiente con capacitación, protección social, jardín de infantes y protección civil por capacidad efectiva."
+        "Educación secundaria y técnica, protección social y especialización profesional del personal."
       ]
     },
     {
@@ -1255,10 +1268,10 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 65,
-      "summary": "Internación hospitalaria y patrullaje municipal con móviles, personal compartido, prioridades, accesibilidad y registro de incidentes",
+      "progress": 72,
+      "summary": "Tipologías escalonadas de servicios, alcance territorial explícito, necesidad de construir instalaciones y flotas físicas de emergencia",
       "pending": [
-        "Reclutamiento policial específico y comisarías independientes; servicios sociales, niveles educativos completos y ambulancias de misión multidiaria."
+        "Profundizar listas de espera, dotaciones especializadas y protección social; ampliar a hospitales y comisarías con turnos independientes."
       ]
     },
     {

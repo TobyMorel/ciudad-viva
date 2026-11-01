@@ -3878,7 +3878,7 @@ def tick_one_day():
         recycling_income=waste_report.get("recyclingRevenueMonth",0)
         monthly_income+=recycling_income
         waste_cost=waste_report.get("monthlyOperatingCost",0)
-        health_cost=health_service_report(economic["workplaces"]).get("monthlySupplyCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
+        health_summary=health_service_report(economic["workplaces"]);health_cost=health_summary.get("monthlySupplyCost",0)+health_summary.get("hospital",{}).get("monthlyOperatingCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
         operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost)["monthlyDebtService"]
@@ -4063,9 +4063,101 @@ def tick_one_day():
             state["projects"].remove(p)
     if day%30==0 and state["projects"]: ev("Revisión de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
 
+# Fase 28: hospitalización municipal y ambulancias asociadas a centros de salud.
+HOSPITAL_COSTS={"openHospitalWard":7200,"expandHospitalWard":4600,"addAmbulance":2800}
+
+def invest_hospital_care(action,x,y):
+    center=next((b for b in state.get("buildings",[]) if b.get("kind")=="civic" and b.get("x")==x and b.get("y")==y and b.get("status") in ("operativo","habilitado")),None)
+    if center is None:raise ValueError("La ampliación requiere un centro de salud municipal habilitado.")
+    if route_between((4,10),(x,y)) is None:raise ValueError("El centro necesita acceso vial para recibir equipos y ambulancias.")
+    ward=center.get("hospitalWard")
+    if action=="openHospitalWard" and ward:raise ValueError("Este centro ya dispone de internación.")
+    if action!="openHospitalWard" and not ward:raise ValueError("Primero hay que equipar una sala de internación.")
+    if action=="expandHospitalWard" and int(ward.get("beds",0))>=36:raise ValueError("La sala alcanzó su capacidad máxima de 36 camas.")
+    if action=="addAmbulance" and int(ward.get("ambulances",0))>=3:raise ValueError("Este centro admite hasta tres ambulancias.")
+    if action not in HOSPITAL_COSTS:raise ValueError("Intervención sanitaria no reconocida.")
+    reserved=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    cost=HOSPITAL_COSTS[action]
+    if state.get("money",0)-reserved<cost:raise ValueError("Fondos libres insuficientes después de reservar las obras municipales.")
+    state["money"]-=cost
+    if action=="openHospitalWard":center["hospitalWard"]={"beds":12,"ambulances":0,"equippedDay":state["day"]}
+    elif action=="expandHospitalWard":ward["beds"]=min(36,int(ward["beds"])+8)
+    else:ward["ambulances"]=int(ward.get("ambulances",0))+1
+    ev("Inversión hospitalaria",f"{center.get('name','Centro de salud')}: {action}; inversión municipal $ {cost}. La atención depende del personal sanitario, las redes y las calles.")
+    return center["hospitalWard"]
+
+def hospital_care_report(workplaces,homes,advance=False):
+    """Camas con rotación de 3 días, equipos sanitarios y traslados con ruta física."""
+    health=state.setdefault("health",{})
+    staff={(w.get("x"),w.get("y")):max(0,int(w.get("staffedJobs",0))) for w in workplaces if w.get("kind")=="civic"}
+    funding=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+    hospitals=[]
+    for b in state.get("buildings",[]):
+        ward=b.get("hospitalWard")
+        if b.get("kind")!="civic" or not ward or b.get("status") not in ("operativo","habilitado"):continue
+        doctors=staff.get((b["x"],b["y"]),0)
+        utility=b.get("utilityAccess",{})
+        factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100*funding
+        beds=max(0,int(ward.get("beds",0)))
+        units=max(0,int(ward.get("ambulances",0)))
+        capacity=min(beds/3,max(0,doctors-4)*1.25)*factor
+        crews=min(units,max(0,(doctors-6)//2)) if factor>=.5 else 0
+        hospitals.append({"building":b,"name":b.get("name","Centro de salud"),"staff":doctors,"beds":beds,
+            "ambulances":units,"activeAmbulances":crews,"dailyCapacity":capacity,"remaining":capacity,
+            "ambulanceRemaining":crews*2,"admitted":0,"transferred":0,"utilityPct":round(factor*100)})
+    population=max(1,sum(int(h.get("occupants",0)) for h in homes))
+    heat=state.get("climate",{}).get("heatForecast",{})
+    heat_extra=(float(heat.get("actualHealthCases",heat.get("expectedHealthCases",0)))/max(1,int(heat.get("durationDays",5)))*.16) if heat.get("active") else 0
+    carry=max(0,float(health.get("hospitalBacklog",0)))*.2
+    demand=served=ambulance_cases=0
+    neighborhoods=[]
+    for home in homes:
+        occupants=max(0,int(home.get("occupants",0)))
+        util=home.get("utilityAccess",{})
+        risk=1-min(util.get("waterServedPct",0),util.get("wastewaterTreatedPct",0))/100
+        need=occupants*.0018*(1+risk*.5)+heat_extra*occupants/population+carry*occupants/population
+        demand+=need
+        options=[]
+        for h in hospitals:
+            path=route_between((home["x"],home["y"]),(h["building"]["x"],h["building"]["y"]))
+            if path:
+                minutes=round(max(0,len(path)-1)*2.5+4)
+                if minutes<=45:options.append((minutes,h))
+        options.sort(key=lambda row:(row[0],row[1]["name"]))
+        handled=transferred=0
+        for minutes,h in options:
+            if handled>=need:break
+            if minutes<=25:
+                take=min(need-handled,h["remaining"])
+            else:
+                take=min(need-handled,h["remaining"],h["ambulanceRemaining"])
+                h["ambulanceRemaining"]-=take
+                transferred+=take
+                h["transferred"]+=take
+            h["remaining"]-=take
+            h["admitted"]+=take
+            handled+=take
+        served+=handled;ambulance_cases+=transferred
+        neighborhoods.append({"name":home.get("name","Barrio"),"population":occupants,"demand":round(need,2),
+            "admitted":round(handled,2),"waiting":round(max(0,need-handled),2),"reachable":bool(options),
+            "ambulanceTransfers":round(transferred,2)})
+    waiting=max(0,demand-served)
+    if advance and health.get("lastHospitalDay")!=state.get("day"):
+        health["hospitalBacklog"]=round(min(population*.12,waiting),3)
+        health["lastHospitalDay"]=state["day"]
+    fixed=sum(h["beds"]*22+h["ambulances"]*360 for h in hospitals)
+    return {"demandPerDay":round(demand,2),"admittedPerDay":round(served,2),"waitingPerDay":round(waiting,2),
+        "capacityPerDay":round(sum(h["dailyCapacity"] for h in hospitals),2),
+        "ambulanceTransfersPerDay":round(ambulance_cases,2),"coveragePct":round(100*served/max(0.001,demand)) if demand else 100,
+        "monthlyOperatingCost":round(fixed+served*20*30),
+        "hospitals":[{"name":h["name"],"x":h["building"]["x"],"y":h["building"]["y"],"beds":h["beds"],
+            "staff":h["staff"],"ambulances":h["ambulances"],"activeAmbulances":h["activeAmbulances"],
+            "capacityPerDay":round(h["dailyCapacity"],2),"admittedPerDay":round(h["admitted"],2),
+            "transfersPerDay":round(h["transferred"],2),"utilityPct":h["utilityPct"]} for h in hospitals],
+        "neighborhoods":sorted(neighborhoods,key=lambda n:-n["waiting"])[:6]}
+
 def health_service_report(workplaces=None,advance=False):
-    health=state.setdefault("education",{"lastProcessedMonth":(state.get("day",1)-1)//30})
-    state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
+    health=state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0]
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
     staff={(w.get("x"),w.get("y")):w for w in workplaces if w.get("kind")=="civic"}
@@ -4127,7 +4219,7 @@ def health_service_report(workplaces=None,advance=False):
     for home in homes:
         key=f"{home['x']},{home['y']}";samples=history.get(key,[min(home.get("utilityAccess",{}).get("waterServedPct",0),home.get("utilityAccess",{}).get("wastewaterTreatedPct",0))/100]*30)
         delayed_risk+=(1-sum(samples[-30:])/max(1,len(samples[-30:])))*home.get("occupants",0)
-    return {"day":state.get("day",1),"population":population,"primary":{"demandPerDay":round(pending,1),"servedPerDay":round(primary_served,1),"capacityPerDay":round(sum(c["primaryCapacity"] for c in clinics),1),"waitlist":round(unserved,1),"coveragePct":round(min(100,primary_served/max(1,pending)*100))},
+    return {"hospital":hospital_care_report(workplaces,homes,advance),"day":state.get("day",1),"population":population,"primary":{"demandPerDay":round(pending,1),"servedPerDay":round(primary_served,1),"capacityPerDay":round(sum(c["primaryCapacity"] for c in clinics),1),"waitlist":round(unserved,1),"coveragePct":round(min(100,primary_served/max(1,pending)*100))},
         "urgent":{"demandPerDay":round(urgent_demand,1),"servedPerDay":round(urgent_served,1),"capacityPerDay":round(sum(c["urgentCapacity"] for c in clinics),1),"unservedPerDay":round(urgent_unserved,1),"coveragePct":round(min(100,urgent_served/max(1,urgent_demand)*100))},
         "clinics":[{"name":c["name"],"x":c["building"]["x"],"y":c["building"]["y"],"staff":c["staff"],"primaryCapacity":round(c["primaryCapacity"],1),"urgentCapacity":round(c["urgentCapacity"],1),"utilityPct":round(c["utility"]*100),"averageTravelMinutes":round(sum(c["travelMinutes"])/max(1,len(c["travelMinutes"]))) if c["travelMinutes"] else None,"patients":c["patients"]} for c in clinics],
         "neighborhoods":area_rows[:6],"unreachableResidents":sum(a["population"] for a in areas if a["travelMinutes"] is None),"delayedWaterRiskPct":round(delayed_risk/population*100),"monthlySupplyCost":monthly_supplies,"primaryBacklog":round(health.get("primaryBacklog",0),1)}
@@ -4285,7 +4377,7 @@ def public_state(player_id=None):
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","wastewaterPlant"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))
     transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
+    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
@@ -4378,6 +4470,10 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action in HOSPITAL_COSTS:
+                    try:invest_hospital_care(action,int(data.get("x",-1)),int(data.get("y",-1)))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action=="scheduleTourismEvent":
                     try:schedule_tourism_event(data.get("kind"))
                     except ValueError as error:self._send(409,{"error":str(error)});return

@@ -3649,17 +3649,25 @@ def advance_maritime_steel_shipments():
     """Cargamentos prepagados llegan después del viaje; la ruta y el puerto siguen siendo requisitos."""
     supply=state["supply"]
     for shipment in supply.setdefault("steelShipments",[]):
-        if shipment.get("status")!="en viaje" or state["day"]<shipment["arrivalDay"]:continue
+        if shipment.get("status") not in ("en viaje","descarga parcial") or state["day"]<shipment["arrivalDay"] or shipment.get("lastUnloadedDay")==state["day"]:continue
         port=next((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("x")==shipment["port"][0] and b.get("y")==shipment["port"][1] and b.get("operational")),None)
         if not port or route_between(tuple(shipment["port"]),(4,10)) is None:
             shipment["statusCause"]="Puerto inhabilitado o conexión vial interrumpida"
             continue
-        supply["suppliers"]["Corralón del Puerto"]["steel"]+=shipment["quantity"]
-        shipment["status"]="entregado"
-        shipment["deliveredDay"]=state["day"]
-        shipment["statusCause"]=""
-        supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+shipment["quantity"]
-        ev("Acero desembarcado",f"{shipment['quantity']} unidades arribaron al Corralón del Puerto después del viaje marítimo.")
+        remaining=max(0,int(shipment["quantity"])-int(shipment.get("deliveredUnits",0)))
+        daily_capacity=max(0,int(port.get("unloadingCapacity",20)))
+        qty=min(remaining,daily_capacity)
+        if not qty:
+            shipment["statusCause"]="Puerto sin capacidad de descarga"
+            continue
+        supply["suppliers"]["Corralón del Puerto"]["steel"]+=qty
+        shipment["deliveredUnits"]=shipment.get("deliveredUnits",0)+qty
+        shipment["status"]="entregado" if shipment["deliveredUnits"]>=shipment["quantity"] else "descarga parcial"
+        shipment["lastUnloadedDay"]=state["day"]
+        shipment["statusCause"]="" if shipment["status"]=="entregado" else "Descarga parcial pendiente"
+        if shipment["status"]=="entregado":shipment["deliveredDay"]=state["day"]
+        supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+qty
+        ev("Acero desembarcado",f"{qty} unidades descargadas; {shipment['quantity']-shipment['deliveredUnits']} pendientes.")
 
 def tick_one_day():
     if state["paused"]: return
@@ -3718,7 +3726,7 @@ def tick_one_day():
             ev("Acero reciclado",f"Recuperadas {recycled_units} unidades desde chatarra municipal; procesamiento $ {cost}.")
         # Importación marítima excepcional: requiere puerto operativo, acceso vial y fondos.
         depot=supplier_stock["Corralón del Puerto"]
-        inbound=sum(o["quantity"] for o in state["supply"].get("steelShipments",[]) if o.get("status")=="en viaje")
+        inbound=sum(o["quantity"] for o in state["supply"].get("steelShipments",[]) if o.get("status") in ("en viaje","descarga parcial"))
         if int(depot.get("steel",0))+inbound<30:
             ports=[b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("operational")]
             viable=[b for b in ports if route_between((b["x"],b["y"]),(4,10)) is not None]

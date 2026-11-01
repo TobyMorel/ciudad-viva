@@ -26,7 +26,8 @@ try{
             materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
       }
       city.supply.tradeContracts=[{id:'ui-contract',buyerId:'rival-4',vendorId:'rival-6',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0,contractValue:700,extensionFee:35}];
-      city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,source:[-3,-3],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
+      city.roads=[]; // Corte real de las vías, con proveedor contractual existente.
+      city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',vendorId:'rival-6',type:'industrial_raw',commodity:'áridos',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,productCost:280,freight:0,source:[6,9],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
     });
     await page.locator('#offlineMode').click();
@@ -37,6 +38,7 @@ try{
     await page.screenshot({path:'ui-captures/'+name+'-ciudad.png'});
     await page.locator('[data-popup="supply"]').click();
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
+    await page.waitForFunction(()=>document.querySelector('#popupContent')?.textContent?.includes('Contratos privados de materias primas'),{timeout:10000});
     const popup=await page.evaluate(()=>{
       const windowEl=document.querySelector('#panelPopup .popup-window');
       const content=document.querySelector('#popupContent');
@@ -68,7 +70,6 @@ try{
         return {visible,overflow:el.scrollWidth>el.clientWidth+3};
       });
     });
-    await page.waitForFunction(()=>document.querySelector('#popupContent')?.textContent?.includes('Contratos privados de materias primas'),{timeout:10000}).catch(()=>{});
     const extensionCount=await page.locator('[data-renegotiate-contract="ui-contract"]').count();
     assert.equal(extensionCount,1,name+': prórroga por corte vial accesible · '+(await page.locator('#popupContent').innerText()).slice(0,1200));
     assert.equal(contractLayout.length,1,name+': contrato privado visible en Economía');

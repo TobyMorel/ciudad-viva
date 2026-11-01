@@ -163,3 +163,31 @@ test('Offline: una prórroga paga al vendedor y rescata remesas sin duplicación
     assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,5260);
   });
 });
+
+test('Offline: quiebra de proveedor cancela remesas y devuelve custodia antes del vencimiento',async()=>{
+  const s=scenarioSeed();s.lastMonth=1;
+  const seller=s.buildings.find(b=>b.business?.id==='quarry-alfa').business;
+  const buyer=s.buildings.find(b=>b.business?.id==='concrete-beta').business;
+  seller.status='cerrado';seller.aggregateStock=0;
+  buyer.cash=19100;s.supply.suppliers['Cantera local'].aggregate=0;
+  s.supply.tradeContracts=[{id:'bankrupt',buyerId:buyer.id,vendorId:seller.id,
+    vendorName:'Cantera Alfa',status:'en curso',quantity:30,deliveredUnits:0,refundedUnits:0,
+    escrow:900,contractValue:900,refunded:0,paidToSeller:0,paidToLogistics:0}];
+  s.supply.marketOrders=[0,1,2].map(i=>({id:'bk-'+i,businessId:buyer.id,vendorId:seller.id,
+    supplyContractId:'bankrupt',type:'industrial_raw',commodity:'áridos',quantity:10,
+    productCost:300,freight:0,supplierReadyDay:31+i*7,deadlineDay:45+i*7,
+    source:[4,9],x:6,y:9,status:'en tránsito'}));
+  await play(s,async({tick})=>{
+    let city=await tick();
+    const contract=city.supply.tradeContracts[0];
+    assert.equal(contract.status,'incumplido');
+    assert.equal(contract.escrow,0);
+    assert.equal(contract.refunded,900);
+    assert.equal(contract.lostReservedUnits,30);
+    assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.cash,20000);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock,0);
+    assert.ok(city.supply.marketOrders.every(o=>o.contractSettled&&o.statusCause==='Proveedor insolvente'));
+    city=await tick();
+    assert.equal(city.supply.tradeContracts[0].refunded,900);
+  });
+});

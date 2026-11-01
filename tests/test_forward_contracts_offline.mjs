@@ -95,6 +95,39 @@ test('Offline: comprador insolvente dispara devolución de todas las remesas no 
   });
 });
 
+test('Offline: plazo vencido devuelve depósitos y paga multa sin duplicación',async()=>{
+  const s=scenarioSeed();
+  s.lastMonth=1;s.day=50;
+  s.buildings.find(b=>b.business?.id==='concrete-beta').business.cash=19100;
+  s.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock=0;
+  s.supply.suppliers['Cantera local'].aggregate=0;
+  const contract={id:'contract-test',buyerId:'concrete-beta',vendorId:'quarry-alfa',
+    vendorName:'Cantera Alfa',commodity:'áridos',status:'en curso',quantity:30,
+    deliveredUnits:0,refundedUnits:0,escrow:900,contractValue:900,refunded:0,paidToSeller:0,paidToLogistics:0};
+  s.supply.tradeContracts=[contract];
+  s.supply.marketOrders=Array.from({length:3},(_,i)=>({
+    id:'contract-test-'+i,businessId:'concrete-beta',vendorId:'quarry-alfa',
+    supplyContractId:'contract-test',commodity:'áridos',type:'industrial_raw',quantity:10,
+    productCost:300,freight:0,orderedDay:30,supplierReadyDay:31+i*7,deadlineDay:45+i*7,
+    arrivalDay:32+i*7,source:[4,9],x:6,y:9,status:'en tránsito'
+  }));
+  await play(s,async({tick})=>{
+    const city=await tick();
+    const settled=city.supply.tradeContracts[0];
+    assert.equal(settled.status,'incumplido');
+    assert.equal(settled.escrow,0);
+    assert.equal(settled.refunded,900);
+    assert.equal(settled.refundedUnits,30);
+    assert.equal(settled.deliveredUnits,0);
+    assert.equal(settled.defaultPenaltyPaid,45);
+    assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.cash,20045);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,4955);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock,30);
+    assert.equal(city.supply.suppliers['Cantera local'].aggregate,30);
+    assert.ok(city.supply.marketOrders.every(o=>o.status==='cancelado'&&o.contractSettled));
+  });
+});
+
 test('Offline: una prórroga paga al vendedor y rescata remesas sin duplicación',async()=>{
   const s=scenarioSeed();s.lastMonth=1;s.roads=[];
   const seller=s.buildings.find(b=>b.business?.id==='quarry-alfa').business,buyer=s.buildings.find(b=>b.business?.id==='concrete-beta').business;

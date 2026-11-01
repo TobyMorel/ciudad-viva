@@ -161,7 +161,7 @@ def settle_industrial_vendor_offer(supplier, material, quantity, offer):
     industrial[metric]=industrial.get(metric,0)+quantity
 
 
-def rebalance_private_staffing():
+def rebalance_private_staffing(workforce=None):
     """Empresas amplían o reducen vacantes por ventas, liquidez y demanda; despidos identificables."""
     reviewed=0
     for site in state.get("buildings",[]):
@@ -182,7 +182,8 @@ def rebalance_private_staffing():
                        int(firm.get({"quarry":"aggregateStock","concrete":"concreteStock",
                                      "sawmill":"timberStock","metalworks":"componentStock"}.get(
                                          firm.get("industryType"),"inventory"),0)))
-        staffed=int(firm.get("lastWorkers",0))
+        workplace=next((w for w in (workforce or {}).get("workplaces",[]) if w.get("x")==site.get("x") and w.get("y")==site.get("y")),None)
+        staffed=int(workplace.get("staffedJobs",0)) if workplace else int(firm.get("lastWorkers",0))
         equip_cost=150 if site["kind"]=="shop" else 240
         strong=(demand>sales+3 and sales>=max(3,slots//3) and profit>0 and staffed>=max(1,slots-2)
                 if site["kind"]=="shop" else
@@ -3537,7 +3538,7 @@ def tick_one_day():
         simulate_airport_month(economic)
         tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
-        rebalance_private_staffing()
+        rebalance_private_staffing(economic)
         price_industrial_competition()
         tax_report=collect_municipal_taxes()
         economic=commute_model()

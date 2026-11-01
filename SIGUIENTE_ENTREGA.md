@@ -1,3 +1,12 @@
+# Siguiente entrega · después de Alfa 0.135
+
+1. Fase 29: cerrar auditoría de caja con asientos de ingreso/pago y conciliación contra saldo y compromisos; demostrar que acciones repetidas no duplican dinero.
+2. Incorporar escenarios presupuestarios base, favorable y adverso con supuestos y fórmulas visibles; añadir costo de ciclo de vida al aprobar infraestructura importante.
+3. Validar refinanciación en partidas en curso: caja neutral, mora consolidada, cuota menor, costo total mayor, repetición rechazada y previsión de 12/48 meses actualizada.
+4. Ejecutar regresiones Online/Offline, stress de 30 años y validación responsive de Economía; publicar en `main`, comprobar SHA/Actions/Vercel y adjuntar ZIP completo.
+
+Fase actual: 29 (40% orientativo y parcial; método de cinco bloques iguales registrado en `ESTADO_DESARROLLO.md`). Próximo hito: asiento financiero auditable y escenarios plurianuales. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
+
 # Siguiente entrega · después de Alfa 0.134
 
 1. Completar fase 28: añadir transporte accesible/acompañamiento por nivel de dependencia y seguimiento de bienestar para adultos mayores; el primer centro domiciliario ya está implementado.

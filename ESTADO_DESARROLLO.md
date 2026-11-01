@@ -1,3 +1,13 @@
+# Estado de desarrollo · Alfa 0.135
+
+## Refinanciación municipal con costo explícito
+
+Hacienda permite reestructurar una vez un crédito municipal activo si quedan más de tres cuotas y la oferta reduce el pago mensual. El saldo y la mora se consolidan en un principal nuevo a 72 meses y tasa fija del 18% anual. No ingresa efectivo. Antes de confirmar, Economía compara la cuota y el costo restante del plan vigente con la cuota y el costo total nuevo; el plazo más largo reduce la presión de caja, pero aumenta intereses y costo. La operación queda registrada en `finance.refinancingHistory` y conserva el historial original del crédito.
+
+La acción está implementada en Online y Offline con validación autoritativa; impide reestructurar dos veces o aceptar una oferta que no reduzca la cuota. La tarjeta es desplegable para mantener compacta Economía y expone todos los supuestos antes del botón de confirmación. Verificado: 96 pruebas Python Online, 64 Node Offline, stress 30 años × cuatro perfiles y Chromium responsive de Economía/catálogo a 390×844 y 1440×900; comparación de refinanciación y acción completadas sin overflow ni solapamiento. LAN física y despliegue Vercel no se prueban en dos equipos.
+
+Fase 29: 40% orientativo. Estimación reproducible: sus cinco bloques de tareas tienen el mismo peso (20 puntos); cada bloque vale 100% si está completo, 50% si es parcial, 0% si falta. Estado: previsión de caja (100%), auditoría de movimientos (50%), presupuestos plurianuales/prioridades (50%), costo de ciclo de vida (0%) y escenarios explícitos (0%); promedio 40%. El refinanciamiento cubre una aceptación específica, no eleva por sí solo un bloque completo. Progreso global no estimable: falta un peso verificable para combinar las 34 fases.
+
 # Estado de desarrollo · Alfa 0.134
 
 ## Atención domiciliaria a personas mayores

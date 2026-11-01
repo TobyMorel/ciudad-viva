@@ -559,3 +559,8 @@ El mapa alterna gradualmente iluminación solar y artificial; farolas muestran l
 ## Alfa 0.134 · cuidado de personas mayores
 
 El centro de acompañamiento domiciliario ofrece acompañamiento domiciliario, no residencia permanente. La elegibilidad se deriva de edad real (75+; prioridad alta desde los 80), sin sacar personas de su hogar ni modificar población. La asignación mensual exige personal, ruta vial hasta el hogar, servicios de electricidad/agua/saneamiento y presupuesto efectivo de Servicios. Capacidad: cuatro visitas por trabajador, limitada por el cupo físico. Es una simplificación intencional del primer corte; transporte accesible, cuidados por nivel de dependencia y seguimiento longitudinal quedan pendientes.
+
+
+## Alfa 0.135 · refinanciación de deuda municipal
+
+Oferta fija, visible y determinista: tomar saldo principal más mora, amortizar a 72 meses y 18% anual. Solo se permite una refinanciación por crédito, cuando quedan más de tres cuotas y el pago nuevo resulta menor. La mora se capitaliza, el efectivo no varía y el usuario ve costo restante anterior frente al costo total nuevo antes de confirmar. No hay quita ni capital nuevo. Se persiste un asiento de reestructuración y vínculo con el préstamo original.

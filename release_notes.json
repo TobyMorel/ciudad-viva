@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.134",
+  "currentVersion": "0.135",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.135",
+      "date": "2026-11-01",
+      "roadmapPhase": 29,
+      "phaseProgress": 40,
+      "overallProgress": null,
+      "changes": [
+        "Hacienda permite refinanciar una vez un crédito municipal activo con más de tres cuotas restantes, si la oferta reduce el pago mensual.",
+        "La mora se suma al nuevo principal; el crédito pasa a 72 meses al 18% anual. La operación no acredita efectivo y persiste su trazabilidad en el registro de refinanciaciones.",
+        "Economía compara cuota y costo restante actuales con cuota y costo total nuevos antes de confirmar. Se informa con claridad que una cuota menor supone más plazo e intereses.",
+        "Refinanciación implementada en Online y Offline, incluida la protección contra doble uso y ofertas que no reducen el pago. El progreso global sigue sin estimarse sin una ponderación verificable para las 34 fases.",
+        "Verificado: 96 pruebas Python, 64 Node Offline, estrés de 30 años × cuatro perfiles y Chromium de Economía a 390×844 y 1440×900 sin recortes, superposición ni errores de consola."
+      ]
+    },
     {
       "version": "0.134",
       "date": "2026-11-01",

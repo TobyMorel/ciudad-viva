@@ -587,3 +587,8 @@ Fase 15 sube de 60% a 65% por coherencia visual y legibilidad comprobables. Prog
 ## Continuidad desde Alfa 0.134
 
 Último avance: centro municipal de cuidados diurnos para personas de 75+, integrado en ambos motores. Lee `ESTADO_DESARROLLO.md` y `SIGUIENTE_ENTREGA.md`; siguiente prioridad de mecánica: movilidad accesible y resultados longitudinales de protección social, después formación técnica. Capacidad actual = min(cupos físicos, 4 por trabajador) × proporción de redes/financiación, siempre con ruta vial al hogar. El reporte vive en `socialCareReport` online y `socialServices.elderCareReport` offline. No declarar esta área completa: no hay dependencia, visitas por frecuencia, ayuda de movilidad ni efectos longitudinales de bienestar.
+
+
+## Continuidad desde Alfa 0.135
+
+Nuevo bloque de fase 29: refinanciación municipal en ambos motores. Revisa `refinance_municipal_loan` en `server.py`, acción `refinanceMunicipalLoan` en `offline.js` y tarjeta `loan-refinance` en `game.js`. Tasa nueva 18% anual, 72 cuotas, saldo + mora como nuevo principal, no acredita efectivo y solo una reestructura si baja la mensualidad. Pruebas: `test_municipal_refinancing_online.py`, `test_municipal_refinancing_offline.mjs`, comprobación responsive `test_municipal_forecast_ui.mjs`. Fase 29 se estima con cinco bloques iguales de 20 puntos (100% completo, 50% parcial, 0% faltante), avance 40% actual (100/50/50/0/0). Siguiente: libro de caja de doble entrada conciliable y escenarios fiscales explícitos, más costo de vida de infraestructuras.

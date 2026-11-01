@@ -663,7 +663,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"refinancingHistory":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
 def new_social_services():
     return {"housingAidBudget":0,"lastReport":{},"history":[],"shelterResidents":[],"shelterReport":{},"elderCareReport":{}}
@@ -1368,6 +1368,23 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
         warning={"month":first_gap["offset"],"monthLabel":first_gap["label"],"shortfall":max(first_gap["fundingGap"],-first_gap["freeAfterCommitments"],0),"causes":causes or ["Los compromisos del mes exceden la caja disponible y la reserva."],"actions":["Revisá gastos y asignaciones de programas.","Reprogramá obras antes de asumir nuevos compromisos.","Revisá impuestos con cautela y la reserva destinada a deuda."]}
     return {"months":rows,"basis":"Ingresos y gastos operativos al ritmo actual; proyecta programas, obras y cuotas. Si caja y reserva no alcanzan, la cuota pasa a mora sin amortizar principal; al recuperarse se paga hasta una cuota vencida adicional.","committedProjects":commitments,"programArrears":arrears,"closingProgramArrears":rows[-1]["programArrears"],"closingDebtArrears":rows[-1]["debtArrears"],"firstDebtDefaultMonth":first_debt_default,"contractEscrow":escrow,"debtReserve":remaining_reserve,"projectedTaxIncome":projected_tax,"closingCash":rows[-1]["closingCash"],"closingFreeCash":rows[-1]["freeAfterCommitments"],"firstFundingGapMonth":first_gap["offset"] if first_gap else None,"earlyWarning":warning}
 
+def refinance_municipal_loan(loan_id):
+    """Reestructura una sola vez: menor cuota a cambio de plazo e intereses mayores."""
+    ensure_finance_state();finance=state["finance"]
+    loan=next((x for x in finance.setdefault("municipalLoans",[]) if str(x.get("id"))==str(loan_id)),None)
+    if not loan or loan.get("status")!="active":raise ValueError("El crédito ya no está activo.")
+    if loan.get("refinanced"):raise ValueError("Este crédito ya fue refinanciado una vez.")
+    balance=max(0,round(float(loan.get("balance",0))));arrears=max(0,round(float(loan.get("paymentArrears",0))))
+    principal=balance+arrears;old_payment=max(0,round(float(loan.get("payment",0))));months=max(0,int(loan.get("monthsRemaining",0)))
+    if principal<=0 or months<=3 or old_payment<=0:raise ValueError("El saldo es cero o quedan tres cuotas o menos; no conviene refinanciar este crédito.")
+    term=72;rate=.015;payment=round(principal*rate*(1+rate)**term/((1+rate)**term-1))
+    if payment>=old_payment:raise ValueError("La nueva cuota no reduciría la obligación mensual; conservá el plan actual.")
+    record={"loanId":loan["id"],"day":state.get("day",1),"oldBalance":balance,"arrearsRolledIn":arrears,"oldMonthlyPayment":old_payment,"oldMonthsRemaining":months,"oldRemainingScheduled":old_payment*months+arrears,"newPrincipal":principal,"newMonthlyPayment":payment,"newTermMonths":term,"newRate":rate,"newTotalScheduled":payment*term}
+    loan.update({"principal":principal,"balance":principal,"paymentArrears":0,"annualRate":rate*12,"monthlyRate":rate,"termMonths":term,"monthsRemaining":term,"payment":payment,"totalScheduled":payment*term,"refinanced":True,"refinancedDay":state.get("day",1),"refinanceRecord":record,"delinquentMonths":0})
+    finance.setdefault("refinancingHistory",[]).append(record);finance["refinancingHistory"]=finance["refinancingHistory"][-24:]
+    ev("Crédito municipal refinanciado",f"La cuota bajó de $ {old_payment:,} a $ {payment:,}/mes por 72 meses. Se incorporaron $ {arrears:,} de mora al saldo. El costo futuro sube de $ {record['oldRemainingScheduled']:,} a $ {record['newTotalScheduled']:,}; no ingresa dinero a caja.".replace(",","."))
+    return record
+
 def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
@@ -1708,7 +1725,7 @@ def ensure_business_state():
 
 def ensure_finance_state():
     state.setdefault("finance",new_finance())
-    state["finance"].setdefault("municipalLoans",[])
+    state["finance"].setdefault("municipalLoans",[]);state["finance"].setdefault("refinancingHistory",[])
     state["finance"].setdefault("debtReserve",0)
     state["finance"].setdefault("debtReserveHistory",[])
     state["finance"].setdefault("contractEscrow",{"balance":0})
@@ -5417,6 +5434,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200,public_state(pid));return
                 if action=="setProgramPriority":
                     try:priority=set_municipal_program_priority(str(data.get("program","")))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
+                if action=="refinanceMunicipalLoan":
+                    try:refinance_municipal_loan(str(data.get("id","")))
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action=="municipalLoan":

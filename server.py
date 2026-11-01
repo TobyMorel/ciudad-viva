@@ -3095,6 +3095,11 @@ def simulate_business_month(workforce):
         sales=sold_local+regional_sales;export_price=max(1,round(unit_price*.78))
         revenue=sold_local*unit_price+regional_sales*export_price
         payroll=payroll_paid.get(firm["id"],0);overhead=max(0,int(firm.get("fixedCost",40)))
+        # Renta del local: pago real a propietarios privados, independiente de impuestos.
+        rent=max(0,int(firm.get("monthlyRent",50+max(0,12-abs(shop["x"]-12)-abs(shop["y"]-10))*3)))
+        overhead+=rent
+        firm["lastRentPaid"]=rent
+        state["supply"]["propertyRentalCash"]=state["supply"].get("propertyRentalCash",0)+rent
         firm["inputInventory"]=input_inventory-production
         cash_before_orders=firm.get("cash",0)+revenue-overhead
         if cash_before_orders<0:

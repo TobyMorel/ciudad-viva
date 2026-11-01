@@ -4902,7 +4902,9 @@ class Handler(BaseHTTPRequestHandler):
                     c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
-                    if model:p["serviceModel"]=service_id
+                    if model:
+                        p["serviceModel"]=service_id
+                        p["materialsRequired"]={k:math.ceil(q*model["cost"]/PROJECTS[kind]["cost"]) if q else 0 for k,q in p["materialsRequired"].items()}
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
                     if kind=="factory":
                         p["industryType"]=next_factory_industry()

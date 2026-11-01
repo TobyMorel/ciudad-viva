@@ -1,5 +1,18 @@
 // Capacidades relativas por tramo. Los corredores estructurales soportan el doble
 // de flujo; el deterioro de la calzada reduce la capacidad disponible.
+export const TRAFFIC_TIME_WINDOWS=['early','morningPeak','dayMorning','dayNoon','midday','afternoon','eveningPeak','evening','late'];
+export const trafficEdgeKey=(a,b)=>[`${a[0]},${a[1]}`,`${b[0]},${b[1]}`].sort().join('|');
+
+export function trafficQueueStep(queue,demand,capacity){
+  const cap=Math.max(.1,Number(capacity)||.1),waiting=Math.max(0,Number(queue)||0),arrivals=Math.max(0,Number(demand)||0);
+  const delay=Math.min(120,waiting/cap*120+Math.max(0,arrivals/cap-.82)*35);
+  return {queue:Math.max(0,waiting+arrivals-cap),delayMinutes:Math.round(delay*10)/10};
+}
+
+export function trafficQueueDelay(route,report,window){
+  let total=0;for(let i=0;i<(route||[]).length-1;i++){const segment=report?.segments?.[trafficEdgeKey(route[i],route[i+1])];total+=Number(segment?.windows?.[window]?.delayMinutes)||0}return Math.round(total*10)/10;
+}
+
 export function roadCapacity(a,b,roadAssets=[]){
   const arterial=a[1]===10||b[1]===10||a[0]===12||b[0]===12;
   const assets=roadAssets instanceof Map?roadAssets:new Map((roadAssets||[]).map(x=>[`${x.x},${x.y}`,x.quality??82]));

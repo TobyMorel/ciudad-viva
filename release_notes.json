@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.114",
+  "currentVersion": "0.115",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.115",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 90,
+      "overallProgress": null,
+      "changes": [
+        "La simulación Online y Offline calcula demanda de autos, colectivos y entregas por nueve franjas horarias; las colas que superan la capacidad de cada calle se conservan entre franjas y días, y se descartan si el tramo deja de existir.",
+        "La espera de cada ruta se incorpora a los tiempos de viaje motorizados, asistencia laboral, puestos efectivos y pago ganado. Los viajes de regreso también cargan la franja correspondiente.",
+        "El panel Tráfico informa la franja de mayor demora, cola máxima, tramos con vehículos pendientes, las tres calles más cargadas y un perfil horario plegable. Los factores de tránsito alimentan la capa coloreada del mapa.",
+        "Verificado: 62 pruebas Python, 44 pruebas Node/Offline y estrés de 30 años en cuatro perfiles. Se añadieron pruebas de cola acumulada, persistencia diaria e informe Offline.",
+        "Fase 7: 90% orientativo; faltan desvíos/capacidad alternativa y completar el efecto de congestión en obras y logística. Progreso global sin estimar: no hay una ponderación verificable común para las 34 fases. LAN física y publicación Vercel deben comprobarse tras publicar."
+      ]
+    },
     {
       "version": "0.114",
       "date": "2026-11-01",
@@ -1140,12 +1154,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.115 · demanda horaria y colas de tránsito",
-      "detail": "Construir perfiles de tráfico por hora y colas persistentes que afecten colectivos, viajes laborales, tiempos y emisiones en Online/Offline."
+      "title": "Alfa 0.116 · desvíos y perturbaciones de movilidad",
+      "detail": "Hacer que obras/cierres viales cambien rutas, tiempos de camiones y alternativas de transporte; verificar alivio de congestión al abrir un acceso alternativo en Online y Offline."
     },
     {
       "title": "Validación de experiencia",
-      "detail": "Pruebas de usabilidad y rendimiento con ciudades densas, sesión LAN física entre dos equipos y revisión de contrastes."
+      "detail": "Comprobar el panel de tráfico en móvil y escritorio, rendimiento con ciudades densas, sesión LAN física entre dos equipos y contraste visual."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1219,11 +1233,11 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 85,
-      "summary": "Movilidad Online/Offline con capacidad vial, congestión y choques causales; animación ligada al reloj, seguimiento básico por carril y semáforos.",
+      "progress": 90,
+      "summary": "Viajes laborales y cotidianos, jerarquía y condición vial, semáforos, colectivos, incidentes y colas persistentes por nueve franjas que afectan viajes Online/Offline.",
       "pending": [
-        "Demanda por franja horaria, colas persistentes y servicio de transporte colectivo afectado de extremo a extremo.",
-        "Incidentes adicionales de movilidad y transporte multimodal con capacidad y servicio integrados."
+        "Desvíos y alivio verificable al abrir rutas alternativas; perturbaciones por obras integradas al flujo.",
+        "Completar efecto de colas en entregas y fiabilidad del transporte público; integrar movilidad multimodal posterior."
       ]
     },
     {

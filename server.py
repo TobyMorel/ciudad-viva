@@ -2457,11 +2457,13 @@ def add_return_commutes(employees,commutes):
         factor=1 if mode=="walk" else traffic_factor(route)
         ride=round(distance*(1.8 if line else 4 if mode=="walk" else 2.5)*factor)
         parking=2 if mode=="auto" else 0
-        minutes=access+wait+ride+parking+transfer
+        signal_wait=signal_delay_minutes(route,{tuple(r) for r in state.get("roads",[])}) if mode!="walk" else 0
+        queue_wait=traffic_queue_delay(route,state.get("traffic",{}).get("queueReport",{}),window) if mode!="walk" else 0
+        minutes=access+wait+ride+parking+transfer+signal_wait+queue_wait
         vehicles=math.ceil(len(rows)/1.4) if mode=="auto" else 0
         emissions=round(vehicles*distance*.18,2)
         counts[mode]+=len(rows);minutes_total+=len(rows)*minutes;auto_vehicles+=vehicles;auto_emissions+=emissions
-        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":headway,"reason":"regreso","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"17:00–19:00"),"departureWindowKey":window,"walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor,2),"attendance":1})
+        return_trips.append({"from":[sx,sy],"to":[hx,hy],"workers":len(rows),"distance":distance,"route":route,"mode":mode,"busLineId":ids[0] if ids else None,"busLineIds":list(ids),"busLegFares":fares,"transferStop":emp.get("transferStop") if len(ids)>1 else None,"fare":round(sum(fares),2),"headwayMinutes":headway,"reason":"regreso","departureWindow":dict((key,label) for key,label,_ in BUS_WINDOW_DEPARTURES).get(window,"17:00–19:00"),"departureWindowKey":window,"walkAccessMinutes":access,"waitingMinutes":wait,"rideMinutes":ride,"parkingMinutes":parking,"transferMinutes":transfer,"estimatedMinutes":minutes,"signalWaitMinutes":signal_wait,"queueDelayMinutes":queue_wait,"vehicles":vehicles,"dailyEmissionsKg":emissions,"trafficFactor":round(factor+queue_wait/max(5,distance*(1.8 if line else 2.5)),2),"attendance":1})
     commutes.extend(return_trips)
     for line_id,line in lines.items():
         line["dailyRiders"]=line.get("ridersThisPass",0)+line.get("returnRidersThisPass",0)
@@ -2738,17 +2740,20 @@ def commute_model():
     _commute_cache_key=key;_commute_cache=model
     # Now that segment flows are cached, congestion can include both commuters and trucks.
     minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
+    queue_report=advance_traffic_queues(commutes,roads)
+    model["queueReport"]=queue_report
     for trip in commutes:
         bus_line=next((b for b in state.get("busRoutes",[]) if b.get("id")==trip.get("busLineId")),None) if trip["mode"]=="bus" else None
         factor=1.0 if trip["mode"]=="walk" else traffic_factor(trip.get("busTravelRoute") or trip["route"])
         ride_rate=4 if trip["mode"]=="walk" else 1.8 if trip["mode"]=="bus" else 2.5
         signal_wait=signal_delay_minutes(trip.get("busTravelRoute") or trip["route"],roads) if trip["mode"]!="walk" else 0
-        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]+trip.get("transferMinutes",0)+signal_wait
+        queue_wait=traffic_queue_delay(trip.get("busTravelRoute") or trip["route"],queue_report,trip.get("departureWindowKey","dayNoon")) if trip["mode"]!="walk" else 0
+        minutes=trip["walkAccessMinutes"]+trip["waitingMinutes"]+round(trip["distance"]*ride_rate*factor)+trip["parkingMinutes"]+trip.get("transferMinutes",0)+signal_wait+queue_wait
         trip["rideMinutes"]=round(trip["distance"]*ride_rate*factor)
         trip["estimatedMinutes"]=minutes
         trip["signalWaitMinutes"]=signal_wait
         attendance=max(.25,1-max(0,minutes-15)/240)
-        trip.update({"trafficFactor":round(factor,2),"estimatedMinutes":minutes,"attendance":round(attendance,2)})
+        trip.update({"trafficFactor":round(factor+queue_wait/max(5,trip["distance"]*ride_rate),2),"queueDelayMinutes":queue_wait,"estimatedMinutes":minutes,"attendance":round(attendance,2)})
         if trip.get("reason")=="regreso":continue
         group=(trip["from"][0],trip["from"][1],trip["to"][0],trip["to"][1],trip["mode"],tuple(trip.get("busLineIds",[])),trip.get("departureWindowKey","morningPeak"))
         for emp in grouped.get(group,[]):
@@ -2880,6 +2885,60 @@ def road_traffic_capacity(a,b):
     assets={(x.get("x"),x.get("y")):float(x.get("quality",82)) for x in state.get("roadAssets",[])}
     quality=min(assets.get(a,82),assets.get(b,82))
     return (2.4 if arterial else 1.2)*max(.35,min(1,quality/82))
+
+def traffic_edge_key(a,b):
+    return "|".join(f"{x},{y}" for x,y in sorted((tuple(a),tuple(b))))
+
+def traffic_queue_step(queue,demand,capacity):
+    cap=max(.1,float(capacity or .1));waiting=max(0,float(queue or 0));arrivals=max(0,float(demand or 0))
+    delay=min(120,waiting/cap*120+max(0,arrivals/cap-.82)*35)
+    return max(0,waiting+arrivals-cap),round(delay,1)
+
+def traffic_queue_delay(route,report,window):
+    return round(sum(float(report.get("segments",{}).get(traffic_edge_key(a,b),{}).get("windows",{}).get(window,{}).get("delayMinutes",0)) for a,b in zip(route or [],(route or [])[1:])),1)
+
+def advance_traffic_queues(commutes,roads):
+    traffic=state.setdefault("traffic",{});queue_state=traffic.setdefault("queueState",{"lastDay":0,"queues":{}});day=int(state.get("day",1))
+    if queue_state.get("lastDay")==day and traffic.get("queueReport"):return traffic["queueReport"]
+    windows=[row[0] for row in BUS_WINDOW_DEPARTURES];road_set={tuple(r) for r in roads};demand={}
+    def add_route(route,window,amount):
+        if amount<=0:return
+        table=demand.setdefault(window,{})
+        for a,b in zip(route or [],(route or [])[1:]):
+            a=tuple(a);b=tuple(b)
+            if a not in road_set or b not in road_set:continue
+            key=traffic_edge_key(a,b);table[key]=table.get(key,0)+amount
+    return_window={"early":"afternoon","morningPeak":"eveningPeak","midday":"late"}
+    for trip in commutes:
+        if trip.get("mode")=="auto":
+            window=trip.get("departureWindowKey") or "dayNoon";add_route(trip.get("route"),window,trip.get("vehicles",0))
+            # La ida permite anticipar el regreso del mismo grupo en su franja laboral.
+            if trip.get("reason")=="trabajo" and window in return_window:add_route(list(reversed(trip.get("route",[]))),return_window[window],trip.get("vehicles",0))
+    for line in state.get("busRoutes",[]):
+        if not line.get("operational"):continue
+        schedule=line.get("departuresByWindow") or bus_service_schedule(line).get("departuresByWindow",{})
+        for window,count in schedule.items():add_route(line.get("route"),window,count)
+    for order in state.get("supply",{}).get("orders",[])+state.get("supply",{}).get("marketOrders",[]):
+        if order.get("status")=="en tránsito" and len(order.get("route",[]))>1 and day>order.get("supplierReadyDay",order.get("orderedDay",0)):
+            path=order["route"];index=min(len(path)-2,max(0,int(order.get("travelledDistance",0))));add_route(path[index:index+2],"dayNoon",1)
+    previous=queue_state.get("queues",{});edges=set(previous)
+    for table in demand.values():edges.update(table)
+    segments={};next_queues={};summary={window:{"vehicles":0,"capacity":0,"queued":0,"delayMinutes":0,"segments":0} for window in windows}
+    for edge in sorted(edges):
+        try:a,b=(tuple(map(int,point.split(","))) for point in edge.split("|"))
+        except (ValueError,TypeError):continue
+        if a not in road_set or b not in road_set or abs(a[0]-b[0])+abs(a[1]-b[1])!=1:continue
+        capacity=road_traffic_capacity(a,b)*6;queue=float(previous.get(edge,0));periods={}
+        for window in windows:
+            arrivals=float(demand.get(window,{}).get(edge,0));before=queue;queue,delay=traffic_queue_step(queue,arrivals,capacity)
+            periods[window]={"vehicles":round(arrivals,2),"queueBefore":round(before,2),"queueAfter":round(queue,2),"capacity":round(capacity,2),"delayMinutes":delay}
+            row=summary[window];row["vehicles"]+=arrivals;row["capacity"]+=capacity;row["queued"]+=queue;row["delayMinutes"]+=delay;row["segments"]+=1
+        segments[edge]={"capacity":round(capacity,2),"queueAfter":round(queue,2),"windows":periods};next_queues[edge]=round(queue,2)
+    queue_state.update({"lastDay":day,"queues":next_queues})
+    for row in summary.values():
+        row["vehicles"]=round(row["vehicles"],1);row["queued"]=round(row["queued"],1);row["meanDelayMinutes"]=round(row["delayMinutes"]/max(1,row["segments"]),1);row["capacity"]=round(row["capacity"],1);row["delayMinutes"]=round(row["delayMinutes"],1)
+    report={"day":day,"windows":[{"key":window,"label":dict((k,label) for k,label,_ in BUS_WINDOW_DEPARTURES)[window],**summary[window]} for window in windows],"segments":segments,"maxQueue":round(max((v["queueAfter"] for v in segments.values()),default=0),1),"persistentQueueSegments":sum(1 for v in segments.values() if v["queueAfter"]>=1)}
+    traffic["queueReport"]=report;return report
 
 def order_route_eta(order):
     distance=max(0,order.get("travelDistance",len(order.get("route",[]))-1))
@@ -4655,6 +4714,7 @@ def public_state(player_id=None):
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
+    view["traffic"]["queueReport"]=commute.get("queueReport",{})
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])

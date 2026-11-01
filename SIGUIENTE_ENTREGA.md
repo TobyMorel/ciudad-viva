@@ -1,5 +1,18 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.115
+
+1. Fase 7: implementar rutas alternativas y perturbaciones temporales por obra/cierre. Probar que abrir una conexión puede reducir colas y que una obra aumenta el tiempo de camiones, en Online y Offline.
+2. Conectar el retraso de colas con plazos de suministro/descarga y fiabilidad de líneas de colectivo; no aumentar la espera sin mostrar causa.
+3. Revisar el panel Tráfico y capa de colores a 390×844 y 1440×900, en temas claro y oscuro, comprobar que el resumen y el detalle horario no se solapan ni salen del panel.
+4. Ejecutar validaciones, actualizar versión/continuidad, publicar en `main`, comprobar SHA/CI/Vercel y entregar ZIP completo.
+
+Fase actual: 7 (90% orientativo); próxima mecánica: desvíos y obras viales. Hito actual: F; siguiente: concluir sistemas de movilidad pendientes y avanzar a fase 8. Progreso global sin estimar porque falta matriz estable de pesos verificables para las 34 fases.
+
+# Siguiente entrega
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.114
 
 1. Fase 7: modelar demanda por franja horaria y cola persistente en cada tramo congestionado. Integrar el retraso al recorrido de colectivos, coches, asistencia laboral y consumo de combustible/emisiones en ambos motores.

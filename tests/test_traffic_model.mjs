@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {roadCapacity,trafficFactorForRoute,applyTrafficQueue} from '../traffic.js';
+import {roadCapacity,trafficFactorForRoute,applyTrafficQueue,trafficQueueStep,trafficQueueDelay,trafficEdgeKey} from '../traffic.js';
+
+test('la cola vial persiste entre franjas y añade demora a la ruta',()=>{
+ const first=trafficQueueStep(0,10,6),second=trafficQueueStep(first.queue,2,6),route=[[0,0],[1,0]],report={segments:{[trafficEdgeKey(...route)]:{windows:{morningPeak:first,eveningPeak:second}}}};
+ assert.equal(first.queue,4);assert.equal(second.queue,0);assert.ok(second.delayMinutes>0);assert.equal(trafficQueueDelay(route,report,'morningPeak'),first.delayMinutes);assert.equal(trafficQueueDelay(route,report,'eveningPeak'),second.delayMinutes);
+});
 
 test('la capacidad estructural duplica la de una calle barrial y cae con el deterioro',()=>{
   assert.equal(roadCapacity([0,0],[1,0]),1.2);

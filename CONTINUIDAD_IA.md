@@ -1,5 +1,17 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.115
+
+Mecánica añadida: en `server.py`, `traffic_queue_step`, `traffic_queue_delay` y `advance_traffic_queues` calculan carga/capacidad y colas por tramo para nueve horarios. En `offline.js`, `advanceOfflineTrafficQueues` mantiene el mismo formato. Estado guardado: `traffic.queueState = {lastDay, queues}` y reporte `traffic.queueReport` con resumen de franjas y segmentos. La rutina es idempotente dentro del día, depura segmentos que ya no son calles y transporta el remanente al próximo día. Demanda: viajes en auto por ventana, salidas de buses por horario y pedidos de suministro en tránsito; en Online se anticipa el retorno laboral para cargar la franja de tarde/noche.
+
+La demora suma a rutas motorizadas y recalcula asistencia y puestos efectivos; peatones quedan fuera. El panel se dibuja en `game.js:renderTrafficPanel` y usa datos reales `S.traffic.queueReport`; sus estilos viven en `design.css`. `traffic.js` comparte helpers y `tests/test_traffic_model.mjs` los prueba. `tests/test_traffic_queues_offline.mjs` protege el informe persistido Offline; `tests/test_traffic_capacity.py` protege la acumulación e idempotencia Online. Mantener formato/paridad de ambos motores cuando cambien horarios, buses o logística.
+
+Progreso global no estimable por falta de ponderación verificable de las 34 fases. Fase 7=90% orientativo; hito actual F. Próximo: desvíos por obras/cortes y prueba de alivio al abrir un acceso alternativo; después seguir a la fase 8 o a sistemas F restantes, sin dedicar una entrega a pulido menor. LAN entre equipos físicos continúa sin verificar.
+
+# Continuidad de desarrollo para otra IA
+
+# Continuidad de desarrollo para otra IA
+
 ## Continuidad inmediata · Alfa 0.114
 
 En `server.py`, `advance_simulation_clock()` preserva tiempo pendiente y `simulation_loop()` procesa como máximo una jornada por vuelta, a intervalos de 50 ms; una pausa pone el acumulador a cero. Mantén el límite de un día por vuelta para evitar ráfagas que bloqueen peticiones LAN.

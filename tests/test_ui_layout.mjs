@@ -50,6 +50,11 @@ try{
     await page.locator('[data-popup="traffic"]').evaluate(button=>button.click());
     assert.equal(await page.locator('#trafficPanel').isVisible(),true,name+': Tráfico debe quedar sobre el mapa sin taparlo');
     assert.equal(await page.locator('#panelPopup').isVisible(),false,name+': la capa vial no debe abrir el popup borroso');
+    const trafficSummary=await page.evaluate(()=>{const panel=document.querySelector('#trafficPanel'),stats=panel?.querySelector('.traffic-stats');return {panelWidth:panel?.clientWidth,scrollWidth:panel?.scrollWidth,statsVisible:Boolean(stats&&stats.getBoundingClientRect().height>0),hasSummary:panel?.textContent?.includes('Colas más largas'),hasProfile:panel?.textContent?.includes('Ver demanda y espera por horario')}});
+    assert.ok(trafficSummary.statsVisible&&trafficSummary.hasSummary&&trafficSummary.hasProfile&&trafficSummary.scrollWidth<=trafficSummary.panelWidth+2,name+': resumen de tráfico cortado o desbordado '+JSON.stringify(trafficSummary));
+    await page.locator('#trafficPanel .traffic-profile summary').click();
+    const profile=await page.evaluate(()=>{const panel=document.querySelector('#trafficPanel'),items=[...panel.querySelectorAll('.traffic-window')];return {count:items.length,inside:items.every(item=>{const r=item.getBoundingClientRect(),p=panel.getBoundingClientRect();return r.left>=p.left-1&&r.right<=p.right+1})}});
+    assert.ok(profile.count===9&&profile.inside,name+': el detalle de franjas está incompleto o desborda '+JSON.stringify(profile));
     await page.locator('#trafficPanel [data-close-traffic]').evaluate(button=>button.click());
     await page.locator('#themeToggle').evaluate(button=>button.click());
     assert.equal(await page.locator('body').getAttribute('data-theme'),'dark',name+': tema oscuro en el juego');

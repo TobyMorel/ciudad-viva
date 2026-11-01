@@ -1,5 +1,15 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.115 · colas de tráfico por franja y día
+
+En Online (`server.py`) y Offline (`offline.js`) el flujo de automóviles, buses y camiones se reparte en nueve franjas de dos horas. Cada tramo tiene capacidad según jerarquía y condición de calle. El exceso deja una cola que persiste en franjas siguientes y se guarda al cambiar de día. La espera de ruta aumenta duración del viaje, reduce asistencia laboral y cambia puestos efectivos y salarios ganados. Se anticipa la franja de regreso de los autos laborales; Offline también suma los regresos y viajes cotidianos ya modelados. El panel Tráfico resume la franja más lenta, cola máxima, calles con cola, tres tramos más cargados y detalle horario plegable.
+
+Verificado: 62 pruebas Python y 44 pruebas Node/Offline; `tests/stress_30_years.py` completó 30 años en cuatro perfiles. La inspección Playwright del panel a 390×844 y 1440×900 confirma que los nueve horarios caben sin desborde horizontal. Pendiente: finalizar el recorrido automatizado integral de UI, LAN física y estado de despliegue Vercel. Fase 7 pasa de 85% a 90% orientativo por nueva evidencia funcional; faltan desvíos por obras/accesos alternativos y completar impacto en logística. Progreso global no estimable: no existe matriz de pesos verificables estable para las 34 fases.
+
+# Estado de desarrollo · Ciudad Viva
+
+# Estado de desarrollo · Ciudad Viva
+
 ## Alfa 0.114 · reloj escalonado y tránsito fluido
 
 Online acumula tiempo a la velocidad seleccionada y consume como máximo una jornada por iteración de simulación; el atraso se conserva y nunca se liquida como una ráfaga de días. Offline de juego real procesa como máximo una jornada por consulta a la frecuencia X1/X2/X4. Pausar limpia el acumulador y detiene actores móviles. El reloj de Three.js escala peatones y vehículos con X1/X2/X4, mantiene animación de cámara y limita el intervalo adaptativo del render a 50 ms. Coches comparten separación segura por carril y esperan los semáforos rojos. 59 pruebas Online y 42 Offline pasaron; la batería de 30 años conserva cuatro perfiles. Playwright de cámara pasó en 390×844 y 1440×900. No hay pruebas de LAN física.

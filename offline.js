@@ -246,30 +246,36 @@ export async function createOfflineAdapter(){
     const population=Math.max(1,homes.reduce((sum,h)=>sum+(h.occupants||0),0)),heat=state.climate?.heatForecast||{};
     const heatExtra=heat.active?(heat.actualHealthCases??heat.expectedHealthCases??0)/Math.max(1,heat.durationDays||5)*.16:0;
     const carry=Math.max(0,state.health.hospitalBacklog||0)*.2;
-    let demand=0,served=0,ambulanceCases=0;const neighborhoods=[];
+    let demand=0,served=0,ambulanceCases=0;const neighborhoods=[],currentDispatches=[];
     for(const home of homes){
       const occupants=Math.max(0,home.occupants||0),util=home.utilityAccess||{},risk=1-Math.min(util.waterServedPct??0,util.wastewaterTreatedPct??0)/100;
       const need=occupants*.0018*(1+risk*.5)+heatExtra*occupants/population+carry*occupants/population;
       demand+=need;
-      const options=hospitals.map(h=>{const route=offlineRoadRoute(home,h.building);return {h,minutes:route?Math.round(Math.max(0,route.length-1)*2.5+4):Infinity}}).filter(o=>o.minutes<=45).sort((a,b)=>a.minutes-b.minutes||a.h.name.localeCompare(b.h.name));
+      const options=hospitals.map(h=>{const route=offlineRoadRoute(home,h.building);return {h,route,minutes:route?Math.round(Math.max(0,route.length-1)*2.5+4):Infinity}}).filter(o=>o.minutes<=45).sort((a,b)=>a.minutes-b.minutes||a.h.name.localeCompare(b.h.name));
       let handled=0,transferred=0;
-      for(const {h,minutes} of options){
+      for(const {h,minutes,route} of options){
         if(handled>=need)break;
         const take=minutes<=25?Math.min(need-handled,h.remaining):Math.min(need-handled,h.remaining,h.ambulanceRemaining);
-        if(minutes>25){h.ambulanceRemaining-=take;transferred+=take;h.transferred+=take}
+        if(minutes>25){h.ambulanceRemaining-=take;transferred+=take;h.transferred+=take;
+          if(take>0&&advance&&state.health.lastHospitalDay!==state.day)currentDispatches.push({
+            id:`amb-${state.day}-${home.x}-${home.y}-${h.building.x}-${h.building.y}`,day:state.day,
+            station:h.name,stationX:h.building.x,stationY:h.building.y,x:home.x,y:home.y,
+            route:[...route].reverse(),patients:+take.toFixed(3),responseMinutes:minutes,status:'traslado'});
+        }
         h.remaining-=take;h.admitted+=take;handled+=take;
       }
       served+=handled;ambulanceCases+=transferred;
       neighborhoods.push({name:home.name||'Barrio',population:occupants,demand:+need.toFixed(2),admitted:+handled.toFixed(2),waiting:+Math.max(0,need-handled).toFixed(2),reachable:Boolean(options.length),ambulanceTransfers:+transferred.toFixed(2)});
     }
     const waiting=Math.max(0,demand-served);
-    if(advance&&state.health.lastHospitalDay!==state.day){state.health.hospitalBacklog=+Math.min(population*.12,waiting).toFixed(3);state.health.lastHospitalDay=state.day}
+    if(advance&&state.health.lastHospitalDay!==state.day){state.health.hospitalBacklog=+Math.min(population*.12,waiting).toFixed(3);state.health.ambulanceDispatches=[...(state.health.ambulanceDispatches||[]),...currentDispatches].slice(-24);state.health.lastHospitalDay=state.day}
     const fixed=hospitals.reduce((sum,h)=>sum+h.beds*22+h.ambulances*360,0);
     return {demandPerDay:+demand.toFixed(2),admittedPerDay:+served.toFixed(2),waitingPerDay:+waiting.toFixed(2),
       capacityPerDay:+hospitals.reduce((sum,h)=>sum+h.dailyCapacity,0).toFixed(2),
       ambulanceTransfersPerDay:+ambulanceCases.toFixed(2),coveragePct:demand?Math.round(100*served/demand):100,
       monthlyOperatingCost:Math.round(fixed+served*20*30),
       hospitals:hospitals.map(h=>({name:h.name,x:h.building.x,y:h.building.y,beds:h.beds,staff:h.staff,ambulances:h.ambulances,activeAmbulances:h.activeAmbulances,capacityPerDay:+h.dailyCapacity.toFixed(2),admittedPerDay:+h.admitted.toFixed(2),transfersPerDay:+h.transferred.toFixed(2),utilityPct:h.utilityPct})),
+      ambulanceDispatches:(state.health.ambulanceDispatches||[]).slice(-12),
       neighborhoods:neighborhoods.sort((a,b)=>b.waiting-a.waiting).slice(0,6)};
   }
   // Fase 28: seguridad urbana municipal, prevención y respuesta territorial.

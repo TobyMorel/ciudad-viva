@@ -637,3 +637,10 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 ## Alfa 0.92 · paridad de especializaciones industriales
 
 Offline excluye las fábricas especializadas del proceso alimentario mensual, evitando proveedor fantasma y segunda liquidación de gastos. Se publicaron pruebas automatizadas Online/Offline de bloqueo por componentes y reanudación tras entrega, con inventario, caja y finalización de obra controlados. El workflow de sintaxis, JSON y dos suites concluyó correctamente en GitHub Actions (run 41260659327). Fase 18=85%, global sin estimación verificable. No se ejecutaron pruebas visuales, LAN física ni Vercel.
+
+
+## Alfa 0.93 · simetría industrial y nuevas cadenas funcionales
+
+La cantera y hormigonera locales ahora funcionan también Offline con inventario físico, personal, servicio, caja privada, reserva geológica, entrega por camión y transformación 2:1. El inventario del corralón no se infla al comprar a las plantas; las compras locales restan stock privado e ingresan efectivo a la empresa productora. El tipo de planta se asigna a la adjudicación del contrato y se respeta en inspección/apertura tanto si la obra es manual como si es promovida automáticamente. Nuevo capital operativo de $4.200 se descuenta de los promotores Offline antes de iniciar la obra. Guardados anteriores admiten fallback si el proyecto no tenía `industryType`.
+
+Tests GitHub Actions: sintaxis, JSON, reservas, producción, pedidos y transformación Online/Offline; se agregó prueba de interfaz de Economía a 390×844 y 1440×900 con captura automática. No se probaron LAN física ni publicación en Vercel. Fase 18=90%; progreso global sin estimación.

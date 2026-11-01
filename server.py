@@ -4106,7 +4106,7 @@ def hospital_care_report(workplaces,homes,advance=False):
             "ambulances":units,"activeAmbulances":crews,"dailyCapacity":capacity,"remaining":capacity,
             "ambulanceRemaining":crews*2,"admitted":0,"transferred":0,"utilityPct":round(factor*100)})
     population=max(1,sum(int(h.get("occupants",0)) for h in homes))
-    heat=state.get("climate",{}).get("heatForecast",{})
+    heat=state.get("climate",{}).get("heatForecast") or {}
     heat_extra=(float(heat.get("actualHealthCases",heat.get("expectedHealthCases",0)))/max(1,int(heat.get("durationDays",5)))*.16) if heat.get("active") else 0
     carry=max(0,float(health.get("hospitalBacklog",0)))*.2
     demand=served=ambulance_cases=0

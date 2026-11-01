@@ -4112,6 +4112,7 @@ def hospital_care_report(workplaces,homes,advance=False):
     carry=max(0,float(health.get("hospitalBacklog",0)))*.2
     demand=served=ambulance_cases=0
     neighborhoods=[]
+    current_dispatches=[]
     for home in homes:
         occupants=max(0,int(home.get("occupants",0)))
         util=home.get("utilityAccess",{})
@@ -4123,10 +4124,10 @@ def hospital_care_report(workplaces,homes,advance=False):
             path=route_between((home["x"],home["y"]),(h["building"]["x"],h["building"]["y"]))
             if path:
                 minutes=round(max(0,len(path)-1)*2.5+4)
-                if minutes<=45:options.append((minutes,h))
+                if minutes<=45:options.append((minutes,h,path))
         options.sort(key=lambda row:(row[0],row[1]["name"]))
         handled=transferred=0
-        for minutes,h in options:
+        for minutes,h,path in options:
             if handled>=need:break
             if minutes<=25:
                 take=min(need-handled,h["remaining"])
@@ -4135,6 +4136,11 @@ def hospital_care_report(workplaces,homes,advance=False):
                 h["ambulanceRemaining"]-=take
                 transferred+=take
                 h["transferred"]+=take
+                if take>0 and advance and health.get("lastHospitalDay")!=state.get("day"):
+                    current_dispatches.append({"id":f"amb-{state['day']}-{home['x']}-{home['y']}-{h['building']['x']}-{h['building']['y']}",
+                        "day":state["day"],"station":h["name"],"stationX":h["building"]["x"],"stationY":h["building"]["y"],
+                        "x":home["x"],"y":home["y"],"route":list(reversed(path)),"patients":round(take,3),
+                        "responseMinutes":minutes,"status":"traslado"})
             h["remaining"]-=take
             h["admitted"]+=take
             handled+=take
@@ -4145,6 +4151,7 @@ def hospital_care_report(workplaces,homes,advance=False):
     waiting=max(0,demand-served)
     if advance and health.get("lastHospitalDay")!=state.get("day"):
         health["hospitalBacklog"]=round(min(population*.12,waiting),3)
+        health["ambulanceDispatches"]=(health.get("ambulanceDispatches",[])+current_dispatches)[-24:]
         health["lastHospitalDay"]=state["day"]
     fixed=sum(h["beds"]*22+h["ambulances"]*360 for h in hospitals)
     return {"demandPerDay":round(demand,2),"admittedPerDay":round(served,2),"waitingPerDay":round(waiting,2),
@@ -4155,6 +4162,7 @@ def hospital_care_report(workplaces,homes,advance=False):
             "staff":h["staff"],"ambulances":h["ambulances"],"activeAmbulances":h["activeAmbulances"],
             "capacityPerDay":round(h["dailyCapacity"],2),"admittedPerDay":round(h["admitted"],2),
             "transfersPerDay":round(h["transferred"],2),"utilityPct":h["utilityPct"]} for h in hospitals],
+        "ambulanceDispatches":health.get("ambulanceDispatches",[])[-12:],
         "neighborhoods":sorted(neighborhoods,key=lambda n:-n["waiting"])[:6]}
 
 # Fase 28: seguridad urbana con puestos físicos, dotaciones y sucesos causales.

@@ -312,3 +312,8 @@ Agregado `tests/stress_30_years.py`: ejecutable manualmente mediante `python tes
 ## Continuación · viajes marítimos reales de acero
 
 Las compras extraordinarias de acero ya no acreditan metal instantáneamente. Online/Offline descuentan el costo de importación al contratar, crean `supply.steelShipments` con puerto, cantidad, fecha y estado `en viaje`, y completan descarga no antes de 12 días. El puerto debe permanecer operativo y conectado al Corralón del Puerto; si se corta la conexión, el lote queda esperando sin duplicar stock ni repetir gastos. La reserva de capacidad y límite comercial descuentan cargamentos en tránsito. `steelImportedUnits` solo aumenta tras recepción. Se amplió regresión Online para verificar demora, llegada y ausencia de doble recepción. Interfaz no modificada. Siguiente: validar CI y corregir fallo responsive previo.
+
+
+## Continuación · descarga portuaria parcial
+
+Los embarques de acero importado ahora descargan hasta `unloadingCapacity` unidades por día (20 por defecto), con `deliveredUnits`, `lastUnloadedDay` y estado `descarga parcial` mientras quede carga. El Corralón recibe únicamente las unidades efectivamente descargadas. Cortes viales y puerto inhabilitado detienen la descarga; queda prohibida una segunda descarga el mismo día. Las unidades pendientes siguen contando como importación en tránsito para evitar pedidos superpuestos. Implementado Online/Offline y nueva prueba de tres días para un lote de 20 unidades con descarga diaria de 7. Pendiente CI. Sin cambios de interfaz.

@@ -276,6 +276,94 @@ def advance_local_metalworks(workplaces,employees):
         elif need and not route:firm["lastMaterialCause"]="Sin ruta vial al proveedor de acero"
         elif need and not source.get("steel",0):firm["lastMaterialCause"]="Corralón sin acero en stock"
 
+
+def sign_aggregate_forward_contract(plant,need):
+    """Reserva inventario físico y pago en custodia; la cantera cobra tras entregar."""
+    supply=state["supply"];buyer=plant["business"];aggregate=supply["suppliers"]["Cantera local"]
+    candidates=[]
+    for site in state.get("buildings",[]):
+        firm=site.get("business",{})
+        if site.get("kind")!="factory" or firm.get("industryType")!="quarry" or firm.get("status")!="abierto":continue
+        route=route_between((site["x"],site["y"]),(plant["x"],plant["y"]))
+        if route is None:continue
+        distance=max(0,len(route)-1);factor=max(.8,min(1.35,float(firm.get("materialPriceFactor",1))))
+        unit=MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]*factor
+        freight=max(0,distance-4)*5
+        qty=min(int(need),int(aggregate.get("aggregate",0)),int(firm.get("aggregateStock",0)),
+                max(0,int((buyer.get("cash",0)-500)//max(1,unit+freight))))
+        if qty>0:candidates.append((unit+freight/max(1,qty),distance,site["x"],site["y"],site,route,qty,unit,freight,factor))
+    if not candidates:return None
+    _,distance,_,_,site,route,qty,unit,freight,factor=min(candidates,key=lambda r:r[:4])
+    n=3 if qty>=9 else 1
+    lines=[qty//n+(i<qty%n) for i in range(n)]
+    prices=[(round(q*unit),freight) for q in lines]
+    total=sum(a+b for a,b in prices)
+    if buyer.get("cash",0)<total+500:return None
+    buyer["cash"]-=total;aggregate["aggregate"]-=qty;site["business"]["aggregateStock"]-=qty
+    ident=uuid.uuid4().hex
+    contract={"id":ident,"commodity":"áridos","buyerId":buyer["id"],"buyerName":plant.get("name"),
+              "vendorId":site["business"]["id"],"vendorName":site.get("name"),"quantity":qty,
+              "deliveredUnits":0,"refundedUnits":0,"escrow":total,"contractValue":total,
+              "paidToSeller":0,"paidToLogistics":0,"refunded":0,"orderedDay":state["day"],
+              "installments":n,"source":[site["x"],site["y"]],"destination":[plant["x"],plant["y"]],"status":"en curso"}
+    supply.setdefault("tradeContracts",[]).append(contract)
+    for index,(amount,(product,delivery)) in enumerate(zip(lines,prices)):
+        ready=state["day"]+1+index*7
+        supply["marketOrders"].append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"áridos",
+            "businessId":buyer["id"],"businessName":plant.get("name"),"supplier":"Cantera local",
+            "vendorId":site["business"]["id"],"vendorName":site.get("name"),"supplyContractId":ident,
+            "installment":index+1,"installments":n,"quantity":amount,"unitCost":unit,
+            "cost":product+delivery,"productCost":product,"freight":delivery,
+            "orderedDay":state["day"],"supplierReadyDay":ready,"deadlineDay":ready+14,
+            "travelDistance":distance,"travelledDistance":0,"source":[site["x"],site["y"]],
+            "x":plant["x"],"y":plant["y"],"route":route,"status":"en tránsito",
+            "statusCause":"Reserva contractual con pago en custodia"})
+    buyer["lastMaterialPurchase"]=qty
+    buyer["lastMaterialCause"]="Áridos comprometidos a plazo: pago contra entregas"
+    ev("Contrato industrial a plazo",f"{plant.get('name','Hormigonera')}: {qty} áridos en {n} remesas; $ {total} en custodia privada.")
+    return contract
+
+def settle_aggregate_contract_line(order,received):
+    if not order.get("supplyContractId") or order.get("contractSettled"):return
+    supply=state["supply"]
+    contract=next((c for c in supply.get("tradeContracts",[]) if c["id"]==order["supplyContractId"]),None)
+    if not contract:return
+    units=int(order["quantity"]);product=int(order["productCost"]);freight=int(order["freight"]);amount=product+freight
+    order["contractSettled"]=True;contract["escrow"]=max(0,contract["escrow"]-amount)
+    seller=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==order["vendorId"]),None)
+    if received:
+        if seller:
+            seller["cash"]=seller.get("cash",0)+product
+            seller["lastLocalSales"]=seller.get("lastLocalSales",0)+units
+            seller["lifetimeIndustrialSales"]=seller.get("lifetimeIndustrialSales",0)+units
+            seller["industrialSalesSincePricing"]=seller.get("industrialSalesSincePricing",0)+units
+        else:supply["unclaimedIndustrialReceipts"]=supply.get("unclaimedIndustrialReceipts",0)+product
+        supply["logisticsCash"]=supply.get("logisticsCash",0)+freight
+        contract["deliveredUnits"]+=units;contract["paidToSeller"]+=product;contract["paidToLogistics"]+=freight
+        industry=state.setdefault("localIndustry",{});industry["materialSold"]=industry.get("materialSold",0)+units
+    else:
+        if seller and seller.get("status")=="abierto":
+            seller["aggregateStock"]=seller.get("aggregateStock",0)+units
+            supply["suppliers"]["Cantera local"]["aggregate"]+=units
+        else:contract["lostReservedUnits"]=contract.get("lostReservedUnits",0)+units
+        buyer=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==order["businessId"]),None)
+        if buyer:buyer["cash"]=buyer.get("cash",0)+amount
+        else:supply["unclaimedContractRefunds"]=supply.get("unclaimedContractRefunds",0)+amount
+        contract["refunded"]+=amount;contract["refundedUnits"]+=units
+        ev("Contrato incumplido",f"Remesa de {units} áridos cancelada; devolución $ {amount} al comprador.")
+    related=[o for o in supply["marketOrders"] if o.get("supplyContractId")==contract["id"]]
+    if related and all(o.get("contractSettled") for o in related):
+        contract["status"]="cumplido" if not contract["refundedUnits"] else "incumplido"
+        contract["closedDay"]=state["day"]
+
+def expire_aggregate_contract_lines():
+    for order in state["supply"].get("marketOrders",[]):
+        if order.get("status")!="en tránsito" or not order.get("supplyContractId"):continue
+        buyer=next((b.get("business") for b in state["buildings"] if b.get("business",{}).get("id")==order["businessId"]),None)
+        if not buyer or buyer.get("status")!="abierto" or state["day"]>order["deadlineDay"]:
+            order["status"]="cancelado";order["statusCause"]="Comprador cerrado" if not buyer or buyer.get("status")!="abierto" else "Plazo contractual vencido"
+            settle_aggregate_contract_line(order,False)
+
 def advance_local_concrete_plants(workplaces,employees):
     supply=state["supply"]["suppliers"].setdefault("Hormigonera local",SUPPLIER_STOCK["Hormigonera local"].copy())
     supply["concrete"]=max(0,int(supply.get("concrete",0)))
@@ -303,44 +391,8 @@ def advance_local_concrete_plants(workplaces,employees):
         firm["lastLocalSales"]=0;firm["lastRevenue"]=0;firm["lastProfit"]=0
         pending=sum(o.get("quantity",0) for o in orders if o.get("businessId")==firm.get("id") and o.get("status")=="en tránsito" and o.get("commodity")=="áridos")
         target=min(72,max(24,capacity*2));need=max(0,target-raw-pending)
-        quarry_stock=state["supply"]["suppliers"].setdefault("Cantera local",SUPPLIER_STOCK["Cantera local"].copy())
-        candidates=[]
-        if need:
-            for site in state.get("buildings",[]):
-                owner=site.get("business",{})
-                if site.get("kind")!="factory" or owner.get("industryType")!="quarry" or owner.get("status")!="abierto":continue
-                route=route_between((site["x"],site["y"]),(plant["x"],plant["y"]))
-                if not route or owner.get("aggregateStock",0)<=0:continue
-                factor=max(.8,min(1.35,float(owner.get("materialPriceFactor",1))))
-                distance=max(0,len(route)-1)
-                unit_cost=MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]*factor+distance*.08
-                capacity=min(need,int(quarry_stock.get("aggregate",0)),int(owner.get("aggregateStock",0)),
-                             max(0,int(max(0,firm.get("cash",0)-500)//max(.01,unit_cost))))
-                if capacity>0:candidates.append((unit_cost,distance,site["x"],site["y"],site,route,capacity,factor))
-        winner=min(candidates,key=lambda row:row[:4]) if candidates else None
-        quantity=winner[6] if winner else 0
-        firm["lastMaterialPurchase"]=quantity
-        if winner:
-            unit_cost,distance,_,_,quarry,route,_,factor=winner
-            product_cost=round(quantity*MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]*factor)
-            cost=round(quantity*unit_cost)
-            quarry_stock["aggregate"]-=quantity
-            settle_industrial_vendor_offer("Cantera local","aggregate",quantity,
-                {"site":quarry,"productCost":product_cost,"factor":factor})
-            state["supply"]["logisticsCash"]=state["supply"].get("logisticsCash",0)+max(0,cost-product_cost)
-            firm["cash"]-=cost
-            ready=state["day"]+1
-            orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"áridos",
-                "businessId":firm["id"],"businessName":firm.get("name",plant.get("name","Hormigonera")),
-                "supplier":"Cantera local","vendorId":quarry["business"]["id"],"vendorName":quarry.get("name"),
-                "quantity":quantity,"unitCost":unit_cost,"cost":cost,"productCost":product_cost,
-                "orderedDay":state["day"],"supplierReadyDay":ready,"travelDistance":distance,
-                "travelledDistance":0,"source":[quarry["x"],quarry["y"]],"x":plant["x"],"y":plant["y"],
-                "route":route,"status":"en tránsito","statusCause":"Áridos locales en viaje a hormigonera"})
-            firm["lastMaterialCause"]="Áridos de "+quarry.get("name","cantera")+" en tránsito"
-            ev("Áridos en camino a hormigonera",f"{plant.get('name','Hormigonera')}: {quantity} áridos comprados a {quarry.get('name','cantera')} por $ {cost}.")
-        elif need:
-            firm["lastMaterialCause"]="Sin cantera conectada con stock y precio que la caja pueda pagar"
+        if need and not sign_aggregate_forward_contract(plant,need):
+            firm["lastMaterialCause"]="No hay cantera con lote, calle y capital suficientes"
 
 def advance_local_sawmills(workplaces,employees):
     industry=state.setdefault("localIndustry",{});industry.setdefault("timberProduced",0);industry.setdefault("timberSold",0)
@@ -1061,7 +1113,7 @@ def new_supply():
             "contractors":{name:INITIAL_CONTRACTOR_STOCK.copy() for name in CONTRACTOR_NAMES},
             "contractorCash":CONTRACTOR_CASH.copy(),
             "suppliers":{name:stock.copy() for name,stock in SUPPLIER_STOCK.items()},
-            "orders":[],"market":new_market_supply(),"marketOrders":[],"portOrders":[],"portVoyages":[],"storageCapacity":240,"yardCapacity":240,"depots":[]}
+            "orders":[],"market":new_market_supply(),"marketOrders":[],"tradeContracts":[],"portOrders":[],"portVoyages":[],"storageCapacity":240,"yardCapacity":240,"depots":[]}
 
 def initial_state():
     roads = [[x, 10] for x in range(4, 22)] + [[12, y] for y in range(5, 16)] + [[18, y] for y in range(10, 16)]
@@ -1311,6 +1363,7 @@ def ensure_supply_state():
     supply.setdefault("orders",[])
     supply.setdefault("market",new_market_supply())
     supply.setdefault("marketOrders",[])
+    supply.setdefault("tradeContracts",[])
     supply.setdefault("portOrders",[])
     supply.setdefault("portVoyages",[])
     for name,values in new_market_supply().items():
@@ -2723,6 +2776,7 @@ def refill_market_suppliers():
         supplier["stock"]=min(supplier.get("maxStock",0),supplier.get("stock",0)+supplier.get("monthlyOutput",0))
 
 def process_market_orders():
+    expire_aggregate_contract_lines()
     for order in state["supply"].get("marketOrders",[]):
         if order.get("status")!="en tránsito":continue
         route=route_between(tuple(order.get("source",(4,10))),(order["x"],order["y"]))
@@ -2758,8 +2812,10 @@ def process_market_orders():
                 firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
                 ev("Insumos recibidos",f"{order['supplier']} entregó {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
             order["status"]="entregado";order["deliveredDay"]=state["day"]
+            settle_aggregate_contract_line(order,True)
         else:
             order["status"]="cancelado";order["statusCause"]="Empresa cerrada antes de recibir la carga"
+            settle_aggregate_contract_line(order,False)
 
 def allocate_regional_export_demand(shops,workforce):
     """Reparte compradores externos finitos entre empresas con personal y salida logística."""

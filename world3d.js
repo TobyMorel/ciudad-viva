@@ -108,10 +108,125 @@ export function createWorld(canvas){
   function makeForklift(){const g=new THREE.Group();box(g,.38,.2,.48,'#dfaa4f',0,.27,0);box(g,.27,.42,.3,'#e9ba60',0,.57,-.05);box(g,.22,.22,.22,'#6e9897',0,.67,.09);box(g,.06,.75,.07,'#6d6354',-.18,.52,.29);box(g,.06,.75,.07,'#6d6354',.18,.52,.29);box(g,.035,.065,.42,'#ddd2ad',-.12,.08,.53);box(g,.035,.065,.42,'#ddd2ad',.12,.08,.53);for(const x of [-.23,.23])for(const z of [-.15,.18])box(g,.09,.12,.1,'#35434a',x,.14,z);trafficRoot.add(g);return g}
   function makeGarbageTruck(){const g=new THREE.Group();box(g,.42,.34,.62,'#477d65',-.18,.32,.02,{cast:true});box(g,.2,.25,.45,'#d4dec9',-.18,.63,.02);box(g,.37,.4,.4,'#608e6e',.22,.35,-.08,{cast:true});box(g,.34,.24,.025,'#86b1b7',.22,.45,.127);box(g,.16,.05,.04,'#f2d47a',.2,.68,.13);for(const x of [-.31,.31])for(const z of [-.18,.22]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.07,10),mat('#34413e'));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.15,z);g.add(wheel)}trafficRoot.add(g);return g}
   function makeFireEngine(){const g=new THREE.Group();box(g,.42,.33,.65,'#c84b3e',-.11,.31,0,{cast:true});box(g,.29,.24,.31,'#e3bd91',-.11,.58,-.04);box(g,.2,.26,.38,'#b83e35',.22,.4,.02,{cast:true});box(g,.25,.2,.025,'#8ec0c0',-.11,.49,.14);box(g,.46,.045,.08,'#eee1bd',0,.71,0);box(g,.12,.1,.09,'#e9c556',0,.78,0);box(g,.035,.22,.36,'#d7d0bd',.39,.46,.13);for(const x of [-.3,.3])for(const z of [-.2,.23]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.105,.105,.07,10),mat('#303c3e'));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.13,z);g.add(wheel)}trafficRoot.add(g);return g}
+
+  // Servicios visibles en el mundo: sólo viajan por calzadas conectadas y habilitadas.
+  function makePoliceCar(){
+    const g=makeVehicle('#ebf0f3');
+    box(g,.36,.06,.28,'#24567b',0,.38,-.13);
+    box(g,.24,.075,.16,'#2f5785',0,.51,.05);
+    box(g,.11,.065,.1,'#be4f4a',-.075,.585,.05);
+    box(g,.11,.065,.1,'#457fc2',.075,.585,.05);
+    return g;
+  }
+  function makeAmbulance(){
+    const g=makeVehicle('#f5f2e9');
+    box(g,.38,.27,.37,'#f4f3eb',0,.43,-.16,{cast:true});
+    box(g,.405,.085,.45,'#d5504c',0,.37,-.14);
+    box(g,.18,.065,.12,'#bb3d3b',0,.61,-.1);
+    box(g,.09,.055,.08,'#e8f4f4',-.08,.59,.08);
+    box(g,.09,.055,.08,'#5eafd4',.08,.59,.08);
+    return g;
+  }
+  function serviceRoadPath(from,to,roads){
+    if(!Array.isArray(from)||!Array.isArray(to))return null;
+    const neighbors=p=>[[p[0],p[1]],[p[0]+1,p[1]],[p[0]-1,p[1]],[p[0],p[1]+1],[p[0],p[1]-1]]
+      .filter(q=>roads.has(key(q[0],q[1])));
+    const a=neighbors(from),b=new Set(neighbors(to).map(p=>key(p[0],p[1])));
+    let best=null;
+    for(const start of a){
+      const q=[start],seen=new Map([[key(start[0],start[1]),null]]);
+      for(let i=0;i<q.length;i++){
+        const cur=q[i],k=key(cur[0],cur[1]);
+        if(b.has(k)){
+          const route=[];for(let j=k;j!==null;j=seen.get(j))route.push(j.split(',').map(Number));
+          route.reverse();if(!best||route.length<best.length)best=route;
+          break;
+        }
+        if(best&&i>40)break;
+        for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+          const n=[cur[0]+dx,cur[1]+dy],nk=key(n[0],n[1]);
+          if(roads.has(nk)&&!seen.has(nk)){seen.set(nk,k);q.push(n)}
+        }
+      }
+    }
+    return best?.length>=2?best.map(([x,y])=>tilePos(x,y)):null;
+  }
+  function spawnEmergencyActors(state,openRoads){
+    const add=(role,mesh,route,description,id,{idle=false,side=0}={})=>{
+      mesh.userData.emergencyRole=role;mesh.userData.emergencyId=id;
+      if(idle||!route?.length){
+        const pos=route?.[0]||tilePos(4,10);
+        mesh.position.set(pos[0]+side,0,pos[1]+.18);
+        return;
+      }
+      routeActors.push({mesh,route,offset:0,speed:1.3,side,emergencyRole:role,
+        selection:{type:role,title:description.title,description:description.description,
+        metrics:description.metrics||[]}});
+    };
+    const recentPolice=(state.policeReport?.recentIncidents||[]).filter(x=>x.status==='atendido'
+      &&Number.isInteger(x.day)&&state.day-x.day>=0&&state.day-x.day<=2&&x.route?.length>1);
+    for(const unit of state.policeReport?.units||[]){
+      const origin=[unit.x,unit.y],dispatched=recentPolice.filter(x=>x.stationX===unit.x&&x.stationY===unit.y);
+      for(let i=0;i<Math.min(3,unit.vehicles||0);i++){
+        const incident=i<unit.activeVehicles?dispatched[i]:null;
+        const trip=incident?serviceRoadPath(origin,[incident.x,incident.y],openRoads):null;
+        const path=trip||(i<unit.activeVehicles?patrolPath(origin,unit.priority,openRoads,state):null);
+        const idle=!path||i>=unit.activeVehicles;
+        const title=incident&&trip?`Patrulla · intervención en ${incident.location}`:`Patrulla ${i+1} · ${unit.name}`;
+        add('Policía',makePoliceCar(),path,{title,description:incident&&trip?
+          'Recorrido de un incidente registrado, reproducido en 3D por las calles de la ciudad.':'Patrullaje de prevención con móvil equipado, personal y calles habilitadas.',
+          metrics:[['Dotación',unit.staff+' trabajadores'],['Prioridad',unit.priority],
+            ['Estado',idle?'Estacionado':incident&&trip?'Intervención reciente':'Patrullando']]},
+          `pol-${unit.x}-${unit.y}-${i}`,{idle,side:(i-1)*.16});
+        if(idle){const a=serviceRoadPath(origin,[4,10],openRoads);const p=a?.[0]||tilePos(unit.x,unit.y);const m=trafficRoot.children.at(-1);m.position.set(p[0]+(i-1)*.42,0,p[1]+.18)}
+      }
+    }
+    const recentFire=(state.fireReport?.recentIncidents||[]).filter(x=>x.status==='controlado'
+      &&Number.isInteger(x.resolvedDay)&&state.day-x.resolvedDay>=0&&state.day-x.resolvedDay<=2&&x.route?.length>1);
+    for(const unit of state.fireReport?.stations||[]){
+      const incident=recentFire.find(x=>x.stationX===unit.x&&x.stationY===unit.y);
+      const trip=incident?serviceRoadPath([unit.x,unit.y],[incident.x,incident.y],openRoads):null;
+      const active=unit.firefighters>=4&&unit.readyDay<=state.day;
+      const path=trip||(!active?null:patrolPath([unit.x,unit.y],'mixto',openRoads,state));
+      const idle=!path||(!trip&&!active);
+      const m=makeFireEngine();
+      add('Bomberos',m,path,{title:incident&&trip?`Bomberos · ${incident.name}`:`Autobomba · ${unit.name}`,
+        description:incident&&trip?'Recorrido de una respuesta real registrada; el cuartel vuelve a estar disponible al cumplir su turno.':
+          'Vehículo del cuartel sujeto a personal, calles y disponibilidad de dotación.',
+        metrics:[['Bomberos',unit.firefighters],['Estado',idle?'En cuartel':incident&&trip?'Respuesta reciente':'Disponible']]},
+        `fire-${unit.x}-${unit.y}`,{idle,side:-.2});
+      if(idle){const road=serviceRoadPath([unit.x,unit.y],[4,10],openRoads);const p=road?.[0]||tilePos(unit.x,unit.y);m.position.set(p[0]-.2,0,p[1]+.13)}
+    }
+    const recentMedical=(state.healthReport?.hospital?.ambulanceDispatches||[]).filter(x=>x.status==='traslado'
+      &&Number.isInteger(x.day)&&state.day-x.day>=0&&state.day-x.day<=2&&x.route?.length>1);
+    for(const unit of state.healthReport?.hospital?.hospitals||[]){
+      const from=[unit.x,unit.y],missions=recentMedical.filter(x=>x.stationX===unit.x&&x.stationY===unit.y);
+      for(let i=0;i<Math.min(3,unit.ambulances||0);i++){
+        const mission=i<unit.activeAmbulances?missions[i]:null;
+        const trip=mission?serviceRoadPath(from,[mission.x,mission.y],openRoads):null;
+        const path=trip;
+        const idle=!trip;
+        const m=makeAmbulance();
+        add('Ambulancia',m,path,{title:mission&&trip?`Traslado sanitario · ${unit.name}`:`Ambulancia ${i+1} · ${unit.name}`,
+          description:mission&&trip?'Traslado registrado hacia un barrio conectado, reproducido en la ciudad 3D.':'Unidad sanitaria estacionada, disponible sólo con equipo, servicios y calle.',
+          metrics:[['Camas',unit.beds],['Dotación operativa',unit.activeAmbulances],['Estado',idle?'En base':'Traslado reciente']]},
+          `amb-${unit.x}-${unit.y}-${i}`,{idle,side:i*.24});
+        if(idle){const a=serviceRoadPath(from,[4,10],openRoads),p=a?.[0]||tilePos(unit.x,unit.y);m.position.set(p[0]+i*.4,0,p[1]-.22)}
+      }
+    }
+  }
+  function patrolPath(origin,priority,roads,state){
+    const targets=(state.buildings||[]).filter(b=>b.kind===(priority==='comercial'?'shop':'home'));
+    if(priority==='mixto')targets.push(...(state.buildings||[]).filter(b=>b.kind==='shop'));
+    const choices=targets.map(b=>serviceRoadPath(origin,[b.x,b.y],roads)).filter(p=>p&&p.length>=3);
+    if(!choices.length)return null;
+    const path=choices.sort((a,b)=>a.length-b.length)[Math.min(2,choices.length-1)];
+    return [...path,...path.slice(0,-1).reverse()];
+  }
   function makeWalker(color){const g=new THREE.Group();box(g,.09,.26,.09,color,0,.3,0);sphere(g,.085,'#efc9a4',0,.51,0,1);trafficRoot.add(g);return g}
   function makeShip(){const g=new THREE.Group();box(g,1.28,.28,.58,'#315d67',0,.22,0,{cast:true});box(g,1.02,.13,.48,'#e2a855',0,.39,-.02);box(g,.34,.38,.34,'#e9dfc6',-.35,.63,-.02);box(g,.28,.18,.3,'#6ba0a6',-.35,.68,.15);for(const [i,x] of [-.48,-.18,.12,.42].entries())box(g,.2,.2,.26,['#c65d4e','#d5a245','#4f8e87'][i%3],x,.55,-.02);box(g,.09,.42,.08,'#d5d0bc',-.43,.95,-.02);trafficRoot.add(g);return g}
   function makePlane(){const g=new THREE.Group();box(g,.18,.17,.98,'#f0e8d4',0,.13,0,{cast:true});box(g,1.12,.07,.28,'#70969a',0,.14,.02,{cast:true});box(g,.37,.055,.2,'#bf6954',0,.17,.35);box(g,.09,.11,.2,'#6b7e83',0,.22,-.42);box(g,.16,.22,.22,'#75a9b0',0,.25,-.31);box(g,.1,.23,.1,'#b95345',-.07,.24,0);trafficRoot.add(g);return g}
-  function sync(state,chosen,nextView){view=nextView;updateCamera();const signature=JSON.stringify([state.day,state.roads,state.buildings,state.projects,state.adaptiveReuseWorks,state.urbanRenewalWorks,state.urbanRenewalNeeds,state.abandoned,state.zones,state.jobs,state.population,state.supply?.orders,state.supply?.portOrders,state.supply?.portVoyages,state.commutes,state.busRoutes,state.utilities?.powerLines,state.utilities?.waterPipes,state.utilities?.sewerLines,state.utilities?.drainLines,state.utilities?.gasLines,state.utilities?.telecomLines,state.utilities?.report?.failures,state.roadAssets?.filter(a=>(a.quality??82)<25),state.utilities?.report?.drainage?.floodedTiles,state.waste?.containers,state.waste?.routes,state.waste?.report?.litterTiles,state.waste?.report?.activeTrucks,state.waste?.report?.recycledTonsDay,state.waste?.report?.transferStoredTons,view.utilityLayer,chosen?.x,chosen?.y]);if(signature===visualSignature){renderer.render(scene,camera);return}visualSignature=signature;clear(dynamicRoot);clear(trafficRoot);routeActors.length=0;const roads=new Set(state.roads.map(r=>key(r[0],r[1]))),closedRoads=new Set((state.roadAssets||[]).filter(a=>(a.quality??82)<25).map(a=>key(a.x,a.y))),openRoads=new Set([...roads].filter(k=>!closedRoads.has(k))),occupied=new Set([...roads,...state.buildings.map(b=>key(b.x,b.y)),...state.projects.map(p=>key(p.x,p.y)),...(state.adaptiveReuseWorks||[]).map(w=>key(w.x,w.y)),...(state.abandoned||[]).map(a=>key(a.x,a.y))]);for(const t of treeSpots)t.mesh.visible=!occupied.has(key(t.x,t.y));
+  function sync(state,chosen,nextView){view=nextView;updateCamera();const signature=JSON.stringify([state.day,state.roads,state.buildings,state.projects,state.adaptiveReuseWorks,state.urbanRenewalWorks,state.urbanRenewalNeeds,state.abandoned,state.zones,state.jobs,state.population,state.supply?.orders,state.supply?.portOrders,state.supply?.portVoyages,state.commutes,state.busRoutes,state.utilities?.powerLines,state.utilities?.waterPipes,state.utilities?.sewerLines,state.utilities?.drainLines,state.utilities?.gasLines,state.utilities?.telecomLines,state.utilities?.report?.failures,state.roadAssets?.filter(a=>(a.quality??82)<25),state.utilities?.report?.drainage?.floodedTiles,state.waste?.containers,state.waste?.routes,state.waste?.report?.litterTiles,state.waste?.report?.activeTrucks,state.waste?.report?.recycledTonsDay,state.waste?.report?.transferStoredTons,state.policeReport,state.fireReport?.recentIncidents,state.fireReport?.stations,state.healthReport?.hospital?.hospitals,state.healthReport?.hospital?.ambulanceDispatches,view.utilityLayer,chosen?.x,chosen?.y]);if(signature===visualSignature){renderer.render(scene,camera);return}visualSignature=signature;clear(dynamicRoot);clear(trafficRoot);routeActors.length=0;const roads=new Set(state.roads.map(r=>key(r[0],r[1]))),closedRoads=new Set((state.roadAssets||[]).filter(a=>(a.quality??82)<25).map(a=>key(a.x,a.y))),openRoads=new Set([...roads].filter(k=>!closedRoads.has(k))),occupied=new Set([...roads,...state.buildings.map(b=>key(b.x,b.y)),...state.projects.map(p=>key(p.x,p.y)),...(state.adaptiveReuseWorks||[]).map(w=>key(w.x,w.y)),...(state.abandoned||[]).map(a=>key(a.x,a.y))]);for(const t of treeSpots)t.mesh.visible=!occupied.has(key(t.x,t.y));
     for(const [x,y] of state.roads)addRoad(dynamicRoot,x,y,roads);for(const a of (state.roadAssets||[]).filter(a=>(a.quality??82)<25)){const [cx,cz]=tilePos(a.x,a.y);box(dynamicRoot,1.5,.24,.2,'#f2e7cc',cx,.24,cz,{cast:true});for(const dx of [-.48,-.16,.16,.48])box(dynamicRoot,.15,.24,.23,'#c84841',cx+dx,.24,cz,{cast:false});sphere(dynamicRoot,.105,'#ef8945',cx,.52,cz,1)}
     if(view.utilityLayer){const networkKey={power:'powerLines',water:'waterPipes',sewer:'sewerLines',drainage:'drainLines',gas:'gasLines',telecom:'telecomLines'}[view.utilityLayer],points=state.utilities?.[networkKey]||[],set=new Set(points.map(([x,y])=>key(x,y))),color={power:'#f0bd4e',water:'#42a9c2',sewer:'#a88bd3',drainage:'#4e9eb9',gas:'#e28b43',telecom:'#a458d4'}[view.utilityLayer];for(const [x,y] of points){const [cx,cz]=tilePos(x,y);for(const [dx,dy] of [[1,0],[0,1]])if(set.has(key(x+dx,y+dy))){const [nx,nz]=tilePos(x+dx,y+dy);line(dynamicRoot,[[cx,.16,cz],[nx,.16,nz]],color,.9)}sphere(dynamicRoot,.07,color,cx,.19,cz,1)}for(const f of (state.utilities?.report?.failures||[]).filter(f=>f.network===view.utilityLayer)){const [fx,fz]=tilePos(f.x,f.y);sphere(dynamicRoot,.16,'#d84e4e',fx,.25,fz,1)}if(view.utilityLayer==='drainage')for(const [x,y] of state.utilities?.report?.drainage?.floodedTiles||[]){const [cx,cz]=tilePos(x,y);plane(dynamicRoot,1.18,1.18,mat('#52a9c2',{transparent:true,opacity:.44,depthWrite:false}),cx,.105,cz)}}
     for(const busLine of (state.busRoutes||[]).filter(r=>r.operational&&r.route?.length>1))for(let i=1;i<busLine.route.length;i++){
@@ -128,7 +243,7 @@ export function createWorld(canvas){
     addSelection(dynamicRoot,chosen);
     const route=buildRoute(openRoads);if(route.length>1){const commuteRoutes=(state.commutes||[]).filter(t=>t.reason==='trabajo').slice().sort((a,b)=>b.workers-a.workers).slice(0,12);for(let i=0;i<commuteRoutes.length;i++){const trip=commuteRoutes[i],path=trip.route.map(([x,y])=>tilePos(x,y));if(path.length>1&&trip.mode!=='bus')routeActors.push({mesh:trip.mode==='walk'?makeWalker(['#476d83','#b46f62','#d3a05a'][i%3]):makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][i%4]),route:path,offset:i*3.7,speed:(trip.mode==='walk'?.5:1.55)/Math.max(1,trip.trafficFactor||1),side:trip.mode==='walk'?(i%2?.83:-.83):(i%2?.23:-.23),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':'Vehículo particular')})}const nonworkRoutes=(state.commutes||[]).filter(t=>['compras','servicios'].includes(t.reason)).slice(0,8);for(let i=0;i<nonworkRoutes.length;i++){const trip=nonworkRoutes[i],path=trip.route.map(([x,y])=>tilePos(x,y)),service=trip.reason==='servicios';if(path.length>1)routeActors.push({mesh:trip.mode==='walk'?makeWalker(service?['#8c83bd','#6f93ae','#9e779d'][i%3]:['#e3bd73','#b88158','#8a9c66'][i%3]):makeVehicle(service?['#8c83bd','#6f93ae','#9e779d'][i%3]:['#e2a54d','#d37e53','#75a6a1'][i%3]),route:trip.roundTrip?[...path,...path.slice(0,-1).reverse()]:path,offset:i*2.9,speed:trip.mode==='walk'?.43:1.25,side:trip.mode==='walk'?(i%2?.72:-.72):(i%2?.3:-.3),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':'Vehículo particular')})}for(const line of (state.busRoutes||[]).filter(b=>b.operational&&b.route?.length>1))for(let i=0;i<Math.min(line.effectiveBuses||0,3);i++){const path=line.route.map(([x,y])=>tilePos(x,y)),drivers=(line.driverIds||[]).map(id=>{for(const h of state.buildings||[])for(const p of h.residents||[])if(p.id===id)return{id,name:p.name||`Vecino #${String(id).slice(-5)}`,age:p.age,status:'Conductor/a',employerName:p.employerName,monthlyWage:p.monthlyWage,home:[h.x,h.y]};return{id,name:`Conductor #${String(id).slice(-5)}`,status:'Conductor/a'}});routeActors.push({mesh:makeBus(),route:path,offset:i*7.4,speed:1.15,side:0,selection:{type:'Colectivo municipal',title:`${line.originName||'Línea'} → ${line.destinationName||'corredor'} · unidad ${i+1}`,description:'Vehículo asignado a una línea real con turnos y capacidad por sentido.',metrics:[['Pasajeros del último turno',line.ridersThisPass||0],['Capacidad',`${line.capacity||0} asientos`],['Conductores',drivers.length],['Frecuencia',`${line.headwayMinutes||0} min`],['Paradas',(line.stops||[]).length],['Pasaje del último mes',`$${line.monthlyFareRevenue||0}`]],people:drivers}})}const wasteRoutes=(state.waste?.routes||[]).filter(r=>r.reachable&&r.path?.length>1);if(wasteRoutes.length){for(let i=0;i<Math.min(4,wasteRoutes.length);i++)routeActors.push({mesh:makeGarbageTruck(),route:wasteRoutes[i].path.map(([x,y])=>tilePos(x,y)),offset:i*4.2,speed:.72,side:i%2?.18:-.18,selection:{type:'Camión municipal',title:wasteRoutes[i].name||`Ruta de recolección ${i+1}`,description:'Recorrido de recolección conectado a su depósito o instalación de descarga.',metrics:[['Contenedores',wasteRoutes[i].containers?.length||0],['Carga del recorrido',`${wasteRoutes[i].payloadTons||0} t`],['Destino',wasteRoutes[i].destination||'Sin destino'],['Distancia',`${wasteRoutes[i].distanceTiles||0} cuadras`]]}})}else for(let i=0;i<Math.min(4,state.waste?.report?.activeTrucks||0);i++)routeActors.push({mesh:makeGarbageTruck(),route,offset:i*15.3,speed:.72,side:i%2?.18:-.18});const ambientResidents=(state.buildings||[]).filter(b=>b.kind==='home').flatMap(h=>(h.residents||[]).map(p=>({home:h,person:p}))).filter(x=>x.person.status==='empleado'||x.person.status==='buscando');for(let i=0;i<Math.min(6,Math.round(state.population/120),ambientResidents.length);i++){const {home,person}=ambientResidents[(i*17)%ambientResidents.length],id=String(person.id||`${home.x}-${home.y}-${i}`),profile={id,name:person.name||`Vecino #${id.slice(-5)}`,age:person.age,status:person.status==='empleado'?'Residente en paseo':'Busca empleo',employerName:person.employerName,monthlyWage:person.monthlyWage,home:[home.x,home.y]};routeActors.push({mesh:makeWalker(['#476d83','#b46f62','#d3a05a'][i%3]),route,offset:i*5.4,speed:.5+i*.04,side:i%2?.83:-.83,selection:{type:'Residente',title:profile.name,description:'Habitante representativo que circula por la red de calles de la ciudad.',metrics:[['Situación laboral',profile.employerName||profile.status],['Ingreso mensual',`$${profile.monthlyWage||0}`],['Hogar',`${home.x+1}, ${home.y+1}`]],people:[profile]}})}}
     for(const order of (state.supply?.orders||[]).filter(o=>['en tránsito','esperando equipo','descargando'].includes(o.status)&&o.route?.length>1)){const path=order.route.map(([x,y])=>tilePos(x,y));routeActors.push({mesh:makeVehicle(order.supplier==='Flete Urgente'?'#e08b52':'#d8b56d'),route:path,deliveryProgress:['esperando equipo','descargando'].includes(order.status)?1:(order.routeProgress??order.progress??0),side:0,selection:{type:'Camión de materiales',title:`${order.supplier} · ${order.label||'Pedido de obra'}`,description:order.statusCause||'Carga contratada por una constructora.',metrics:[['Estado',order.status],['Obra',order.label||'Pedido'],['Materiales',Object.entries(order.items||{}).map(([k,v])=>`${k} ${v}`).join(' · ')||'Carga en traslado'],['Destino',order.destinationLabel||'Patio de constructoras'],['Entrega estimada',order.arrivalDay?`día ${order.arrivalDay}`:'en ruta']]}});if(order.status==='descargando'){const depot=(state.supply.depots||[]).find(d=>d.id===order.destinationId),dest=depot?[depot.x,depot.y]:[4,10],offsets=[[-.42,.04],[.42,-.04],[0,.42]],center=tilePos(dest[0],dest[1]),lift=makeForklift();lift.position.set(center[0]+.62,.01,center[1]+.3);lift.rotation.y=-Math.PI/4;for(let i=0;i<(order.unloadWorkers||0);i++){const worker=makeWalker(i?'#526d82':'#b8745b');worker.position.set(center[0]-.52+i*.16,0,center[1]+.25)}offsets.forEach(([dx,dz],i)=>{const progress=clamp((order.unloadProgress||0)*3-i,0,1),from=tilePos(dest[0],dest[1]),to=tilePos(dest[0]+dx,dest[1]+dz);routeActors.push({mesh:makeCargo(['#c89958','#769784','#bb765d'][i]),route:[from,to],deliveryProgress:progress,side:0})})}}
-    for(const incident of (state.fireReport?.recentIncidents||[]).filter(i=>i.status==='controlado'&&i.route?.length>1&&(state.day-i.resolvedDay)<=1)){const path=incident.route.map(([x,y])=>tilePos(x,y)),progress=clamp(.48+(state.day-incident.resolvedDay)*.52,0,.99);routeActors.push({mesh:makeFireEngine(),route:path,deliveryProgress:progress,side:.12,selection:{type:'Móvil de bomberos',title:`Respuesta en ${incident.name||`parcela ${incident.x+1}, ${incident.y+1}`}`,description:incident.cause||'Incidente reciente atendido por la red de emergencias.',metrics:[['Estado',incident.status],['Daños',`$${incident.damageCost||0}`],['Llegada',incident.responseMinutes?`${incident.responseMinutes} min`:'ruta de respuesta']]}})}
+    spawnEmergencyActors(state,openRoads);
     for(const order of (state.supply?.marketOrders||[]).filter(o=>o.status==='en tránsito'&&o.route?.length>1)){
       const path=order.route.map(([x,y])=>tilePos(x,y)),distance=Math.max(1,path.length-1),start=order.supplierReadyDay??order.orderedDay??state.day,arrival=Math.max(start+1,order.arrivalDay||start+2),timeline=clamp(((state.day||start)-start)/(arrival-start),0,.98),travelled=Math.min(.98,(order.travelledDistance||0)/distance),progress=Math.max(timeline,travelled),grain=order.type==='industrial_raw',cargo=grain?'Grano':'Insumos comerciales';
       routeActors.push({mesh:makeDeliveryTruck(grain?'#c69742':'#c98155'),route:path,deliveryProgress:progress,side:.13,selection:{type:'Camión regional',title:cargo+' · '+(order.quantity||0)+' unidades',description:order.statusCause||'Carga comprada por una empresa y trasladada por calles conectadas.',metrics:[['Empresa',order.businessName||'Comercio local'],['Origen',order.supplier||'Proveedor regional'],['Destino',grain?'Procesadora industrial':'Comercio'],['Ruta',distance+' tramos'],['Llegada prevista','día '+(order.arrivalDay||arrival)]]}})
@@ -143,5 +258,10 @@ export function createWorld(canvas){
   function screenToActor(px,py){updateCamera();const w=canvas.clientWidth,h=canvas.clientHeight,candidates=[];for(const actor of routeActors){if(!actor.selection)continue;const point=actor.mesh.position.clone().project(camera);if(point.z<-1||point.z>1)continue;const sx=(point.x+1)*w/2,sy=(1-point.y)*h/2,d=Math.hypot(sx-px,sy-py),limit=smallScreen?26:20;if(d<=limit)candidates.push({actor,d,z:point.z})}candidates.sort((a,b)=>a.d-b.d||a.z-b.z);return candidates[0]?.actor.selection||null}
   function setView(nextView){view=nextView;updateCamera();renderer.render(scene,camera)}
   window.addEventListener('resize',updateCamera);
-  return {sync,screenToTile,screenToActor,setView};
+  return {sync,screenToTile,screenToActor,setView,
+    getEmergencyActors:()=>trafficRoot.children.filter(m=>m.userData.emergencyRole).map(m=>({
+      type:m.userData.emergencyRole,id:m.userData.emergencyId,visible:m.visible,
+      inScene:m.parent===trafficRoot,position:[m.position.x,m.position.z],
+      moving:routeActors.some(a=>a.mesh===m),routeLength:routeActors.find(a=>a.mesh===m)?.route.length||0
+    }))};
 }

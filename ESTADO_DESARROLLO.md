@@ -5,6 +5,7 @@
 - Las pruebas de navegador ahora esperan una respuesta HTTP del servidor estático local antes de abrir el juego; evitan el fallo intermitente `ERR_CONNECTION_REFUSED` de Actions.
 - La prueba de cámara espera `domcontentloaded`, porque la escena Three.js continúa cargándose mientras los controles de prueba ya pueden usarse. Se reutiliza la espera común en las verificaciones responsive.
 - La batería responsive completa y Actions deben volver a ejecutarse tras este hotfix; no se cambia la jugabilidad ni el alcance/progreso de Alfa 0.130.
+- Ajustada la prueba de presupuesto: el nuevo acordeón de ayuda habitacional ya comparte clase con presupuesto por programas, así que la prueba selecciona por título y comprueba el orden en el panel completo.
 
 ## Ayuda habitacional con cupo y pago municipal
 

@@ -161,6 +161,29 @@ def settle_industrial_vendor_offer(supplier, material, quantity, offer):
     industrial[metric]=industrial.get(metric,0)+quantity
 
 
+def reprice_private_shops():
+    """Competencia minorista mensual: precios según demanda, stock y margen real."""
+    for site in state.get("buildings",[]):
+        if site.get("kind")!="shop":continue
+        firm=site.get("business",{})
+        if firm.get("status")!="abierto":continue
+        old=max(1,int(firm.get("price",18)))
+        sales=max(0,int(firm.get("lastSales",0)))
+        demand=max(0,int(firm.get("lastDemand",0)))
+        stock=max(0,int(firm.get("inventory",0)))
+        profit=int(firm.get("lastProfit",0))
+        # No subir precios ante desabastecimiento: falta oferta, no poder de mercado.
+        if sales>=max(5,demand*3//4) and profit>0 and 0<stock<max(6,sales//2):
+            new=min(36,old+1);cause="Demanda sostenida y existencias bajas"
+        elif (stock>=max(12,sales*2) and sales<max(4,demand//2)) or (profit<0 and stock>=8):
+            new=max(8,old-1);cause="Exceso de inventario o margen negativo"
+        else:continue
+        if new!=old:
+            firm["price"]=new
+            firm["lastPriceChangeDay"]=state["day"]
+            firm["lastPriceCause"]=cause
+            ev("Competencia comercial",f"{site.get('name','Comercio')}: precio {old} → {new}; {cause.lower()}.")
+
 def rebalance_private_staffing(workforce=None):
     """Empresas amplían o reducen vacantes por ventas, liquidez y demanda; despidos identificables."""
     reviewed=0
@@ -3633,6 +3656,7 @@ def tick_one_day():
         tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
         rebalance_private_staffing(economic)
+        reprice_private_shops()
         price_industrial_competition()
         tax_report=collect_municipal_taxes()
         economic=commute_model()

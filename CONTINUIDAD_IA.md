@@ -165,3 +165,14 @@ El mercado mensual Offline ya excluye cantera, hormigonera, aserradero y metalú
 Fase 18 permanece al 85%; avance global sin estimación. No se hizo prueba LAN física, Vercel ni visual con Chromium en esta entrega. Estas pruebas usan una fábrica y una obra controladas, no acreditan todo el ciclo de permiso, obra industrial y habilitación.
 
 **Próxima tarea:** comprobar la cadena completa de metalúrgica nacida de un permiso y contratista, luego inspección, puestos, servicios, acero regional, producción real, pedido y consumo por una obra. Revisar y corregir diferencias de secuencia de especialidades industriales Online/Offline. Luego escasez entre meses y escenarios de 30 años.
+
+
+## Alfa 0.93 · cantera → hormigón también Offline (actual)
+
+Se implementaron las dos especialidades industriales que faltaban en Offline: cantera con reserva geológica finita, trabajadores, servicios, costos y stock; hormigonera con compra de áridos reales a cantera por ruta, costo contra caja privada, pedido industrial, entrega diferida y receta de conversión 2:1. El hormigón producido se ofrece como proveedor local a la construcción y el cobro acredita a la planta; compras desde Obras usan la posición real del proveedor. La simulación mensual ahora procesa cantera → hormigonera → aserradero → metalúrgica, y el mercado de alimentos excluye estas cuatro ramas.
+
+La especialidad `industryType` se fija **al contratar** una fábrica, también cuando la construye automáticamente un promotor. Online y Offline consideran fábricas activas y proyectos ya adjudicados para escoger alimento, cantera, hormigonera, aserradero o metalúrgica, evitando que dos contratos simultáneos cambien de destino al abrir. La fábrica nueva reserva $4.200 de caja privada. En Online ya se aplicaba este descuento al contratar; Offline manual ahora lo paga y la caja al habilitar procede de la reserva. Los proyectos legados sin `industryType` conservan fallback.
+
+Pruebas nuevas: Python verifica reserva de especialidades, extracción, compra vial, entrega y producción 2:1; Node verifica contratación de tres plantas con capital privado, producción con residentes empleados, abastecimiento y conversión real en la segunda mensualidad. Regresiones anteriores de obra con componentes siguen activas. La suite de Chromium en GitHub Actions verifica 390×844 y 1440×900, sin sustituir prueba LAN física/Vercel. Fase 18=90%; global no estimado.
+
+**Siguiente tarea:** ampliar fase 17 con competencia y reasignación de trabajadores bajo insolvencia industrial, órdenes y proveedores ante precios rivales, recuperación/reutilización de plantas cerradas; después ensayar escasez/contratos con décadas en los cuatro perfiles de fase 33. Evitar gastar versiones en retoques de tarjetas. Verificar la ejecución más reciente del workflow y su ZIP.

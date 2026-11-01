@@ -21,7 +21,8 @@ function recoveryFixture(demand=true){
     business:{id:'old-quarry',industryType:'quarry',status:'cerrado',
       cash:-300,closedDay:-100,aggregateStock:0,quarryReserve:73,jobSlots:20}});
   if(demand)city.projects.push({id:'industrial-demand',kind:'road',x:4,y:11,contractor:'Estudio y Obra Norte',
-    workersAssigned:4,status:'cambio_pendiente',
+    workersAssigned:4,status:'cambio_pendiente',label:'Demanda de áridos',cost:0,paid:0,privatePaid:true,
+    stages:['Inspección'],duration:1,elapsed:0,progress:0,stageIndex:0,
     materialsRequired:{aggregate:12},materialsUsed:{aggregate:0}});
   return city;
 }

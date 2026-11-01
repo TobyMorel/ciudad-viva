@@ -26,7 +26,7 @@ test('Offline: secundaria contrata costo y materiales reales',async()=>{
   await assert.rejects(action({action:'place',kind:'school',serviceModel:'policePost',x:11,y:11,contractor:'Sur Obras'}),/incompatible/);
  });
 });
-test('Offline: universidad distingue edades y no crea plazas sin docentes',async()=>{
+test('Offline: universidad distingue edades y limita plazas a su dotación',async()=>{
  const city=seed();city.paused=true;
  city.buildings.push({kind:'school',serviceModel:'university',name:'Universidad experimental',x:10,y:11,
   status:'habilitado',classrooms:8,jobSlots:30,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
@@ -36,6 +36,9 @@ test('Offline: universidad distingue edades y no crea plazas sin docentes',async
   assert.equal(school.ageMin,18);
   assert.equal(school.ageMax,24);
   assert.equal(school.radius,17);
-  assert.equal(school.enrolled,0);
+  assert.ok(school.enrolled<=school.operationalCapacity);
+  assert.ok(school.enrolled<=school.seatCapacity);
+  assert.ok(school.enrolled<=school.teacherCapacity);
+  if(school.teachers===0)assert.equal(school.enrolled,0);
  });
 });

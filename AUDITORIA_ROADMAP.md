@@ -380,3 +380,7 @@ Se comprobó un sistema central de producción y economía: las construcciones d
 ### Alfa 0.97 — fase 17 (80%), 18 (90%)
 
 Los proveedores privados ya celebran contratos de suministro a plazo para la cadena cantera→hormigonera. La materia reservada sale de la oferta disponible, pero el comprador solo recibe inventario al descargar cada remesa; la caja retenida se libera por entrega o se devuelve si el plazo expira. La liquidez empresarial, precio, ubicación y acceso vial determinan los acuerdos. Los estados y saldos quedan auditables por contrato en Economía. Es mecánica B2B verificable pero acotada a áridos: otros sectores, garantías adicionales, sanciones y comercio a largo plazo siguen pendientes, así como partidas de 30 años. No se extrapola a porcentaje global.
+
+### Alfa 0.98 — fase 17 continúa al 80%
+
+El contrato B2B de áridos agrega negociación pagada ante cortes viales, con conservación de lotes, dinero en custodia y la posibilidad de incumplimiento si persiste el corte. Se prueban los dos motores, una sola prórroga, rechazo sin ruta bloqueada, recepción tardía, cajas y ausencia de duplicación. Es una ampliación acotada de cantera→hormigonera: no eleva la cobertura de fase 17, la fase 18 conserva 90% y el avance global sigue no estimable.

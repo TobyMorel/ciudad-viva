@@ -21,10 +21,11 @@ test('Offline: inversión hospitalaria consume caja una vez y agrega capacidad f
   const s=seed();s.money=60000;s.paused=true;
   await scenario(s,async({request,view,reload})=>{
     let city=await view();
-    const clinic=city.buildings.find(b=>b.kind==='civic'),initial=city.money;
+    const clinic=city.buildings.find(b=>b.kind==='civic'),initial=city.money,primaryBefore=city.healthReport.primary.capacityPerDay;
     city=await request({action:'openHospitalWard',x:clinic.x,y:clinic.y});
     assert.equal(city.money,initial-7200);
     assert.equal(city.healthReport.hospital.hospitals[0].beds,12);
+    assert.ok(city.healthReport.primary.capacityPerDay<=primaryBefore,'La internación debe restar capacidad primaria');
     await assert.rejects(request({action:'openHospitalWard',x:clinic.x,y:clinic.y}),/ya dispone/);
     city=await request({action:'expandHospitalWard',x:clinic.x,y:clinic.y});
     assert.equal(city.buildings.find(b=>b.kind==='civic').hospitalWard.beds,20);

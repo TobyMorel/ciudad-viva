@@ -43,3 +43,11 @@ test('Tutorial inicial marca únicamente pasos alcanzados por el estado real',()
  assert.ok(advanced.every(x=>x.done));
  assert.ok(advanced.every(x=>x.description.length>=40));
 });
+
+test('Los cortes de redes son avisos accionables y reflejan la respuesta despachada',()=>{
+ const city={day:20,utilities:{report:{failures:[{id:'u1',network:'power',x:8,y:10,day:19,reason:'inundación',repairCost:500,affectedBuildings:4,status:'avería',emergencyRouteAvailable:true},{id:'u2',network:'water',x:9,y:10,day:18,repairCost:300,affectedBuildings:2,status:'en reparación',remainingDays:1,responseKind:'emergencia'}]}},projects:[],roadAssets:[]};
+ const alerts=collectCityAlerts(city).filter(a=>a.kind==='utility');
+ assert.equal(alerts.length,2);
+ assert.ok(alerts.some(a=>a.title==='Corte de electricidad'&&a.detail.includes('$1000')&&a.action.includes('Servicios')));
+ assert.ok(alerts.some(a=>a.title==='Cuadrilla reparando red'&&a.detail.includes('Respuesta urgente')));
+});

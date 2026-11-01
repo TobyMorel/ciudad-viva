@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.105",
+  "currentVersion": "0.106",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.106",
+      "date": "2026-11-01",
+      "roadmapPhase": 13,
+      "phaseProgress": 40,
+      "overallProgress": null,
+      "changes": [
+        "Cortes de electricidad, agua, cloacas, gas y telecomunicaciones registrados por avería real aparecen en Avisos con causa, edificios afectados y acción en Ciudad → Servicios.",
+        "Ante una avería se puede contratar una reparación normal (costo base, 3 días) o despachar prioridad urgente (costo doble, 1 día), con comprobación de fondos libres después de compromisos y ruta vial alcanzable.",
+        "La cuadrilla deja ruta y progreso persistentes; se representa como vehículo seleccionable sobre el mapa y permanece visible un día tras restaurar el servicio.",
+        "Paridad Online/Offline. Pruebas de costo, plazo, ruta, fondos comprometidos e idempotencia; revisión responsive 390/1440 px. Fase 13: 40%; progreso global aún no estimable."
+      ]
+    },
     {
       "version": "0.105",
       "date": "2026-11-01",
@@ -1023,12 +1036,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.106 · seguimiento de eventos y ayuda guiada",
-      "detail": "Profundizar estados, historial por parcela y respuesta municipal directa con presupuestos y acciones; ampliar casos de enfermedades, cortes y accidentes."
+      "title": "Alfa 0.107 · enfermedades, accidentes y recuperación de crisis",
+      "detail": "Extender aviso → diagnóstico → opciones presupuestadas → respuesta observable y consecuencias para crisis de salud y movilidad."
     },
     {
-      "title": "Alfa 0.107 · renovación 3D por distritos",
-      "detail": "Optimizar rendimiento móvil, materiales, variación de modelos y detalles animados por actividad a escala de barrio."
+      "title": "Rediseño integral de interfaz",
+      "detail": "Después de completar la tanda de mecánicas prioritarias, reemplazar la dirección visual actual por un sistema visual original, coherente, más claro y comprobado en móvil y escritorio."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1156,10 +1169,11 @@
     {
       "phase": 13,
       "title": "Crisis, inspecciones, protestas y acontecimientos",
-      "progress": 35,
-      "summary": "Clima, contratos, averías e incidentes de convivencia y comercio con resultados medidos",
+      "progress": 40,
+      "summary": "Clima, contratos, incidentes y respuesta municipal a cortes de redes con costo, ruta, plazo y cuadrilla visible",
       "pending": [
-        "Biblioteca completa de doce crisis causales y opciones de recuperación persistente."
+        "Biblioteca completa de doce crisis causales y recuperación persistente para cada tipo.",
+        "Ampliar decisiones para enfermedad, accidentes y otras interrupciones de servicio."
       ]
     },
     {

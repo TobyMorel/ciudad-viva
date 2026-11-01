@@ -30,6 +30,14 @@ export function collectCityAlerts(state){
  if(!state)return [];
  const now=Number(state.day)||1,items=[],seen=new Set();
  const push=a=>{if(!site(a.x,a.y)||seen.has(a.id))return;seen.add(a.id);items.push(a)};
+ for(const f of state.utilities?.report?.failures||[]){
+  if(!f||!['avería','en reparación'].includes(f.status)||!site(f.x,f.y))continue;
+  const working=f.status==='en reparación',urgent=f.responseKind==='emergencia';
+  const network=({power:'electricidad',water:'agua potable',sewer:'cloacas',gas:'gas',telecom:'telecomunicaciones'}[f.network]||f.network);
+  push(item('utility','⚡',working?'Cuadrilla reparando red':'Corte de '+network,
+   `${f.affectedBuildings||0} edificios afectados. ${working?`${urgent?'Respuesta urgente':'Reparación programada'}: ${f.remainingDays||0} día(s) restantes.`:`Avería por ${f.reason||'daño de infraestructura'}. Reparación normal $${Number(f.repairCost)||0} (3 días); urgente $${(Number(f.repairCost)||0)*2} (1 día)${f.emergencyRouteAvailable===false?'; falta ruta vial para despacho urgente':''}.`}`,
+   working?'Seguí la reparación en Ciudad → Servicios.':'Abrí Ciudad → Servicios para elegir cuadrilla normal o respuesta urgente y comprobar ruta y presupuesto.',f.x,f.y,f.day,f.id||`utility-${f.network}-${f.x}-${f.y}`,working?1:0));
+ }
  const police=state.policeReport?.recentIncidents||[];
  for(const v of police){
   if(!site(v.x,v.y)||now-(v.day||0)>35||now<(v.day||0))continue;

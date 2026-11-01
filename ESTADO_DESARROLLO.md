@@ -723,10 +723,10 @@ Se agregaron cuatro obras municipales en Construir, con licitación y recursos m
 
 La escena 3D distingue jardines y edificios mayores, y muestra en verde sobre calles transitables el radio del establecimiento seleccionado o previsualizado. Se incorporan regresiones Online/Offline y se actualiza el empaquetado CI. Los estudiantes todavía no se mueven individualmente por las calles de Three.js; tampoco existen carreras universitarias completas ni oferta técnica especializada. Fase 28 queda parcialmente en 75%, progreso global no cuantificable. CI se verificará después de publicar; LAN física y Vercel siguen sin comprobar.
 
-**Siguiente gran mecánica sugerida:** protección social por hogar con elegibilidad objetiva, presupuesto y cupos mensuales realmente acotados y efectos comprobables. Seguir la serie Alfa 0.N: 0.104 → 0.105.
+**Siguiente gran mecánica sugerida:** protección social por hogar con elegibilidad objetiva, presupuesto y cupos mensuales realmente acotados y efectos comprobables. Seguir la serie Alfa 0.N: 0.105 → 0.106.
 
 
-## Alfa 0.105 · interfaz rosa minimalista, avisos físicos y construcción comprensible
+## Alfa 0.105 · interfaz rosa minimalista, avisos físicos y construcción comprensible (histórico)
 
 La interfaz pasa a rosa empolvado/crema, superficies blancas, controles con jerarquía y navegación simplificada sin ocultar el simulador. En el muelle inferior hay **Avisos** y **Ayuda**. El módulo cityGuide.js obtiene alertas de datos calculados por las simulaciones Online/Offline: policía, incendios, ambulancias, basura visible, contenedores casi llenos, tramos dañados y obras pausadas. Cada aviso tiene identificador, posición real y texto accionable; la proyección de la cámara coloca botones 2D sobre el edificio o la calle (giro y zoom incluidos). Pulsar una alerta abre descripción y permite inspeccionar parcela. No se fabrican incidentes sin causa simulada. Los eventos resueltos solo se ven por un período limitado; los incidentes sin respuesta no se confunden con los atendidos. Los avisos son lectura y localización de hechos existentes, no despacho municipal manual.
 
@@ -737,3 +737,9 @@ Los cubos junto a calles corresponden a **contenedores de residuos**, **bolsas d
 Three.js añade detalles decorativos y diferenciación a todas las familias, patios, señalética, jardineras, fachadas, cubiertas, instalaciones industriales y luminarias, además de iluminación más cálida; se mantiene como base el modelado procedural previo, sin importar modelos CAD externos. En móvil se omiten adornos adicionales costosos. **Pendientes**: efectos activos de humo/llamas, tutorial con pasos validados, remodelación total de cada activo con malla de alta calidad, despacho manual de emergencias y mejoras adicionales de rendimiento. No declarar esos sistemas completos. Las regresiones cubren clasificación de avisos, fuentes, guía de materiales, especialidad industrial Offline y UI responsive. Verificar CI después de publicar; red LAN física y Vercel requieren comprobación separada.
 
 **Próxima etapa:** emergencias con decisiones y respuesta municipal sobre el mundo; después optimización visual y tutorial por objetivos persistente.
+
+La fase 13 avanza del 35% al 40%. En el panel Ciudad → Servicios, una avería permite contratar reparación normal al costo base y tres días, o despachar una cuadrilla prioritaria por el doble y un día. La respuesta urgente verifica conectividad vial y caja municipal libre después de compromisos de obra; las acciones repetidas se rechazan. El corte aparece en Avisos con causa, ubicación, afectados y opciones. La ruta y el estado de la cuadrilla persisten y Three.js presenta un vehículo seleccionable durante el trabajo y hasta un día después de restablecer la red. Online y Offline usan el mismo costo, plazo y requisitos. Tests: `test_utility_response_online.py`, `test_utility_response_offline.mjs`, `test_city_guide.mjs` y revisión UI responsive.
+
+**Pendiente:** responder con opciones específicas a enfermedades, accidentes y otras crisis; completar el catálogo causal de fase 13. La UI integral queda como etapa posterior a esta tanda mecánica, según la instrucción del usuario. El progreso global sigue sin estimarse: el registro de roadmap no define pesos verificables comunes para ponderar las 34 fases. Fase 13: 40%.
+
+**Siguiente entrega:** ampliar fase 13 con respuesta sanitaria y movilidad ante accidentes, e integrar sus efectos persistentes. A continuación iniciar el rediseño visual integral solicitado. Mantener controles sin límites para invitados.

@@ -2155,7 +2155,7 @@ def calculate_utility_balance(apply_effects=False):
         "climate":{"heatwave":{"active":heat_active,"targetDay":heat_day,"durationDays":5,"powerDemandMultiplier":1.22 if heat_active else 1.0,"waterDemandMultiplier":1.18 if heat_active else 1.0,"coolingPrepared":climate.get("coolingPreparedForDay")==heat_day,"healthCases":(climate.get("heatForecast") or {}).get("actualHealthCases",0)},"drought":{"active":drought_active,"targetDay":drought_day,"durationDays":30,"sourceReductionPct":45 if drought_active else 0,"waterRestrictions":restrictions_active,"waterCapacityM3Day":round(water_capacity),"emergencyTankerM3Day":tanker_capacity,"demandM3Day":round(water_total),"shortageM3Day":round(max(0,water_total-water_delivered))}},
         "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
         "lineCondition":utility_condition_report(),
-        "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays")} for f in utilities.get("failures",[]) if f.get("status")!="reparada"]}
+        "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays","responseKind","responseStartedDay","responseDurationDays","responseProgress","responseRoute","completedDay")} | {"emergencyRouteAvailable":bool(route_between((4,10),(f.get("x"),f.get("y"))))} for f in utilities.get("failures",[]) if f.get("status")!="reparada" or state.get("day",0)-f.get("completedDay",-99)<=1]}
     utilities["report"]=report
     if apply_effects:
         if coverage<85:
@@ -2289,10 +2289,24 @@ def register_utility_flood_damage(flooded_tiles,day):
         ev("Avería en red de servicios",f"La inundación dañó un tramo de {names[network]} en la calle {x+1},{y+1}. El sector perdió conexión; reparar cuesta $ {costs[network]} y demanda 3 días de cuadrilla.")
         break
 
+def dispatch_utility_repair(failure_id,emergency=False):
+    failure=next((f for f in ensure_utility_state()["failures"] if f.get("id")==str(failure_id) and f.get("status")=="avería"),None)
+    if not failure:raise ValueError("La avería ya fue reparada o tiene una cuadrilla asignada.")
+    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
+    cost=int(failure["repairCost"])*(2 if emergency else 1);duration=1 if emergency else 3;route=route_between((4,10),(failure["x"],failure["y"]))
+    if route and len(route)==1:route=route*2
+    if emergency and not route:raise ValueError("La cuadrilla de emergencia no puede llegar: conectá una ruta vial utilizable al tramo averiado.")
+    if available<cost:raise ValueError(f"Quedan $ {available}; la reparación {'urgente' if emergency else 'programada'} cuesta $ {cost} además de los contratos.")
+    state["money"]-=cost;failure.update({"status":"en reparación","remainingDays":duration,"startedDay":state["day"],"responseKind":"emergencia" if emergency else "programada","responseStartedDay":state["day"],"responseDurationDays":duration,"responseProgress":0,"responseRoute":[list(p) for p in (route or [])]})
+    if emergency:ev("Cuadrilla de emergencia despachada",f"Una unidad de servicios salió por la red vial hacia la avería de {failure['network']} en calle {failure['x']+1},{failure['y']+1}. Costo $ {cost}; prioridad de reparación: un día.")
+    else:ev("Cuadrilla de servicios contratada",f"Reparación programada de {failure['network']} en calle {failure['x']+1},{failure['y']+1}: $ {cost} · 3 días. Una prioridad urgente habría costado $ {cost*2} y durado un día.")
+    return failure
+
 def advance_utility_repairs():
     for failure in ensure_utility_state()["failures"]:
         if failure.get("status")!="en reparación":continue
         failure["remainingDays"]=max(0,int(failure.get("remainingDays",1))-1)
+        duration=max(1,int(failure.get("responseDurationDays",3)));failure["responseProgress"]=round(min(1,(duration-failure["remainingDays"])/duration),3)
         if failure["remainingDays"]==0:
             failure["status"]="reparada";failure["completedDay"]=state.get("day",0)
             ensure_utility_state().setdefault("lineConditions",{})[f"{failure.get('network')}:{failure.get('x')}:{failure.get('y')}"]=82
@@ -5109,13 +5123,9 @@ class Handler(BaseHTTPRequestHandler):
                     if available<cost:self._send(409,{"error":f"Quedan $ {available}; el despliegue de bombas y limpieza cuesta $ {cost}."});return
                     state["money"]-=cost;climate["preparedForDay"]=target;forecast["prepared"]=True
                     ev("Respuesta preventiva desplegada",f"Se limpiaron sumideros y se preposicionaron bombas para el día {target}. $850; la capacidad pluvial aumentará 25% durante la tormenta.")
-                elif action=="repairUtility":
-                    failure=next((f for f in ensure_utility_state()["failures"] if f.get("id")==str(data.get("id")) and f.get("status")=="avería"),None)
-                    if not failure:self._send(409,{"error":"La avería ya fue reparada o tiene una cuadrilla asignada."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<failure["repairCost"]:self._send(409,{"error":f"Quedan $ {available}; la reparación cuesta $ {failure['repairCost']} además de los contratos."});return
-                    state["money"]-=failure["repairCost"];failure["status"]="en reparación";failure["remainingDays"]=3;failure["startedDay"]=state["day"]
-                    ev("Cuadrilla de servicios contratada",f"Reparación de {failure['network']} en calle {failure['x']+1},{failure['y']+1}: $ {failure['repairCost']} · 3 días de trabajo.")
+                elif action in ("repairUtility","repairUtilityEmergency"):
+                    try:dispatch_utility_repair(data.get("id"),action=="repairUtilityEmergency")
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action=="utilityLine":
                     network=data.get("network");x=int(data.get("x",-1));y=int(data.get("y",-1))
                     if network not in ("power","water","sewer","drainage","gas","telecom") or [x,y] not in state["roads"]:self._send(409,{"error":"El tendido necesita un tramo de calle terminado y una red válida."});return

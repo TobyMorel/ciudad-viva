@@ -29,13 +29,13 @@ jobs:
       - name: Regresión Online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs tests/test_industry_offline.mjs tests/test_industrial_recovery_offline.mjs tests/test_industrial_competition_offline.mjs tests/test_private_construction_supply_offline.mjs tests/test_private_staffing_offline.mjs tests/test_forward_contracts_offline.mjs tests/test_retail_road_access_offline.mjs tests/test_maritime_steel_import_offline.mjs tests/test_tourism_events_offline.mjs tests/test_hospital_care_offline.mjs tests/test_police_offline.mjs tests/test_service_models_offline.mjs tests/test_education_tiers_offline.mjs tests/test_factory_selection_offline.mjs tests/test_city_guide.mjs
+        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs tests/test_industry_offline.mjs tests/test_industrial_recovery_offline.mjs tests/test_industrial_competition_offline.mjs tests/test_private_construction_supply_offline.mjs tests/test_private_staffing_offline.mjs tests/test_forward_contracts_offline.mjs tests/test_retail_road_access_offline.mjs tests/test_maritime_steel_import_offline.mjs tests/test_tourism_events_offline.mjs tests/test_hospital_care_offline.mjs tests/test_police_offline.mjs tests/test_service_models_offline.mjs tests/test_education_tiers_offline.mjs tests/test_factory_selection_offline.mjs tests/test_city_guide.mjs tests/test_utility_response_offline.mjs
       - name: Stress económico 30 años (cuatro perfiles)
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.105
+          name: ciudad-viva-alfa-0.106
           path: |
             .
             !.git/**
@@ -60,12 +60,12 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium
       - name: Comprobar UI y panel Economía (390/1440 px)
-        run: node tests/test_ui_layout.mjs
+        run: node tests/test_ui_layout.mjs && node tests/test_utility_response_ui.mjs
       - name: Capturas de comprobación
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.105-responsive
+          name: ciudad-viva-alfa-0.106-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

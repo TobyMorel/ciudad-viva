@@ -160,7 +160,7 @@ if(z?.kind==='factory'&&!b&&!p){
 if(p)actions+='<section class="street-object"><h3>¿Por qué está en obra?</h3><p>'+escHtml(p.cause||p.status||'Requiere materiales, certificados y días de construcción.')+'</p><button data-guide-project="'+escHtml(p.id)+'">Ver cómo terminar esta obra</button></section>';
 
 const streetContainer=(S.waste?.containers||[]).find(c=>c.x===x&&c.y===y);
-const streetLitter=(S.waste?.report?.litterTiles||[]).some(row=>(Array.isArray(row)?row[0]:row.x)===x&&(Array.isArray(row)?row[1]:row.y)===y);
+const streetLitter=(S.waste?.report?.litterTiles||[]).some(row=>row&&(Array.isArray(row)?row[0]:row.x)===x&&(Array.isArray(row)?row[1]:row.y)===y);
 const streetWarning=cityAlertCards().find(alert=>alert.x===x&&alert.y===y&&alert.kind==='road');
 let streetInfo='';
 if(streetContainer){const amount=Number(streetContainer.storedTons)||0,capacity=Number(streetContainer.capacityTons)||2;streetInfo+='<section class="street-object"><h3>Contenedor de residuos</h3><p>Ocupación: '+wfmt(amount)+' de '+wfmt(capacity)+' toneladas. Una base de recolección con camiones y ruta debe vaciarlo; necesita destino y presupuesto.</p><button data-guide-open="guide">¿Cómo funcionan los servicios?</button></section>';}

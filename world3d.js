@@ -349,7 +349,7 @@ export function createWorld(canvas){
       const [px,pz]=tilePos((ax+bx)/2,(ay+by)/2);box(dynamicRoot,ax!==bx?1.7:.085,.009,ay!==by?1.7:.085,'#67d3b8',px,.089,pz,{cast:false});
     }
     for(const c of state.waste?.containers||[]){const [cx,cz]=tilePos(c.x,c.y),fill=(c.storedTons||0)/Math.max(.15,c.capacityTons||2);const bin=new THREE.Group();bin.position.set(cx+.56,.09,cz+.45);box(bin,.34,.48,.3,'#547e70',0,.24,0,{cast:true});box(bin,.36,.055,.32,'#354f48',0,.5,0);box(bin,.22,.035,.2,fill>.75?'#d28b50':fill>.4?'#c0a45c':'#b4c99c',0,.53,0);for(const dx of [-.11,.11])cylinder(bin,.045,.045,.05,'#253b39',dx,.035,.13,10);dynamicRoot.add(bin)}
-    for(const [x,y] of state.waste?.report?.litterTiles||[]){const [cx,cz]=tilePos(x,y);for(const [dx,dz,color] of [[-.24,-.12,'#62745f'],[.2,.1,'#8a785e'],[.02,-.27,'#4c6157']]){const bag=box(dynamicRoot,.2,.22,.18,color,cx+dx,.18,cz+dz,{cast:true});bag.rotation.y=(x*7+y*11)%3*.7}}
+    for(const tile of state.waste?.report?.litterTiles||[]){if(!Array.isArray(tile)||tile.length<2||!Number.isFinite(tile[0])||!Number.isFinite(tile[1]))continue;const [x,y]=tile,[cx,cz]=tilePos(x,y);for(const [dx,dz,color] of [[-.24,-.12,'#62745f'],[.2,.1,'#8a785e'],[.02,-.27,'#4c6157']]){const bag=box(dynamicRoot,.2,.22,.18,color,cx+dx,.18,cz+dz,{cast:true});bag.rotation.y=(x*7+y*11)%3*.7}}
     showServiceCoverage(state,chosen,view,openRoads);
     for(const z of state.zones||[])addZone(dynamicRoot,z);
     const renewalKeys=new Set((state.urbanRenewalWorks||[]).map(w=>key(w.x,w.y)));for(const b of state.buildings)addBuilding(dynamicRoot,b,roads,renewalKeys);

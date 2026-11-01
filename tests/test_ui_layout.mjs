@@ -99,8 +99,6 @@ try{
     await page.screenshot({path:'ui-captures/'+name+'-economia.png'});
     await page.locator('#popupClose').click();
     await page.locator('[data-popup="city"]').click();
-    await page.waitForTimeout(250);
-    console.log('CIUDAD PANEL DIAGNÓSTICO',name,JSON.stringify(await page.evaluate(()=>({hidden:document.querySelector('#panelPopup')?.classList.contains('hidden'),body:document.querySelector('#popupContent')?.textContent?.slice(0,100),cityButton:!!document.querySelector('[data-popup="city"]')}))),errors);
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
     await page.locator('[data-city-section-button="tourism"]').click();
     const eventUI=await page.evaluate(()=>{

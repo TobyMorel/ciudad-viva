@@ -52,12 +52,13 @@ export function collectCityAlerts(state){
   push(item('health','✚','Emergencia sanitaria atendida','Traslado de '+(v.patients||1)+' paciente(s). '+(v.station||'Centro hospitalario')+'.','Revisá Salud para ver camas, profesionales, ambulancias y atención pendiente.',v.x,v.y,v.day,v.id||`amb-${v.x}-${v.y}-${v.day}`,2));
  }
  for(const raw of state.waste?.report?.litterTiles||[]){
+  if(!raw)continue;
   const x=Array.isArray(raw)?raw[0]:raw.x,y=Array.isArray(raw)?raw[1]:raw.y;
   if(!site(x,y))continue;
   push(item('litter','🗑','Basura acumulada en la calle','Hay residuos visibles sobre este tramo. No son materiales disponibles para construir.','Construí una base de recolección con camiones, calles conectadas y capacidad de disposición. Revisá los contenedores y las rutas en Ciudad → Servicios.',x,y,now,`litter-${x}-${y}`,1));
  }
  for(const c of state.waste?.containers||[]){
-  if(!site(c.x,c.y))continue;
+  if(!c||!site(c.x,c.y))continue;
   const capacity=Math.max(.15,Number(c.capacityTons)||2),stored=Math.max(0,Number(c.storedTons)||0);
   if(stored<capacity*.75)continue;
   push(item('waste','🗑','Contenedor casi lleno',`Residuos: ${stored.toFixed(2)} de ${capacity.toFixed(2)} toneladas.`,'Construí una base de recolección y verificá ruta, camiones, destino y presupuesto. Tocá la parcela para ver más detalles.',c.x,c.y,now,`container-${c.id||c.x+'-'+c.y}`,1));
@@ -69,7 +70,7 @@ export function collectCityAlerts(state){
    'Abrí Obras para resolver materiales, financiación, pausa o cambio contractual.',project.x,project.y,now,`project-${project.id}`,1));
  }
  for(const r of state.roadAssets||[]){
-  if(!site(r.x,r.y)||Number(r.quality??100)>=25)continue;
+  if(!r||!site(r.x,r.y)||Number(r.quality??100)>=25)continue;
   push(item('road','🚧','Calle en mal estado','Este tramo está deteriorado y puede impedir paso de camiones y vehículos de emergencia.','Revisá Ciudad → Mantenimiento. Sin una calle utilizable la obra y el servicio no pueden avanzar.',r.x,r.y,now,`road-${r.x}-${r.y}`,1));
  }
  return items.sort((a,b)=>a.priority-b.priority||b.day-a.day||a.id.localeCompare(b.id)).slice(0,32);

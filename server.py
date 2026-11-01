@@ -160,6 +160,75 @@ def settle_industrial_vendor_offer(supplier, material, quantity, offer):
     industrial=state.setdefault("localIndustry",{})
     industrial[metric]=industrial.get(metric,0)+quantity
 
+
+def rebalance_private_staffing():
+    """Empresas amplían o reducen vacantes por ventas, liquidez y demanda; despidos identificables."""
+    reviewed=0
+    for site in state.get("buildings",[]):
+        if site.get("kind") not in ("shop","factory"):continue
+        firm=site.get("business",{})
+        if firm.get("status")!="abierto":continue
+        slots=int(firm.get("jobSlots",site.get("jobSlots",12 if site["kind"]=="shop" else 20)))
+        sales=(int(firm.get("lastSales",0)) if site["kind"]=="shop" else
+               max(0,int(firm.get("lifetimeIndustrialSales",0))-int(firm.get("staffingSalesCheckpoint",0))))
+        if site["kind"]=="factory" and firm.get("industryType","food")=="food":
+            sales=max(sales,int(firm.get("lastLocalSales",0)))
+        cash=int(firm.get("cash",0))
+        profit=int(firm.get("lastProfit",0))
+        demand=int(firm.get("lastDemand",0)) if site["kind"]=="shop" else sales
+        max_slots=18 if site["kind"]=="shop" else 24
+        min_slots=4 if site["kind"]=="shop" else 8
+        product_stock=(int(firm.get("inventory",0)) if site["kind"]=="shop" else
+                       int(firm.get({"quarry":"aggregateStock","concrete":"concreteStock",
+                                     "sawmill":"timberStock","metalworks":"componentStock"}.get(
+                                         firm.get("industryType"),"inventory"),0)))
+        staffed=int(firm.get("lastWorkers",0))
+        equip_cost=150 if site["kind"]=="shop" else 240
+        strong=(demand>sales+3 and sales>=max(3,slots//3) and profit>0 and staffed>=max(1,slots-2)
+                if site["kind"]=="shop" else
+                sales>=max(6,slots//2) and product_stock<max(10,sales) and staffed>=max(1,slots-2))
+        weak=((sales<=max(1,slots//6) and profit<0 and product_stock>=8)
+              if site["kind"]=="shop" else (sales<=1 and product_stock>=20))
+        firm["lowDemandMonths"]=firm.get("lowDemandMonths",0)+1 if weak else 0
+        change=0
+        if strong and slots<max_slots and cash>equip_cost+max(1200,3*(slots+1)*int(firm.get("wage",10))):
+            change=1
+            firm["cash"]=cash-equip_cost
+            state["supply"]["businessEquipmentCash"]=state["supply"].get("businessEquipmentCash",0)+equip_cost
+            firm["lastEquipmentInvestment"]=equip_cost
+            ev("Expansión empresarial",f"{firm.get('name',site.get('name'))} invirtió $ {equip_cost} en equipamiento y abrió una vacante por ventas verificadas.")
+        elif firm["lowDemandMonths"]>=2 and slots>min_slots:
+            change=-min(2,slots-min_slots)
+            firm["lastEquipmentInvestment"]=0
+            ev("Reducción de plantilla",f"{firm.get('name',site.get('name'))} eliminó {-change} vacantes por ventas bajas e inventario inmóvil.")
+        else:firm["lastEquipmentInvestment"]=0
+        if change:
+            firm["jobSlots"]=slots+change
+            site["jobSlots"]=slots+change
+            state["jobs"]=max(0,int(state.get("jobs",0))+change)
+            firm["lastStaffingChange"]=change
+            firm["lastStaffingDay"]=state["day"]
+            if change<0:
+                people=[person for building in state.get("buildings",[]) if building.get("kind")=="home"
+                        for person in building.get("residents",[])
+                        if person.get("employerId")==firm.get("id") and person.get("status")=="empleado"]
+                people.sort(key=lambda p:(p.get("attendance",0),str(p.get("id",""))))
+                for person in people[:max(0,len(people)-(slots+change))]:
+                    person.update({"previousEmployer":firm.get("name",site.get("name")),
+                        "previousEmployerId":firm.get("id"),"status":"buscando",
+                        "employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,
+                        "unemployedSinceDay":state["day"],
+                        "unemploymentReason":"reducción de plantilla por falta de demanda"})
+                state.setdefault("unemploymentEvents",[]).append({
+                    "day":state["day"],"employerId":firm.get("id"),"employerName":firm.get("name"),
+                    "workers":min(len(people),-change),"cause":"reducción de actividad"})
+                state["unemploymentEvents"]=state["unemploymentEvents"][-80:]
+        else:firm["lastStaffingChange"]=0
+        firm["staffingSalesCheckpoint"]=int(firm.get("lifetimeIndustrialSales",0))
+        reviewed+=1
+    return reviewed
+
+
 def price_industrial_competition():
     """Reajuste al cierre mensual: precio cae con stock ocioso, sube con ventas."""
     for site in state.get("buildings",[]):
@@ -3468,6 +3537,7 @@ def tick_one_day():
         simulate_airport_month(economic)
         tourism_tax=simulate_hotel_month(economic)
         activity=simulate_business_month(economic)
+        rebalance_private_staffing()
         price_industrial_competition()
         tax_report=collect_municipal_taxes()
         economic=commute_model()

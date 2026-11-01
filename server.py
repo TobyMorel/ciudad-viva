@@ -3646,24 +3646,30 @@ def advance_utility_backup_fuel():
                 ev("Grupo electrógeno sin combustible",f"{building.get('name','Servicio crítico')} agotó su reserva. Reabastecer para recuperar el respaldo eléctrico.")
 
 def advance_maritime_steel_shipments():
-    """Cargamentos prepagados llegan después del viaje; la ruta y el puerto siguen siendo requisitos."""
+    """La cuota diaria de cada puerto se comparte entre todos sus buques."""
     supply=state["supply"]
-    for shipment in supply.setdefault("steelShipments",[]):
+    shipments=supply.setdefault("steelShipments",[])
+    for shipment in shipments:
         if shipment.get("status") not in ("en viaje","descarga parcial") or state["day"]<shipment["arrivalDay"] or shipment.get("lastUnloadedDay")==state["day"]:continue
         port=next((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("x")==shipment["port"][0] and b.get("y")==shipment["port"][1] and b.get("operational")),None)
         if not port or route_between(tuple(shipment["port"]),(4,10)) is None:
             shipment["statusCause"]="Puerto inhabilitado o conexión vial interrumpida"
             continue
-        remaining=max(0,int(shipment["quantity"])-int(shipment.get("deliveredUnits",0)))
         daily_capacity=max(0,int(port.get("unloadingCapacity",20)))
-        qty=min(remaining,daily_capacity)
+        # Reconstruir el uso desde remesas conserva la cuota tras recarga y reintentos.
+        # Las remesas antiguas sin volumen diario usan un límite conservador.
+        used_today=sum(max(0,int(other.get("lastUnloadedUnits",min(int(other.get("deliveredUnits",0)),daily_capacity))))
+                       for other in shipments if other.get("port")==shipment["port"] and other.get("lastUnloadedDay")==state["day"])
+        remaining=max(0,int(shipment["quantity"])-int(shipment.get("deliveredUnits",0)))
+        qty=min(remaining,max(0,daily_capacity-used_today))
         if not qty:
-            shipment["statusCause"]="Puerto sin capacidad de descarga"
+            shipment["statusCause"]="Puerto sin cupo diario de descarga"
             continue
         supply["suppliers"]["Corralón del Puerto"]["steel"]+=qty
         shipment["deliveredUnits"]=shipment.get("deliveredUnits",0)+qty
         shipment["status"]="entregado" if shipment["deliveredUnits"]>=shipment["quantity"] else "descarga parcial"
         shipment["lastUnloadedDay"]=state["day"]
+        shipment["lastUnloadedUnits"]=qty
         shipment["statusCause"]="" if shipment["status"]=="entregado" else "Descarga parcial pendiente"
         if shipment["status"]=="entregado":shipment["deliveredDay"]=state["day"]
         supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+qty

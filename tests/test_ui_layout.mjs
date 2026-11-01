@@ -68,6 +68,7 @@ try{
         return {visible,overflow:el.scrollWidth>el.clientWidth+3};
       });
     });
+    await page.waitForFunction(()=>document.querySelector('#popupContent')?.textContent?.includes('Contratos privados de materias primas'),{timeout:10000}).catch(()=>{});
     const extensionCount=await page.locator('[data-renegotiate-contract="ui-contract"]').count();
     assert.equal(extensionCount,1,name+': prórroga por corte vial accesible · '+(await page.locator('#popupContent').innerText()).slice(0,1200));
     assert.equal(contractLayout.length,1,name+': contrato privado visible en Economía');

@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.95",
+  "currentVersion": "0.96",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.96",
+      "date": "2026-10-31",
+      "roadmapPhase": 17,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Las obras privadas autónomas y las inversiones comerciales delegadas ya no generan materiales instantáneos: cotizan cada lote con stock, oferta industrial competitiva, costo de flete, red vial y capacidad real de patio o depósito. La compra descuenta capital privado, reserva existencias y emite órdenes con transporte y descarga; la construcción espera la llegada, incluso con dinero disponible.",
+        "Las empresas privadas ajustan plantillas al cierre mensual según demanda solvente, ventas, excedentes, caja y ocupación laboral. La expansión exige comprar equipamiento con caja empresarial y abre vacantes efectivas; dos períodos de demanda débil pueden recortar puestos, registrar desempleo y devolver residentes identificables a búsqueda laboral. La inversión no se acredita al municipio y queda registrada como compra de equipamiento.",
+        "Capacidad metalúrgica ampliable mediante contratación y equipo en ambas modalidades. Nuevas regresiones verifican transporte privado, bloqueo por falta de espacio, expansión de comercios, despidos identificables y reducción industrial. Modo Online/Offline y guardados antiguos siguen usando defaults compatibles. Fase 17: 75%; fase 18 permanece en 90%; global no estimable."
+      ]
+    },
     {
       "version": "0.95",
       "date": "2026-10-31",
@@ -893,12 +905,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 18 · aserradero completo y bloqueo de obra",
-      "detail": "Probar en ambas modalidades que la fábrica se construye, contrata, opera con servicios y reserva, vende tablas por carretera y una obra detenida se reanuda al recibir el lote."
+      "title": "Fase 17 · contratos de suministro a plazo y competencia minorista",
+      "detail": "Reservas, fechas de entrega y pagos entre empresas; impuestos, alquileres y crecimiento ante rivales, sin producir mercadería gratis."
     },
     {
-      "title": "Fase 18 · acero y comercio exterior",
-      "detail": "Completar el acero local/importado con capacidades finitas, transporte por corredor, inventario y consumo de construcción; después avanzar otras fases prioritarias del roadmap."
+      "title": "Fase 33 · escenarios de 30 años",
+      "detail": "Simulaciones pequeña, metropolitana, portuaria y turística; detectar fallos de empleo, vivienda, energía, logística y presupuesto."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1062,11 +1074,11 @@
     {
       "phase": 17,
       "title": "Empresas privadas, inversión y competencia real",
-      "progress": 70,
-      "summary": "Inversión y quiebra privadas, rehabilitación de plantas y competencia por pedidos industriales entre firmas con precios, existencias, rutas y balances de caja propios.",
+      "progress": 75,
+      "summary": "Empresas privadas compiten, se financian y pueden quebrar/reabrir; promotores pagan transporte de materiales y firmas expanden/reducen sus puestos por resultados económicos, con residentes desempleados identificables.",
       "pending": [
-        "Competencia minorista de varias firmas con expansión/reducción de plantilla y alquiler; inversión privada en varios sectores.",
-        "Negociación y contratos a plazo de grandes clientes, cierre de mercado y reubicación laboral en escenarios plurianuales."
+        "Consolidar competencia minorista, alquileres comerciales y supervivencia empresarial con expansión/relocalización entre parcelas.",
+        "Contratos de largo plazo entre proveedores y clientes; estrés por recursos y desempleo sostenido durante partidas de 30 años."
       ]
     },
     {
@@ -1075,9 +1087,9 @@
       "progress": 90,
       "summary": "Cadenas materiales locales de alimentos, áridos→hormigón, bosque→madera y acero regional→metalúrgica→componentes. Stock, servicios, personal, caja, producción y transporte vial limitan oferta y consumo en obras.",
       "pending": [
-        "Integrar una fábrica construida en partida con personal, servicios, insumos, producción y venta bajo escasez y competencia en ambos modos",
-        "Completar acero local primario, comercio regional y abastecimiento físico de depósitos",
-        "Verificar ciclo de construcción y apertura de metalúrgica desde adjudicación en ambos motores"
+        "Verificar desde un permiso industrial todo el ciclo de una metalúrgica habilitada: trabajadores, acero, producción, venta, transporte y consumo en obra",
+        "Completar acero local primario, comercio regional y abastecimiento físico de depósitos con rutas y competencia",
+        "Evaluar escasez sostenida y cierres de corredores en simulaciones plurianuales"
       ]
     },
     {

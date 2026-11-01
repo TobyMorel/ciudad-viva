@@ -601,7 +601,7 @@ def ensure_person_work_profile(person):
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
     model=service_model(site) if site.get("kind")=="civic" else None
-    if model and model.get("socialCare"):
+    if model and (model.get("socialCare") or model.get("elderCare")):
         category,label,minimum="salud","Acompañamiento social",48
     if site.get("kind")=="civic" and (model or {}).get("police"):
         category,label,minimum="administracion","Seguridad municipal",48
@@ -666,7 +666,7 @@ def new_finance():
     return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
 def new_social_services():
-    return {"housingAidBudget":0,"lastReport":{},"history":[],"shelterResidents":[],"shelterReport":{}}
+    return {"housingAidBudget":0,"lastReport":{},"history":[],"shelterResidents":[],"shelterReport":{},"elderCareReport":{}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -1165,6 +1165,44 @@ def update_social_shelters(workplaces=None, funding_pct=None):
     social["shelterReport"]=report
     return report
 
+def update_older_adult_care(workplaces=None, funding_pct=None):
+    """Programa diurno: visitas domiciliarias reales, limitadas por rutas, plantilla, redes y caja."""
+    social=state.setdefault("socialServices",new_social_services())
+    if workplaces is None:workplaces=commute_model().get("workplaces",[])
+    if funding_pct is None:funding_pct=100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+    staff={(w.get("x"),w.get("y")):max(0,int(w.get("staffedJobs",0))) for w in workplaces}
+    centers=[]
+    for b in state.get("buildings",[]):
+        care=b.get("elderCare")
+        if not care or b.get("kind")!="civic" or b.get("status") not in ("habilitado","operativo"):continue
+        workers=staff.get((b.get("x"),b.get("y")),0);access=b.get("utilityAccess",{})
+        utilities=min(max(0,min(100,float(access.get(k,0)))) for k in ("powerServedPct","waterServedPct","wastewaterTreatedPct"))
+        route=route_between((b["x"],b["y"]),(4,10));connected=bool(route)
+        capacity=min(max(0,int(care.get("careSlots",36))),workers*4)
+        capacity=math.floor(capacity*utilities/100*max(0,min(100,funding_pct))/100) if connected else 0
+        centers.append({"building":b,"id":f"elder-care-{b['x']}-{b['y']}","name":b.get("name","Centro de acompañamiento domiciliario"),"capacity":capacity,"staff":workers,"utilities":utilities,"connected":connected,"monthlyCost":int(b.get("monthlyCost",1450))})
+    candidates=[]
+    for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
+        for person in home.get("residents",[]):
+            age=int(person.get("age",0));person["careNeed"]="alta" if age>=80 else "moderada" if age>=75 else "no requerida"
+            person["careStatus"]="sin servicio" if age>=75 else "no requiere"
+            if age>=75:candidates.append((0 if age>=80 else 1,-age,home,person))
+    candidates.sort(key=lambda row:(row[0],row[1],str(row[3].get("id",""))))
+    assigned=set();facilities=[]
+    for center in centers:
+        b=center["building"];used=0
+        for _,__,home,person in candidates:
+            if person.get("id") in assigned or used>=center["capacity"]:continue
+            route=route_between((b["x"],b["y"]),(home["x"],home["y"]))
+            model=service_model(b);radius=int(model.get("radius",10)) if model else 10
+            if not route or len(route)-1>radius:continue
+            person["careStatus"]="visita mensual asignada";person["careCenterId"]=center["id"];person["careVisitDay"]=state.get("day",1)
+            assigned.add(person.get("id"));used+=1
+        facilities.append({k:v for k,v in center.items() if k!="building"}|{"served":used,"waitingNearby":sum(1 for _,__,home,person in candidates if person.get("id") not in assigned and route_between((b["x"],b["y"]),(home["x"],home["y"])) and len(route_between((b["x"],b["y"]),(home["x"],home["y"])))<=11)})
+    report={"eligible":len(candidates),"served":len(assigned),"waiting":len(candidates)-len(assigned),"highNeed":sum(1 for row in candidates if row[0]==0),"monthlyCost":sum(x["monthlyCost"] for x in centers),"fundingPct":round(max(0,min(100,funding_pct))),"facilities":facilities,"month":(state.get("day",1)-1)//30}
+    social["elderCareReport"]=report
+    return report
+
 def displace_home_residents(home, reason, days=7):
     """Move a disaster-hit household into the public shelter queue without changing population."""
     if not home or home.get("kind")!="home" or home.get("emergencyReturnDay",0)>state.get("day",1):return 0
@@ -1608,6 +1646,7 @@ SERVICE_MODELS={
  "medicalCenter":{"kind":"civic","label":"Policlínico municipal","cost":14200,"days":85,"radius":10,"jobs":24,"care":True},
  "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
  "socialShelter":{"kind":"civic","label":"Centro de acogida temporal","cost":14800,"days":92,"radius":8,"jobs":12,"beds":30,"socialCare":True,"monthlyCost":1180},
+ "elderCare":{"kind":"civic","label":"Centro de acompañamiento domiciliario","cost":12600,"days":78,"radius":10,"jobs":10,"careSlots":36,"elderCare":True,"monthlyCost":1450},
  "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
  "policeStation":{"kind":"civic","label":"Comisaría distrital","cost":16500,"days":90,"radius":11,"jobs":22,"police":2},
  "policeHQ":{"kind":"civic","label":"Central de seguridad","cost":28700,"days":124,"radius":16,"jobs":36,"police":3},
@@ -4028,6 +4067,7 @@ def move_households():
     report=update_social_shelters()
     report.update({"housingDemand":max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary)),"rehousedThisMonth":rehoused,"admittedThisMonth":admitted})
     social["shelterReport"]=report
+    update_older_adult_care()
 
 def process_port_logistics():
     """Exportaciones reales de comercios: camión por calles, patio limitado y barco por demanda."""
@@ -4526,6 +4566,10 @@ def tick_one_day():
                 if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":day}
                 if model.get("socialCare"):
                     building["socialShelter"]={"beds":model["beds"],"residents":[],"openedDay":day}
+                    building["monthlyCost"]=model["monthlyCost"]
+                    operating_cost=building["monthlyCost"]
+                elif model.get("elderCare"):
+                    building["elderCare"]={"careSlots":model["careSlots"],"openedDay":day}
                     building["monthlyCost"]=model["monthlyCost"]
                     operating_cost=building["monthlyCost"]
                 elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
@@ -5105,7 +5149,7 @@ def public_state(player_id=None):
     view["workplaces"]=commute["workplaces"]
     view["laborMarket"]=commute["laborMarket"]
     view["trainingCatalog"]=training_catalog()
-    view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"]);view["policeReport"]=police_service_report(commute["workplaces"]);view["roadIncidentReport"]=road_incident_report()
+    view["socialCareReport"]=update_older_adult_care(commute["workplaces"]);view["healthReport"]=health_service_report(commute["workplaces"]);view["educationReport"]=education_service_report(commute["workplaces"]);view["fireReport"]=fire_service_report(commute["workplaces"]);view["policeReport"]=police_service_report(commute["workplaces"]);view["roadIncidentReport"]=road_incident_report()
     bank=state["finance"]["businessBank"]
     view["finance"]["businessBank"].update({"openLoans":sum(b.get("business",{}).get("creditDebt",0) for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"),"borrowers":sum(1 for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("creditDebt",0)>0)})
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")

@@ -554,3 +554,8 @@ Offline delega el adaptador a un Worker de módulo (`offline_worker.js`); `offli
 La hora es parte del estado de la partida: `timeOfDayMinutes` usa 0–1440 y se persiste. El factor de velocidad multiplica el tiempo de juego; una hora simulada transcurre cada segundo real a ×1. El calendario cambia únicamente al cruzar medianoche. Esta escala permite que la hora visible corresponda con demanda y horarios de movilidad, manteniendo el avance diario existente a un ritmo jugable. El host online es autoritativo; el render 3D interpola la luz entre actualizaciones de estado. Offline guarda la misma variable en el snapshot local.
 
 El mapa alterna gradualmente iluminación solar y artificial; farolas muestran luz local cálida y reflejo de suelo nocturnos. La hora/franja activa se muestra junto al calendario y en el panel de Tráfico. No se recalcula el modelo diario de colas en cada frame: conserva las nueve franjas discretas y muestra el informe de la franja vigente.
+
+
+## Alfa 0.134 · cuidado de personas mayores
+
+El centro de acompañamiento domiciliario ofrece acompañamiento domiciliario, no residencia permanente. La elegibilidad se deriva de edad real (75+; prioridad alta desde los 80), sin sacar personas de su hogar ni modificar población. La asignación mensual exige personal, ruta vial hasta el hogar, servicios de electricidad/agua/saneamiento y presupuesto efectivo de Servicios. Capacidad: cuatro visitas por trabajador, limitada por el cupo físico. Es una simplificación intencional del primer corte; transporte accesible, cuidados por nivel de dependencia y seguimiento longitudinal quedan pendientes.

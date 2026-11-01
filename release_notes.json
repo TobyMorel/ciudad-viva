@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.133",
+  "currentVersion": "0.134",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.134",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 88,
+      "overallProgress": null,
+      "changes": [
+        "Se incorpora el Centro de acompañamiento domiciliario como nueva obra municipal: 36 plazas máximas, diez empleos, radio vial de diez calles, 78 días de obra y operación de $1.450/mes.",
+        "El acompañamiento domiciliario atiende residentes identificados de 75 años o más; prioriza a quienes tienen 80+, sin trasladarlos de sus hogares. Cada trabajador cualificado permite hasta cuatro visitas mensuales.",
+        "Los cupos efectivos dependen de personal, ruta vial al hogar, electricidad, agua, saneamiento y financiación del programa de servicios. Economía informa elegibles, visitas, espera y capacidad por centro.",
+        "La lógica se integra a Online y Offline; se añade una regresión de límites por plantilla, accesibilidad, redes y financiación. No se estima progreso global: aún no hay pesos comunes verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.133",
       "date": "2026-11-01",

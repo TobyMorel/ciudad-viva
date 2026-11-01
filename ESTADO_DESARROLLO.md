@@ -1,3 +1,13 @@
+# Estado de desarrollo · Alfa 0.134
+
+## Atención domiciliaria a personas mayores
+
+Construir incorpora un Centro de acompañamiento domiciliario ($12.600, 78 días, 10 puestos y operación de $1.450/mes). El centro no traslada residentes: organiza visitas domiciliarias mensuales a personas identificadas de 75 años o más y prioriza a mayores de 80. Cada trabajador con aptitud sanitaria habilita hasta cuatro visitas, hasta el máximo del centro.
+
+La capacidad efectiva cae si faltan trabajadores, acceso vial al hogar, electricidad, agua, saneamiento o financiación del programa de Servicios. Economía presenta elegibles, visitas realizadas, espera, personas con necesidad alta y el estado de cada centro. El motor Online y Offline calcula la asignación en cierres mensuales; no altera el padrón de hogares.
+
+Verificado: 93 pruebas Python Online y 63 pruebas Node Offline; estrés de 30 años × cuatro perfiles; Playwright responsive en 390×844 y 1440×900 sin errores ni texto recortado en el catálogo. LAN física y despliegue Vercel siguen sin probar en dos equipos. Fase 28: 88% orientativo y parcial. Avance global no estimable por falta de una ponderación común verificable para las 34 fases.
+
 # Estado de desarrollo · Alfa 0.133
 
 ## Inicio directo de construcción

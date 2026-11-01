@@ -1,11 +1,11 @@
-# Siguiente entrega · después de Alfa 0.133
+# Siguiente entrega · después de Alfa 0.134
 
-1. Avanzar fase 28 con atención a adultos mayores, enlazando edad de residentes, accesibilidad, personal, transporte, cupos, salud y financiación.
+1. Completar fase 28: añadir transporte accesible/acompañamiento por nivel de dependencia y seguimiento de bienestar para adultos mayores; el primer centro domiciliario ya está implementado.
 2. Conectar protección a hogares desplazados y medir recuperación social longitudinal; después educación técnica con destinos laborales reales.
 3. Mantener el flujo sin licitación por edificio: validar que la asignación automática respete capacidad en salas Online y Offline, que la ficha de costo coincida con el cobro final y que una obra se pueda completar con materiales/inspección.
 4. Ejecutar suites funcionales, estrés y chequeos responsive a 390×844 y 1440×900; publicar cada versión en `main`, verificar SHA/Actions/Vercel y generar ZIP completo desde el commit publicado.
 
-Fase actual de desarrollo funcional: 28 (85% orientativo; parcial). Esta entrega también ajusta la fase 2 de construcción, que permanece en 75% orientativo. Próximo sistema de jugabilidad: atención a adultos mayores. Progreso global no estimable: no hay ponderación común verificable para las 34 fases. LAN física pendiente.
+Fase actual de desarrollo funcional: 28 (88% orientativo; parcial). Esta entrega también ajusta la fase 2 de construcción, que permanece en 75% orientativo. Próximo sistema de jugabilidad: movilidad accesible y resultados longitudinales de la atención social. Progreso global no estimable: no hay ponderación común verificable para las 34 fases. LAN física pendiente.
 
 # Siguiente entrega · después de Alfa 0.132
 
@@ -14,7 +14,7 @@ Fase actual de desarrollo funcional: 28 (85% orientativo; parcial). Esta entrega
 3. Incorporar formación técnica con oferta educativa real, población elegible y destinos laborales; evitar barras aisladas.
 4. Ejecutar Online, Offline, estrés a décadas y la UI móvil/escritorio si cambia; publicar a `main`, verificar SHA, Actions y Vercel y adjuntar un ZIP integral desde el commit publicado.
 
-Fase actual: 28 (85% orientativo; parcial). Próximo sistema: cuidado a adultos mayores enlazado a hogares/servicios. Progreso global no estimable: no existe una ponderación estable y verificable común para las 34 fases. LAN física pendiente.
+Fase actual: 28 (88% orientativo; parcial). Próximo sistema: movilidad accesible y seguimiento de atención social. Progreso global no estimable: no existe una ponderación estable y verificable común para las 34 fases. LAN física pendiente.
 
 # Siguiente entrega · después de Alfa 0.131
 

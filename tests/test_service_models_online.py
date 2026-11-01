@@ -22,10 +22,10 @@ class ServiceConstruction(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"comisaría"):
             server.invest_police_unit("openPoliceUnit",town["x"],town["y"])
 
-    def test_twelve_models_have_monotone_costs_and_road_radii(self):
+    def test_service_models_have_monotone_costs_and_road_radii(self):
         families=(("clinic","medicalCenter","generalHospital"),("policePost","policeStation","policeHQ"),
             ("firePost","fireStationPlus","fireCommand"),("wasteYard","wasteDepot","wasteComplex"))
-        self.assertEqual(len(server.SERVICE_MODELS),13)
+        self.assertEqual(len(server.SERVICE_MODELS),14)
         for family in families:
             models=[server.SERVICE_MODELS[k] for k in family]
             self.assertEqual([m["cost"] for m in models],sorted(m["cost"] for m in models))

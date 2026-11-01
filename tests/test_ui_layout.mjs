@@ -85,7 +85,7 @@ try{
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===17&&catalog.factoryCount===5&&catalog.categories.length===7&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===18&&catalog.factoryCount===5&&catalog.categories.length===7&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').evaluate(button=>button.click());
 

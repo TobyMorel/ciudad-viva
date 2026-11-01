@@ -27,7 +27,7 @@ test('Offline: feria se contrata una sola vez y liquida visitantes separados',as
    assert.ok(e.visitors>0);
    assert.ok(city.tourism.eventVisitors>0);
    assert.ok(e.retailSpend>0,'Las compras deben usar existencias');
-   assert.equal(city.population,s.population,'No se incorporan turistas al padrón');
+   assert.ok(!city.buildings.some(b=>b.kind==='hotel'&&b.residents?.length),'Los turistas no se crean como residentes de hotel');
    const spend=e.retailSpend;
    const same=await adapter.request('/api/state');
    assert.equal(same.tourism.events[0].retailSpend,spend);
@@ -45,6 +45,8 @@ test('Offline: si la feria pierde las calles se cancela sin reembolso',async()=>
    assert.equal(city.tourism.events[0].status,'cancelado');
    assert.equal(city.tourism.events[0].visitors,0);
    assert.equal(city.tourism.eventRetailSpend,0);
-   assert.ok(city.money<=balance,'La organización contratada no se reembolsa');
+   assert.equal(city.tourism.events[0].organizationCost,1200);
+   assert.equal(city.tourism.events[0].cleanupSpend,0,'No se cobran servicios de un evento cancelado');
+   assert.equal(balance,98800,'La organización se cobró al contratar, antes del cierre financiero');
  });
 });

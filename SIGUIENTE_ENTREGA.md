@@ -292,3 +292,8 @@ El stock del Corralón del Puerto por debajo de 30 unidades permite una compra m
 ## Continuación · límite logístico a importaciones de acero
 
 El acero marítimo requiere ahora capacidad física adicional del puerto: el lote mensual está limitado por `shipCapacity` y por el espacio libre `cargoCapacity - cargoStored`, además de stock, fondos y conectividad. Se agrega capacidad de puertos operativos conectados; sin espacio portuario no hay importación. Online y Offline implementados, prueba de límite de 4 unidades incorporada. Se corrigió el día de cierre mensual en dos regresiones Online y se amplió el diagnóstico del test responsive, que aún se investiga; no afirmar CI aprobado hasta verificarlo. Sin modificaciones de interfaz. Siguiente prioridad: ensayos largos de 30 años e integración con el transporte portuario.
+
+
+## Continuación · prospección siderúrgica finita
+
+El capital privado puede financiar prospección de mineral de hierro cuando la reserva regional operativa cae por debajo de 900 unidades: cada campaña cuesta $4500 y acredita 300 unidades desde `supply.unexploredSteelOre`, un yacimiento restante que inicialmente dispone de 12000 unidades, sin creación infinita de recursos. Se contabiliza `geologicalExplorationSpend`; el nuevo mineral se usa en reposiciones mensuales posteriores. Online y Offline implementados; prueba Online de caja y conservación agregada. El CI anterior confirmó el motor pero falló la comprobación responsive de la prórroga de contratos, pendiente de corregir. No hubo cambios de interfaz. Prioridad próxima: validación larga de 30 años y reparación del escenario UI.

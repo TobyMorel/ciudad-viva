@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.85",
+  "currentVersion": "0.86",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.86",
+      "date": "2026-11-01",
+      "changes": [
+        "Fase 19: una incidencia técnica verificable durante una obra puede abrir una orden de cambio con causa, costo adicional y demora. El proyecto se detiene hasta que el equipo decide.",
+        "Aceptar compromete tesorería libre y suma días al calendario preservando el avance físico y los hitos certificados; rechazar mantiene el precio y el plazo con penalización de calidad final. La solicitud y su resolución quedan en la ciudad guardada, el registro de acontecimientos y el historial contractual. Online y Offline.",
+        "Obras presenta el impacto y permite resolver la orden en la misma tarjeta; la aprobación queda bloqueada en interfaz y servidor cuando los contratos ya comprometidos dejan fondos libres insuficientes. Fase 19: 50%. El progreso global sigue sin estimarse porque no hay ponderaciones verificables comunes para las 34 fases."
+      ],
+      "roadmapPhase": 19,
+      "phaseProgress": 50,
+      "overallProgress": null
+    },
     {
       "version": "0.85",
       "date": "2026-11-01",
@@ -955,12 +967,12 @@
     {
       "phase": 19,
       "title": "Licitaciones avanzadas y dirección de obras complejas",
-      "progress": 45,
-      "summary": "Ofertas, demoras y pagos por hitos con retención, inspección de garantía y reparación de defectos.",
+      "progress": 50,
+      "summary": "Licitaciones, calendario, hitos certificados, garantía/reparación y órdenes de cambio con presupuesto/plazo/penalidad",
       "pending": [
-        "Proyecto ejecutivo, dependencias entre tareas, órdenes de cambio y disputas contractuales.",
-        "Penalidades económicas y otras garantías legales por incumplimiento.",
-        "Riesgos particulares de clima, geotecnia, permisos y quiebra; comparar rescates y terminación."
+        "Disputas formales, evidencia contradictoria y mediación/arbitraje",
+        "Multas por incumplimiento y rescisión contractual con efectos económicos",
+        "Pruebas de paridad prolongadas y contratos dependientes durante varios mandatos"
       ]
     },
     {

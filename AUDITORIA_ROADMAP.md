@@ -318,3 +318,8 @@ Las constructoras cobran un 20% de anticipo y el saldo en certificados cuando el
 ## Alfa 0.85 · fase 19, garantías posteriores a recepción
 
 Evidencia nueva: el contrato municipal reserva 10% en escrow después de la inspección provisional. Caja insuficiente para certificado + retención bloquea el último avance. Revisión día +30 es reproducible, modifica la calidad del activo ante defecto y bloquea pago; reclamo compromete tres trabajadores por cinco días y libera escrow al reparar sin duplicación. Online y Offline comparten el flujo. UI de Obras revisada en Chromium móvil y escritorio. Fase 19: 45% por el salto verificable del sistema. Se mantienen pendientes órdenes de cambio, disputas y penalidades, riesgos técnicos y rescate integral. Prueba Offline de cinco días completada: calidad restaurada y escrow pagado una vez. No elevar global, porque los 34 sistemas no tienen pesos comparables.
+
+
+## Alfa 0.86 · fase 19, órdenes de cambio
+
+Verificado: al primer 20% de obra municipal, un riesgo técnico reproducible puede detener avance y presentar causa, impacto económico/plazo y penalidad. Aceptar comprueba tesorería libre después de obligaciones, rebasea progreso/plazo sin retroceso y registra decisión; rechazar conserva precio y plazo, pero reduce calidad final y riesgo de garantía. Online (ruta HTTP) y Offline (persistencia local). Fase 19: 50%. Pendiente: disputas formales, multas/terminación, dependencias entre contratos y cobertura de pruebas largas. No se estima global.

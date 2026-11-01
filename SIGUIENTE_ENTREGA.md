@@ -161,3 +161,8 @@ Los certificados ahora siguen el avance de etapas; falta implementar retenciones
 ## Alfa 0.85 · siguiente paso
 
 Fase 19 llegó a 45% con pagos certificados, retención de 10%, inspección de defectos, reclamo y reparación trazable en ambos motores. Próxima entrega: luego añadir órdenes de cambio y resolución de disputas con evidencia económica. Después retornar a fase 18 y ampliar otra cadena material (áridos/cemento para obras) para no concentrar entregas en licitaciones. Mantener el desarrollo centrado en sistemas jugables y consecuencias; no pulir UI fuera de lo necesario. LAN física y Vercel continúan pendientes. Progreso global no estimable sin ponderación estable de fases.
+
+
+## Alfa 0.86 · próximo paso
+
+Fase 19 está en 50%: órdenes de cambio con causa técnica y decisión de costo/plazo/calidad Online/Offline. Priorizar ahora otro sistema nuevo: fase 18, cadena local de áridos → hormigón → obras, conectando existencias, plantas, transporte y pedidos, sin extender más la adjudicación salvo correcciones necesarias. Más adelante completar disputa formal/evidencia, multas y rescisión de contratos. LAN en dos equipos y despliegue Vercel permanecen pendientes de prueba externa. Global no estimable sin pesos comparables para las 34 fases.

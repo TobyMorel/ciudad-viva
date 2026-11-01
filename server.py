@@ -756,7 +756,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"name":"Puerto Claro","day":1,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 state = initial_state()
 
@@ -799,12 +799,37 @@ def project_certificate(project, elapsed):
     stages=max(1,len(project.get("stages",[])))
     base=max(0,min(stages,int(project.get("milestoneBase",0))))
     remaining=max(1,stages-base)
-    progress=min(1,float(project.get("initialProgress",0))+(1-float(project.get("initialProgress",0)))*elapsed/max(1,project.get("duration",1)))
+    if "scheduleBaseProgress" in project:
+        baseline=float(project.get("scheduleBaseProgress",0));baseline_elapsed=int(project.get("scheduleBaseElapsed",0));remaining=max(1,int(project.get("scheduleRemainingDays",project.get("duration",1)-baseline_elapsed)))
+        progress=min(1,baseline+(1-baseline)*max(0,elapsed-baseline_elapsed)/remaining)
+    else:progress=min(1,float(project.get("initialProgress",0))+(1-float(project.get("initialProgress",0)))*elapsed/max(1,project.get("duration",1)))
     earned=max(0,min(remaining,int(math.floor(progress*stages+1e-9))-base))
     certified=int(project.get("certifiedMilestones",max(0,int(math.floor(float(project.get("progress",0))*stages+1e-9))-base)))
     retention=max(0,min(.2,float(project.get("retentionPct",0))))
     target=project["cost"]*(.2+(.8-retention)*earned/remaining)
     return progress,earned,certified,target,max(0,target-project.get("paid",0)),base,remaining
+
+def contract_change_roll(project):
+    index=CONTRACTOR_NAMES.index(project.get("contractor")) if project.get("contractor") in CONTRACTOR_NAMES else 0
+    seed=((int(project.get("x",0)+1)*73856093) ^ (int(project.get("y",0)+1)*19349663) ^ (int(project.get("contractedDay",1)+1)*83492791) ^ index*2654435761 ^ 0x51ED270B)&0xffffffff
+    return seed,(seed%10000)/10000
+
+def request_contract_change(project):
+    contractor=CONTRACTORS.get(project.get("contractor"),CONTRACTORS["Constructora Delta"])
+    seed,roll=contract_change_roll(project)
+    infrastructure=project.get("kind") in ("road","busStop","port","airport","waterPlant","wastewaterPlant")
+    chance=.11+(1-contractor["quality"])*.18+(.025 if infrastructure else 0)
+    if roll>=chance:return False
+    utility_conflict=any([project.get("x"),project.get("y")] in state.get("utilities",{}).get(key,[]) for key in ("powerLines","waterPipes","sewerLines","drainLines","gasLines","telecomLines"))
+    cause="Interferencia con una red enterrada no relevada" if utility_conflict else "Estrato del terreno menos competente que el relevamiento inicial"
+    cost_pct=.08+(seed//10000%7)*.01
+    cost_delta=max(100,round(project.get("cost",0)*cost_pct))
+    delay_days=4+(seed//70000%5)
+    project["changeOrderReviewed"]=True
+    project["changeOrder"]={"id":f"cambio-{project['id']}","status":"pendiente","cause":cause,"createdDay":state["day"],"costDelta":cost_delta,"delayDays":delay_days,"qualityPenalty":12}
+    project["status"]="cambio_pendiente"
+    ev("Constructora solicita una orden de cambio",f"{project.get('label','La obra')}: {cause.lower()}. La propuesta agrega $ {cost_delta:,} y {delay_days} días; rechazarla implica una reducción de 12 puntos en la calidad final. La obra espera decisión.".replace(",","."))
+    return True
 
 def contract_guarantee_roll(project):
     names=CONTRACTOR_NAMES
@@ -3067,6 +3092,7 @@ def tick_one_day():
     process_port_logistics()
     for p in list(state["projects"]):
         if p.get("status")=="pausada": continue
+        if p.get("status")=="cambio_pendiente": continue
         if p.get("status")=="suspendida":
             if not p.get("cause","").startswith("Faltan materiales") or missing_materials(p,p["elapsed"]+1): continue
             p["status"]="contratada";p["cause"]="Insumos recibidos; la cuadrilla vuelve a trabajar"
@@ -3081,6 +3107,9 @@ def tick_one_day():
             ev("Obra demorada por insumos",f"{p['label']} en {p['x']+1},{p['y']+1}: {p['cause']}. Pedí los materiales faltantes desde la tarjeta de la obra.")
             continue
         next_progress,earned_milestones,certified,targetPaid,due,milestone_base,milestones_remaining=project_certificate(p,next_elapsed)
+        if not p.get("privatePaid") and not p.get("changeOrderReviewed") and next_progress>=.2:
+            p["changeOrderReviewed"]=True
+            if request_contract_change(p):continue
         retention_due=round(p.get("cost",0)*max(0,min(.2,float(p.get("retentionPct",0))))) if next_progress>=1 and not p.get("privatePaid") else 0
         if not p.get("privatePaid") and due+retention_due>state["money"]:
             p["status"]="suspendida"; p["cause"]=f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining} y apartar su garantía" if retention_due else f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining}"; continue
@@ -3098,7 +3127,7 @@ def tick_one_day():
         stage=int(p["progress"]*len(p["stages"]))
         p["stageIndex"]=min(len(p["stages"])-1,stage)
         if p["progress"]>=1:
-            quality=round(c["quality"]*100)
+            quality=max(35,round(c["quality"]*100-p.get("qualityPenalty",0)))
             if p["kind"]=="road":
                 state["roads"].append([p["x"],p["y"]])
                 state["monthlyIncome"]+=85
@@ -3183,7 +3212,7 @@ def tick_one_day():
                 state["money"]=max(0,state["money"]-retained)
                 state["finance"].setdefault("contractEscrow",{"balance":0})["balance"]+=retained
                 contractor=CONTRACTORS.get(p.get("contractor"),CONTRACTORS["Constructora Delta"])
-                guarantee={"id":f"garantia-{p['id']}","projectId":p["id"],"label":p["label"],"contractor":p["contractor"],"x":p["x"],"y":p["y"],"kind":p["kind"],"retained":retained,"status":"garantia","startDay":day,"reviewDay":day+30,"initialQuality":quality,"defectChance":.025+(1-contractor["quality"])*.18+(1-contractor["reliability"])*.12}
+                guarantee={"id":f"garantia-{p['id']}","projectId":p["id"],"label":p["label"],"contractor":p["contractor"],"x":p["x"],"y":p["y"],"kind":p["kind"],"retained":retained,"status":"garantia","startDay":day,"reviewDay":day+30,"initialQuality":quality,"defectChance":.025+(1-quality/100)*.18+(1-contractor["reliability"])*.12}
                 state.setdefault("contractGuarantees",[]).append(guarantee)
                 ev("Recepción provisional de obra",f"{p['label']}: inspección de entrega aprobada. $ {retained:,} quedan retenidos hasta el control de garantía del día {day+30}.".replace(",","."))
             state["projects"].remove(p)
@@ -3447,7 +3476,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.85"
+    server_version="CiudadViva/0.86"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -3510,6 +3539,20 @@ class Handler(BaseHTTPRequestHandler):
                     if not contractor_has_capacity(guarantee["contractor"]) or contractor_free_workers(guarantee["contractor"])<3:self._send(409,{"error":"La constructora no tiene cupo y tres trabajadores libres para reparar. La retención continúa bloqueada."});return
                     guarantee.update({"status":"reparacion","repairStartedDay":state["day"],"repairCompleteDay":state["day"]+5,"workersAssigned":3})
                     ev("Reparación contractual iniciada",f"{guarantee['contractor']} movilizó tres trabajadores por cinco días para corregir {guarantee['label']}; la retención sigue bloqueada.")
+                    self._send(200,public_state(pid));return
+                elif action in ("approveContractChange","rejectContractChange"):
+                    project=next((p for p in state.get("projects",[]) if p.get("id")==str(data.get("id"))),None);change=project.get("changeOrder") if project else None
+                    if not project or project.get("status")!="cambio_pendiente" or not change or change.get("status")!="pendiente":self._send(409,{"error":"La orden de cambio ya se resolvió o la obra no está esperando decisión."});return
+                    if action=="approveContractChange":
+                        reserved=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+                        if available<int(change["costDelta"]):self._send(409,{"error":f"Faltan fondos libres: la tesorería dispone de $ {available:,} y la ampliación exige comprometer $ {change['costDelta']:,}.".replace(",",".")});return
+                        baseline=max(0,float(project.get("progress",0)));elapsed=int(project.get("elapsed",0));remaining=max(1,int(project.get("duration",1))-elapsed+int(change["delayDays"]))
+                        project.update({"scheduleBaseProgress":baseline,"scheduleBaseElapsed":elapsed,"scheduleRemainingDays":remaining,"duration":elapsed+remaining,"cost":int(project["cost"])+int(change["costDelta"])})
+                        change.update({"status":"aprobada","decidedDay":state["day"]});detail=f"Se comprometieron $ {change['costDelta']:,} y {change['delayDays']} días adicionales".replace(",",".")
+                    else:
+                        project["qualityPenalty"]=int(project.get("qualityPenalty",0))+int(change.get("qualityPenalty",12));change.update({"status":"rechazada","decidedDay":state["day"]});detail=f"Se mantiene el contrato original; la inspección final tendrá {project['qualityPenalty']} puntos menos de calidad por el trabajo sin refuerzo."
+                    project["status"]="contratada";state.setdefault("contractChangeHistory",[]).append({"projectId":project["id"],"label":project.get("label"),"contractor":project.get("contractor"),**change});state["contractChangeHistory"]=state["contractChangeHistory"][-40:]
+                    ev("Orden de cambio " + change["status"],f"{project.get('label','La obra')}: {change['cause']}. {detail}.")
                     self._send(200,public_state(pid));return
                 elif action=="assignMunicipalRole":
                     role=str(data.get("role",""));target=str(data.get("playerId",""))

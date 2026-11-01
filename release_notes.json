@@ -1,7 +1,20 @@
 {
-  "currentVersion": "1.00",
+  "currentVersion": "1.01",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "1.01",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "Sistema de internación hospitalaria en centros de salud: inversión municipal de $7.200 para 12 camas, ampliaciones de 8 camas por $4.600 (hasta 36), ambulancias por $2.800 (hasta 3). Se respetan compromisos públicos y cortes viales.",
+        "Demanda hospitalaria por barrio sensible a agua, saneamiento y calor; admisión limitada por camas, profesionales sanitarios, servicios y financiación. Camas con rotación estimada de 3 días; residentes alejados requieren ambulancia con dotación y ruta de hasta 45 minutos.",
+        "Nuevos gastos fijos y variables hospitalarios cargados al presupuesto de servicios, lista de espera y barrios sin internación. Un centro sin trabajadores no admite pacientes aunque haya sido equipado.",
+        "Paridad Online/Offline, pruebas de falta de personal, rescate en ambulancia, corte de calles, fondos comprometidos e idempotencia diaria. Panel Ciudad > Salud con decisiones e indicadores y control visual 390/1440 px."
+      ]
+    },
     {
       "version": "1.00",
       "date": "2026-11-01",
@@ -1051,10 +1064,10 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 40,
-      "summary": "Atención primaria/urgente, escuelas y respuesta de bomberos con personal",
+      "progress": 50,
+      "summary": "Atención primaria, escuelas y bomberos más hospitalización equipada, ampliación física y traslados por ambulancia",
       "pending": [
-        "Hospitales, ambulancias, policía, protección social y niveles educativos completos."
+        "Hospitales independientes, policía, protección social y niveles educativos completos."
       ]
     },
     {
@@ -1229,10 +1242,10 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 50,
-      "summary": "Salud primaria, escuela con docentes y bomberos con dotaciones/rutas",
+      "progress": 60,
+      "summary": "Internación con camas, personal, servicios, acceso, traslados y costos municipales, junto a formación y bomberos",
       "pending": [
-        "Hospitalización, ambulancias, jardines, policía y protección social."
+        "Ciclos de ocupación y altas médicas individuales agregadas, vehículos ocupados más de un día, hospital especializado, jardines, policía y protección social."
       ]
     },
     {

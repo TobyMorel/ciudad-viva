@@ -196,3 +196,10 @@ Fase 18=85%. Implementado el ciclo regional de acero a componentes: compra de ac
 GitHub Actions verifica pruebas Online/Offline de escasez de componentes, pedido local, transporte, recepción, reanudación e inspección, con pago y consumo sin duplicación, más ausencia de productor alimentario ficticio en una metalúrgica Offline. La liquidación mensual Offline deja de procesar por segunda vez las fábricas especializadas; fase 18 sigue en 85%.
 
 **Próximo desarrollo:** ejecutar un escenario real de creación de metalúrgica desde zonificación industrial, construcción, inspección, personal, servicios, acero del Corralón, conversión, entrega y consumo en una obra. Dar paridad a la secuencia de tipos de industria entre los motores sin crear inventarios ni caja; después validar escasez y partidas de décadas. LAN física, Vercel y Chromium continúan sin comprobar.
+
+
+## Continuación después de Alfa 0.93
+
+Se cerró la brecha cantera→hormigonera en Offline: reserva finita, 2 áridos por hormigón, pedidos pagados desde caja empresarial y recepción por ruta antes de producción. Contratos industriales especifican `industryType` desde el inicio, impiden reasignación fortuita de una obra e incorporan caja operativa pagada; Online y Offline usan el mismo orden de especialidades sin duplicar las comprometidas. Pruebas automáticas cubren contratación, materia prima, conversión y disponibilidad para construir, con snapshots responsive en Chromium.
+
+Priorizar mecánica de **fase 17** de empresa industrial que pierde trabajadores o quiebra y posibilidad de reocupación o compra por otro promotor, con oferta/demanda y cuentas reales; también competencia industrial por materias primas locales y expansión condicionada a pedidos. Tras ella ejecutar partidas estables de 30 años de fase 33 con escenarios pequeño, metropolitano, portuario y turístico. LAN física y Vercel pendientes. Fase 18=90%; total global sin estimación por ausencia de pesos.

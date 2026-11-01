@@ -22,5 +22,10 @@ test('Offline avanza un día ordenado por actualización, escala x4 y se congela
   state=await adapter.request('/api/state');assert.equal(state.day,day);assert.equal(state.paused,true);
   await adapter.request('/api/action',{action:'pause'});now+=250;
   state=await adapter.request('/api/state');assert.equal(state.day,day+1);assert.equal(state.paused,false);
+  day=state.day;now+=1_500;
+  for(let i=0;i<6;i++){
+   state=await adapter.request('/api/state');
+   assert.equal(state.day,day+1,'el atraso largo debe recuperarse de a un día y sin perder tiempo');day=state.day;
+  }
  }finally{Date.now=previousNow;globalThis.fetch=previousFetch;if(previousStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=previousStorage}
 });

@@ -8,7 +8,7 @@ class MaritimeSteelImport(unittest.TestCase):
         s=server.state
         server.ensure_supply_state()
         s["paused"]=False
-        s["day"]=29
+        s["day"]=30
         s["lastMonth"]=0
         s["supply"]["regionalSteelReserve"]=0
         s["waste"]["scrapSteelTons"]=0

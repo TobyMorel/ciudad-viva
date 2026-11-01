@@ -170,3 +170,8 @@ Fase 19 está en 50%: órdenes de cambio con causa técnica y decisión de costo
 ## Alfa 0.87 · siguiente paso
 
 La fase 18 llegó a 65% con extracción privada de áridos, empleo/servicios, reserva agotable, pedidos pagados y rutas por camión. Próxima mecánica: completar áridos → hormigón → obra, con insumo agregado consumido por planta, personal/utilidades, existencias y entrega que afecte certificados. Después ampliar madera/acero. Llevar las órdenes al adaptador Offline y probar el LAN en equipos físicos continúa pendiente. Priorizar comportamiento e inventarios; no hacer otra versión de pulido. Progreso global no estimable sin pesos comunes para las 34 fases.
+
+
+## Alfa 0.88 · siguiente paso
+
+Fase 18=70%: hay áridos finitos, cantera, hormigonera que los compra por carretera, conversión 2:1, stock vendible y recetas de hormigón que consume la obra. El endpoint ya verifica compra y stock insuficiente, y `missing_materials` verifica el bloqueo por hito. Antes de ampliar la cadena, simular un tick completo de obra que se suspenda, reciba el camión y reanude el avance. Luego llevar el modelo de materiales al motor Offline (pedidos, stock, saldo, tiempos y bloqueo de obra), y abrir madera/acero industriales; no sobreprofundizar la cantera. Mantener como límite actual que estas compras funcionan solo Online/LAN. Fase siguiente amplia según roadmap: continuar fase 19 después de cerrar pruebas de construcción integradas. La prueba LAN en dos equipos y el deploy Vercel siguen sin evidencia. No estimar progreso global sin pesos estables comparables para las 34 fases.

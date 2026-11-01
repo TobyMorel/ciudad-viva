@@ -327,3 +327,8 @@ Verificado: al primer 20% de obra municipal, un riesgo técnico reproducible pue
 ## Alfa 0.87 · fase 18, cantera y materiales de obra
 
 Evidencia: fábrica industrial privada adicional puede abrir como cantera. Extracción nominal ≤48/ciclo depende del menor factor de personal y tres servicios; una reserva geológica de 2.400 unidades y patio de 360 limitan salida/stock. Compra de árido local en un contrato paga a la empresa, descuenta su inventario y recorre ruta vial y descarga normal. Pruebas de capacidad, agotamiento parcial de reserva e integración HTTP, más UI Online en móvil/escritorio. Fase 18: 65%. Incompleto: transformación a hormigón, madera/acero, pedidos Offline y comercio exterior completo. Global no estimable.
+
+
+## Alfa 0.88 · fase 18, hormigón local y recetas de construcción
+
+Evidencia verificada mediante funciones del motor: cantera con personal/servicios produjo 30 áridos; la planta pidió stock a su ubicación física; el pedido recorrió cuatro tramos y entregó el insumo; 30 áridos generaron 15 hormigones; tres unidades vendidas al sistema sumaron exactamente $169 a la caja de la empresa y bajaron su stock; casa requiere siete unidades de hormigón; una partida antigua recibe la clave nueva con inventario cero. UI Economía de 390×844 y 1440×900 dentro del viewport, sin nodos ocultos ni errores de página. Python, JavaScript y JSON validan. El test funcional confirmó que `missing_materials` marca el hormigón por hito y que la compra HTTP sale de la planta, paga y rechaza faltantes sin debitar. Sigue pendiente el test de un tick/contrato completo suspendido → entrega → reanudación. Fuera de alcance verificado: Offline, LAN físico, madera/acero local. Fase 18: 70%; progreso global no estimable sin pesos comunes.

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.87",
+  "currentVersion": "0.88",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.88",
+      "date": "2026-10-31",
+      "changes": [
+        "Fase 18: una hormigonera privada local transforma 2 áridos en 1 hormigón; la producción requiere trabajadores, electricidad, agua, saneamiento, caja operativa y espacio de almacenamiento.",
+        "La planta compra áridos finitos a una cantera activa y los transporta por una ruta vial real. La entrega queda pendiente durante el viaje; al recibirla, el ciclo industrial produce hormigón con existencias y pagos registrados para la cantera.",
+        "El hormigón es ahora un material requerido por casas, calles, servicios e infraestructuras. Las obras solo pueden continuar cuando el contratista tiene la cantidad indicada; se puede comprar a la hormigonera local o a proveedores regionales.",
+        "Economía distingue la producción, existencias y causas de parada de áridos y hormigón. Verificado: extracción, ruta y entrega a planta, conversión 2:1, pago y stock del productor, recetas de obra y migración de partidas previas. Popup probado en 390×844 y 1440×900, sin desborde ni elementos ocultos. Sistema Online/LAN; compra de materiales Offline, madera/acero locales y prueba LAN física siguen pendientes. Fase 18: 70%; global no estimable sin pesos comparables verificables."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 70,
+      "overallProgress": null
+    },
     {
       "version": "0.87",
       "date": "2026-11-01",
@@ -793,12 +806,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 33 · inversiones y ciclo económico de largo plazo",
-      "detail": "Ejecutar escenarios reproducibles de 30 años en ambos motores. Evaluar demografía y migración, empresas, capital, contratos entre mandatos, inventario, deuda, mantenimiento, transporte y mercados finitos; corregir los desequilibrios observados. Luego probar ciudades pequeñas, metropolitanas, portuarias y turísticas."
+      "title": "Fase 18 · verificar materiales hasta la obra",
+      "detail": "Probar una obra Online de extremo a extremo: falta de hormigón, pedido a hormigonera, camión/descarga y reanudación. Después trasladar el circuito al modo Offline."
     },
     {
-      "title": "Fases abiertas · cerrar circuitos causales",
-      "detail": "Completar pendientes de gobiernos y sistemas con mecánicas de ciudad: decisiones, recursos, plazos y consecuencias visibles; ampliar un circuito por entrega, no acumular solo detalle de interfaz."
+      "title": "Fase 18 · abrir otras cadenas industriales",
+      "detail": "Incorporar madera mediante aserradero y completar acero regional/local, con inventarios, empleo, operación, transporte y consumo real en obras; luego retomar los pendientes abiertos del roadmap."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -971,12 +984,12 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 65,
-      "summary": "Grano regional → planta procesadora → comercios; cantera privada de áridos con reserva finita, empleados, servicios y pedidos por carretera a obras.",
+      "progress": 70,
+      "summary": "Grano regional → alimentos; cantera finita de áridos → hormigonera local (2:1) → pedidos de obra. Personal, servicios y ruta vial afectan el flujo.",
       "pending": [
-        "Áridos → hormigón con consumo trazable del árido y venta/entrega a obras",
+        "Probar obra Online completa: falta de hormigón bloquea y pedido entregado la reanuda",
         "Madera → aserradero → materiales; acero local/importado → construcción",
-        "Logística de materiales Offline, mermas, almacenes, cierres/reaperturas y exportaciones físicas completas"
+        "Logística de materiales Offline, almacenes, cierres/reaperturas y exportaciones físicas completas"
       ]
     },
     {

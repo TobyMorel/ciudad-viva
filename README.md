@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.87
+# Ciudad Viva · Alfa 0.88
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -256,3 +256,8 @@ Las incidencias técnicas ahora pueden detener una obra para que el gobierno coo
 ## Alfa 0.87 · cantera privada (fase 18)
 
 Una inversión industrial posterior a la procesadora de alimentos puede abrir una cantera local. Contrata personal, requiere redes eléctricas, agua y saneamiento, consume una reserva geológica finita y vende áridos con stock limitado a contratos de obra. Los pedidos recorren la red vial, ocupan la descarga de constructoras y acreditan ingresos a la cantera. UI de abastecimiento informa stock y reservas. Disponible Online; el pedido de materiales Offline sigue pendiente. Fase 18: 65%. Próximo: hormigonera local y áridos que pasan a losas/obras.
+
+
+## Alfa 0.88 · hormigonera local (fase 18)
+
+La cantera vende áridos por carretera a una hormigonera local. La planta requiere trabajadores y redes urbanas, paga su operación y convierte dos áridos entregados en una unidad de hormigón. El proveedor mantiene existencias vendibles, y las recetas de viviendas, calles y servicios consumen hormigón durante construcción. Proveedores regionales continúan como respaldo. Disponible en Online/LAN; Offline todavía no tiene pedidos de materiales. Pruebas de conversión, ruta, cobro, migración y layout móvil/escritorio documentadas en `ESTADO_DESARROLLO.md`. Fase 18: 70%; global no estimable sin ponderaciones comunes verificables.

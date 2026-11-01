@@ -4223,7 +4223,7 @@ def police_service_report(workplaces=None,advance=False):
                 minutes=round(max(0,len(path)-1)*2.5+4)
                 if minutes<=40:choices.append((minutes,unit,path))
         choices.sort(key=lambda pair:(pair[0],pair[1]["name"]))
-        protected=bool(choices and any(u["active"]>0 for _,u in choices))
+        protected=bool(choices and any(u["active"]>0 for _,u,_ in choices))
         rows.append({"building":b,"choices":choices,"protected":protected})
     if advance and month>police.get("lastProcessedMonth",state.get("lastMonth",0)):
         police["lastProcessedMonth"]=month

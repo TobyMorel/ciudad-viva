@@ -17,7 +17,7 @@ class SteelScarcity(unittest.TestCase):
                     "business":{"id":"metal-test","industryType":"metalworks","status":"abierto",
                         "cash":40000,"jobSlots":20,"rawSteelInventory":0,"componentStock":0}}
                 s["buildings"].append(plant)
-                server.advance_local_metalworks({},[])
+                server.advance_local_metalworks({(6,9):{'staffedJobs':10,'payroll':0}},[])
                 self.assertEqual(supplier["lastSteelPriceFactor"],expected)
                 orders=[o for o in s["supply"]["marketOrders"] if o.get("commodity")=="acero" and o.get("businessId")=="metal-test"]
                 self.assertEqual(len(orders),1)

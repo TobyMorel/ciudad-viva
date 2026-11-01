@@ -1830,6 +1830,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
         waste["lastRouteCollectedTons"]=round(bin_picked,3)
         waste["lastBinOverflowTons"]=round(bin_overflow,3)
         waste["lastRecycledTonsDay"]=round(recycled,3)
+        waste["scrapSteelTons"]=round(max(0,waste.get("scrapSteelTons",0))+recycled*.2,3)
     backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
     backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
     roads=sorted(state.get("roads",[]),key=lambda p:(p[1],p[0]));pile_count=min(18,math.ceil(backlog/1.5))
@@ -3679,6 +3680,16 @@ def tick_one_day():
             for name,quantity in zip(("Distribuidora Regional","Corralón del Puerto","Flete Urgente"),batches):
                 supplier_stock[name][key]+=quantity
         state["supply"]["regionalSteelReserve"]=regional_reserve
+        # Recuperación industrial con masa y presupuesto: la chatarra reciclada es el insumo.
+        scrap=max(0,float(state.get("waste",{}).get("scrapSteelTons",0)))
+        recycled_units=min(int(scrap*2),max(0,int(state.get("money",0)//12)),max(0,240-int(supplier_stock["Corralón del Puerto"].get("steel",0))))
+        if recycled_units:
+            cost=recycled_units*12
+            state["money"]-=cost
+            state["waste"]["scrapSteelTons"]=round(scrap-recycled_units/2,3)
+            supplier_stock["Corralón del Puerto"]["steel"]+=recycled_units
+            state["supply"]["steelRecyclingSpend"]=state["supply"].get("steelRecyclingSpend",0)+cost
+            ev("Acero reciclado",f"Recuperadas {recycled_units} unidades desde chatarra municipal; procesamiento $ {cost}.")
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)

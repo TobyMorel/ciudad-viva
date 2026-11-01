@@ -141,3 +141,11 @@ canvas#city{touch-action:none}
 
 /* Alfa 0.86 · decision on contract scope changes */
 .change-order-card{display:grid;gap:7px;min-width:0;margin:9px 0;padding:10px;border:1px solid #e2bd78;border-radius:11px;background:linear-gradient(145deg,#fff8e8,#fffdf5)}.change-order-card>b{color:#735522;font:800 11px/1.35 system-ui;overflow-wrap:anywhere}.change-order-card>small{color:#75664d;font:9px/1.45 system-ui;overflow-wrap:anywhere}.change-order-card>div:not(.change-order-actions){display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;gap:4px 8px;align-items:baseline;padding:7px;border-radius:8px;background:#fffdf7;color:#837354;font:9px system-ui}.change-order-card>div strong{color:#79591e;font-size:10px}.change-order-actions{display:flex;flex-wrap:wrap;gap:7px}.change-order-actions button{flex:1 1 118px;min-width:0;min-height:36px;padding:8px;border:1px solid #9fbd94;border-radius:8px;background:#eaf4e6;color:#326947;font:750 10px/1.3 system-ui;overflow-wrap:anywhere}.change-order-actions button:last-child{border-color:#dfb6a4;background:#fff1e9;color:#9b5142}.change-order-actions button:disabled{opacity:.48;cursor:not-allowed}.change-order-card .change-funds{padding:6px 7px;border-radius:7px;background:#fff0e8;color:#9d5141}.change-order-resolved{display:block;margin:5px 0;padding:7px;border-radius:8px;background:#f4f4e9;color:#65745b;font:9px/1.4 system-ui;overflow-wrap:anywhere}@media(max-width:420px){.change-order-card{padding:8px}.change-order-card>div:not(.change-order-actions){grid-template-columns:minmax(0,1fr) auto;gap:5px 9px}}
+
+/* Fase 28 · inversiones hospitalarias con botones legibles en pantallas angostas. */
+.hospital-care-panel,.hospital-unit{min-width:0;max-width:100%}
+.hospital-unit{display:block}
+.hospital-unit small,.hospital-care-panel .detail-grid b{overflow-wrap:anywhere;word-break:normal}
+.hospital-actions{display:flex;flex-wrap:wrap;gap:7px;width:100%;max-width:100%;margin-top:8px}
+.hospital-actions button{flex:1 1 155px;min-width:0;max-width:100%;padding:8px 9px;border:1px solid #8faf9f;border-radius:7px;background:#e7f1e7;color:#315c4b;font:700 10px system-ui;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.hospital-actions button:disabled{opacity:.48;cursor:not-allowed}

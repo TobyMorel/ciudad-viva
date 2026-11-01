@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.135",
+  "currentVersion": "0.136",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.136",
+      "date": "2026-11-01",
+      "roadmapPhase": 29,
+      "phaseProgress": 40,
+      "overallProgress": null,
+      "changes": [
+        "Hacienda incorpora un libro de caja persistente para partidas Online y Offline: saldo de apertura, ingresos y egresos netos observados, saldo calculado, caja real y diferencia de conciliación.",
+        "Cada variación queda fechada con saldo anterior y posterior, monto y último evento asociado. Las operaciones sin cambios no generan asientos repetidos; se conservan 120 movimientos recientes y los acumulados completos.",
+        "Los guardados antiguos abren el libro desde su caja actual, sin inventar historia previa. Los movimientos muestran variaciones netas entre límites de operación/cierre; la contabilidad por concepto y doble partida sigue pendiente.",
+        "Economía presenta el informe en un panel plegable responsive. Pruebas: Online registra ingresos/egresos, detecta saldos legacy y evita duplicados; Offline verifica el fondo de deuda; Chromium comprueba el panel en 390×844 y 1440×900.",
+        "La fase 29 permanece en 40%: el bloque de auditoría continúa parcial mientras no exista clasificación contable completa por origen/destino. El progreso global sigue sin estimarse por falta de pesos verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.135",
       "date": "2026-11-01",
@@ -1437,16 +1451,16 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.134 · atención a adultos mayores",
-      "detail": "Enlazar envejecimiento individual, accesibilidad, atención primaria y cupos de cuidado con personal, transporte, presupuesto y vivienda; integrar necesidades a los ciclos de hogar."
+      "title": "Fase 29 · escenarios fiscales explícitos",
+      "detail": "Comparar escenarios base, favorable y adverso con supuestos visibles, eventos de caja y compromisos a varios años; conectar el resultado con decisiones municipales."
     },
     {
-      "title": "Fase 28 · educación técnica y continuidad social",
-      "detail": "Añadir recorridos de formación técnica conectados con empleos y revisar efectos acumulados de desastres en hogares y acceso a servicios."
+      "title": "Fase 29 · costo de ciclo de vida",
+      "detail": "Incorporar construcción, operación, mantenimiento, reposición y financiamiento a la evaluación de infraestructura; extender el libro con conceptos atribuibles."
     },
     {
       "title": "Verificación integral y red local",
-      "detail": "Mantener batería de motores, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
+      "detail": "Mantener batería Online/Offline, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",

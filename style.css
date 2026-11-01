@@ -296,6 +296,10 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 
 /* Alfa 0.120 · detalle mensual de caja, legible en paneles estrechos. */
 .municipal-forecast{min-width:0;max-width:100%;margin:10px 0;padding:9px;border:1px solid var(--line,#d8e2db);border-radius:10px;background:var(--panel,#fff)}
+.cash-ledger{min-width:0;max-width:100%;margin:10px 0;padding:9px;border:1px solid var(--line,#d8e2db);border-radius:10px;background:var(--panel,#fff)}
+.cash-ledger>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
+.cash-ledger-entries{display:grid;gap:6px;min-width:0;margin-top:8px}
+.cash-ledger-entries .supply-line{min-width:0;overflow-wrap:anywhere}
 .municipal-forecast>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
 .forecast-note{margin:8px 0;color:var(--muted,#68756e);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 .forecast-obligations{margin:8px 0}

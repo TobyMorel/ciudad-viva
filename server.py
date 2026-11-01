@@ -1401,7 +1401,7 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
     municipal_program_priority(budgets)
     forecast=municipal_finance_forecast(income,expenses)
-    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+forecast["debtReserve"]),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
+    return {"cash":round(state.get("money",0)),"cashLedger":municipal_cash_ledger_report(),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"outstandingDebtArrears":debt_arrears,"totalDebt":outstanding+debt_arrears,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding-debt_arrears)),"forecast12":round(forecast["closingCash"]+forecast["debtReserve"]),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
 
 def municipal_program_priority(budgets=None):
     if budgets is None:
@@ -1736,6 +1736,31 @@ def ensure_finance_state():
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
     bank=state["finance"].setdefault("businessBank",new_finance()["businessBank"])
     for key,value in new_finance()["businessBank"].items():bank.setdefault(key,value)
+    ledger=state["finance"].get("cashLedger")
+    if not isinstance(ledger,dict):
+        opening=round(state.get("money",0));ledger={"openingBalance":opening,"recordedBalance":opening,"receipts":0,"payments":0,"sequence":0,"entries":[]}
+        state["finance"]["cashLedger"]=ledger
+    ledger.setdefault("openingBalance",round(state.get("money",0)));ledger.setdefault("recordedBalance",round(state.get("money",0)))
+    ledger.setdefault("receipts",0);ledger.setdefault("payments",0);ledger.setdefault("sequence",0);ledger.setdefault("entries",[])
+
+def record_municipal_cash_movement():
+    """Conciliación de caja disponible entre límites de operación/API; no reconstruye historia perdida."""
+    ensure_finance_state();ledger=state["finance"]["cashLedger"]
+    before=round(ledger.get("recordedBalance",state.get("money",0)));after=round(state.get("money",0));delta=after-before
+    if not delta:return ledger
+    ledger["sequence"]+=1
+    events=state.get("events",[]);latest=events[0] if events else {}
+    entry={"id":ledger["sequence"],"day":state.get("day",1),"direction":"ingreso" if delta>0 else "egreso","amount":abs(delta),"balanceBefore":before,"balanceAfter":after,"reference":str(latest.get("title") or "Variación de caja")[:100],"detail":str(latest.get("detail") or "Cambio neto desde la última conciliación.")[:220]}
+    ledger["entries"].append(entry);ledger["entries"]=ledger["entries"][-120:]
+    if delta>0:ledger["receipts"]+=delta
+    else:ledger["payments"]+=-delta
+    ledger["recordedBalance"]=after
+    return ledger
+
+def municipal_cash_ledger_report():
+    ledger=state["finance"].get("cashLedger",{});opening=round(ledger.get("openingBalance",state.get("money",0)))
+    receipts=round(ledger.get("receipts",0));payments=round(ledger.get("payments",0));actual=round(state.get("money",0));calculated=opening+receipts-payments
+    return {"openingBalance":opening,"receipts":receipts,"payments":payments,"calculatedBalance":calculated,"actualBalance":actual,"difference":actual-calculated,"sequence":ledger.get("sequence",0),"entries":list(reversed(ledger.get("entries",[])[-12:]))}
 
 def ensure_resident_roster():
     for home in (b for b in state["buildings"] if b.get("kind")=="home"):
@@ -5124,6 +5149,7 @@ def fire_service_report(workplaces=None,advance=False):
 def public_state(player_id=None):
     ensure_supply_state()
     ensure_finance_state()
+    record_municipal_cash_movement()
     cutoff=time.time()-25
     online=sum(1 for t in state["players"].values() if t>cutoff)
     ensure_utility_state();calculate_utility_balance();calculate_waste_balance()

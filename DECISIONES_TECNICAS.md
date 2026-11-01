@@ -564,3 +564,10 @@ El centro de acompañamiento domiciliario ofrece acompañamiento domiciliario, n
 ## Alfa 0.135 · refinanciación de deuda municipal
 
 Oferta fija, visible y determinista: tomar saldo principal más mora, amortizar a 72 meses y 18% anual. Solo se permite una refinanciación por crédito, cuando quedan más de tres cuotas y el pago nuevo resulta menor. La mora se capitaliza, el efectivo no varía y el usuario ve costo restante anterior frente al costo total nuevo antes de confirmar. No hay quita ni capital nuevo. Se persiste un asiento de reestructuración y vínculo con el préstamo original.
+
+
+## Alfa 0.136 · libro neto de caja municipal
+
+`finance.cashLedger` se persiste en los estados Online/Offline. `openingBalance + receipts - payments` se contrasta con el efectivo actual; las diferencias se exponen en Hacienda. Se agrega una fila solamente al variar el saldo entre límites de operación/API, con día, cantidad, referencia del evento reciente y saldos anterior/posterior. La interfaz muestra los últimos 12; el estado guarda hasta 120 y conserva acumulados totales para conciliar aunque rote el detalle.
+
+Un guardado anterior inicia el libro con el efectivo actual y sin entradas inventadas. El dato describe variación neta por límite de operación/cierre; no implica clasificación contable completa ni partida doble. Cambiar efectivo hacia la reserva de deuda es salida de la caja disponible, aunque no sea gasto consolidado. Se mantiene fase 29 en 40% (100/50/50/0/0) mientras este bloque de auditoría esté incompleto.

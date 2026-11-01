@@ -1,11 +1,11 @@
-# Siguiente entrega · después de Alfa 0.135
+# Siguiente entrega · después de Alfa 0.136
 
-1. Fase 29: cerrar auditoría de caja con asientos de ingreso/pago y conciliación contra saldo y compromisos; demostrar que acciones repetidas no duplican dinero.
-2. Incorporar escenarios presupuestarios base, favorable y adverso con supuestos y fórmulas visibles; añadir costo de ciclo de vida al aprobar infraestructura importante.
-3. Validar refinanciación en partidas en curso: caja neutral, mora consolidada, cuota menor, costo total mayor, repetición rechazada y previsión de 12/48 meses actualizada.
-4. Ejecutar regresiones Online/Offline, stress de 30 años y validación responsive de Economía; publicar en `main`, comprobar SHA/Actions/Vercel y adjuntar ZIP completo.
+1. Fase 29: extender el libro de caja de snapshots netos a asientos clasificados por concepto/origen/destino, con conciliación contra caja y compromisos sin registrar dos veces la misma operación.
+2. Implementar escenarios presupuestarios base, favorable y adverso con fórmulas visibles, compromisos a varios años y resultados que ayuden a decidir políticas municipales.
+3. Añadir costo de ciclo de vida al aprobar infraestructura: inversión inicial, operación, mantenimiento, reposición y financiamiento; conectarlo con el pronóstico y la caja real.
+4. Ejecutar regresiones Online/Offline, stress de 30 años y Chromium responsive de Hacienda; publicar en `main`, comprobar SHA/Actions/Vercel y adjuntar ZIP completo.
 
-Fase actual: 29 (40% orientativo y parcial; método de cinco bloques iguales registrado en `ESTADO_DESARROLLO.md`). Próximo hito: asiento financiero auditable y escenarios plurianuales. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
+Fase actual: 29 (40% orientativo y parcial; método estable de cinco bloques iguales en `ESTADO_DESARROLLO.md`). Próximo hito: movimientos contables clasificados, escenarios fiscales y costo plurianual de infraestructura. Progreso global no estimable: falta ponderación común verificable para las 34 fases. LAN física pendiente.
 
 # Siguiente entrega · después de Alfa 0.134
 

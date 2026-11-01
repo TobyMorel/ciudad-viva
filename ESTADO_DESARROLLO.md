@@ -1,4 +1,14 @@
-# Estado de desarrollo · Alfa 0.135
+# Estado de desarrollo · Alfa 0.136
+
+## Libro de caja municipal y conciliación neta
+
+Hacienda incorpora un libro persistente en Online y Offline con saldo de apertura, ingresos y egresos netos observados, efectivo calculado, caja real, diferencia y operaciones recientes. Cada operación registra día, monto, saldo anterior/posterior y el evento más reciente como referencia; consultas repetidas sin variación no duplican entradas. Se conservan 120 movimientos recientes y los acumulados históricos.
+
+En guardados previos, la caja guardada se convierte en saldo de apertura: no se reconstruyen ingresos ni pagos anteriores. El registro agrupa la variación entre límites de operación/cierre y no atribuye movimientos a cuentas de gasto/ingreso por concepto; no equivale aún a contabilidad de doble partida. La reserva de deuda es un fondo aparte y mover efectivo hacia ella figura como salida de caja disponible.
+
+Verificado en esta entrega: 98 pruebas Python, 65 Node Offline, stress de 30 años × cuatro perfiles y Chromium responsive del panel Hacienda y sus movimientos recientes a 390×844 y 1440×900. Compilación Python/JavaScript, JSON y `git diff --check` también pasan. No se validó conexión LAN física ni que Vercel sirva este repositorio.
+
+Fase 29: 40% orientativo, calculado con los mismos cinco bloques de igual peso (20 puntos; 100% completo, 50% parcial, 0% faltante): caja/compromisos/proyección 100%; auditoría de movimientos 50%; presupuestos plurianuales/prioridades 50%; ciclo de vida 0%; escenarios 0%. El libro mejora la trazabilidad, pero la auditoría sigue parcial hasta clasificar los movimientos por concepto y origen/destino. Progreso global no estimable: falta un peso verificable para combinar las 34 fases.
 
 ## Refinanciación municipal con costo explícito
 

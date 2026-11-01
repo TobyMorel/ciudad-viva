@@ -4213,7 +4213,7 @@ def police_service_report(workplaces=None,advance=False):
             path=route_between((unit["building"]["x"],unit["building"]["y"]),(b["x"],b["y"]))
             if path:
                 minutes=round(max(0,len(path)-1)*2.5+4)
-                if minutes<=40:choices.append((minutes,unit))
+                if minutes<=40:choices.append((minutes,unit,path))
         choices.sort(key=lambda pair:(pair[0],pair[1]["name"]))
         protected=bool(choices and any(u["active"]>0 for _,u in choices))
         rows.append({"building":b,"choices":choices,"protected":protected})
@@ -4225,15 +4225,15 @@ def police_service_report(workplaces=None,advance=False):
             road_quality=next((float(a.get("quality",82)) for a in state.get("roadAssets",[]) if a.get("x")==b["x"] and a.get("y")==b["y"]),82)
             power=float(b.get("utilityAccess",{}).get("powerServedPct",100))
             threshold=14+(10 if road_quality<40 else 0)+(8 if power<60 else 0)+(7 if kind=="shop" else 0)
-            options=[(mins,u) for mins,u in row["choices"] if u["remaining"]>0 and u["active"]>0]
-            if any(u["priority"] in ("mixto","comercial" if kind=="shop" else "residencial") for _,u in options):threshold=max(3,threshold-7)
+            options=[(mins,u,path) for mins,u,path in row["choices"] if u["remaining"]>0 and u["active"]>0]
+            if any(u["priority"] in ("mixto","comercial" if kind=="shop" else "residencial") for _,u,_ in options):threshold=max(3,threshold-7)
             token=(month*37+b["x"]*19+b["y"]*43+(11 if kind=="shop" else 0))%100
             if token>=threshold:continue
             response=None
             if options:
-                minutes,unit=min(options,key=lambda it:(it[0],it[1]["name"]))
+                minutes,unit,path=min(options,key=lambda it:(it[0],it[1]["name"]))
                 unit["remaining"]-=1;unit["responded"]+=1
-                response={"station":unit["name"],"minutes":minutes}
+                response={"station":unit["name"],"minutes":minutes,"stationX":unit["building"]["x"],"stationY":unit["building"]["y"],"route":path}
                 responded+=1
             else:
                 unanswered+=1
@@ -4244,7 +4244,8 @@ def police_service_report(workplaces=None,advance=False):
                 "day":state["day"],"location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
                 "x":b["x"],"y":b["y"],"status":"atendido" if response else "sin respuesta",
                 "responseMinutes":response["minutes"] if response else None,
-                "station":response["station"] if response else None})
+                "station":response["station"] if response else None,"stationX":response["stationX"] if response else None,
+                "stationY":response["stationY"] if response else None,"route":response["route"] if response else None})
         police["recentIncidents"]=(police.get("recentIncidents",[])+incidents)[-24:]
         police["lastIncidents"]=len(incidents);police["lastResponded"]=responded;police["lastUnanswered"]=unanswered;police["lastInventoryLoss"]=damage
         police["totalResponded"]=police.get("totalResponded",0)+responded

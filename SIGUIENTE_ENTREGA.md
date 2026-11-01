@@ -189,3 +189,10 @@ Primero probar end-to-end la nueva cadena: adjudicar la segunda fábrica como as
 ## Continuación después de Alfa 0.91
 
 Fase 18=85%. Implementado el ciclo regional de acero a componentes: compra de acero desde Corralón por ruta, orden industrial, recepción en metalúrgica, producción limitada por fuerza laboral/servicios, stock local y venta a la construcción en Offline/Online. Próxima prioridad: prueba end-to-end de obra detenida cuando faltan componentes → pedido a Metalúrgica local → camión recibido → reanudación sin doble consumo/pago, primero Online y luego Offline; verificar que proveedor/stock/caja y progreso coincidan. Inspeccionar Economía en móvil y escritorio tras agregar tarjeta. Luego completar circuito de habilitación de la fábrica desde licitación/apertura, antes de otra expansión industrial. Global no estimable sin pesos comunes verificables para 34 fases. No declarar probado LAN físico/Vercel.
+
+
+## Continuación después de Alfa 0.92
+
+GitHub Actions verifica pruebas Online/Offline de escasez de componentes, pedido local, transporte, recepción, reanudación e inspección, con pago y consumo sin duplicación, más ausencia de productor alimentario ficticio en una metalúrgica Offline. La liquidación mensual Offline deja de procesar por segunda vez las fábricas especializadas; fase 18 sigue en 85%.
+
+**Próximo desarrollo:** ejecutar un escenario real de creación de metalúrgica desde zonificación industrial, construcción, inspección, personal, servicios, acero del Corralón, conversión, entrega y consumo en una obra. Dar paridad a la secuencia de tipos de industria entre los motores sin crear inventarios ni caja; después validar escasez y partidas de décadas. LAN física, Vercel y Chromium continúan sin comprobar.

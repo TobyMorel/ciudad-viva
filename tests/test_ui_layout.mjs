@@ -25,7 +25,8 @@ try{
           business:{id:'rival-'+x,industryType:'metalworks',status:'abierto',
             materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
       }
-      city.supply.tradeContracts=[{id:'ui-contract',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0}];
+      city.supply.tradeContracts=[{id:'ui-contract',buyerName:'Hormigonera de la zona industrial central',vendorName:'Cantera del corredor productivo de Puerto Claro',commodity:'áridos',status:'en curso',quantity:30,deliveredUnits:10,installments:3,escrow:600,paidToSeller:290,refunded:0,contractValue:700,extensionFee:35}];
+      city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
     });
     await page.locator('#offlineMode').click();
@@ -67,6 +68,7 @@ try{
         return {visible,overflow:el.scrollWidth>el.clientWidth+3};
       });
     });
+    assert.equal(await page.locator('[data-renegotiate-contract="ui-contract"]').count(),1,name+': prórroga por corte vial accesible');
     assert.equal(contractLayout.length,1,name+': contrato privado visible en Economía');
     assert.ok(contractLayout.every(v=>v.visible&&!v.overflow),
       name+': texto contractual solapado u oculto '+JSON.stringify(contractLayout));

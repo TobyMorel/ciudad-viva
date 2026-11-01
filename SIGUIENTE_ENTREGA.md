@@ -252,3 +252,8 @@ Cuando el proveedor quiebra, las órdenes contractuales pendientes se cancelan i
 ## Continuación · competencia comercial
 
 Al cierre mensual las tiendas cambian autónomamente precio según demanda efectiva, existencias y margen. Suben con ventas fuertes y poco stock; bajan con sobreinventario o pérdidas. El precio modifica la preferencia de compra de hogares en meses posteriores sin crear caja en el ajuste. Implementación Online/Offline, prueba unitaria Online; confirmar CI y ampliar pruebas de integración. Sin cambios visuales. Después: más contratos B2B, expansiones y escenarios multidecada.
+
+
+## Continuación · alquiler comercial operativo
+
+Comercios abiertos asumen una renta mensual según localización y `monthlyRent` opcional; el costo reduce caja/beneficio y puede llevar a cierre por insolvencia. Los pagos efectivamente cubiertos quedan en `supply.propertyRentalCash` como recaudación de propietarios, no ingreso del municipio ni capital generado. Se implementó en Online y Offline sin modificar UI; Online eliminó además el ajuste minorista anterior duplicado para mantener una sola decisión de precios por cierre. Pendiente validar resultados de CI y ajustar pruebas de rentas en escenarios largos. Fases sin cambiar; próximo sistema: contratos B2B ampliados y escenarios de 30 años.

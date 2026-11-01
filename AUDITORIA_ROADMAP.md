@@ -384,3 +384,11 @@ Los proveedores privados ya celebran contratos de suministro a plazo para la cad
 ### Alfa 0.98 — fase 17 continúa al 80%
 
 El contrato B2B de áridos agrega negociación pagada ante cortes viales, con conservación de lotes, dinero en custodia y la posibilidad de incumplimiento si persiste el corte. Se prueban los dos motores, una sola prórroga, rechazo sin ruta bloqueada, recepción tardía, cajas y ausencia de duplicación. Es una ampliación acotada de cantera→hormigonera: no eleva la cobertura de fase 17, la fase 18 conserva 90% y el avance global sigue no estimable.
+
+## Alfa 0.99 · descarga siderúrgica compartida
+
+En ambos motores, el cupo diario `unloadingCapacity` de un puerto se comparte entre **todos** los embarques de acero que llegaron al mismo muelle: si dos barcos traen 5 y 8 unidades y el puerto solo admite 7 al día, se entregan 5+2 el primer día y las 6 restantes al siguiente. La regla conserva el tiempo de navegación, la necesidad de puerto operativo, el acceso vial y los costos ya pagados. `lastUnloadedUnits` guarda el volumen diario por remesa y evita superar el límite en reintentos o al reabrir un guardado. Para remesas heredadas sin volumen diario registrado, el motor utiliza una estimación conservadora, sin migración obligatoria del esquema.
+
+Se añadieron regresiones Online y Offline con dos cargamentos en el mismo puerto y comprobaciones de idempotencia; el workflow `validation.yml` incorpora el nuevo test Offline. Se corrigió el escenario responsive de prórrogas: la orden tenía un proveedor ausente y se cancelaba por insolvencia ficticia; ahora tiene comprador y vendedor existentes, materia identificable y corte de calles real. El CI debe confirmar el resultado después de publicar. Se conserva fase 33 en 40% y fase 17 en 80%; el progreso global sigue sin estimación verificable. Las verificaciones LAN física y Vercel no se realizaron.
+
+**Próximo trabajo:** verificar el resultado CI de Alfa 0.99; completar contratos industriales a plazo en otras cadenas y ampliar observabilidad anual del estrés de 30 años para detectar pérdidas de capital, migración extrema y cuellos de botella portuarios.

@@ -1,3 +1,15 @@
+# Auditoría del roadmap · Alfa 0.131
+
+## Revisión de alcance · Alfa 0.131
+
+### Fase 28 · refugio temporal conectado a vivienda, empleo y presupuesto
+
+El refugio público es una obra cívica por etapas, con empresa, materiales, plazo, inspección y operación. Capacidad máxima de 30 camas, limitada por dotación (tres plazas por empleado), electricidad, agua, cloacas, acceso vial y presupuesto financiado de Servicios. El costo mensual ($1.180) entra a la contabilidad municipal. La migración sin hogar permanente puede ocupar una plaza; al quedar vivienda disponible, se realoja a la misma persona antes de nuevas admisiones. La UI de Economía informa capacidad, ocupación, lista de espera, admisiones/realojamientos y costo.
+
+La cobertura protege demanda nueva no alojada; todavía no recoge hogares existentes desplazados por emergencias ni incorpora necesidades diferenciadas de adultos mayores. No se declara cerrada la fase. Pruebas dedicadas verifican equivalencia Online/Offline, cuello de botella por personal, financiación, redes y ruta, y realojamiento sin duplicación. Playwright revisa catálogo y panel en móvil 390×844 y escritorio 1440×900.
+
+Fase 28: 83% orientativo (78% en Alfa 0.130); progreso global no estimable por falta de pesos comunes comprobables para las 34 fases. LAN física pendiente.
+
 # Auditoría del roadmap · Alfa 0.130
 
 ## Revisión de alcance · Alfa 0.130

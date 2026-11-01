@@ -1,3 +1,17 @@
+# Estado de desarrollo · Alfa 0.131
+
+## Refugio municipal temporal con cupos y realojamiento
+
+Se añade el Centro de acogida temporal como obra cívica pública ($14.800, 92 días), con modelo 3D y costo operativo mensual de $1.180. Solo atiende personas cuando la obra está terminada, hay personal cualificado, conexión vial y redes de electricidad, agua y cloacas; las plazas efectivas se limitan también por la fracción financiada de Servicios. Cada trabajador habilita hasta tres plazas y el centro aporta hasta 30.
+
+Las personas que llegan por demanda migratoria pero no encuentran vivienda permanente pueden ocupar plazas disponibles. Conservan identidad y estado de residente temporal; al surgir una vivienda, se realojan antes de aceptar nueva migración, sin duplicar población. Economía muestra capacidad, ocupación, plazas libres, espera, admisiones, realojamientos, costo y condiciones operativas. Online y Offline aplican el ciclo de forma equivalente.
+
+Verificación local: regresiones Online y Offline de admisión y realojamiento; límites por personal, fondos, redes y acceso vial; catálogo y tarjeta de Economía inspeccionados en Playwright a 390×844 y 1440×900; sintaxis y `git diff --check`. Stress largo y suite completa se ejecutan antes del push. Fase 28: 83% orientativo. Restan protección ante desplazamientos, adultos mayores, formación técnica y cobertura/efectos sociales longitudinales. Progreso global no estimable: falta una ponderación común verificable para las 34 fases. LAN física entre dos equipos sigue pendiente.
+
+## Prioridad inmediata
+
+Ampliar protección a hogares desplazados por emergencias y a residentes vulnerables ya establecidos, reutilizando plazas, costos y salida a vivienda sin crear población duplicada. Después volver a educación técnica y a validar cobertura de servicios. Mantener entregas centradas en mecánicas, con UI responsiva cuando cambie y push/ZIP por versión.
+
 # Estado de desarrollo · Alfa 0.130
 
 ## Corrección de estabilidad de las pruebas de interfaz (hotfix 0.130)

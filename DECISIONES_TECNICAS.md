@@ -1,3 +1,14 @@
+# Decisiones técnicas · Alfa 0.131
+
+## Refugio social
+
+- `socialServices.shelterResidents` guarda residentes temporales con identidad estable; `shelterReport` conserva capacidad/ocupación y actividad del período. No cuentan como hogares con vivienda ni se vuelven a sumar al realojarse.
+- Capacidad de cada refugio = mínimo entre camas físicas y tres camas por trabajador asignado; se limita por la menor disponibilidad entre electricidad, agua y cloacas y por el porcentaje efectivo de financiamiento de Servicios. Sin acceso vial desde el centro no admite residentes.
+- Solo se admiten candidatos ya generados por la demanda migratoria y con empleo disponible; se asignan primero viviendas permanentes disponibles a residentes temporales en cuanto se ejecuta la colocación mensual.
+- El refugio es una obra cívica con los recursos/etapas existentes, no una aparición instantánea. El costo operativo fijo mensual se incluye en Servicios.
+- Alcance explícito de esta iteración: cubre demanda migratoria nueva sin alojamiento. Todavía no evacua hogares existentes desplazados por incendio/inundación ni modela atención geriátrica, salud individual, reunificación o duración máxima de estancia. Son siguientes pasos, no funciones completadas.
+- `server.py` y `offline.js` mantienen reglas paralelas; suites dedicadas cubren admisión, realojamiento y cuellos de botella.
+
 # Decisiones técnicas · Alfa 0.130
 
 ## Subsidio directo de alquiler con apropiación mensual

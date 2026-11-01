@@ -30,6 +30,9 @@ try{
       city.buildings.push({x:7,y:11,kind:'civic',serviceModel:'clinic',name:'Consultorio del Barrio Oeste',status:'operativo',jobSlots:12,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.buildings.push({x:10,y:11,kind:'civic',serviceModel:'generalHospital',name:'Hospital del corredor periurbano del Puerto Claro',status:'operativo',jobSlots:40,hospitalWard:{beds:20,ambulances:1},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.buildings.push({x:11,y:11,kind:'civic',serviceModel:'policeStation',name:'Comisaría Distrital Norte de Puerto Claro',status:'operativo',jobSlots:22,policeUnit:{vehicles:2,priority:'mixto'},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+      city.buildings.push({x:12,y:11,kind:'civic',serviceModel:'socialShelter',name:'Centro de acogida del Puerto Claro',status:'habilitado',jobSlots:12,monthlyCost:1180,socialShelter:{beds:30,occupied:2,operationalCapacity:8,residents:[]},utilityAccess:{powerServedPct:90,waterServedPct:80,wastewaterTreatedPct:75}});
+      city.socialServices=city.socialServices||{};city.socialServices.shelterResidents=[{id:'shelter-ui-a',name:'Residente en alojamiento temporal 1',age:34,workerEligible:true,shelterId:'shelter-12-11',admittedDay:30},{id:'shelter-ui-b',name:'Residente en alojamiento temporal 2',age:41,workerEligible:true,shelterId:null,admittedDay:30}];
+      city.socialServices.shelterReport={residents:2,sheltered:1,waiting:1,capacity:8,available:6,monthlyCost:1180,fundingPct:100,facilities:[{id:'shelter-12-11',name:'Centro de acogida del Puerto Claro',capacity:8,beds:30,staff:4,utilities:75,connected:true,monthlyCost:1180,occupied:1,available:7}]};
       city.roads=[]; // Corte real de las vías, con proveedor contractual existente.
       city.supply.marketOrders=[{id:'ui-delayed',supplyContractId:'ui-contract',businessId:'rival-4',vendorId:'rival-6',type:'industrial_raw',commodity:'áridos',status:'en tránsito',statusCause:'Sin acceso vial',supplier:'Cantera local',businessName:'Hormigonera de la zona industrial central',quantity:8,productCost:280,freight:0,source:[6,9],x:4,y:9,supplierReadyDay:99998,arrivalDay:99999,deadlineDay:100000}];
       localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
@@ -82,7 +85,7 @@ try{
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===16&&catalog.factoryCount===5&&catalog.categories.length===6&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===17&&catalog.factoryCount===5&&catalog.categories.length===7&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').evaluate(button=>button.click());
 
@@ -143,6 +146,8 @@ try{
     });
     assert.ok(aidLayout.found&&aidLayout.buttons===2&&aidLayout.within&&aidLayout.noOverflow&&aidLayout.labels&&aidLayout.controls,
       name+': control o explicación de ayuda de alquiler oculto/desbordado '+JSON.stringify(aidLayout));
+    const shelterLayout=await page.evaluate(()=>{const panel=document.querySelector('.social-shelter-panel');if(!panel)return {found:false};panel.scrollIntoView({block:'center'});const r=panel.getBoundingClientRect(),content=document.querySelector('#popupContent'),text=panel.textContent||'',parts=[...panel.querySelectorAll('.detail-grid>div,.supply-line')].map(el=>{const b=el.getBoundingClientRect();return {left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,scroll:el.scrollWidth,client:el.clientWidth,text:el.textContent}});const overlap=parts.some((a,i)=>parts.slice(i+1).some(b=>Math.min(a.right,b.right)-Math.max(a.left,b.left)>3&&Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>3));return {found:true,left:r.left,right:r.right,overflow:panel.scrollWidth>panel.clientWidth+3||content.scrollWidth>content.clientWidth+3,contained:parts.every(p=>p.width>0&&p.left>=-2&&p.right<=innerWidth+2&&p.scroll<=p.client+3),overlap,text}});
+    assert.ok(shelterLayout.found&&shelterLayout.left>=-2&&shelterLayout.right<=width+2&&!shelterLayout.overflow&&shelterLayout.contained&&!shelterLayout.overlap&&shelterLayout.text.includes('Personas en alojamiento')&&shelterLayout.text.includes('6 libres')&&shelterLayout.text.includes('redes 75%'),name+': ocupación, plazas o estado del refugio recortados/solapados '+JSON.stringify(shelterLayout));
     await page.locator('#popupClose').evaluate(button=>button.click());
     await page.locator('[data-popup="city"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});

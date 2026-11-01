@@ -46,3 +46,19 @@ test('Licitación de hospital y central de higiene persiste modelo y materiales 
   await assert.rejects(action({...tender,serviceModel:'wasteComplex',x:11,y:11}),/incompatible/);
  });
 });
+
+test('El centro de acogida es una obra pública de 30 plazas con costo y personal propios',async()=>{
+ const city=seed();city.money=200000;city.paused=true;
+ await scenario(city,async({view,action})=>{
+  const result=await action({action:'place',contractor:'Constructora Delta',kind:'civic',serviceModel:'socialShelter',x:10,y:11});
+  const project=result.projects.find(p=>p.x===10&&p.y===11);
+  assert.equal(project.serviceModel,'socialShelter');assert.equal(project.label,'Centro de acogida temporal');assert.ok(project.cost>8000);
+  assert.ok(project.materialsRequired.steel>22,'la obra de 30 camas requiere más insumos que un consultorio');
+  assert.ok(result.socialServices.shelterResidents.length===0,'no crea personas sin una demanda migratoria sin vivienda');
+  const facility={kind:'civic',name:'Acogida',serviceModel:'socialShelter',status:'habilitado',jobSlots:12,monthlyCost:1180,socialShelter:{beds:30,residents:[]},x:5,y:10,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}};
+  const home={kind:'home',x:4,y:11,occupants:1,capacity:1,residents:[{id:'resident-a',age:32,workerEligible:true,status:'buscando',skills:{salud:100},expectedMonthlyWage:8,carAccess:false}],quality:90};
+  city.buildings=[home,facility];city.roads=[[4,10],[5,10],[4,11]];city.population=1;city.jobs=100;city.approval=69;city.housingDemand={unmet:0,lastGenerated:0,lastFilled:0};
+  const saved=JSON.stringify(city),storage=globalThis.localStorage;let encoded=saved;globalThis.localStorage={getItem:()=>encoded,setItem:(_,v)=>{encoded=v}};
+  try{const reopened=await createOfflineAdapter();reopened.setRealtimeClock(false);const s=await reopened.request('/api/state');assert.ok(Array.isArray(s.socialServices.shelterResidents));assert.equal(s.buildings.find(b=>b.serviceModel==='socialShelter').socialShelter.beds,30)}finally{globalThis.localStorage=storage}
+ });
+});

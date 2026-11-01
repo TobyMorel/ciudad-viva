@@ -25,12 +25,15 @@ class ServiceConstruction(unittest.TestCase):
     def test_twelve_models_have_monotone_costs_and_road_radii(self):
         families=(("clinic","medicalCenter","generalHospital"),("policePost","policeStation","policeHQ"),
             ("firePost","fireStationPlus","fireCommand"),("wasteYard","wasteDepot","wasteComplex"))
-        self.assertEqual(len(server.SERVICE_MODELS),12)
+        self.assertEqual(len(server.SERVICE_MODELS),13)
         for family in families:
             models=[server.SERVICE_MODELS[k] for k in family]
             self.assertEqual([m["cost"] for m in models],sorted(m["cost"] for m in models))
             self.assertEqual([m["radius"] for m in models],sorted(m["radius"] for m in models))
             self.assertEqual([m["jobs"] for m in models],sorted(m["jobs"] for m in models))
+        shelter=server.SERVICE_MODELS["socialShelter"]
+        self.assertEqual((shelter["beds"],shelter["jobs"],shelter["monthlyCost"]),(30,12,1180))
+        self.assertTrue(shelter["socialCare"])
         small={"kind":"civic","name":"Consultorio","serviceModel":"clinic","x":10,"y":11,"status":"habilitado"}
         big={**small,"serviceModel":"generalHospital"}
         target={"x":5,"y":9}

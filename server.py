@@ -600,7 +600,10 @@ def ensure_person_work_profile(person):
 
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
-    if site.get("kind")=="civic" and (service_model(site) or {}).get("police"):
+    model=service_model(site) if site.get("kind")=="civic" else None
+    if model and model.get("socialCare"):
+        category,label,minimum="salud","Acompañamiento social",48
+    if site.get("kind")=="civic" and (model or {}).get("police"):
         category,label,minimum="administracion","Seguridad municipal",48
     firm=site.get("business",{}) if site.get("kind") in ("shop","hotel","factory") else {}
     wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel","factory") else 14 if site.get("kind") in ("powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school","fireStation") else 8))
@@ -663,7 +666,7 @@ def new_finance():
     return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"programPriority":["services","networks","mobility"],"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"financialServiceImpact":0,"lastReport":{},"history":[]}}
 
 def new_social_services():
-    return {"housingAidBudget":0,"lastReport":{},"history":[]}
+    return {"housingAidBudget":0,"lastReport":{},"history":[],"shelterResidents":[],"shelterReport":{}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -1132,6 +1135,36 @@ def settle_housing_aid(allocations,funding_pct):
     elif report["budget"] and report["eligible"]==0:ev("Ayuda de alquiler sin beneficiarios",f"Cupo $ {report['budget']:,}; ningún hogar elegible registra deuda de alquiler activa.".replace(",","."))
     return report
 
+def update_social_shelters(workplaces=None, funding_pct=None):
+    """Operate staffed, connected beds and persist temporary residents awaiting homes."""
+    social=state.setdefault("socialServices",new_social_services())
+    residents=social.setdefault("shelterResidents",[])
+    if workplaces is None:workplaces=commute_model().get("workplaces",[])
+    staff={(w.get("x"),w.get("y")):max(0,int(w.get("staffedJobs",0))) for w in workplaces}
+    if funding_pct is None:
+        funding_pct=100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+    facilities=[]
+    for building in state.get("buildings",[]):
+        shelter=building.get("socialShelter")
+        if building.get("kind")!="civic" or not shelter or building.get("status") not in ("habilitado","operativo"):continue
+        workers=staff.get((building.get("x"),building.get("y")),0);access=building.get("utilityAccess",{})
+        utilities=min(max(0,min(100,float(access.get(key,0)))) for key in ("powerServedPct","waterServedPct","wastewaterTreatedPct"))
+        connected=bool(route_between((4,10),(building["x"],building["y"])))
+        staffed_beds=min(max(0,int(shelter.get("beds",0))),workers*3)
+        capacity=max(0,math.floor(staffed_beds*utilities/100*max(0,min(100,funding_pct))/100)) if connected else 0
+        facilities.append({"building":building,"id":f"shelter-{building['x']}-{building['y']}","name":building.get("name","Centro de acogida"),"capacity":capacity,"beds":max(0,int(shelter.get("beds",0))),"staff":workers,"utilities":utilities,"connected":connected,"monthlyCost":max(0,int(building.get("monthlyCost",0)))})
+    residents.sort(key=lambda person:(person.get("admittedDay",0),person.get("id","")))
+    for person in residents:person["shelterId"]=None
+    for facility in facilities:
+        assigned=[person for person in residents if person.get("shelterId") is None][:facility["capacity"]]
+        for person in assigned:person["shelterId"]=facility["id"]
+        facility["occupied"]=len(assigned);facility["available"]=max(0,facility["capacity"]-len(assigned))
+        facility["building"]["socialShelter"]["occupied"]=len(assigned)
+        facility["building"]["socialShelter"]["operationalCapacity"]=facility["capacity"]
+    report={"residents":len(residents),"sheltered":sum(bool(p.get("shelterId")) for p in residents),"waiting":sum(not p.get("shelterId") for p in residents),"capacity":sum(x["capacity"] for x in facilities),"available":sum(x.get("available",0) for x in facilities),"monthlyCost":sum(x["monthlyCost"] for x in facilities),"fundingPct":round(max(0,min(100,funding_pct))),"facilities":[{k:v for k,v in x.items() if k!="building"} for x in facilities]}
+    social["shelterReport"]=report
+    return report
+
 def advance_heritage_works():
     day=int(state.get("day",1))
     if day>1 and (day-1)%360==0:
@@ -1555,6 +1588,7 @@ SERVICE_MODELS={
  "clinic":{"kind":"civic","label":"Consultorio barrial","cost":8000,"days":62,"radius":6,"jobs":12,"care":True},
  "medicalCenter":{"kind":"civic","label":"Policlínico municipal","cost":14200,"days":85,"radius":10,"jobs":24,"care":True},
  "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
+ "socialShelter":{"kind":"civic","label":"Centro de acogida temporal","cost":14800,"days":92,"radius":8,"jobs":12,"beds":30,"socialCare":True,"monthlyCost":1180},
  "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
  "policeStation":{"kind":"civic","label":"Comisaría distrital","cost":16500,"days":90,"radius":11,"jobs":22,"police":2},
  "policeHQ":{"kind":"civic","label":"Central de seguridad","cost":28700,"days":124,"radius":16,"jobs":36,"police":3},
@@ -3890,6 +3924,17 @@ def move_households():
     tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
     desired=tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)
     demand_state=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
+    social=state.setdefault("socialServices",new_social_services());temporary=social.setdefault("shelterResidents",[])
+    rehoused=0
+    for person in temporary[:]:
+        available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0)]
+        if not available:break
+        home=min(available,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
+        home["occupants"]=home.get("occupants",0)+1
+        if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
+        person.pop("shelterId",None);person.pop("admittedDay",None);person["status"]="buscando" if person.get("workerEligible") else "inactivo"
+        ensure_person_work_profile(person);home.setdefault("residents",[]).append(person);temporary.remove(person);demand_state["unmet"]=max(0,int(demand_state.get("unmet",0))-1);rehoused+=1
+    if rehoused:ev("Personas reubicadas desde el refugio",f"{rehoused} residentes encontraron vivienda permanente vacante; vuelven a buscar trabajo desde su nuevo hogar.")
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
         generated=min(desired,jobs_room)
@@ -3897,7 +3942,8 @@ def move_households():
         demand_state["lastGenerated"]=generated;demand_state["lastFilled"]=0
         vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes)
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
-        arrivals=min(int(demand_state.get("unmet",0)),vacancies,jobs_room);placed=0
+        awaiting_home=max(0,int(demand_state.get("unmet",0))-len(temporary))
+        arrivals=min(awaiting_home,vacancies,jobs_room);placed=0
         for index in range(arrivals):
             available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0)]
             if not available:break
@@ -3934,6 +3980,21 @@ def move_households():
             left+=1
         state["population"]=max(0,state.get("population",0)-left);state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-left*3)
         if left:ev("Salida de residentes",f"{left} residentes dejaron hogares con menor calidad; sus perfiles laborales y plazas ocupadas se liberaron y los ingresos tributarios futuros bajan $ {left*3}/mes.")
+    report=update_social_shelters()
+    pending=max(0,int(demand_state.get("unmet",0))-len(temporary))
+    jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
+    admitted=min(pending,report.get("available",0),jobs_room)
+    for index in range(admitted):
+        identifier=f"shelter-{state.get('day',1)}-{len(temporary)+index}"
+        cohort=stable_skill(identifier,"migration-cohort");age=18+stable_skill(identifier,"migration-age")%49
+        person={"id":identifier,"name":f"Residente en alojamiento temporal {len(temporary)+1}","age":age,"birthYear":2026+(max(0,state.get("day",1)-1)//360),"lifeStage":"vida laboral","workerEligible":True,"status":"alojamiento temporal","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1),"unemploymentReason":"sin vivienda permanente","admittedDay":state.get("day",1)}
+        ensure_person_work_profile(person);temporary.append(person)
+    if admitted:
+        state["population"]=state.get("population",0)+admitted;state["monthlyIncome"]=state.get("monthlyIncome",0)+admitted*3
+        ev("Alojamiento temporal asignado",f"{admitted} personas de la lista migratoria fueron recibidas en plazas municipales; siguen necesitando vivienda permanente.")
+    report=update_social_shelters()
+    report.update({"housingDemand":max(0,int(demand_state.get("unmet",0))-len(temporary)),"rehousedThisMonth":rehoused,"admittedThisMonth":admitted})
+    social["shelterReport"]=report
 
 def process_port_logistics():
     """Exportaciones reales de comercios: camión por calles, patio limitado y barco por demanda."""
@@ -4430,7 +4491,11 @@ def tick_one_day():
                 building={"x":p["x"],"y":p["y"],"kind":"civic","name":model["label"],"serviceModel":p.get("serviceModel","clinic"),"level":1,
                      "occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":operating_cost,"quality":quality}
                 if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":day}
-                if model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
+                if model.get("socialCare"):
+                    building["socialShelter"]={"beds":model["beds"],"residents":[],"openedDay":day}
+                    building["monthlyCost"]=model["monthlyCost"]
+                    operating_cost=building["monthlyCost"]
+                elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
                 state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
                 ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
             elif p["kind"]=="school":

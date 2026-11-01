@@ -1,3 +1,13 @@
+# Continuidad inmediata · Alfa 0.131
+
+Objetivo de trabajo actual: ampliar mecánicas del roadmap con alcance útil por entrega; no encadenar varias versiones de detalle visual. El usuario espera que cada cambio llegue a GitHub `main`, UI revisada si se modifica, y ZIP completo para continuar en otra sesión. Mantener el autor `66056611+TobyMorel@users.noreply.github.com`.
+
+Esta entrega añade refugio público temporal en `server.py`, `offline.js`, `game.js`, `world3d.js` e `index.html`. Se construye desde el catálogo; cuesta $14.800, tarda 92 días y al recibirse opera por $1.180/mes. Tiene 30 camas, 12 empleos base, admite solo con personal, ruta y servicios y limita capacidad al financiamiento de Servicios. Admite migrantes que no hallaron hogar; cuando queda una vivienda, se realojan antes de la siguiente admisión, conservando el mismo conteo poblacional. Economía expone capacidad, espera, ocupación, costos y resultados.
+
+Regresiones dedicadas: `tests/test_social_shelter_online.py` y `tests/test_social_shelter_offline.mjs`; el test de modelos comprueba catálogo y recepción; `tests/test_ui_layout.mjs` incluye tarjeta/catálogo del refugio en 390×844 y 1440×900. No declarar suite integral o stress pasado hasta ejecutarlos en esta sesión.
+
+Próximo sistema: alojar temporalmente hogares ya residentes desplazados por emergencias y conectar adultos mayores a capacidad de atención. Asegurar identidad/conteo poblacional sin duplicación, fondos y realojamiento. Fase 28=83% orientativo; global sin estimar por falta de pesos comunes verificables; LAN entre equipos físicos pendiente. Usar author arriba, publicar a `main`, verificar SHA/Actions/Vercel y construir el ZIP desde el commit publicado.
+
 # Continuidad inmediata · Alfa 0.130
 
 Implementado primer programa jugable de protección social: cupo de ayuda de alquiler por mes, priorización por ingreso/habitante, elegibilidad solo con mora real en vivienda convertida por reconversión privada y transferencia directa al propietario. Tope $5.000, ajuste $250; el gasto se suma a Servicios y la financiación fiscal determina cuánto llega. Se registra balance en `socialServices.lastReport/history` y en cada hogar. No entregamos cash indiscriminado. `game.js` expone el ajuste y el resultado dentro de Economía; `server.py` y `offline.js` aplican el mismo cierre.

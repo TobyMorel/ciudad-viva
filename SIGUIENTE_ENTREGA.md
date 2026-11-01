@@ -1,3 +1,12 @@
+# Siguiente entrega · después de Alfa 0.131
+
+1. Fase 28: integrar hogares ya residentes desplazados por desastre a la red de refugios, con prioridad según vulnerabilidad, plazas limitadas, costos y restauración de vivienda; asegurar que evacuación y realojamiento no creen ni borren población.
+2. Añadir prioridad y necesidades de adultos mayores de manera jugable, enlazadas a personal y servicios disponibles, sin un contador aislado.
+3. Continuar educación técnica y medición de cobertura de salud/protección por distrito. No dedicar entregas consecutivas a pulido.
+4. Ejecutar suites Online/Offline, estrés de largo plazo y UI responsive a 390×844/1440×900 cuando cambie; publicar una build acumulativa en `main`, verificar SHA, Actions y despliegue, adjuntar ZIP íntegro.
+
+Fase actual: 28 (83% orientativo, aún parcial). Próximo hito: refugio para hogares desplazados ya presentes y necesidades de adultos mayores. Global no estimable: no existe ponderación estable verificable común para las 34 fases. LAN física sigue pendiente.
+
 # Siguiente entrega
 
 ## Punto exacto · después de Alfa 0.130

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.130",
+  "currentVersion": "0.131",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.131",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 83,
+      "overallProgress": null,
+      "changes": [
+        "Construir incorpora el Centro de acogida temporal como obra municipal por etapas: 30 plazas base, 12 puestos y operación de $1.180/mes; usa licitación, materiales, inspección, calles y redes existentes.",
+        "La demanda migratoria solo entra al alojamiento cuando la ciudad conserva demanda, empleos alcanzables y no hay casas libres. El personal cualificado, agua, electricidad, saneamiento, acceso vial y gasto de Servicios determinan las plazas operativas; sin esos requisitos no se crean residentes.",
+        "Las personas alojadas conservan identificador y forman parte de la población, pero siguen buscando una vivienda estable. Cuando abre una casa con vacantes, el cierre mensual las reubica antes de recibir otros ingresos y no duplica habitantes.",
+        "Economía informa residentes alojados y en espera, plazas, financiación, costo mensual, ingresos y reubicaciones. Three.js muestra el centro como edificio propio; la prueba responsive mide textos, tarjetas, límites y solapamientos a 390×844 y 1440×900.",
+        "Online y Offline comparten admisión y reubicación. Verificación local: suites y estrés económico se volverán a ejecutar en CI; se agregaron pruebas de capacidad por personal, acceso, redes y financiación, así como del ciclo de alojamiento a vivienda.",
+        "Fase 28 avanza de 78% a 83% por entregar una ruta física y fiscal de alojamiento temporal vinculada con migración y vivienda. Siguen pendientes el desplazamiento de hogares existentes, la atención a mayores y educación técnica. El progreso global no se estima sin pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.130",
       "date": "2026-11-01",
@@ -1367,12 +1382,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.131 · refugio y atención a hogares sin vivienda",
-      "detail": "Fases 28 y 30: conectar edificios/refugios, personal, plazas disponibles, accesibilidad vial y gasto operativo con hogares en riesgo de quedar sin vivienda. Medir admisiones, espera y salidas sin crear capacidad automática."
+      "title": "Alfa 0.132 · hogares desplazados y acceso a servicios",
+      "detail": "Extender protección a residentes desplazados por emergencias y hogares vulnerables con elegibilidad, plazas, tiempos, fondos y salida hacia viviendas disponibles; mantener Offline/Online equivalentes."
     },
     {
-      "title": "Validación de experiencia y red",
-      "detail": "Mantener pruebas de UI móvil/escritorio, rendimiento de ciudades densas y conectividad LAN física entre dos equipos."
+      "title": "Verificación integral y red local",
+      "detail": "Completar la batería responsive y de economía para cada entrega; probar LAN entre dos equipos físicos cuando haya entorno disponible."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1649,12 +1664,12 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 78,
-      "summary": "Salud, seguridad y cuatro niveles educativos; suma ayuda de alquiler con elegibilidad, cupo fiscal y pago trazable.",
+      "progress": 83,
+      "summary": "Salud, seguridad y cuatro niveles educativos; ayuda de alquiler y refugios temporales integrados con vivienda, empleo, personal, redes y presupuesto.",
       "pending": [
-        "Ampliar la protección a hogares desplazados, personas sin vivienda y adultos mayores con capacidad y costos reales.",
+        "Atender desplazamiento por desastres, hogares vulnerables y personas mayores con capacidad y costos medibles.",
         "Educación técnica, carreras profesionales y desplazamientos estudiantiles visibles.",
-        "Despacho interactivo de incidentes y medición longitudinal de equidad y cobertura."
+        "Integrar residentes temporales al empleo, servicios individuales y medición longitudinal de equidad y cobertura."
       ]
     },
     {

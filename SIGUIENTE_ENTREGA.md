@@ -247,3 +247,8 @@ Remesas de áridos no entregadas al vencimiento generan devolución desde custod
 ## Continuación · quiebra del vendedor B2B
 
 Cuando el proveedor quiebra, las órdenes contractuales pendientes se cancelan inmediatamente y devuelven el escrow al cliente: el material que había sido reservado por una firma ya cerrada consta como pérdida, no vuelve al mercado ficticiamente. Ambas simulaciones implementadas con pruebas de no duplicación. Seguir con contratos para otras materias primas, comercio y escenarios multidecada; interfaz sin cambios.
+
+
+## Continuación · competencia comercial
+
+Al cierre mensual las tiendas cambian autónomamente precio según demanda efectiva, existencias y margen. Suben con ventas fuertes y poco stock; bajan con sobreinventario o pérdidas. El precio modifica la preferencia de compra de hogares en meses posteriores sin crear caja en el ajuste. Implementación Online/Offline, prueba unitaria Online; confirmar CI y ampliar pruebas de integración. Sin cambios visuales. Después: más contratos B2B, expansiones y escenarios multidecada.

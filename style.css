@@ -149,3 +149,13 @@ canvas#city{touch-action:none}
 .hospital-actions{display:flex;flex-wrap:wrap;gap:7px;width:100%;max-width:100%;margin-top:8px}
 .hospital-actions button{flex:1 1 155px;min-width:0;max-width:100%;padding:8px 9px;border:1px solid #8faf9f;border-radius:7px;background:#e7f1e7;color:#315c4b;font:700 10px system-ui;text-align:center;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
 .hospital-actions button:disabled{opacity:.48;cursor:not-allowed}
+
+/* Fase 28 · controles de seguridad con ancho limitado y texto visible. */
+.police-panel,.police-unit{min-width:0;max-width:100%}
+.police-unit{display:block}
+.police-unit b,.police-unit small{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.police-actions,.police-priorities{display:flex;flex-wrap:wrap;gap:7px;max-width:100%;width:100%;margin-top:8px}
+.police-actions button,.police-priorities button{flex:1 1 115px;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4;text-align:center;padding:8px 7px;border:1px solid #a9bdad;border-radius:7px;background:#eaf2e8;color:#345d4d;font:700 10px system-ui}
+.police-priorities button{flex-basis:75px}
+.police-priorities .active{background:#d6e7d6;border-color:#648d75}
+.police-priorities button:disabled,.police-actions button:disabled{opacity:.65;cursor:not-allowed}

@@ -356,11 +356,11 @@ export async function createOfflineAdapter(){
     for(const site of state.buildings||[]){
       const f=site.business,recipe=Object.values(OFFLINE_INDUSTRIAL_GOODS).find(spec=>spec[0]===f?.industryType);
       if(!recipe||f.status!=='abierto')continue;
-      const stock=Math.max(0,f[recipe[2]]||0),produced=Math.max(0,f.lastProduction||0),sold=Math.max(0,f.lastLocalSales||0);
+      const stock=Math.max(0,f[recipe[2]]||0),produced=Math.max(0,f.lastProduction||0),sold=Math.max(0,f.industrialSalesSincePricing??f.lastLocalSales??0);
       let factor=Number(f.materialPriceFactor||1);
       if(sold>=Math.max(4,Math.floor(produced/2))&&stock<=Math.max(8,produced))factor=Math.min(1.35,Math.round((factor+.04)*100)/100);
       else if(sold===0&&stock>Math.max(12,produced))factor=Math.max(.8,Math.round((factor-.05)*100)/100);
-      f.materialPriceFactor=factor;
+      f.materialPriceFactor=factor;f.industrialSalesSincePricing=0;
     }
   }
     function offlinePrivateMaterialCost(kind){let total=0;for(const [material,quantity] of Object.entries(MATERIAL_NEEDS[kind]||{})){if(!quantity)continue;const choice=Object.entries(MATERIAL_SUPPLIERS).filter(([name])=>(state.supply.suppliers[name]?.[material]||0)>=quantity).sort((a,b)=>a[1].price-b[1].price||a[1].days-b[1].days||a[0].localeCompare(b[0]))[0];if(!choice)return Infinity;total+=Math.round(quantity*MATERIAL_PRICES[material]*choice[1].price)}return total}

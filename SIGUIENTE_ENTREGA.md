@@ -210,3 +210,10 @@ Priorizar mecánica de **fase 17** de empresa industrial que pierde trabajadores
 La recuperación industrial autónoma ya cubre insolvencia→90 días de espera→demanda y terreno compatibles→financiación privada real ($5.300)→contratista con cinco trabajadores siete días→inspección de servicios/calle→nueva firma, 20 puestos, caja inicial pagada, inventarios sin duplicar y reserva geológica residual. Los dos motores registran origen, causa de bloqueo, contrato e historial. Nuevos tests automatizados comprueban financiación, idempotencia y ausencia de inversión sin demanda; el popup Economía muestra causas y períodos. Fase 17=65%, 18=90%, avance global no estimable.
 
 **Próxima mecánica:** negociación y competencia entre empresas proveedoras de materias primas bajo escasez con precios/contratos pagados; reempleo con efectos demográficos y recuperación con supervivencia económica. Luego estrés de 30 años con escenarios del roadmap. No lanzar iteraciones de pulido visual aislado. LAN física y Vercel siguen pendientes.
+
+
+## Continuación después de Alfa 0.95
+
+Competencia operativa entre canteras, hormigoneras, aserraderos y metalúrgicas en ambos motores. Cada orden manual de obra compra stock de una fábrica conectada por ruta, clasificada por producto + flete, con caja y existencias únicas y rastro de adjudicación. Las compras industriales automáticas de áridos siguen la misma lógica. Una fábrica con ventas suficientes puede subir su precio gradualmente; inventario ocioso obliga a rebajarlo, con límites de 80%–135% de tarifa. Economía expone cotizaciones rivales y la ventana de compras evita pedir un lote mayor al de cualquier planta.
+
+**Próximo sistema:** introducir contratos a plazo con inventario reservado, entregas físicas por transportistas y competencia también para la obra privada automática; ampliar dinámica de plantillas y demanda de comercios y fábricas sin crear capital ni empleo. Implementar después escenarios de estrés de 30 años de fase 33. Pruebas LAN físicas y Vercel aún pendientes. Fase 17=70%, 18=90%, global sin estimación.

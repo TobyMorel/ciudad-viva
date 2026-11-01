@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.97",
+  "currentVersion": "0.98",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.98",
+      "date": "2026-10-31",
+      "roadmapPhase": 17,
+      "phaseProgress": 80,
+      "overallProgress": null,
+      "changes": [
+        "Contratos de áridos cantera-hormigonera: una prórroga de 14 días por corte vial comprobable y remesas aún vigentes, con compensación de 5% del contrato original (mínimo $20), pagada de una empresa privada a otra.",
+        "La prórroga no cambia las reservas físicas ni el dinero en custodia. No se repite y exige ambas firmas abiertas y caja disponible; la recepción y el incumplimiento posteriores siguen el circuito de camiones, plazos y liquidación.",
+        "Economía expone decisión y registro; tests Online/Offline validan control, caja, inventario y entrega tras el vencimiento inicial, más responsive. Fase 17 permanece 80%, fase 18 90%; global no estimable."
+      ]
+    },
     {
       "version": "0.97",
       "date": "2026-10-31",

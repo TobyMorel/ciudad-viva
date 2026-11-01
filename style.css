@@ -159,3 +159,9 @@ canvas#city{touch-action:none}
 .police-priorities button{flex-basis:75px}
 .police-priorities .active{background:#d6e7d6;border-color:#648d75}
 .police-priorities button:disabled,.police-actions button:disabled{opacity:.65;cursor:not-allowed}
+
+/* Catálogo de tipologías por servicio: tarjetas elásticas y texto completo. */
+.tool-category{margin:12px 6px 5px;padding:6px 8px;border-bottom:1px solid #79958c;color:#436d61;font:700 11px system-ui;letter-spacing:.065em;white-space:normal}
+.tool.service-model-tool{min-width:0;max-width:100%;height:auto;min-height:52px}
+.tool.service-model-tool span:not(.tool-icon){min-width:0;overflow-wrap:anywhere}
+.tool.service-model-tool b,.tool.service-model-tool small{display:block;white-space:normal;overflow-wrap:anywhere;line-height:1.35}

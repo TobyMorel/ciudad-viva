@@ -3,6 +3,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: ciudad-viva-validacion-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   engines:
     runs-on: ubuntu-latest

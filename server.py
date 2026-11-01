@@ -1143,6 +1143,54 @@ def collect_municipal_taxes():
         state["approval"]=max(0,state.get("approval",0)-1);ev("Mora tributaria extendida",f"{late_homes} hogares no pudieron pagar el impuesto completo; la confianza municipal cae un punto.")
     return report
 
+def municipal_finance_forecast(monthly_income, monthly_expenses):
+    finance=state.get("finance",{});loans=[dict(x) for x in finance.get("municipalLoans",[]) if x.get("status")=="active"]
+    projects=[p for p in state.get("projects",[]) if not p.get("privatePaid") and p.get("status") not in ("cancelada","finalizada")]
+    commitments=sum(max(0,round(p.get("cost",0)-p.get("paid",0))) for p in projects)
+    schedule=[0]*12
+    for project in projects:
+        unpaid=max(0,round(project.get("cost",0)-project.get("paid",0)))
+        if unpaid<=0 or project.get("status") in ("pausada","suspendida","cambio_pendiente"):continue
+        months=max(1,math.ceil(max(1,project.get("duration",1)-project.get("elapsed",0))/30))
+        monthly=math.ceil(unpaid/months)
+        for index in range(min(12,months)):
+            amount=min(unpaid,monthly);schedule[index]+=amount;unpaid-=amount
+    taxes=state.get("taxes",{});tax_report=taxes.get("lastReport",{});last_tax=max(0,round(tax_report.get("collected",0)))
+    assessed=sum(max(0,b.get("occupants",0))*2400 for b in state.get("buildings",[]) if b.get("kind")=="home")
+    sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto")
+    property_rate=max(0,int(taxes.get("propertyRateBp",60)));business_rate=max(0,int(taxes.get("businessRateBp",200)))
+    property_collection=min(1,max(0,tax_report.get("propertyCollected",0)/tax_report["propertyBilled"])) if tax_report.get("propertyBilled",0)>0 else 1;business_collection=min(1,max(0,tax_report.get("businessCollected",0)/tax_report["businessBilled"])) if tax_report.get("businessBilled",0)>0 else 1
+    projected_tax=round(assessed*property_rate/120000*min(1,property_collection)+sales*business_rate/10000*min(1,business_collection))
+    projected_income=max(0,round(monthly_income)-last_tax+projected_tax)
+    programs=finance.get("programBudgets",{});program_report=programs.get("lastReport",{}).get("programs",{});program_names=("services","networks","mobility")
+    program_costs={key:max(0,round(program_report.get(key,{}).get("monthlyCost",0))) for key in program_names}
+    program_arrears={key:max(0,round(programs.get("arrears",{}).get(key,0))) for key in program_names}
+    program_rates={key:max(0,min(200,int(programs.get(f"{key}Pct",100)))) for key in program_names}
+    program_cost_total=sum(program_costs.values());start_month=max(0,(int(state.get("day",1))-1)//30)
+    cash=float(state.get("money",0));reserve=max(0,round(finance.get("debtReserve",0)))
+    arrears=sum(max(0,round(v)) for v in finance.get("programBudgets",{}).get("arrears",{}).values())
+    escrow=max(0,round(finance.get("contractEscrow",{}).get("balance",0)))
+    rows=[];remaining_commitments=commitments
+    for offset in range(12):
+        debt_service=0
+        for loan in loans:
+            if loan.get("status")!="active" or loan.get("monthsRemaining",0)<offset+1:continue
+            balance=max(0,float(loan.get("balance",0)));rate=max(0,float(loan.get("monthlyRate",float(loan.get("annualRate",.12))/12)))
+            interest=round(balance*rate);payment=min(balance+interest,max(0,round(loan.get("payment",0))))
+            principal=max(0,round(payment-interest));loan["balance"]=max(0,balance-principal);loan["monthsRemaining"]=max(0,int(loan.get("monthsRemaining",0))-1)
+            if loan["balance"]<=0 or loan["monthsRemaining"]<=0:loan["status"]="paid"
+            debt_service+=payment
+        contract_payment=min(remaining_commitments,schedule[offset]);remaining_commitments-=contract_payment
+        program_payment=0
+        for key in program_names:
+            cost=program_costs[key];due=program_arrears[key]+cost;scheduled=min(due,round(cost*program_rates[key]/100));program_payment+=scheduled;program_arrears[key]=max(0,due-scheduled)
+        income=projected_income;operating=max(0,round(monthly_expenses)-program_cost_total+program_payment)
+        opening=round(cash);net=income-operating-contract_payment-debt_service;cash+=net
+        calendar_month=start_month+offset+1
+        program_arrears_total=sum(program_arrears.values())
+        rows.append({"offset":offset+1,"label":f"Año {calendar_month//12+1} · Mes {calendar_month%12+1}","openingCash":opening,"income":income,"taxIncome":projected_tax,"operatingExpenses":operating,"programPayments":program_payment,"programArrears":program_arrears_total,"contractPayments":contract_payment,"debtService":debt_service,"net":net,"closingCash":round(cash),"fundingGap":max(0,round(-cash)),"remainingCommitments":remaining_commitments,"freeAfterCommitments":round(cash-remaining_commitments-program_arrears_total),"debtReserve":reserve})
+    return {"months":rows,"basis":"Ingresos y gastos operativos al ritmo actual; actualiza impuestos según tasas y proyecta pagos de programas, obras y deuda vigentes.","committedProjects":commitments,"programArrears":arrears,"closingProgramArrears":rows[-1]["programArrears"],"contractEscrow":escrow,"debtReserve":reserve,"projectedTaxIncome":projected_tax,"closingCash":rows[-1]["closingCash"],"closingFreeCash":rows[-1]["freeAfterCommitments"],"firstFundingGapMonth":next((r["offset"] for r in rows if r["fundingGap"]>0),None)}
+
 def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     finance=state.setdefault("finance",new_finance());loans=finance.setdefault("municipalLoans",[])
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
@@ -1156,7 +1204,8 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None):
     for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
     for name in ("services","mobility","networks"):
         budgets["arrears"].setdefault(name,0);budgets["underfundedMonths"].setdefault(name,0)
-    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(state.get("money",0)+debt_reserve+net*12),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"loans":loans}
+    forecast=municipal_finance_forecast(income,expenses)
+    return {"cash":round(state.get("money",0)),"debtReserve":debt_reserve,"totalTreasury":round(state.get("money",0))+debt_reserve,"programBudgets":budgets,"monthlyIncome":income,"monthlyExpenses":expenses,"monthlyDebtService":service,"netAfterDebt":net,"outstandingDebt":outstanding,"activeLoans":sum(x.get("status")=="active" for x in loans),"creditLimit":max(0,min(40000,round(income*8)-outstanding)),"forecast12":round(forecast["closingCash"]+debt_reserve),"forecast48":round(state.get("money",0)+debt_reserve+net*48),"forecastMonths":forecast,"loans":loans}
 
 def municipal_debt_payment():
     finance=state.setdefault("finance",new_finance());total=0

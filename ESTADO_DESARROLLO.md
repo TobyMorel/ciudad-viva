@@ -1,3 +1,14 @@
+# Estado de desarrollo · Alfa 0.120
+
+## Sistemas y verificación
+
+- Fase 8: previsión municipal móvil de 12 meses Online y Offline; incluye cambios de tasas, operación, asignaciones y mora de programas, contratos públicos según plazo, pagos de deuda, garantías, compromisos, caja libre y primer faltante. No altera la simulación al consultar.
+- Hacienda incluye tarjetas mensuales desplegables. Chromium inspeccionó 390×844 y 1440×900: sin desborde horizontal, tarjetas recortadas ni solapadas.
+- Pasan 68 pruebas Python, las pruebas Node Offline, sintaxis, regresiones financieras Online/Offline y estrés de 30 años en pueblo, metrópoli, puerto y turismo.
+- Hito actual: fase 8, cobertura estimada 75%; parcial. Próximo: validar déficits recuperables, impago y consecuencias en los servicios.
+- Progreso global no estimable: falta una ponderación estable y verificable común a las 34 fases.
+- Pendiente: conexión LAN física entre dos equipos; no comprobada aquí.
+
 # Estado de desarrollo · Ciudad Viva
 
 ## Alfa 0.119 · continuidad de camiones en rutas recalculadas

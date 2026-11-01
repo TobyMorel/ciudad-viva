@@ -1,6 +1,12 @@
 # Continuidad de desarrollo para otra IA
 
-## Continuidad inmediata · Alfa 0.119
+## Continuidad inmediata · Alfa 0.120
+
+La fase 8 suma una previsión fiscal móvil de doce meses en Online (`server.py:municipal_finance_forecast`) y Offline (`offline.js:offlineMunicipalForecast`). Recalcula impuestos con las tasas vigentes y la cobranza observada; conserva ingresos no tributarios y costos operativos al nivel actual; aplica partidas presupuestarias y acumula atrasos; agenda obligaciones de obras dentro del plazo pendiente; amortiza créditos mes a mes. Informa el primer mes con caja negativa, compromisos, garantías y caja libre después de obras y mora. Es una consulta, no modifica el saldo real. La tarjeta “Previsión móvil” está en Economía/Hacienda y despliega los doce meses.
+
+La inspección UI se ejecutó con Chromium en 390×844 y 1440×900: doce tarjetas, sin desborde horizontal, recorte ni solapamiento. Pruebas de esta entrega: 68 Python, todas las pruebas Node Offline, syntax checks, tres regresiones Online de finanzas, una regresión Offline de finanzas y estrés 30 años/4 perfiles. Global no estimable: no existe ponderación común verificable para las 34 fases. Fase 8=75%; faltan escenarios, estrés de déficits recuperables/impagos y continuidad de servicios. Próximo: completar esa validación fiscal, con efectos en servicios.
+
+## Referencia previa · Alfa 0.119
 
 Los desvíos de fase 7 ya afectan el transporte de materiales en ambos motores. Online (`server.py:process_supply_orders`) y Offline (`offline.js:processOfflineMaterialOrders`) conservan `currentPosition`, la última intersección alcanzada. Cada día buscan ruta desde ese punto; si coincide con el sufijo vigente mantienen el avance; si la ruta cambió reinician el progreso solo desde la intersección actual. Al cerrarse el camino el camión espera con su posición guardada, y reanuda desde ahí cuando vuelve a haber conexión. El tiempo previsto usa `plannedArrivalDay` como línea base, sin reiniciar la demora al recalcular la ruta. Online aplica congestión de los tramos aún pendientes; Offline incorpora el aumento real de longitud por el desvío.
 

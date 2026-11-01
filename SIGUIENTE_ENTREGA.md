@@ -1,6 +1,17 @@
 # Siguiente entrega
 
-## Punto exacto · después de Alfa 0.119
+## Punto exacto · después de Alfa 0.120
+
+1. Completar fase 8 con escenarios de estrés fiscal que se resuelvan mediante decisiones de gobierno: déficit moderado recuperable, mora, priorización presupuestaria y consecuencias visibles en salud, educación, residuos, redes y colectivos.
+2. Añadir alertas accionables del mes del faltante y partidas causantes, sin simular cargos antes de su fecha.
+3. Medir efectos de impuestos y presupuestos sobre demanda, actividad empresarial y apoyo ciudadano para conectar la previsión con jugabilidad.
+4. Mantener verificación responsive 390×844 y 1440×900, regresiones Online/Offline y stress. Publicar cada entrega en `main`, verificar SHA/estado Vercel y generar ZIP integral.
+
+Fase actual: 8 (75% orientativo; no terminada). Próximo: déficits recuperables, morosidad y continuidad de cinco servicios. Progreso global no estimable hasta disponer de ponderación comprobable común a las 34 fases. LAN física sigue pendiente.
+
+# Siguiente entrega
+
+## Referencia previa · después de Alfa 0.119
 
 1. Fase 7=95% orientativo. Falta medir el alivio de tráfico en redes densas al abrir accesos alternativos y mejorar la fiabilidad por horario de buses.
 2. Continuar fase 8 con una previsión móvil de 12 meses basada en ingreso municipal, operación, mantenimiento, nómina, contratos reservados y pagos de deuda. Toda proyección debe usar reglas económicas existentes y no alterar la caja hasta que ocurran los cargos.

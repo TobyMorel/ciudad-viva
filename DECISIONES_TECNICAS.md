@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.120
+
+## Previsión de tesorería municipal
+
+La previsión de doce meses es de solo lectura. Proyecta impuestos desde las tasas actuales y la proporción histórica recaudada (si todavía no hay un cierre fiscal, se parte de la tasa vigente completa); ingresos no tributarios y gastos ajenos a programas permanecen al nivel mensual actual. Los programas aplican su porcentaje aprobado al costo vigente y arrastran el déficit como mora. Las obras públicas distribuyen lo no pagado sobre los meses de trabajo restantes. La deuda usa la cuota y tasa guardadas y deja de cargarse al vencer o cancelarse. Garantías y compromisos aparecen por separado; la caja libre descuenta obras pendientes y mora. Esta aproximación no pronostica crecimiento, inflación ni crisis, y no cambia el saldo del juego.
+
+Online (`server.py`) y Offline (`offline.js`) comparten las reglas. Las pruebas verifican horizonte, desembolsos, deuda, ajuste tributario y ausencia de mutación Online; Offline comprueba estructura y operaciones básicas.
+
 # Decisiones técnicas · Ciudad Viva
 
 ## Alfa 0.119 · continuidad física de carga durante desvíos

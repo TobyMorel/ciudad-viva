@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.119",
+  "currentVersion": "0.120",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.120",
+      "date": "2026-11-01",
+      "roadmapPhase": 8,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Hacienda ahora proyecta 12 cierres mensuales, con ingresos y tasas tributarias vigentes, gastos operativos, partidas de servicios, atrasos acumulados, compromisos de obras y amortización de deuda.",
+        "El calendario distribuye los pagos de obras municipales según su plazo restante; los préstamos se amortizan mes a mes, las partidas presupuestarias generan mora si no alcanzan, y las garantías/compromisos se muestran por separado.",
+        "La previsión señala la primera falta de caja y el saldo libre después de descontar obras comprometidas y atrasos. Es una estimación informativa: no cambia los fondos reales de la ciudad.",
+        "Hacienda añade tarjetas mensuales adaptables a móvil y escritorio. Se verificaron el contenido, el desbordamiento horizontal y el solapamiento en 390×844 y 1440×900.",
+        "Verificación: 68 pruebas Python, todas las pruebas Node Offline, sintaxis, previsión fiscal Online/Offline, revisión UI y estrés de 30 años en cuatro perfiles pasan. LAN física entre computadoras sigue pendiente.",
+        "La fase 8 avanza de 70% a 75% por calendario de compromisos y deuda y previsión impositiva verificable. Faltan escenarios económicos y pruebas de recuperación fiscal. El progreso global no se estima porque las fases tienen alcances y dependencias distintas y aún no hay ponderación común verificable."
+      ]
+    },
     {
       "version": "0.119",
       "date": "2026-11-01",
@@ -1211,12 +1226,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.120 · presupuesto municipal proyectado",
-      "detail": "Fase 8: exponer previsión móvil de 12 meses con ingresos, gastos operativos, contratos, reservas y cuotas de deuda; mostrar cómo una decisión actual cambia el saldo futuro sin crear dinero."
+      "title": "Alfa 0.121 · estrés fiscal y continuidad de servicios",
+      "detail": "Fase 8: comprobar déficits moderados recuperables, pagos prioritarios, atrasos y efectos en salud, educación, redes, residuos y colectivos; añadir causas y alertas accionables."
     },
     {
       "title": "Validación de experiencia y red",
-      "detail": "Revisar pantallas en móvil/escritorio, rendimiento de ciudades densas y conectividad LAN física entre dos equipos."
+      "detail": "Mantener inspección móvil/escritorio, rendimiento de ciudades densas y prueba LAN física entre dos equipos."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1300,10 +1315,12 @@
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
-      "progress": 70,
+      "progress": 75,
       "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
       "pending": [
-        "Planificación plurianual, escenarios económicos completos y control presupuestario."
+        "Escenarios económicos con cambios de empleo, demanda y costos a lo largo del horizonte.",
+        "Pruebas jugables de déficits recuperables, impago y continuidad de cinco servicios públicos.",
+        "Presupuesto plurianual y control de calendario completo para inversiones y operaciones."
       ]
     },
     {

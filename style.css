@@ -293,3 +293,18 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .quick-start-step p{color:#826c7d;font-size:11px;line-height:1.5;margin:3px 0 0}
 .quick-start-step>small{color:#947a8c;white-space:nowrap;font-size:9px;padding-top:5px}
 @media(max-width:650px){.quick-start{padding:11px}.quick-start-step{grid-template-columns:24px minmax(0,1fr)}.quick-start-step>small{grid-column:2;padding:0}}
+
+/* Alfa 0.120 · detalle mensual de caja, legible en paneles estrechos. */
+.municipal-forecast{min-width:0;max-width:100%;margin:10px 0;padding:9px;border:1px solid var(--line,#d8e2db);border-radius:10px;background:var(--panel,#fff)}
+.municipal-forecast>summary{cursor:pointer;min-width:0;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
+.forecast-note{margin:8px 0;color:var(--muted,#68756e);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.forecast-obligations{margin:8px 0}
+.forecast-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;min-width:0}
+.forecast-month{display:grid;gap:5px;min-width:0;padding:9px;border:1px solid var(--line,#d8e2db);border-radius:9px;background:var(--panel2,#fbfcfa)}
+.forecast-month header,.forecast-month>div{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0;line-height:1.35}
+.forecast-month header{padding-bottom:5px;border-bottom:1px solid var(--line,#d8e2db)}
+.forecast-month header>*{overflow-wrap:anywhere}
+.forecast-month>div span{color:var(--muted,#68756e)}
+.forecast-month>div span,.forecast-month>div b{min-width:0;overflow-wrap:anywhere}
+.forecast-month .forecast-free{padding-top:5px;border-top:1px solid var(--line,#d8e2db);font-weight:700}
+@media(max-width:600px){.forecast-months{grid-template-columns:minmax(0,1fr)}.forecast-month{padding:10px}.municipal-forecast{padding:8px}.forecast-obligations{grid-template-columns:minmax(0,1fr)}}

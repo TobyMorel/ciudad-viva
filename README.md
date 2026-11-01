@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.95
+# Ciudad Viva · Alfa 0.96
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -295,3 +295,10 @@ Una fábrica cerrada por insolvencia puede tener un nuevo operador tras 90 días
 ## Alfa 0.95 · mercado de proveedores industriales competidores
 
 El simulador conecta competencia entre fábricas a la compra efectiva de materiales en ambas modalidades. Cada cantera, hormigonera, aserradero o metalúrgica tiene un precio relativo dinámico, inventario propio, posición vial y caja propia. Al comprar para una obra se elige una planta conectada que tenga todo el lote, con mínimo costo de producto más flete; no basta con que varias plantas sumen inventario suficiente. Solo el vendedor ganador recibe el pago y pierde existencias. Una parte separada del costo se contabiliza como ingreso logístico, sin duplicar la caja empresarial. Las hormigoneras también adjudican automáticamente sus compras de áridos entre canteras rivales. Precio y stock por fábrica aparecen en Economía; la interfaz de pedido limita el lote a lo disponible en una planta individual y explica el criterio de adjudicación. Tests Python/Node y Chromium cubren los dos motores y las vistas 390×844/1440×900. Fase 17: 70%; fase 18: 90%; global sin estimación.
+
+
+## Alfa 0.96 · materiales privados por carretera y contratación por demanda
+
+Los promotores que inician viviendas y fábricas desde suelo zonificado, así como las inversiones comerciales delegadas, pagan materiales con capital privado y esperan envíos reales a los patios o depósitos. El motor selecciona lotes con stock suficiente, precio de cada fábrica, flete, rutas abiertas y espacio de descarga. La mercancía se descuenta al reservar y solo aparece en los almacenes tras el viaje; construir sin suministros conectados ya no es posible. Los contratos guardan el vendedor, el trayecto, los costos y el día previsto de llegada. Online y Offline funcionan con la misma lógica de caja y logística.
+
+Las empresas además ajustan sus puestos de trabajo mensualmente. Abrir una vacante requiere ventas, liquidez y compra de equipamiento; mantener exceso de inventario y pérdidas durante períodos consecutivos puede obligarlas a recortar vacantes y despedir trabajadores reales, que vuelven a buscar empleo. Las metalúrgicas amplían la capacidad productiva al incorporar personal a equipos nuevos. Nuevas pruebas verifican suministro diferido, falta de capacidad, inversión productiva y despidos. Fases 17=75%, 18=90%; avance global no estimado.

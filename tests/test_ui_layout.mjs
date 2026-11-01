@@ -17,6 +17,16 @@ try{
       catch{await new Promise(r=>setTimeout(r,250))}
     }
     assert.ok(loaded,'El servidor estático debe responder.');
+    await page.evaluate(async()=>{
+      const city=await fetch('/offline_seed.json').then(response=>response.json());
+      city.supply.suppliers['Metalúrgica local']={aggregate:0,concrete:0,steel:0,timber:0,components:9,cash:0};
+      for(const [x,factor,stock] of [[4,1.35,4],[6,.8,5]]){
+        city.buildings.push({x,y:9,kind:'factory',name:'Metalúrgica rival '+x,status:'habilitado',
+          business:{id:'rival-'+x,industryType:'metalworks',status:'abierto',
+            materialPriceFactor:factor,componentStock:stock,cash:2500,jobSlots:20,lastLocalSales:2}});
+      }
+      localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
+    });
     await page.locator('#offlineMode').click();
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     await page.waitForTimeout(400);
@@ -35,6 +45,19 @@ try{
         hasContent:Boolean(content.textContent?.trim()),scrollable:scroller.scrollHeight<=scroller.clientHeight+3||scroller.scrollTop>0,
         width:window.innerWidth};
     });
+    const vendorLayout=await page.evaluate(()=>{
+      const nodes=[...document.querySelectorAll('#popupContent .supply-line')]
+        .filter(el=>el.textContent.includes('proveedor independiente'));
+      return nodes.map(node=>{
+        const rect=node.getBoundingClientRect(),parts=[...node.querySelectorAll('span,b,small')];
+        return {text:node.textContent?.slice(0,90),width:rect.width,
+          overflowing:node.scrollWidth>node.clientWidth+3,
+          missing:parts.some(p=>{const r=p.getBoundingClientRect();return r.width<2||r.height<2||getComputedStyle(p).visibility==='hidden'})};
+      });
+    });
+    assert.equal(vendorLayout.length,2,name+': las ofertas de dos metalúrgicas deben aparecer');
+    assert.ok(vendorLayout.every(v=>!v.overflowing&&!v.missing),
+      name+': precio o texto industrial oculto o desbordado '+JSON.stringify(vendorLayout));
     assert.ok(popup.hasContent,name+': economía no muestra información');
     assert.ok(popup.left>=-2&&popup.right<=width+2,name+': popup de Economía fuera de pantalla '+JSON.stringify(popup));
     assert.ok(popup.scrollWidth<=popup.width+2,name+': overflow horizontal en Economía '+JSON.stringify(popup));

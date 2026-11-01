@@ -313,3 +313,8 @@ El historial de confiabilidad de las constructoras deja de ser solo informativo:
 ## Alfa 0.84 · evidencia de fase 19
 
 Las constructoras cobran un 20% de anticipo y el saldo en certificados cuando el avance físico cruza cada hito del proyecto. El certificado registra importe y avance; si el municipio no puede pagarlo, la obra queda suspendida sin avanzar ni consumir insumos. Verificado en ambos motores y mostrado en la tarjeta. Fase 19: 40%. Aún faltan retenciones y garantías, órdenes de cambio, multas/disputas, tareas dependientes y pruebas de defectos. No se estima el progreso global.
+
+
+## Alfa 0.85 · fase 19, garantías posteriores a recepción
+
+Evidencia nueva: el contrato municipal reserva 10% en escrow después de la inspección provisional. Caja insuficiente para certificado + retención bloquea el último avance. Revisión día +30 es reproducible, modifica la calidad del activo ante defecto y bloquea pago; reclamo compromete tres trabajadores por cinco días y libera escrow al reparar sin duplicación. Online y Offline comparten el flujo. UI de Obras revisada en Chromium móvil y escritorio. Fase 19: 45% por el salto verificable del sistema. Se mantienen pendientes órdenes de cambio, disputas y penalidades, riesgos técnicos y rescate integral. Prueba Offline de cinco días completada: calidad restaurada y escrow pagado una vez. No elevar global, porque los 34 sistemas no tienen pesos comparables.

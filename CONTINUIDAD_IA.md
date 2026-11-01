@@ -113,3 +113,10 @@ Fase 19: el riesgo de demora ya afecta calendario y avance en Online/Offline. `a
 ### Alfa 0.84 · pago por certificado de etapa (actual)
 
 Fase 19 suma pagos por hitos físicos en `server.py` y `offline.js`: anticipo del 20%, 80% dividido por etapas; sin avance de caja entre hitos. `certificationHistory` guarda los hitos y `paid` el acumulado. El control de tesorería ocurre antes de consumir insumos/avanzar. Tarjeta Obras muestra hitos y pagos. Evitar duplicar certificados en guardados heredados: el hito inicial deriva del progreso anterior si falta el campo. La prueba cubrió caja insuficiente y el ciclo completo. Próximo avance de fase 19: retención final con período de garantía y reparación/reclamo atribuible a calidad; preservar presupuesto reservado y responsabilidades del contratista al diseñarlo.
+
+
+### Alfa 0.85 · garantías de obra (actual)
+
+Online/Offline: los contratos públicos nuevos retienen 10% en escrow y siguen pagando 20% de anticipo más 70% por hitos. Exigir el saldo del certificado y el fondo de garantía de forma atómica antes del último avance. Guardados previos (sin `retentionPct`) y proyectos privados mantienen 0% de retención. `contractGuarantees` persiste recepción provisional, revisión día +30, contratista, riesgo congelado, defecto, reclamo y reparación. Una falla reduce 12 puntos de calidad. Acción `repairContractGuarantee` compromete tres trabajadores durante cinco días; al cumplirse restaura calidad y paga escrow una sola vez. `release_notes.json` reporta fase 19 = 45%; global continúa nulo/no estimable.
+
+Verificado: Python expuso certificado final de 90%, reclamo, reparación y pago idempotente. Chromium Offline completó obra nueva con retención $100 y suspendió obra con caja insuficiente sin avanzar. La acción de reclamo creó plazo de cinco días. Obras se revisó en viewports móvil/escritorio sin overflow horizontal y con tarjeta legible. Probado también: una garantía defectuosa quedó en reclamo con calidad −12; tras cinco días asignados restauró calidad y liberó $100 una sola vez. Siguen pendientes disputa/orden de cambio, LAN física y Vercel.

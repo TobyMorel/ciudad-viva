@@ -156,3 +156,8 @@ La confiabilidad de la constructora y su ocupación de capacidad ya generan revi
 ## Alfa 0.84 · continuación de fase 19
 
 Los certificados ahora siguen el avance de etapas; falta implementar retenciones, recepción provisional y garantía sin liberar dos veces el saldo reservado. Conectar un defecto de inspección/calidad a una reparación/reclamo pagado por el contratista y visible en el registro. Mantener 19 en 40% hasta cerrar otro criterio completo. Después continuar fase 18 (otras materias primas industriales) y fases pendientes de servicios/seguridad. El progreso global sigue sin estimarse.
+
+
+## Alfa 0.85 · siguiente paso
+
+Fase 19 llegó a 45% con pagos certificados, retención de 10%, inspección de defectos, reclamo y reparación trazable en ambos motores. Próxima entrega: luego añadir órdenes de cambio y resolución de disputas con evidencia económica. Después retornar a fase 18 y ampliar otra cadena material (áridos/cemento para obras) para no concentrar entregas en licitaciones. Mantener el desarrollo centrado en sistemas jugables y consecuencias; no pulir UI fuera de lo necesario. LAN física y Vercel continúan pendientes. Progreso global no estimable sin ponderación estable de fases.

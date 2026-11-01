@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.84",
+  "currentVersion": "0.85",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.85",
+      "date": "2026-11-01",
+      "changes": [
+        "Fase 19: contratos municipales nuevos retienen 10% en una cuenta de garantía separada; contratos privados y guardados anteriores conservan su calendario de pagos. El certificado final y la garantía requieren caja suficiente antes de avanzar.",
+        "A los 30 días, una inspección reproducible libera la retención o registra un defecto que baja la calidad del activo. El equipo puede reclamar reparación: tres trabajadores quedan asignados cinco días; al aprobarse, se restaura la calidad y se libera el pago retenido al contratista. Online y Offline.",
+        "Obras muestra garantías activas, reclamos, plazo de reparación e importe apartado. Se verificaron tesorería insuficiente, liberación única, defecto/reparación y diseño adaptable en móvil/escritorio. Fase 19: 45%."
+      ],
+      "roadmapPhase": 19,
+      "phaseProgress": 45,
+      "overallProgress": null
+    },
     {
       "version": "0.84",
       "date": "2026-10-31",
@@ -943,12 +955,12 @@
     {
       "phase": 19,
       "title": "Licitaciones avanzadas y dirección de obras complejas",
-      "progress": 40,
-      "summary": "Ofertas y riesgos contractuales comparables, más certificados de pago por hitos físicos.",
+      "progress": 45,
+      "summary": "Ofertas, demoras y pagos por hitos con retención, inspección de garantía y reparación de defectos.",
       "pending": [
-        "Anteproyecto/proyecto ejecutivo y tareas con dependencias específicas.",
-        "Retenciones, garantía, penalidades, reclamos, órdenes de cambio y recepción provisional.",
-        "Riesgos específicos de clima, geotecnia, permisos y quiebra; inspección de fallas y rescate."
+        "Proyecto ejecutivo, dependencias entre tareas, órdenes de cambio y disputas contractuales.",
+        "Penalidades económicas y otras garantías legales por incumplimiento.",
+        "Riesgos particulares de clima, geotecnia, permisos y quiebra; comparar rescates y terminación."
       ]
     },
     {

@@ -181,7 +181,7 @@ def process_training_programs():
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
 
 def new_finance():
-    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"lastReport":{},"history":[]}}
+    return {"businessBank":{"name":"Banco Cooperativo","liquidity":42000,"maxLiquidity":42000,"annualRate":.24},"municipalLoans":[],"debtReserve":0,"debtReserveHistory":[],"contractEscrow":{"balance":0},"programBudgets":{"servicesPct":100,"mobilityPct":100,"networksPct":100,"arrears":{"services":0,"mobility":0,"networks":0},"underfundedMonths":{"services":0,"mobility":0,"networks":0},"lastReport":{},"history":[]}}
 
 def new_tax_state():
     return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
@@ -781,7 +781,9 @@ def assess_contract_delay(project, contractor):
     if day-start<30 or int(project.get("lastRiskReviewCycle",0))>=cycle:return False
     project["lastRiskReviewCycle"]=cycle
     active=sum(1 for p in state.get("projects",[]) if p.get("contractor")==project.get("contractor") and p.get("status") not in ("pausada","cancelada","finalizada"))
-    capacity=max(1,int(contractor.get("capacity",1)));congested=active>=capacity
+    capacity=max(1,int(contractor.get("capacity",1)))
+    active+=sum(1 for g in state.get("contractGuarantees",[]) if g.get("contractor")==project.get("contractor") and g.get("status")=="reparacion")
+    congested=active>=capacity
     reliability=max(0,min(1,float(contractor.get("reliability",.75))))
     chance=.025+(1-reliability)*.22+(.04 if congested else 0)
     salt=CONTRACTOR_NAMES.index(project.get("contractor")) if project.get("contractor") in CONTRACTOR_NAMES else 0
@@ -800,8 +802,38 @@ def project_certificate(project, elapsed):
     progress=min(1,float(project.get("initialProgress",0))+(1-float(project.get("initialProgress",0)))*elapsed/max(1,project.get("duration",1)))
     earned=max(0,min(remaining,int(math.floor(progress*stages+1e-9))-base))
     certified=int(project.get("certifiedMilestones",max(0,int(math.floor(float(project.get("progress",0))*stages+1e-9))-base)))
-    target=project["cost"]*(.2+.8*earned/remaining)
+    retention=max(0,min(.2,float(project.get("retentionPct",0))))
+    target=project["cost"]*(.2+(.8-retention)*earned/remaining)
     return progress,earned,certified,target,max(0,target-project.get("paid",0)),base,remaining
+
+def contract_guarantee_roll(project):
+    names=CONTRACTOR_NAMES
+    index=names.index(project.get("contractor")) if project.get("contractor") in names else 0
+    seed=((int(project.get("x",0))+1)*73856093 ^ (int(project.get("y",0))+1)*19349663 ^ (int(project.get("contractedDay",1))+1)*83492791 ^ index*2654435761)&0xffffffff
+    return (seed%10000)/10000
+
+def release_contract_guarantee(guarantee):
+    finance=state.setdefault("finance",new_finance());escrow=finance.setdefault("contractEscrow",{"balance":0})
+    amount=max(0,int(guarantee.get("retained",0)));escrow["balance"]=max(0,int(escrow.get("balance",0))-amount)
+    state.setdefault("supply",new_supply())["contractorCash"][guarantee["contractor"]]=state["supply"]["contractorCash"].get(guarantee["contractor"],0)+amount
+    guarantee["status"]="released";guarantee["releasedDay"]=state["day"]
+    ev("Garantía contractual liberada",f"{guarantee['label']}: inspección de garantía aprobada; se liberaron $ {amount:,} a {guarantee['contractor']}.".replace(",","."))
+
+def advance_contract_guarantees():
+    guarantees=state.setdefault("contractGuarantees",[])
+    for guarantee in guarantees:
+        if guarantee.get("status")=="garantia" and state["day"]>=int(guarantee.get("reviewDay",10**12)):
+            if contract_guarantee_roll(guarantee)<float(guarantee.get("defectChance",.1)):
+                guarantee["status"]="reclamo";guarantee["defectDay"]=state["day"]
+                asset=next((b for b in state.get("buildings",[])+state.get("roadAssets",[]) if b.get("x")==guarantee.get("x") and b.get("y")==guarantee.get("y")),None)
+                if asset:asset["quality"]=max(0,int(asset.get("quality",guarantee.get("initialQuality",82)))-12)
+                ev("Defecto detectado en garantía",f"{guarantee['label']} en parcela {guarantee['x']+1},{guarantee['y']+1}: la inspección detectó una falla constructiva. La retención queda bloqueada hasta que {guarantee['contractor']} complete cinco días de reparación.")
+            else:release_contract_guarantee(guarantee)
+        elif guarantee.get("status")=="reparacion" and state["day"]>=int(guarantee.get("repairCompleteDay",10**12)):
+            asset=next((b for b in state.get("buildings",[])+state.get("roadAssets",[]) if b.get("x")==guarantee.get("x") and b.get("y")==guarantee.get("y")),None)
+            if asset:asset["quality"]=int(guarantee.get("initialQuality",asset.get("quality",82)))
+            guarantee["repairedDay"]=state["day"];release_contract_guarantee(guarantee)
+    state["contractGuarantees"]=guarantees[-60:]
 
 CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
@@ -852,6 +884,8 @@ def ensure_finance_state():
     state["finance"].setdefault("municipalLoans",[])
     state["finance"].setdefault("debtReserve",0)
     state["finance"].setdefault("debtReserveHistory",[])
+    state["finance"].setdefault("contractEscrow",{"balance":0})
+    state.setdefault("contractGuarantees",[])
     budgets=state["finance"].setdefault("programBudgets",new_finance()["programBudgets"])
     for key,value in new_finance()["programBudgets"].items():budgets.setdefault(key,value.copy() if isinstance(value,dict) else value)
     for name in ("services","mobility","networks"):
@@ -1027,12 +1061,14 @@ def consume_materials(project, amounts):
 def contractor_has_capacity(name):
     assigned=sum(p["contractor"]==name and p.get("status")!="pausada" for p in state["projects"])
     assigned+=sum(p.get("contractor")==name and p.get("status")=="en obra" for p in state.get("recoveryContracts",[]))
+    assigned+=sum(g.get("contractor")==name and g.get("status")=="reparacion" for g in state.get("contractGuarantees",[]))
     return assigned<CONTRACTORS[name]["capacity"]
 
 def contractor_free_workers(name):
     assigned=sum(p.get("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
                  for p in state["projects"] if p["contractor"]==name)
     assigned+=sum(p.get("workers",4) for p in state.get("recoveryContracts",[]) if p.get("contractor")==name and p.get("status")=="en obra")
+    assigned+=sum(g.get("workersAssigned",3) for g in state.get("contractGuarantees",[]) if g.get("contractor")==name and g.get("status")=="reparacion")
     assigned+=sum(o.get("unloadWorkers",0) for o in state["supply"].get("orders",[]) if o.get("contractor")==name and o.get("status")=="descargando")
     return CONTRACTORS[name]["workers"]-assigned
 
@@ -2941,6 +2977,7 @@ def tick_one_day():
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    advance_contract_guarantees()
     advance_heritage_works()
     advance_urban_evolution()
     advance_urban_renewals()
@@ -3044,8 +3081,9 @@ def tick_one_day():
             ev("Obra demorada por insumos",f"{p['label']} en {p['x']+1},{p['y']+1}: {p['cause']}. Pedí los materiales faltantes desde la tarjeta de la obra.")
             continue
         next_progress,earned_milestones,certified,targetPaid,due,milestone_base,milestones_remaining=project_certificate(p,next_elapsed)
-        if not p.get("privatePaid") and due>state["money"]:
-            p["status"]="suspendida"; p["cause"]=f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining}"; continue
+        retention_due=round(p.get("cost",0)*max(0,min(.2,float(p.get("retentionPct",0))))) if next_progress>=1 and not p.get("privatePaid") else 0
+        if not p.get("privatePaid") and due+retention_due>state["money"]:
+            p["status"]="suspendida"; p["cause"]=f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining} y apartar su garantía" if retention_due else f"Tesorería insuficiente para certificar el hito {earned_milestones}/{milestones_remaining}"; continue
         material_cost=material_delta(p,next_elapsed)
         consume_materials(p,material_cost)
         for key,amount in material_cost.items():p["materialsUsed"][key]=p["materialsUsed"].get(key,0)+amount
@@ -3139,6 +3177,15 @@ def tick_one_day():
                 state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":"Cuartel de bomberos municipal","level":1,"occupants":0,"jobSlots":12,"fireEngineCapacity":3,"dispatchReadyDay":state["day"],"status":"habilitado","monthlyCost":950,"quality":quality});state["jobs"]+=12;state["monthlyExpenses"]+=950
                 ev("Cuartel de bomberos habilitado","El cuartel ofrece 12 puestos y hasta tres dotaciones de cuatro bomberos. Sin personal cualificado o ruta no puede responder; operación y mantenimiento $950/mes.")
             if p["kind"] not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
+            retention_pct=max(0,min(.2,float(p.get("retentionPct",0))))
+            retained=min(max(0,round(p.get("cost",0)-p.get("paid",0))),round(p.get("cost",0)*retention_pct))
+            if not p.get("privatePaid") and retained:
+                state["money"]=max(0,state["money"]-retained)
+                state["finance"].setdefault("contractEscrow",{"balance":0})["balance"]+=retained
+                contractor=CONTRACTORS.get(p.get("contractor"),CONTRACTORS["Constructora Delta"])
+                guarantee={"id":f"garantia-{p['id']}","projectId":p["id"],"label":p["label"],"contractor":p["contractor"],"x":p["x"],"y":p["y"],"kind":p["kind"],"retained":retained,"status":"garantia","startDay":day,"reviewDay":day+30,"initialQuality":quality,"defectChance":.025+(1-contractor["quality"])*.18+(1-contractor["reliability"])*.12}
+                state.setdefault("contractGuarantees",[]).append(guarantee)
+                ev("Recepción provisional de obra",f"{p['label']}: inspección de entrega aprobada. $ {retained:,} quedan retenidos hasta el control de garantía del día {day+30}.".replace(",","."))
             state["projects"].remove(p)
     if day%30==0 and state["projects"]: ev("Revisión de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
 
@@ -3400,7 +3447,7 @@ def discovery_loop():
     finally:sock.close()
 
 class Handler(BaseHTTPRequestHandler):
-    server_version="CiudadViva/0.75"
+    server_version="CiudadViva/0.85"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
@@ -3457,7 +3504,14 @@ class Handler(BaseHTTPRequestHandler):
                 ensure_government_state()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
-                if action=="assignMunicipalRole":
+                if action=="repairContractGuarantee":
+                    guarantee=next((g for g in state.get("contractGuarantees",[]) if g.get("id")==str(data.get("id")) and g.get("status")=="reclamo"),None)
+                    if not guarantee:self._send(409,{"error":"La garantía no tiene un reclamo reparable."});return
+                    if not contractor_has_capacity(guarantee["contractor"]) or contractor_free_workers(guarantee["contractor"])<3:self._send(409,{"error":"La constructora no tiene cupo y tres trabajadores libres para reparar. La retención continúa bloqueada."});return
+                    guarantee.update({"status":"reparacion","repairStartedDay":state["day"],"repairCompleteDay":state["day"]+5,"workersAssigned":3})
+                    ev("Reparación contractual iniciada",f"{guarantee['contractor']} movilizó tres trabajadores por cinco días para corregir {guarantee['label']}; la retención sigue bloqueada.")
+                    self._send(200,public_state(pid));return
+                elif action=="assignMunicipalRole":
                     role=str(data.get("role",""));target=str(data.get("playerId",""))
                     if role not in MUNICIPAL_ROLES:
                         self._send(400,{"error":"Elegí una cartera municipal válida."});return
@@ -3693,6 +3747,7 @@ class Handler(BaseHTTPRequestHandler):
                         advance=round(total*.2)
                         state["money"]-=advance; p["paid"]=advance
                         state["supply"]["contractorCash"][contractor]+=advance
+                    p["retentionPct"]=0 if p.get("privatePaid") else .1
                     state["projects"].append(p); ev(f"Contrato adjudicado: {spec['label']}",f"{contractor} · $ {total:,} · {LABOR_NEEDS[kind]} trabajadores · plazo estimado {duration} días. Se reservó el anticipo.".replace(",","."))
                     if investment_id:
                         investment_offer["status"]="aceptada";investment_offer["decisionDay"]=state["day"];investment_offer["projectId"]=p["id"];investment_book.setdefault("history",[]).append(dict(investment_offer));investment_book["history"]=investment_book["history"][-24:];investment_book["nextOfferDay"]=state["day"]+90;investment_book["reason"]="La obra comercial está contratada; la empresa abrirá después de construcción e inspección.";ev("Inversión comercial adjudicada",f"El promotor invierte $ {p['cost']:,}; se aprobó el permiso por $ {p['municipalPermitPaid']}. La apertura depende de materiales, cuadrilla, etapas e inspección.".replace(",","."))
@@ -3858,8 +3913,9 @@ class Handler(BaseHTTPRequestHandler):
                         project["status"]="pausada"; project["workersAssigned"]=0; project["cause"]="Pausa decidida por el equipo de gobierno"; ev("Obra pausada",f"{project['label']}: se conserva el avance ({round(project['progress']*100)}%) y se liberan cuadrillas.")
                     elif action=="resumeProject":
                         if project["status"] not in ("pausada","suspendida"): self._send(409,{"error":"La obra no está pausada ni suspendida."}); return
-                        nextPayment=0 if project.get("privatePaid") else project_certificate(project,project.get("elapsed",0)+1)[4]
-                        if state["money"]<nextPayment: self._send(409,{"error":f"Falta caja para el próximo certificado de $ {nextPayment:.0f}."}); return
+                        next_certificate=project_certificate(project,project.get("elapsed",0)+1)
+                        nextPayment=0 if project.get("privatePaid") else next_certificate[4]+(round(project.get("cost",0)*max(0,min(.2,float(project.get("retentionPct",0))))) if next_certificate[0]>=1 else 0)
+                        if state["money"]<nextPayment: self._send(409,{"error":f"Falta caja para el próximo certificado y su garantía ($ {nextPayment:.0f})."}); return
                         if project["status"]=="pausada":
                             if not contractor_has_capacity(project["contractor"]): self._send(409,{"error":"La constructora tiene todos sus cupos ocupados. Esperá otra entrega antes de reanudar."}); return
                             if contractor_free_workers(project["contractor"])<LABOR_NEEDS[project["kind"]]: self._send(409,{"error":"La constructora no tiene trabajadores libres para reanudar esta obra."}); return
@@ -3893,6 +3949,7 @@ class Handler(BaseHTTPRequestHandler):
                         reserved=sum(max(0,q["cost"]-q.get("paid",0)) for q in state["projects"] if not q.get("privatePaid"));available=max(0,state["money"]-reserved)
                         if available<total: self._send(409,{"error":"La tesorería disponible no cubre el contrato de rescate."}); return
                         p["paid"]=round(total*.2);state["money"]-=p["paid"];state["supply"]["contractorCash"][contractor]+=p["paid"]
+                    p["retentionPct"]=0 if private else .1
                     state["abandoned"].remove(abandoned);state["projects"].append(p)
                     ev("Rescate de obra adjudicado",f"{abandoned['label']} continúa desde {round(initial*100)}% con {contractor}; contrato nuevo $ {total:,} y plazo estimado {duration} días.".replace(",","."))
                 elif action=="new":

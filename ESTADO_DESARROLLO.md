@@ -592,3 +592,18 @@ Prueba Online: una obra pública heredada con saldo $6.000 apareció en la carte
 - Online: sin pago en el día intermedio; a 20% físico certifica el primer 16% del contrato; los cinco hitos pagan el saldo completo y la vía se habilita al final. Con tesorería vacía se suspende antes del primer hito y conserva el avance previo.
 - Offline en Chromium: el importe `paid` y la caja de constructora se actualizan al completar un hito, y el guardado conserva la historia/cumulado. Tarjeta visible a 390×844 y 1440×900: monto y etapa legibles, sin desborde horizontal ni error JS.
 - Comprobaciones Python/JavaScript y `git diff --check`: correctas. LAN física y Vercel no probados. Fase 19 sube de 35% a 40%; global no estimable por falta de ponderación verificable de las 34 fases.
+
+
+## Alfa 0.85 · retención, garantía e inspección de defectos (fase 19)
+
+- Contratos públicos nuevos pagan 20% de anticipo y hasta 70% por hitos; el 10% final se deposita en `finance.contractEscrow` al completar la recepción provisional. Contratos privados y guardados antiguos siguen sin retención, para no cambiar compromisos ya adjudicados.
+- La caja debe cubrir el último certificado y la retención antes de consumir materiales o completar la obra. Sin fondos, se suspende con avance y garantía intactos.
+- Tras 30 días, la inspección reproducible libera el pago o detecta una falla según la calidad y confiabilidad histórica de la constructora. El defecto reduce 12 puntos de calidad y bloquea el fondo. Reclamar reparación ocupa tres trabajadores durante cinco días; la inspección posterior restaura la calidad original y paga la retención una sola vez.
+- Obras muestra hasta ocho garantías recientes, saldo en custodia, días de inspección/reparación y acción de reclamo.
+
+### Verificación Alfa 0.85
+
+- Online: certificado final 90% del contrato; defecto retuvo el saldo, redujo calidad y una reparación de cinco días restauró calidad y liberó exactamente el fondo. Repetir la revisión no duplicó pagos.
+- Offline en Chromium: una obra pública completó su certificado y dejó $100 de $1.000 en escrow; con $700 de tesorería se suspendió en avance 0 sin crear garantía. La acción visible de reclamo cambió el estado a reparación por cinco días.
+- UI Obras revisada en 390×844 y 1440×900, sin desbordamiento horizontal; captura móvil confirmó título, saldo, estado y botón legibles. `py_compile`, `node --check` y `git diff --check` correctos. Offline detectó un defecto, bloqueó escrow, ejecutó cinco días de reparación, restauró calidad y liberó el saldo una sola vez. LAN física y Vercel siguen sin probarse.
+- Fase 19 sube de 40% a 45% con el criterio estable por fase. Progreso global no estimable: faltan pesos verificables comunes para las 34 fases.

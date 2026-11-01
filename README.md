@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.84
+# Ciudad Viva · Alfa 0.85
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -242,3 +242,8 @@ La confiabilidad histórica ya afecta la ejecución de las obras. Cada 30 días,
 ## Alfa 0.84 · pagos certificados por etapas
 
 Las obras públicas reciben su anticipo contractual y cobran el saldo en certificados cuando completan hitos físicos de su cronograma. Cada certificado guarda etapa, día, avance físico y monto pagado. Si la tesorería no cubre el próximo hito, la obra se suspende antes de consumir los materiales o avanzar esa jornada. Las tarjetas muestran hitos y pago acumulado. Funciona Online y Offline; las retenciones y garantías siguen pendientes.
+
+
+## Alfa 0.85 · garantía de obra y retención (fase 19)
+
+En los contratos públicos nuevos se retiene el 10% en una cuenta separada. El certificado final exige caja para pagar el avance y fondear la retención; si no alcanza, la obra se suspende antes de avanzar. Tras 30 días, la inspección usa calidad y confiabilidad del contratista para decidir si libera el pago o declara un defecto. El equipo puede asignar tres trabajadores durante cinco días; al reparar, el activo recupera su calidad inicial y la constructora cobra la retención. Los contratos privados y los contratos de guardados anteriores mantienen su esquema de pago. Estado y acción disponibles en Online y Offline.

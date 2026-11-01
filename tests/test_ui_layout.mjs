@@ -46,7 +46,7 @@ try{
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===12&&catalog.categories.length===4&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===16&&catalog.categories.length===5&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').click();
 

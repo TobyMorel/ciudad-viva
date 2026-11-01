@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.88",
+  "currentVersion": "0.89",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.89",
+      "date": "2026-11-01",
+      "changes": [
+        "Fase 18 amplía el abastecimiento al modo Offline: cada obra tiene recetas por tipo y consume áridos, hormigón, acero, madera y componentes conforme avanza por etapas. Si falta el siguiente lote, la cuadrilla queda suspendida con la causa visible.",
+        "Las constructoras offline pueden pedir materiales desde la ficha de obra a proveedores con inventario, precio y plazo distintos. La orden descuenta stock y caja al confirmarse, reserva capacidad de patio/depósito, recorre una ruta vial y entrega con ETA; el material recibido habilita el avance y queda registrado en el inventario de la constructora.",
+        "El crecimiento autónomo residencial y comercial también adquiere materiales y los financia con capital privado antes de iniciar; se conserva el crecimiento inducido por demanda sin construcción manual de viviendas, comercios o fábricas.",
+        "Verificado en Chromium: pedido offline de hormigón por $372, entrega por calle y consumo del material en obra; ventana de pedidos en 390×844 y 1440×900, con confirmación visible, lista desplazable y sin errores de JavaScript. Node validó la sintaxis. Pendiente: probar explícitamente bloqueo → entrega → reanudación, equivalencia Online/LAN, y LAN física. Fase 18: 75%; global no estimable porque las 34 fases tienen alcances distintos y no existe una ponderación global común verificable."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 75,
+      "overallProgress": null
+    },
     {
       "version": "0.88",
       "date": "2026-10-31",
@@ -806,12 +819,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 18 · verificar materiales hasta la obra",
-      "detail": "Probar una obra Online de extremo a extremo: falta de hormigón, pedido a hormigonera, camión/descarga y reanudación. Después trasladar el circuito al modo Offline."
+      "title": "Fase 18 · bloqueo y reanudación de obras en ambos motores",
+      "detail": "Validar que la siguiente etapa se suspenda al agotarse un material, que el pedido viaje por carretera y que la misma cuadrilla reanude sin duplicar avance ni inventario."
     },
     {
-      "title": "Fase 18 · abrir otras cadenas industriales",
-      "detail": "Incorporar madera mediante aserradero y completar acero regional/local, con inventarios, empleo, operación, transporte y consumo real en obras; luego retomar los pendientes abiertos del roadmap."
+      "title": "Fase 18 · aserradero y acero para construcción",
+      "detail": "Agregar proveedores industriales con materia prima, personal, servicios, producción finita, stock vendible y uso verificable en proyectos. Mantener la paridad Online/Offline y luego abrir otras fases del roadmap."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -984,12 +997,12 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 70,
-      "summary": "Grano regional → alimentos; cantera finita de áridos → hormigonera local (2:1) → pedidos de obra. Personal, servicios y ruta vial afectan el flujo.",
+      "progress": 75,
+      "summary": "Grano regional → alimentos; cantera finita → hormigonera local (2:1); las constructoras Offline también compran y consumen materiales por etapas. Personal, servicios, caja y rutas viales limitan las cadenas.",
       "pending": [
-        "Probar obra Online completa: falta de hormigón bloquea y pedido entregado la reanuda",
-        "Madera → aserradero → materiales; acero local/importado → construcción",
-        "Logística de materiales Offline, almacenes, cierres/reaperturas y exportaciones físicas completas"
+        "Verificar expresamente una obra que se detenga por falta de material y se reanude tras la entrega en Online y Offline",
+        "Madera → aserradero → materiales; completar acero local/regional con empleo, inventario, transporte y consumo en obras",
+        "Almacenes y cierres de proveedores integrados a ambos motores; completar comercio exterior físico"
       ]
     },
     {

@@ -302,3 +302,8 @@ El capital privado puede financiar prospección de mineral de hierro cuando la r
 ## Continuación · stress mensual de 30 años por cuatro perfiles
 
 Agregado `tests/stress_30_years.py`: ejecutable manualmente mediante `python tests/stress_30_years.py`, recorre 360 cierres mensuales para pueblo, metrópolis, puerto y ciudad turística, con capital/población/reservas distintos. Controla no negatividad de mineral, chatarra y stock siderúrgico, además de ausencia de NaN en caja privada. Se trata de una **prueba de cierres mensuales con salto de días**, no una simulación íntegra de 10.950 ticks diarios ni verificación de transporte LAN. Falta ejecutar y validar resultados, expandir métricas anuales y cubrir tráficos portuarios. También se agregó espera del panel contractual al test responsive anterior; no darlo por resuelto sin CI. Interfaz sin cambios.
+
+
+## Continuación · estrés 30 años integrado a CI
+
+`validation.yml` ejecuta `python tests/stress_30_years.py` en cada push a main, tras las regresiones de motores: cuatro perfiles y 360 cierres mensuales por perfil con controles de inventario siderúrgico, reservas, chatarra, caja municipal, capital privado y gasto de importación/prospección/reciclaje. Este test automatizado no reemplaza 10.950 ticks diarios completos ni valida LAN real. No se modificó la interfaz. Confirmar resultado del último workflow, resolver el fallo responsive de botón de prórroga y continuar con mecanismos jugables pendientes.

@@ -364,7 +364,73 @@ export async function createOfflineAdapter(){
     }
   }
     function offlinePrivateMaterialCost(kind){let total=0;for(const [material,quantity] of Object.entries(MATERIAL_NEEDS[kind]||{})){if(!quantity)continue;const choice=Object.entries(MATERIAL_SUPPLIERS).filter(([name])=>(state.supply.suppliers[name]?.[material]||0)>=quantity).sort((a,b)=>a[1].price-b[1].price||a[1].days-b[1].days||a[0].localeCompare(b[0]))[0];if(!choice)return Infinity;total+=Math.round(quantity*MATERIAL_PRICES[material]*choice[1].price)}return total}
-  function fundOfflinePrivateMaterials(project){const purchases=[];let total=0;for(const [material,quantity] of Object.entries(project.materialsRequired||{})){if(!quantity)continue;const choice=Object.entries(MATERIAL_SUPPLIERS).filter(([name])=>(state.supply.suppliers[name]?.[material]||0)>=quantity).sort((a,b)=>a[1].price-b[1].price||a[1].days-b[1].days||a[0].localeCompare(b[0]))[0];if(!choice)return false;const [name,spec]=choice,cost=Math.round(quantity*MATERIAL_PRICES[material]*spec.price);purchases.push({name,material,quantity,cost});total+=cost}if((state.privateCapital||0)<total)return false;for(const purchase of purchases){state.supply.suppliers[purchase.name][purchase.material]-=purchase.quantity;state.supply.suppliers[purchase.name].cash=(state.supply.suppliers[purchase.name].cash||0)+purchase.cost;settleOfflineLocalMaterialSale(purchase.name,purchase.material,purchase.quantity);state.supply.contractors[project.contractor][purchase.material]+=purchase.quantity}state.privateCapital-=total;project.materialsCost=total;return true}
+  function planOfflinePrivateDeliveries(project){
+    const plans=[],capacity={};
+    const destinations=[offlineStorageLocation('yard'),...(state.supply.depots||[])];
+    for(const dest of destinations){
+      const used=offlineStorageUsage(dest.id),route=offlineRoadRoute(dest,project);
+      capacity[dest.id]=route?Math.max(0,used.capacity-used.used-used.inbound):0;
+    }
+    for(const [material,required] of Object.entries(project.materialsRequired||{})){
+      const amount=Math.max(0,required-(state.supply.contractors[project.contractor]?.[material]||0));
+      if(!amount)continue;
+      const candidates=[];
+      for(const dest of destinations){
+        if((capacity[dest.id]||0)<amount)continue;
+        for(const [supplier,provider] of Object.entries(MATERIAL_SUPPLIERS)){
+          if((state.supply.suppliers[supplier]?.[material]||0)<amount)continue;
+          const local=OFFLINE_INDUSTRIAL_GOODS[supplier];
+          if(local&&local[1]!==material)continue;
+          const offer=local?offlineIndustrialOffers(supplier,material,amount,dest)[0]:null;
+          if(local&&!offer)continue;
+          const origin=offer?{x:offer.site.x,y:offer.site.y}:supplier==='Distribuidora Regional'?{x:21,y:10}:{x:4,y:10};
+          const route=offer?.route||offlineRoadRoute(origin,dest);
+          if(!route)continue;
+          const distance=Math.max(0,route.length-1),freight=offer?offer.freight:Math.max(0,distance-4)*5;
+          const productCost=offer?offer.productCost:Math.round(amount*MATERIAL_PRICES[material]*provider.price);
+          const cost=productCost+freight;
+          candidates.push({supplier,material,amount,origin,route,offer,dest,cost,productCost,freight,distance});
+        }
+      }
+      candidates.sort((a,b)=>a.cost-b.cost||a.distance-b.distance||a.supplier.localeCompare(b.supplier)||a.dest.id.localeCompare(b.dest.id));
+      if(!candidates.length)return null;
+      const choice=candidates[0];
+      capacity[choice.dest.id]-=amount;
+      plans.push(choice);
+    }
+    return plans;
+  }
+  function fundOfflinePrivateMaterials(project){
+    const purchases=planOfflinePrivateDeliveries(project);
+    if(!purchases)return false;
+    const total=purchases.reduce((n,p)=>n+p.cost,0);
+    if((state.privateCapital||0)<total)return false;
+    for(const p of purchases){
+      const {supplier,material,amount,route,dest,origin,offer,cost,productCost,freight,distance}=p;
+      state.supply.suppliers[supplier][material]-=amount;
+      if(offer){
+        settleOfflineIndustrialOffer(supplier,material,amount,offer);
+        state.supply.logisticsCash=(state.supply.logisticsCash||0)+freight;
+      }else{
+        state.supply.supplierCash=state.supply.supplierCash||{};
+        state.supply.supplierCash[supplier]=(state.supply.supplierCash[supplier]||0)+cost;
+      }
+      const ready=state.day+MATERIAL_SUPPLIERS[supplier].days;
+      const order={id:'private-'+state.day+'-'+project.id+'-'+material,projectId:project.id,
+        label:project.label,contractor:project.contractor,supplier,items:{[material]:amount},
+        cost,productCost,freight,destinationId:dest.id,destinationLabel:dest.label,
+        orderedDay:state.day,supplierReadyDay:ready,travelDistance:distance,travelledDistance:0,
+        arrivalDay:ready+Math.max(1,Math.ceil(distance/6)),route,source:[origin.x,origin.y],
+        status:'en tránsito',statusCause:'Insumos privados pendientes de transporte',
+        progress:0,privateContract:true,priority:'normal'};
+      if(offer)Object.assign(order,{vendorId:offer.site.business.id,vendorName:offer.site.name,quotedFactor:offer.factor});
+      state.supply.orders.push(order);
+    }
+    state.privateCapital-=total;
+    project.materialsCost=total;
+    project.privateSupplyOrders=purchases.map(p=>'private-'+state.day+'-'+project.id+'-'+p.material);
+    return true;
+  }
   function offlineStorageLocation(id){if(id==='yard'||!id)return{x:4,y:10,id:'yard',capacity:state.supply.yardCapacity||240,label:'Patio de constructoras'};return(state.supply.depots||[]).find(d=>d.id===id)||null}
   function offlineStorageUsage(locationId){if(locationId==='yard'){const used=Object.values(state.supply.contractors||{}).reduce((n,stock)=>n+Object.values(stock).reduce((a,v)=>a+v,0),0),inbound=(state.supply.orders||[]).filter(o=>o.destinationId==='yard'&&o.status==='en tránsito').reduce((n,o)=>n+Object.values(o.items||{}).reduce((a,v)=>a+v,0),0);return{used,inbound,capacity:state.supply.yardCapacity||240}}const depot=(state.supply.depots||[]).find(d=>d.id===locationId);if(!depot)return{used:0,inbound:0,capacity:0};const used=Object.values(depot.stocks||{}).reduce((n,stock)=>n+Object.values(stock).reduce((a,v)=>a+v,0),0),inbound=(state.supply.orders||[]).filter(o=>o.destinationId===locationId&&o.status==='en tránsito').reduce((n,o)=>n+Object.values(o.items||{}).reduce((a,v)=>a+v,0),0);return{used,inbound,capacity:depot.capacity||0}}
   function orderOfflineMaterials(data){const project=state.projects.find(p=>p.id===String(data.projectId)),supplier=String(data.supplier||''),provider=MATERIAL_SUPPLIERS[supplier],stock=state.supply.suppliers[supplier],items=data.items;if(!project)throw Error('La obra ya no está activa.');if(!provider||!stock)throw Error('Proveedor inválido.');if(!items||typeof items!=='object'||Array.isArray(items))throw Error('Detalle de materiales inválido.');const clean={};for(const [material,value] of Object.entries(items)){if(!(material in MATERIAL_NAMES))throw Error('Categoría de material inválida.');const qty=Math.trunc(Number(value));if(!Number.isFinite(qty)||qty<0||qty>300)throw Error('Cada pedido admite de 0 a 300 unidades por material.');if(qty)clean[material]=qty}if(!Object.keys(clean).length)throw Error('Indicá al menos un material.');const destinationId=String(data.destinationId||'yard'),destination=offlineStorageLocation(destinationId);if(!destination)throw Error('Depósito de destino inválido.');const missing=Object.entries(clean).filter(([k,v])=>(stock[k]||0)<v).map(([k])=>MATERIAL_NAMES[k]);if(missing.length)throw Error(`El proveedor no tiene stock de ${missing.join(', ')}.`);const localSpec=OFFLINE_INDUSTRIAL_GOODS[supplier];

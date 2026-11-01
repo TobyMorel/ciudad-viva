@@ -1650,17 +1650,18 @@ def route_between(start_coord, destination_coord):
     return path
 
 def build_waste_collection_routes(containers,depots,facilities):
-    trucks=[{"id":"municipal-1","name":"Camión municipal","start":{"x":4,"y":10},"depot":None,"bins":[]}]
+    trucks=[] # Un camión requiere su base municipal construida.
     for i,depot in enumerate(depots):
-        trucks.append({"id":f"depot-{depot['x']}-{depot['y']}","name":f"Camión de {depot.get('name','depósito municipal')}","start":{"x":depot["x"],"y":depot["y"]},"depot":depot,"bins":[]})
-    for index,truck in enumerate(trucks):truck["payloadTons"]=1.15 if index==0 else .75
+        for vehicle in range(max(1,int((service_model(depot) or {}).get("trucks",1)))):
+            trucks.append({"id":f"depot-{depot['x']}-{depot['y']}-{vehicle}","name":f"Camión de {depot.get('name','base')} #{vehicle+1}","start":{"x":depot["x"],"y":depot["y"]},"depot":depot,"bins":[]})
+    for index,truck in enumerate(trucks):truck["payloadTons"]=.75
     for container in sorted(containers,key=lambda c:(c.get("y",0),c.get("x",0))):
         options=[]
         for index,truck in enumerate(trucks):
             if len(truck["bins"])*.15>=truck["payloadTons"]-.001:continue
             origin=truck["bins"][-1] if truck["bins"] else truck["start"]
             path=route_between((origin["x"],origin["y"]),(container["x"],container["y"]))
-            if path:options.append((len(path)+len(truck["bins"])*5,index))
+            if path and service_route_within(truck["depot"],container):options.append((len(path)+len(truck["bins"])*5,index))
         if options:
             _,index=min(options);trucks[index]["bins"].append(container)
     routes=[]
@@ -1800,7 +1801,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     generated=household+businesses+public+visitors
     active_depot_buildings=[b for b in buildings if b.get("kind")=="depot" and b.get("status","habilitado") not in ("cerrado","abandonado") and route_between((4,10),(b.get("x",0),b.get("y",0)))]
     active_depots=len(active_depot_buildings)
-    trucks=1+active_depots
+    trucks=sum(int((service_model(b) or {}).get("trucks",1)) for b in active_depot_buildings)
     containers=waste.setdefault("containers",[])
     facilities=[b for b in buildings if b.get("kind") in ("landfill","recyclingPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     routes=build_waste_collection_routes(containers,active_depot_buildings,facilities)
@@ -1810,7 +1811,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     routed_by_id={container_id:route for route in routes if route["reachable"] for container_id in route["containerIds"]}
     routed_bin_ids=set(routed_by_id)
     for container in containers:container["routeId"]=routed_by_id.get(container.get("id",f"bin-{container['x']}-{container['y']}"),{}).get("id")
-    collection_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75+len(routed_bin_ids)*.15)*collection_factor
+    collection_capacity=(trucks*.75+len(routed_bin_ids)*.15)*collection_factor
     transfer_capacity=active_depots*12
     transfer_dispatch=active_depots*1.5
     landfills=[b for b in buildings if b.get("kind")=="landfill" and b.get("status","habilitado") not in ("cerrado","abandonado")]
@@ -1840,7 +1841,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
             container["lastPickedTons"]=round(picked,3);container["routeId"]=route["id"] if route else None
             bin_picked+=picked;bin_overflow+=overflow
         curb_generated=max(0,generated-bin_generation)
-        curb_capacity=(waste["baseCollectionTonsDay"]+active_depots*.75)*collection_factor
+        curb_capacity=trucks*.75*collection_factor
         curb_picked=min(backlog+curb_generated,curb_capacity)
         picked=curb_picked+bin_picked
         accepted=min(picked,max(0,transfer_capacity-transfer_stored)) if active_depots else picked
@@ -1867,7 +1868,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
     roads=sorted(state.get("roads",[]),key=lambda p:(p[1],p[0]));pile_count=min(18,math.ceil(backlog/1.5))
     litter_tiles=[list(roads[(i*max(1,len(roads)//max(1,pile_count)))%len(roads)]) for i in range(pile_count)] if roads and pile_count else []
     collected=waste.get("lastCollectionTons",0);recycled=waste.get("lastRecycledTonsDay",0)
-    operating=round(280+max(0,trucks-1)*160+len(landfills)*420+len(recyclers)*650+collected*30*7.5)
+    operating=round(trucks*160+len(landfills)*420+len(recyclers)*650+collected*30*7.5)
     recycling_income=round(recycled*30*18)
     report={"generatedTonsDay":round(generated,3),"householdTonsDay":round(household,3),"businessTonsDay":round(businesses,3),"publicTonsDay":round(public,3),"visitorTonsDay":round(visitors,3),"collectedTonsDay":round(collected,3),"collectionCapacityTonsDay":round(collection_capacity,2),"activeTrucks":trucks,"landfillStoredTons":round(stored,1),"landfillCapacityTons":round(landfill_capacity,1),"landfillRemainingTons":round(max(0,landfill_capacity-stored),1),"landfillFillPct":round(min(100,stored/max(1,landfill_capacity)*100)),"uncollectedTons":round(backlog,1),"litterTiles":litter_tiles,"landfills":len(landfills),"activeDepots":active_depots,"transferStoredTons":round(waste.get("transferStoredTons",0),1),"transferCapacityTons":round(transfer_capacity,1),"transferDispatchTonsDay":round(transfer_dispatch,2),"containers":len(containers),"recyclingPlants":len(recyclers),"recyclingCapacityTonsDay":round(recycling_capacity,2),"recycledTonsDay":round(recycled,3),"recyclingRevenueMonth":recycling_income,"routeCount":sum(r["reachable"] for r in routes),"routeContainersServed":len(routed_bin_ids),"routeContainersUnserved":max(0,len(containers)-len(routed_bin_ids)),"routeDistanceTiles":sum(r["distanceTiles"] for r in routes if r["reachable"]),"routeCollectedTons":round(waste.get("lastRouteCollectedTons",0),3),"containerStoredTons":round(sum(c.get("storedTons",0) for c in containers),2),"monthlyOperatingCost":operating,"routes":[{"id":r["id"],"name":r["name"],"reachable":r["reachable"],"stops":len(r["containerIds"]),"distanceTiles":r["distanceTiles"],"destination":r["destination"]} for r in routes]}
     waste["report"]=report
@@ -4137,7 +4138,7 @@ def hospital_care_report(workplaces,homes,advance=False):
     hospitals=[]
     for b in state.get("buildings",[]):
         ward=b.get("hospitalWard")
-        if b.get("kind")!="civic" or not ward or b.get("status") not in ("operativo","habilitado"):continue
+        if b.get("kind")!="civic" or not ward or b.get("status") not in ("operativo","habilitado") or not (service_model(b) or {}).get("care"):continue
         doctors=max(0,staff.get((b["x"],b["y"]),0)-police_staff_reserved(b,workplaces))
         utility=b.get("utilityAccess",{})
         factor=min(utility.get("powerServedPct",0),utility.get("waterServedPct",0),utility.get("wastewaterTreatedPct",0))/100*funding
@@ -4163,7 +4164,7 @@ def hospital_care_report(workplaces,homes,advance=False):
         demand+=need
         options=[]
         for h in hospitals:
-            path=route_between((home["x"],home["y"]),(h["building"]["x"],h["building"]["y"]))
+            path=service_route_within(h["building"],home)
             if path:
                 minutes=round(max(0,len(path)-1)*2.5+4)
                 if minutes<=45:options.append((minutes,h,path))
@@ -4251,7 +4252,7 @@ def police_service_report(workplaces=None,advance=False):
     month=(state.get("day",1)-1)//30
     units=[]
     for b in state.get("buildings",[]):
-        if b.get("kind")!="civic" or not b.get("policeUnit") or b.get("status") not in ("operativo","habilitado"):continue
+        if b.get("kind")!="civic" or not b.get("policeUnit") or b.get("status") not in ("operativo","habilitado") or not (service_model(b) or {}).get("police"):continue
         u=b["policeUnit"];personnel=police_staff_reserved(b,workplaces);units.append({"building":b,"name":b.get("name","Base de seguridad"),
             "vehicles":max(0,int(u.get("vehicles",0))),"active":personnel//3,"staff":personnel,
             "priority":u.get("priority","mixto"),"remaining":personnel//3*2,"responded":0})
@@ -4260,7 +4261,7 @@ def police_service_report(workplaces=None,advance=False):
     for b in sites:
         choices=[]
         for unit in units:
-            path=route_between((unit["building"]["x"],unit["building"]["y"]),(b["x"],b["y"]))
+            path=service_route_within(unit["building"],b)
             if path:
                 minutes=round(max(0,len(path)-1)*2.5+4)
                 if minutes<=40:choices.append((minutes,unit,path))
@@ -4335,7 +4336,7 @@ def health_service_report(workplaces=None,advance=False):
         health["lastAdvancedDay"]=state.get("day")
     clinics=[]
     for building in state.get("buildings",[]):
-        if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado"):continue
+        if building.get("kind")!="civic" or building.get("status") in ("cerrado","abandonado") or not (service_model(building) or {}).get("care"):continue
         workplace=staff.get((building.get("x"),building.get("y")),{});people=max(0,int(workplace.get("staffedJobs",0))-police_staff_reserved(building,workplaces))
         access=building.get("utilityAccess",{});utility=min(access.get("powerServedPct",0),access.get("waterServedPct",0),access.get("wastewaterTreatedPct",0))/100*max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
         clinic_staff=min(4,people) if building.get("hospitalWard") else people
@@ -4354,7 +4355,7 @@ def health_service_report(workplaces=None,advance=False):
         base_demand+=need;urgent_demand+=urgent_need
         choices=[]
         for clinic in clinics:
-            building=clinic["building"];path=route_between((home["x"],home["y"]),(building["x"],building["y"]))
+            building=clinic["building"];path=service_route_within(building,home)
             if not path:continue
             minutes=round(max(0,len(path)-1)*2.5+4)
             if minutes<=45:choices.append((minutes,clinic))
@@ -4455,7 +4456,7 @@ def fire_service_report(workplaces=None,advance=False):
             choices=[]
             for station in stations:
                 if station["staff"]<4 or station["ready"]>day:continue
-                path=route_between((station["building"]["x"],station["building"]["y"]),(incident["x"],incident["y"]))
+                path=service_route_within(station["building"],incident)
                 if path:choices.append((5+max(0,len(path)-1)*2.5,station))
             if choices:
                 minutes,station=min(choices,key=lambda row:(row[0],row[1]["building"]["x"],row[1]["building"]["y"]))
@@ -4481,11 +4482,11 @@ def fire_service_report(workplaces=None,advance=False):
     for b in state.get("buildings",[]):
         if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue
         work=next((w for w in workplaces if w.get("kind")=="fireStation" and w.get("x")==b.get("x") and w.get("y")==b.get("y")),{})
-        stations.append({"name":b.get("name","Cuartel de bomberos"),"x":b["x"],"y":b["y"],"firefighters":max(0,work.get("staffedJobs",0)),"crews":min(3,max(0,work.get("staffedJobs",0)//4)),"readyDay":b.get("dispatchReadyDay",day)})
+        stations.append({"name":b.get("name","Cuartel de bomberos"),"x":b["x"],"y":b["y"],"firefighters":max(0,work.get("staffedJobs",0)),"crews":min(int(b.get("fireEngineCapacity",1)),max(0,work.get("staffedJobs",0)//4)),"readyDay":b.get("dispatchReadyDay",day)})
     eligible=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","hotel","airport","port","school")]
     covered=0
     for target in eligible:
-        if any(s["firefighters"]>=4 and (p:=route_between((s["x"],s["y"]),(target["x"],target["y"]))) and len(p)<=14 for s in stations):covered+=1
+        if any(s["firefighters"]>=4 and (station:=next((b for b in state["buildings"] if b.get("kind")=="fireStation" and b["x"]==s["x"] and b["y"]==s["y"]),None)) and service_route_within(station,target) for s in stations):covered+=1
     return {"day":day,"stations":stations,"coveragePct":round(covered/max(1,len(eligible))*100),"coveredBuildings":covered,"eligibleBuildings":len(eligible),"dispatches":fire.get("dispatches",0),"resolved":fire.get("resolved",0),"unanswered":fire.get("unanswered",0),"activeIncidents":[dict(i) for i in incidents if i.get("status")=="ardiendo"],"recentIncidents":[dict(i) for i in incidents[-8:][::-1]],"monthlyOperatingCost":len(stations)*950}
 
 def public_state(player_id=None):

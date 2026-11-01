@@ -11,8 +11,6 @@ Fase actual: 7 (90% orientativo); próxima mecánica: desvíos y obras viales. H
 
 # Siguiente entrega
 
-# Siguiente entrega
-
 ## Punto exacto · después de Alfa 0.114
 
 1. Fase 7: modelar demanda por franja horaria y cola persistente en cada tramo congestionado. Integrar el retraso al recorrido de colectivos, coches, asistencia laboral y consumo de combustible/emisiones en ambos motores.

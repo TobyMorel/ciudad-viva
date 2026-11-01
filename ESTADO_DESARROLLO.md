@@ -8,8 +8,6 @@ Verificado: 62 pruebas Python y 44 pruebas Node/Offline; `tests/stress_30_years.
 
 # Estado de desarrollo · Ciudad Viva
 
-# Estado de desarrollo · Ciudad Viva
-
 ## Alfa 0.114 · reloj escalonado y tránsito fluido
 
 Online acumula tiempo a la velocidad seleccionada y consume como máximo una jornada por iteración de simulación; el atraso se conserva y nunca se liquida como una ráfaga de días. Offline de juego real procesa como máximo una jornada por consulta a la frecuencia X1/X2/X4. Pausar limpia el acumulador y detiene actores móviles. El reloj de Three.js escala peatones y vehículos con X1/X2/X4, mantiene animación de cámara y limita el intervalo adaptativo del render a 50 ms. Coches comparten separación segura por carril y esperan los semáforos rojos. 59 pruebas Online y 42 Offline pasaron; la batería de 30 años conserva cuatro perfiles. Playwright de cámara pasó en 390×844 y 1440×900. No hay pruebas de LAN física.

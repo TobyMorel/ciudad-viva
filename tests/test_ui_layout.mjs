@@ -10,7 +10,7 @@ try{
   for(const {name,width,height} of [{name:'movil',width:390,height:844},{name:'escritorio',width:1440,height:900}]){
     const page=await browser.newPage({viewport:{width,height}});
     const errors=[];
-    page.on('pageerror',e=>errors.push(e.message));
+    page.on('pageerror',e=>errors.push(e.stack||e.message));
     let loaded=false;
     for(let attempt=0;attempt<20&&!loaded;attempt++){
       try{await page.goto('http://127.0.0.1:18765/',{waitUntil:'domcontentloaded',timeout:4000});loaded=true}

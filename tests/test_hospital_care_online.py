@@ -20,7 +20,10 @@ class HospitalCareOnline(unittest.TestCase):
     def test_ward_needs_staff_capacity_and_cost(self):
         with patch.object(server,"route_between",return_value=[(0,0)]*4):
             before=self.s["money"]
+            primary_before=server.health_service_report(self.staff)["primary"]["capacityPerDay"]
             server.invest_hospital_care("openHospitalWard",self.center["x"],self.center["y"])
+            primary_after=server.health_service_report(self.staff)["primary"]["capacityPerDay"]
+            self.assertLess(primary_after,primary_before,"La internación ocupa trabajadores antes destinados a atención primaria")
             self.assertEqual(self.s["money"],before-7200)
             report=server.hospital_care_report([],self.homes)
             self.assertEqual(report["admittedPerDay"],0,"El equipamiento sin profesionales no opera.")

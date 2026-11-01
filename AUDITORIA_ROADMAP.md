@@ -459,3 +459,9 @@ La fase 13 avanza del 35% al 40%. En el panel Ciudad → Servicios, una avería 
 **Pendiente:** responder con opciones específicas a enfermedades, accidentes y otras crisis; completar el catálogo causal de fase 13. La UI integral queda como etapa posterior a esta tanda mecánica, según la instrucción del usuario. El progreso global sigue sin estimarse: el registro de roadmap no define pesos verificables comunes para ponderar las 34 fases. Fase 13: 40%.
 
 **Siguiente entrega:** ampliar fase 13 con respuesta sanitaria y movilidad ante accidentes, e integrar sus efectos persistentes. A continuación iniciar el rediseño visual integral solicitado. Mantener controles sin límites para invitados.
+
+## Alfa 0.107 · rediseño integral Atlas municipal
+
+La interfaz adopta una dirección cartográfica propia: azul petróleo, papel cálido, acento terracota y verde de acción. `design.css` concentra el nuevo sistema para pantalla de inicio, barras superiores, indicadores, mapa, dock, ventanas, catálogo, formularios, avisos y paneles de ciudad. El archivo se sirve también por el anfitrión LAN. Se corrigió la cuadrícula heredada: como los paneles laterales están en ventanas, el mapa ocupa todo el ancho de escritorio; en móvil ocupa toda la altura entre indicadores y pie. Los controles y textos largos permiten envolver y desplazar contenido. La navegación y mecánicas siguen disponibles. Comprobar visualmente 390×844 y 1440×900, además de las pruebas de interfaz existentes.
+
+Fase 15 sube de 60% a 65% por coherencia visual y legibilidad comprobables. Progreso global aún no estimable: faltan pesos comunes verificables para las 34 fases. Pendientes: sesiones de usabilidad con personas y revisión de accesibilidad. Próxima entrega: respuestas sanitarias y viales de fase 13.

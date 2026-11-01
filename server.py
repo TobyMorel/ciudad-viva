@@ -4662,7 +4662,7 @@ class Handler(BaseHTTPRequestHandler):
                 rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
             self._send(200,{"rooms":rooms});return
         rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
+        if rel not in ("index.html","style.css","design.css","game.js","offline.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
             self._send(404,{"error":"No encontrado"}); return
         file=(ROOT/rel).resolve()
         if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta inválida"}); return

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.106",
+  "currentVersion": "0.107",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.107",
+      "date": "2026-11-01",
+      "roadmapPhase": 15,
+      "phaseProgress": 65,
+      "overallProgress": null,
+      "changes": [
+        "Rediseño integral Atlas municipal: identidad visual azul petróleo, papel cálido y acento terracota aplicada a inicio, tablero, mapa, navegación, ventanas, catálogos, contratos, avisos y componentes internos.",
+        "La pantalla de inicio usa una composición cartográfica propia; las opciones Offline y LAN son visibles y legibles en móvil y escritorio.",
+        "El mapa ocupa todo el espacio disponible en escritorio y móvil. La navegación inferior, las barras de estado y los paneles largos conservan desplazamiento y texto visible.",
+        "Se conserva la simulación y el acceso a todas las herramientas y categorías. Revisión visual en 390 y 1440 px; fase 15 pasa a 65%."
+      ]
+    },
     {
       "version": "0.106",
       "date": "2026-11-01",
@@ -1036,12 +1049,12 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.107 · enfermedades, accidentes y recuperación de crisis",
-      "detail": "Extender aviso → diagnóstico → opciones presupuestadas → respuesta observable y consecuencias para crisis de salud y movilidad."
+      "title": "Alfa 0.108 · crisis con decisiones urbanas",
+      "detail": "Respuesta sanitaria y vial a incidentes causales, con presupuesto, equipos, demora y resultados visibles."
     },
     {
-      "title": "Rediseño integral de interfaz",
-      "detail": "Después de completar la tanda de mecánicas prioritarias, reemplazar la dirección visual actual por un sistema visual original, coherente, más claro y comprobado en móvil y escritorio."
+      "title": "Validación de experiencia",
+      "detail": "Sesiones de juego prolongadas y revisión de accesibilidad, especialmente flujos extensos en móvil."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1188,10 +1201,11 @@
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 60,
-      "summary": "Herramientas de ciudad, paneles, controles, historial y accesibilidad básica",
+      "progress": 65,
+      "summary": "Interfaz Atlas municipal, paneles, navegación, historial, controles y accesibilidad visual básica",
       "pending": [
-        "Equilibrio de experiencia probado con sesiones largas y ciudades extensas."
+        "Pruebas de usabilidad con jugadores y revisión de contraste con tecnologías de asistencia.",
+        "Equilibrio de experiencia en sesiones largas y ciudades extensas."
       ]
     },
     {

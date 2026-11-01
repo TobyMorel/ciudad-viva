@@ -34,7 +34,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-1.01
+          name: ciudad-viva-alfa-0.101
           path: |
             .
             !.git/**
@@ -64,7 +64,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-1.01-responsive
+          name: ciudad-viva-alfa-0.101-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

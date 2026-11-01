@@ -355,3 +355,8 @@ Se suma el tramo acero regional → metalúrgica privada → componentes usados 
 ### Alfa 0.92 — fase 18 (85%)
 
 Separar las cuatro especialidades industriales del proceso alimentario Offline corrige doble contabilización de gastos y producción inexistente. Regresiones automatizadas Online/Offline confirman abastecimiento de componentes desde metalúrgica controlada a una obra detenida, transporte, consumo e inspección. No cubren habilitación desde una obra industrial ni todos los mercados/meses; sin nueva ponderación verificable no se altera el 85% de la fase ni se calcula un total global.
+
+
+### Alfa 0.93 — Fase 18: 90%
+
+Dos cadenas del roadmap pasan a funcionar también Offline (cantera geológica agotable → áridos, áridos comprados por carretera → hormigón físico 2:1 → suministro a obras). Los tests comprobaron compras, entregas y producción con mano de obra; se reserva el tipo de planta y la caja de operación en los contratos en ambos motores. Falta competencia más profunda entre suministradores, destinos logísticos alternativos, exportación industrial, quiebras con reorganización empresarial, escenarios de escasez sostenida y revisión plurianual. Por eso se incrementa solo 5 puntos de cobertura respecto del 85% anterior, sin atribuir avance global.

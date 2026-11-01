@@ -18,8 +18,18 @@ class MaritimeSteelImport(unittest.TestCase):
         s["buildings"].append({"kind":"port","x":4,"y":10,"name":"Puerto prueba","operational":True,"shipCapacity":6,"cargoCapacity":10,"cargoStored":6})
         with patch.object(server,"route_between",return_value=[[4,10]]):
             server.tick_one_day()
-        self.assertEqual(s["supply"]["steelImportedUnits"],4)
+        self.assertEqual(s["supply"].get("steelImportedUnits",0),0)
         self.assertEqual(s["supply"]["steelImportSpend"],1120)
+        self.assertEqual(depot["steel"],0)
+        shipment=s["supply"]["steelShipments"][0]
+        self.assertEqual(shipment["quantity"],4)
+        self.assertEqual(shipment["status"],"en viaje")
+        with patch.object(server,"route_between",return_value=[[4,10]]):
+            s["day"]=shipment["arrivalDay"]
+            server.advance_maritime_steel_shipments()
+        self.assertEqual(depot["steel"],4)
+        self.assertEqual(s["supply"]["steelImportedUnits"],4)
+        server.advance_maritime_steel_shipments()
         self.assertEqual(depot["steel"],4)
 
 if __name__=="__main__":

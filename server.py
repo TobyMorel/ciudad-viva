@@ -3182,6 +3182,84 @@ def advance_industrial_reopenings():
         recovery["status"]="completada";recovery["completedDay"]=state["day"];recovery["statusCause"]="Inspección aprobada y nueva firma habilitada"
         ev("Fábrica recuperada",f"{site['name']} reabrió con nuevo operador, 20 puestos y $ {firm['cash']:,} de caja privada ya reservada. La producción debe volver a conseguir insumos y personal.".replace(",","."))
 
+
+def plan_private_construction_deliveries(project):
+    """Cotizar sin alterar estado; precio, ruta y depósito deben estar disponibles juntos."""
+    supply=state["supply"];contractor=project["contractor"]
+    needs=project.get("materialsRequired",{})
+    destinations=[storage_location("yard")]+list(supply.get("depots",[]))
+    capacity={}
+    for dest in destinations:
+        if not dest:continue
+        destination_id=dest["id"]
+        available=max(0,int(dest["capacity"])-storage_used(destination_id)-storage_reserved(destination_id))
+        if route_between((dest["x"],dest["y"]),(project["x"],project["y"])) is None:available=0
+        capacity[destination_id]=available
+    quotes=[]
+    for material,required in needs.items():
+        shortage=max(0,int(required)-int(supply["contractors"][contractor].get(material,0)))
+        if not shortage:continue
+        options=[]
+        for dest in destinations:
+            if not dest or capacity.get(dest["id"],0)<shortage:continue
+            for name,provider in SUPPLIERS.items():
+                stock=supply["suppliers"].get(name,{})
+                if stock.get(material,0)<shortage:continue
+                if name in INDUSTRIAL_VENDOR_GOODS:
+                    if INDUSTRIAL_VENDOR_GOODS[name][1]!=material:continue
+                    offers=industrial_vendor_offers(name,material,shortage,(dest["x"],dest["y"]))
+                    if not offers:continue
+                    quote=offers[0]
+                    route=quote["route"];origin=(quote["site"]["x"],quote["site"]["y"])
+                    cost=quote["total"];product_cost=quote["productCost"];freight=quote["freight"]
+                else:
+                    origin=(21,10) if name=="Distribuidora Regional" else (4,10)
+                    route=route_between(origin,(dest["x"],dest["y"]))
+                    if route is None:continue
+                    distance=max(0,len(route)-1)
+                    freight=max(0,distance-4)*5
+                    product_cost=round(shortage*MATERIAL_PRICE[material]*provider["price"])
+                    cost=product_cost+freight;quote=None
+                options.append((cost,len(route),name,dest["id"],{
+                    "supplier":name,"material":material,"quantity":shortage,"cost":cost,
+                    "productCost":product_cost,"freight":freight,
+                    "quote":quote,"route":route,"source":list(origin),
+                    "destinationId":dest["id"],"destinationLabel":dest["label"]}))
+        if not options:return None
+        chosen=min(options,key=lambda option:option[:4])[-1]
+        capacity[chosen["destinationId"]]-=shortage
+        quotes.append(chosen)
+    return quotes
+
+def commit_private_construction_deliveries(project,quotes):
+    """El promotor paga hoy, las constructoras reciben después del viaje y descarga."""
+    supply=state["supply"];day=state["day"]
+    for seq,purchase in enumerate(quotes):
+        supplier=purchase["supplier"];material=purchase["material"];quantity=purchase["quantity"]
+        supply["suppliers"][supplier][material]-=quantity
+        order={"id":uuid.uuid4().hex,"projectId":project["id"],"label":project["label"],
+            "contractor":project["contractor"],"supplier":supplier,"items":{material:quantity},
+            "cost":purchase["cost"],"productCost":purchase["productCost"],"freight":purchase["freight"],
+            "destinationId":purchase["destinationId"],"destinationLabel":purchase["destinationLabel"],
+            "priority":"normal","orderedDay":day,
+            "supplierReadyDay":day+SUPPLIERS[supplier]["days"],
+            "arrivalDay":day+SUPPLIERS[supplier]["days"]+max(1,math.ceil((len(purchase["route"])-1)/6)),
+            "travelDistance":max(0,len(purchase["route"])-1),"travelledDistance":0,
+            "route":purchase["route"],"source":purchase["source"],
+            "progress":0,"status":"en tránsito","statusCause":"Insumos privados pendientes de entrega",
+            "privateContract":True}
+        if purchase["quote"]:
+            offer=purchase["quote"]
+            settle_industrial_vendor_offer(supplier,material,quantity,offer)
+            order.update({"vendorId":offer["site"]["business"].get("id"),
+                          "vendorName":offer["site"].get("name"),"quotedFactor":offer["factor"]})
+            supply["logisticsCash"]=supply.get("logisticsCash",0)+purchase["freight"]
+        else:
+            supply.setdefault("supplierCash",{})[supplier]=supply.get("supplierCash",{}).get(supplier,0)+purchase["cost"]
+        supply["orders"].append(order)
+    project["materialsCost"]=sum(q["cost"] for q in quotes)
+    project["privateSupplyOrders"]=[o["id"] for o in supply["orders"] if o.get("projectId")==project["id"] and o.get("privateContract")]
+
 def advance_zoned_development():
     """Promoters spend real capital and buy the materials for approved projects."""
     demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
@@ -3196,31 +3274,23 @@ def advance_zoned_development():
             route=route_between((z["x"],z["y"]),(4,10))
             if route:candidates.append((len(route),z["y"],z["x"],z))
         if not candidates:continue
+        _,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
         specification=PROJECTS[kind];required=material_plan(kind);options=[]
         for name,company in CONTRACTORS.items():
             if not contractor_has_capacity(name) or contractor_free_workers(name)<LABOR_NEEDS[kind]:continue
             cost=round(specification["cost"]*company["price"]);permit=round(specification["cost"]*.12);private_cost=cost-permit
-            purchases=[];material_bill=0;feasible=True
-            for material,amount in required.items():
-                shortage=max(0,amount-state["supply"]["contractors"][name].get(material,0))
-                if shortage:
-                    suppliers=sorted(((SUPPLIERS[supplier]["price"],supplier) for supplier in SUPPLIERS if state["supply"]["suppliers"].get(supplier,{}).get(material,0)>=shortage))
-                    if not suppliers:feasible=False;break
-                    factor,supplier=suppliers[0];bill=round(shortage*MATERIAL_PRICE[material]*factor);material_bill+=bill;purchases.append((supplier,material,shortage,bill))
+            proposal={"contractor":name,"x":zone["x"],"y":zone["y"],"materialsRequired":required}
+            purchases=plan_private_construction_deliveries(proposal)
+            if purchases is None:continue
+            material_bill=sum(item["cost"] for item in purchases)
             reserve=4200 if kind=="factory" else 0
-            if feasible and state.get("money",0)>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500:
+            if state.get("money",0)>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500:
                 options.append((cost,name,company,permit,private_cost,purchases,material_bill,reserve))
         if not options:continue
         _,name,company,permit,private_cost,purchases,material_bill,reserve=min(options,key=lambda row:(row[0],row[1]))
-        _,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
         project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
         project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":round(specification["days"]*company["days"]/30),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
-        for supplier,material,amount,bill in purchases:
-            state["supply"]["suppliers"][supplier][material]-=amount
-            state["supply"]["contractors"][name][material]+=amount
-            state["supply"].setdefault("supplierCash",{}).setdefault(supplier,0)
-            state["supply"]["supplierCash"][supplier]+=bill
-            settle_local_material_sale(supplier,{material:amount})
+        commit_private_construction_deliveries(project,purchases)
         state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance;state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
         zone["status"]="en obra"
         if kind=="factory":

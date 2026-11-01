@@ -353,3 +353,7 @@ El ajuste mensual de empleo crea/cancela `jobSlots` según ganancias, demanda, s
 ### Alfa 0.98 — prórroga de contrato frente a corte vial
 
 Una acción `renegotiateTradeContract` exige contrato activo no prorrogado, al menos una remesa sin liquidar y antes del vencimiento, ausencia de ruta real, y ambas empresas solventes/abiertas. La tarifa `max(20, floor((contractValue+10)/20))` se debita de la caja compradora y acredita a la vendedora directamente: no modifica `escrow`, pagos de transporte ni existencias. Solo los `deadlineDay` pendientes aumentan en 14. `renegotiatedDay` impide repetir; el almacenamiento legado sigue compatible, sin migración destructiva. Ambas implementaciones validan la acción, no la interfaz.
+
+## Convención de versiones de las entregas (obligatoria)
+
+Las Alfas se etiquetan como `0.N` con `N` entero sin límite de cifras, conservado como **texto**: `0.99 → 0.100 → 0.101 → 0.102 → ... → 0.999 → 0.1000`. Nunca cambiar a `1.0` ni interpretar `0.100` como número decimal (equivaldría erróneamente a `0.1`). La próxima versión se calcula incrementando `N` y anteponiendo `0.`. Las entregas agrupan sistemas y mecánicas; ajustes aislados permanecen en la misma Alfa. Los campos `currentVersion`, `versions[].version`, la cabecera visible y los nombres de artefactos deben reflejar el mismo identificador.

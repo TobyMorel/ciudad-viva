@@ -7,7 +7,7 @@ class ScrapSteelTest(unittest.TestCase):
         s=server.state
         server.ensure_supply_state()
         s["paused"]=False
-        s["day"]=29
+        s["day"]=30
         s["lastMonth"]=0
         s["money"]=1000
         s["supply"]["regionalSteelReserve"]=0

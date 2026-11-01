@@ -4167,11 +4167,11 @@ def process_port_logistics():
         if port.get("cargoStored",0)<60 or state["day"]-port.get("lastShipDay",0)<10:continue
         quantity=min(port.get("shipCapacity",180),port["cargoStored"]);port["cargoStored"]-=quantity;port["lastShipDay"]=state["day"];port["shipsDeparted"]=port.get("shipsDeparted",0)+1
         fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee
-        voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
+        voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"cargoType":"mercadería","direction":"exportación","departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
         voyages.append(voyage);ev("Buque de carga zarpó",f"Un buque partió con {quantity} unidades exportadas; tasa portuaria $ {fee} ingresó a tesorería.")
     for voyage in voyages:
-        if voyage.get("status")=="en ruta" and state["day"]>=voyage.get("arrivalDay",999999):voyage["status"]="entregado";voyage["deliveredDay"]=state["day"];ev("Exportación entregada",f"El cargamento de {voyage['quantity']} unidades llegó al mercado regional.")
-    supply["portOrders"]=orders[-80:];supply["portVoyages"]=voyages[-30:]
+        if voyage.get("direction")!="importación" and voyage.get("status")=="en ruta" and state["day"]>=voyage.get("arrivalDay",999999):voyage["status"]="entregado";voyage["deliveredDay"]=state["day"];ev("Exportación entregada",f"El cargamento de {voyage['quantity']} unidades llegó al mercado regional.")
+    supply["portOrders"]=orders[-80:];supply["portVoyages"]=voyages[-60:]
 
 def simulate_airport_month(workforce):
     airports=[b for b in state["buildings"] if b.get("kind")=="airport" and b.get("status") in ("habilitado","operativo")]
@@ -4343,7 +4343,17 @@ def advance_maritime_steel_shipments():
     """La cuota diaria de cada puerto se comparte entre todos sus buques."""
     supply=state["supply"]
     shipments=supply.setdefault("steelShipments",[])
+    voyages=supply.setdefault("portVoyages",[])
     for shipment in shipments:
+        if shipment.get("status") in ("en viaje","descarga parcial"):
+            shipment_id=shipment.setdefault("id",uuid.uuid4().hex)
+            voyage=next((v for v in voyages if v.get("id")==shipment.get("voyageId")),None)
+            if not voyage:
+                shipment["voyageId"]=uuid.uuid4().hex
+                x,y=shipment.get("port",[23,10])
+                voyage={"id":shipment["voyageId"],"shipmentId":shipment_id,"portId":f"port-{x}-{y}","quantity":shipment.get("quantity",0),"cargoType":"acero","direction":"importación","departureDay":shipment.get("orderedDay",state["day"]),"arrivalDay":shipment.get("arrivalDay",state["day"]),"status":"en ruta","route":[[x-4,y],[x-3,y],[x-2,y],[x-1,y],[x,y]],"unloadedUnits":shipment.get("deliveredUnits",0)}
+                voyages.append(voyage)
+            else:voyage["unloadedUnits"]=shipment.get("deliveredUnits",0)
         if shipment.get("status") not in ("en viaje","descarga parcial") or state["day"]<shipment["arrivalDay"] or shipment.get("lastUnloadedDay")==state["day"]:continue
         port=next((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("x")==shipment["port"][0] and b.get("y")==shipment["port"][1] and b.get("operational")),None)
         if not port or route_between(tuple(shipment["port"]),(4,10)) is None:
@@ -4365,6 +4375,11 @@ def advance_maritime_steel_shipments():
         shipment["lastUnloadedDay"]=state["day"]
         shipment["lastUnloadedUnits"]=qty
         shipment["statusCause"]="" if shipment["status"]=="entregado" else "Descarga parcial pendiente"
+        voyage=next((v for v in voyages if v.get("id")==shipment.get("voyageId")),None)
+        if voyage:
+            voyage["unloadedUnits"]=shipment["deliveredUnits"]
+            voyage["status"]="descargado" if shipment["status"]=="entregado" else "atracado"
+            voyage["arrivalDay"]=shipment.get("arrivalDay",state["day"])
         if shipment["status"]=="entregado":shipment["deliveredDay"]=state["day"]
         supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+qty
         ev("Acero desembarcado",f"{qty} unidades descargadas; {shipment['quantity']-shipment['deliveredUnits']} pendientes.")
@@ -4439,7 +4454,9 @@ def tick_one_day():
                 if units>0:
                     cost=units*280
                     state["money"]-=cost
-                    state["supply"].setdefault("steelShipments",[]).append({"quantity":units,"port":[port["x"],port["y"]],"orderedDay":state["day"],"arrivalDay":state["day"]+12,"cost":cost,"status":"en viaje"})
+                    shipment_id=uuid.uuid4().hex;voyage_id=uuid.uuid4().hex;arrival=state["day"]+12
+                    state["supply"].setdefault("steelShipments",[]).append({"id":shipment_id,"voyageId":voyage_id,"quantity":units,"port":[port["x"],port["y"]],"orderedDay":state["day"],"arrivalDay":arrival,"cost":cost,"status":"en viaje"})
+                    state["supply"].setdefault("portVoyages",[]).append({"id":voyage_id,"shipmentId":shipment_id,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":units,"cargoType":"acero","direction":"importación","departureDay":state["day"],"arrivalDay":arrival,"status":"en ruta","route":[[port["x"]-4,port["y"]],[port["x"]-3,port["y"]],[port["x"]-2,port["y"]],[port["x"]-1,port["y"]],[port["x"],port["y"]]],"unloadedUnits":0})
                     state["supply"]["steelImportSpend"]=state["supply"].get("steelImportSpend",0)+cost
                     ev("Acero contratado por puerto",f"{units} unidades zarparon; anticipo $ {cost}, llegada prevista en 12 días.")
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")

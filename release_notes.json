@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.138",
+  "currentVersion": "0.139",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.139",
+      "date": "2026-11-01",
+      "roadmapPhase": 23,
+      "phaseProgress": 45,
+      "overallProgress": null,
+      "changes": [
+        "Los barcos que importan acero desde el mercado regional ahora aparecen en el mapa durante la travesía y el atraque; se pueden seleccionar para consultar carga, salida y arribo.",
+        "La navegación del buque se interpola en tiempo real con el reloj simulado y se detiene al pausar. Al llegar, queda atracado hasta que el puerto descarga según su capacidad diaria; el acero se acredita en el inventario cuando se descarga.",
+        "Online y Offline enlazan la remesa física, el viaje y las unidades efectivamente descargadas, incluidos guardados antiguos con remesas activas. Las exportaciones conservan sus viajes y no se mezclan con la importación.",
+        "Ciudad → Puerto ahora diferencia buques de exportación de acero entrante, muestra remesas, costo, ETA, descarga parcial y el saldo pendiente. Chromium comprueba la selección del buque y el panel sin recortes ni solapamientos en 390×844 y 1440×900. También se corrige Ciudad después de inspeccionar un actor: abre el panel municipal y sus categorías, no la ficha anterior.",
+        "Fase 23 pasa de 35% a 45% por visibilidad e inspección de la cadena de importación portuaria existente, con llegada y descarga limitada persistente. Siguen pendientes importación de otras mercancías, grúas, calado, atraque y logística portuaria completa. Progreso global no estimable sin pesos verificables para 34 fases."
+      ]
+    },
     {
       "version": "0.138",
       "date": "2026-11-01",
@@ -1479,8 +1493,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 29 · ciclo de vida completo y escenarios largos",
-      "detail": "Conectar suelo, diseño, obra, personal, operación, renovación y cierre con costos ya presentes en cada subsistema; convertir los horizontes 1/4/10/20 años en escenarios fiscales con población, inflación, salarios y demanda trazables."
+      "title": "Fase 23 · terminal portuaria de carga más completa",
+      "detail": "Ampliar la cadena a otras mercancías y depósitos con capacidad, turnos de grúa, cola de atraque y acceso vial; después avanzar en sistemas de otras fases pendientes, manteniendo causas y cantidades reales."
     },
     {
       "title": "Fase 29 · libro contable clasificado",
@@ -1719,10 +1733,11 @@
     {
       "phase": 23,
       "title": "Puertos marítimos, fluviales y logística de terminales",
-      "progress": 35,
-      "summary": "Puerto visible y operativo para exportación con acceso y capacidad limitada",
+      "progress": 45,
+      "summary": "Puerto exporta producción comercial e importa acero para construcción; viajes físicos seleccionables, stock y descarga diaria limitados están enlazados.",
       "pending": [
-        "Importación, grúas, calado, atraque, ferrocarril y competencia logística."
+        "Importar otras mercancías y enlazarlas con depósitos, fábricas y obras.",
+        "Colas de atraque, grúas, calado, trenes de carga, costes de mantenimiento y competencia entre puertos."
       ]
     },
     {

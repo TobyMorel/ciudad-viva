@@ -576,3 +576,10 @@ Tests: `test_municipal_forecast_online.py` y `test_municipal_forecast_offline.mj
 La ficha de obra pública separa inversión inicial, operación mensual conocida y reserva anual de mantenimiento (2,5% de inversión) a horizontes acumulados de 1, 4, 10 y 20 años. Modelos con operación no definida quedan marcados como no cuantificados, no como costo cero. Las reservas se describen como supuesto y no alteran el presupuesto real. Siguen pendientes suelo, diseño, personal para todos los modelos, operación completa, inflación, renovación, cierre y financiamiento; por ello esta herramienta es una ayuda de planificación, no un costo total contable.
 
 Fase 29: 60% según bloques iguales caja/compromisos 100%, auditoría 50%, presupuestos/prioridades 50%, ciclo de vida 50%, escenarios 50%. Se conserva el mismo criterio longitudinal documentado en `ESTADO_DESARROLLO.md`. Chromium responsive valida construcción en 390×844 y 1440×900, lectura completa al desplazar el modal y el comienzo real de una obra.
+
+
+## Alfa 0.139 · importaciones marítimas visibles (fase 23)
+
+Los pedidos de acero que abastecen el proveedor regional quedan enlazados a un viaje de importación marítima. En la escena 3D el buque se mueve con el reloj y es seleccionable; informa carga, salida y arribo. Al llegar queda en la terminal hasta que el cupo diario descarga unidades. La descarga modifica el stock de acero una vez, no al mostrar el viaje. Los guardados antiguos con remesas en curso reciben una entidad visual idempotente. El informe separa importación de exportación. Online/Offline verifican ruta, remesa, espera parcial y cantidad sin duplicados; Chromium 390×844/1440×900 verifica panel y selección sin texto recortado o solapado.
+
+Fase 23: 45%, parcial. Para considerar completa la logística portuaria siguen pendientes importaciones distintas del acero, destinos/depósitos genéricos, cola de atraque, grúas, calado, ferrocarril, competencia, costos y mantenimiento.

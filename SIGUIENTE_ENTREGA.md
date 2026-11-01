@@ -1,11 +1,11 @@
-# Siguiente entrega · después de Alfa 0.138
+# Siguiente entrega · después de Alfa 0.139
 
-1. Fase 29: conectar el estimador de ciclo de vida a costos reales por activo: terreno/diseño cuando existan, personal y operación, mantenimiento observado, reposición, cierre y financiamiento. Mantener separados los rubros no simulados.
-2. Extender los escenarios de 12 meses a 1, 4, 10 y 20 años usando población, salarios, inflación y demanda trazables, sin tocar la caja real.
-3. Completar la clasificación contable de ingresos, egresos, transferencias y reservas; avanzar en paralelo a sistemas jugables pendientes de otras fases para no concentrar entregas sucesivas en Hacienda.
-4. Ejecutar pruebas funcionales Online/Offline, stress de 30 años y Chromium responsive al cambiar la interfaz; publicar en `main`, verificar SHA, Actions y despliegue, y adjuntar ZIP desde el commit publicado.
+1. Fase 23: extender importación portuaria más allá del acero, con mercancías elegibles, depósito de llegada, capacidad de patio/turno, costo y destino industrial/obras observables; luego añadir cola de atraque y equipo de descarga.
+2. En paralelo, abrir otra fase de contenido de baja cobertura: crisis causales y recuperación persistente (13), geología/catastro y propiedad (16), o movilidad avanzada (22). Evitar entregas consecutivas de ajustes finos de la misma familia.
+3. Mantener paridad Online/Offline; añadir regresiones para cantidades persistidas y no duplicadas. Si se cambia UI o visual 3D, comprobar selección y encuadre en 390×844 y 1440×900.
+4. Publicar la build íntegra en `main`, verificar SHA, checks y despliegue; generar ZIP completo desde el commit publicado.
 
-Fase actual: 29 (60% orientativo parcial; cinco bloques estables 100/50/50/50/50 documentados en `ESTADO_DESARROLLO.md`). Próximo hito: costos reales de ciclo de vida y escenarios fiscales largos. Progreso global y restante no estimables: faltan pesos comunes verificables para las 34 fases. LAN entre equipos físicos permanece pendiente.
+Hito actual: fase 23, puertos y logística de terminales (45%, parcial). Próximo hito: más carga entrante con destino real y límites de terminal. Progreso global y restante no estimables: no hay ponderación verificable para sumar las 34 fases. LAN entre equipos físicos continúa pendiente.
 
 # Siguiente entrega · después de Alfa 0.134
 

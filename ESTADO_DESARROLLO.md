@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.138
+# Estado de desarrollo · Alfa 0.139
+
+## Importación marítima visible y descarga en puerto · fase 23
+
+El pedido real de acero ya no es invisible: Online y Offline persisten el viaje de importación ligado a la remesa, el buque recorre la ruta oceánica a velocidad del reloj y se puede seleccionar para consultar su carga/ETA. Al llegar se mantiene atracado hasta descargar; cada jornada respeta la capacidad de descarga del puerto y solo las unidades desembarcadas pasan al inventario del proveedor. Remesas activas de guardados anteriores reciben un registro visual sin duplicar carga. Exportaciones e importaciones se separan en conteos e informes.
+
+Verificado: regresiones `test_maritime_steel_import_online.py` y `test_maritime_steel_import_offline.mjs` comprueban viaje, ID enlazado, ruta, descarga parcial, idempotencia y cierre. `test_port_import_ui.mjs` comprueba buque seleccionable e informe Ciudad → Puerto en Chromium a 390×844 y 1440×900, sin recortes ni solapamientos; confirma además que el botón Ciudad restaura categorías luego de inspeccionar un actor. Pasa la batería Python completa (99 pruebas), las 66 pruebas Node de simulación Offline/modelos, sintaxis Python/JavaScript, JSON y `git diff --check`.
+
+Fase 23: 45% orientativo y parcial: puerto exportador existente más importación de acero con barco visible, llegada, descarga limitada y stock proveedor. Aún faltan otras mercancías, grúas, atraques, calado, ferrocarril y competencia. Progreso global/restante no estimable por falta de pesos comunes verificables para las 34 fases.
 
 ## Costo municipal de ciclo de vida · fase 29
 

@@ -25,6 +25,8 @@ test('Offline: dos buques comparten el cupo portuario sin duplicar acero',async(
     assert.deepEqual(s.supply.steelShipments.map(x=>x.deliveredUnits),[5,2]);
     assert.equal(s.supply.suppliers['Corralón del Puerto'].steel,7);
     assert.equal(s.supply.steelImportedUnits,7);
+    assert.deepEqual(s.supply.portVoyages.map(x=>x.direction),['importación','importación']);
+    assert.ok(s.supply.portVoyages.every(x=>['atracado','descargado'].includes(x.status)&&x.unloadedUnits>0));
     s=await adapter.request('/api/state');
     assert.equal(s.supply.steelImportedUnits,7,'No se reutiliza el cupo diario');
     now=2000;
@@ -33,5 +35,6 @@ test('Offline: dos buques comparten el cupo portuario sin duplicar acero',async(
     assert.equal(s.supply.suppliers['Corralón del Puerto'].steel,13);
     assert.equal(s.supply.steelImportedUnits,13);
     assert.ok(s.supply.steelShipments.every(x=>x.status==='entregado'));
+    assert.ok(s.supply.portVoyages.every(x=>x.status==='descargado'));
   }finally{globalThis.fetch=oldFetch;globalThis.localStorage=oldStorage;Date.now=oldNow}
 });

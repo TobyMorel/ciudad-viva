@@ -24,9 +24,15 @@ class MaritimeSteelImport(unittest.TestCase):
         shipment=s["supply"]["steelShipments"][0]
         self.assertEqual(shipment["quantity"],4)
         self.assertEqual(shipment["status"],"en viaje")
+        voyage=next(v for v in s["supply"]["portVoyages"] if v["id"]==shipment["voyageId"])
+        self.assertEqual(voyage["direction"],"importación")
+        self.assertEqual(voyage["cargoType"],"acero")
+        self.assertEqual(voyage["route"],[[0,10],[1,10],[2,10],[3,10],[4,10]])
         with patch.object(server,"route_between",return_value=[[4,10]]):
             s["day"]=shipment["arrivalDay"]
             server.advance_maritime_steel_shipments()
+        self.assertEqual(voyage["status"],"descargado")
+        self.assertEqual(voyage["unloadedUnits"],4)
         self.assertEqual(depot["steel"],4)
         self.assertEqual(s["supply"]["steelImportedUnits"],4)
         server.advance_maritime_steel_shipments()
@@ -45,6 +51,8 @@ class MaritimeSteelImport(unittest.TestCase):
             server.advance_maritime_steel_shipments()
             self.assertEqual(depot["steel"]-before,7)
             self.assertEqual(s["supply"]["steelShipments"][0]["status"],"descarga parcial")
+            self.assertEqual(s["supply"]["portVoyages"][0]["status"],"atracado")
+            self.assertEqual(s["supply"]["portVoyages"][0]["unloadedUnits"],7)
             server.advance_maritime_steel_shipments()
             self.assertEqual(depot["steel"]-before,7)
             s["day"]=101
@@ -78,6 +86,7 @@ class MaritimeSteelImport(unittest.TestCase):
         self.assertEqual(depot["steel"]-before,13)
         self.assertEqual(s["supply"]["steelImportedUnits"],13)
         self.assertTrue(all(x["status"]=="entregado" for x in s["supply"]["steelShipments"]))
+        self.assertTrue(all(v["status"]=="descargado" for v in s["supply"]["portVoyages"]))
 
 
 if __name__=="__main__":

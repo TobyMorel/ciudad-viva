@@ -1,0 +1,23 @@
+import {chromium} from 'playwright';
+import {startUiTestServer} from './ui_test_server.mjs';
+import assert from 'node:assert/strict';
+
+const port=18943,server=await startUiTestServer(port);
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
+try{
+ for(const {name,width,height} of [{name:'móvil',width:390,height:844},{name:'escritorio',width:1440,height:900}]){
+  const page=await browser.newPage({viewport:{width,height}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
+  await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.day=6;city.timeOfDayMinutes=720;city.paused=true;city.buildings.push({x:23,y:10,kind:'port',name:'Terminal costera',status:'operativo',operational:true,cargoCapacity:500,cargoStored:0,shipCapacity:180,shipsDeparted:2,feeIncome:54});city.supply.steelShipments=[{id:'steel-test',voyageId:'voyage-steel-test',quantity:24,deliveredUnits:7,port:[23,10],orderedDay:1,arrivalDay:13,cost:6720,status:'descarga parcial',statusCause:'Puerto sin cupo diario de descarga'}];city.supply.portVoyages=[{id:'voyage-steel-test',shipmentId:'steel-test',portId:'port-23-10',quantity:24,cargoType:'acero',direction:'importación',departureDay:1,arrivalDay:13,status:'en ruta',route:[[19,10],[20,10],[21,10],[22,10],[23,10]],unloadedUnits:7}];localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
+  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+  await page.waitForFunction(()=>window.__ciudadVivaShips?.().some(s=>s.type==='Buque de importación'&&s.visible&&s.position[0]>30),{timeout:15000});await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
+  const ship=await page.evaluate(()=>window.__ciudadVivaShips().find(s=>s.type==='Buque de importación'&&s.visible));const canvas=await page.locator('#city').boundingBox();assert.ok(canvas&&ship.x>=0&&ship.y>=0,`${name}: buque de importación no proyectado al mapa`);
+  await page.mouse.click(canvas.x+ship.x,canvas.y+ship.y);await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
+  const actorText=await page.locator('#popupContent').innerText();assert.match(actorText,/Importación de acero · 24 unidades/);assert.match(actorText,/Carga/i);assert.match(actorText,/Arribo previsto/i);assert.match(actorText,/7 \/ 24 unidades/);
+  await page.locator('#popupClose').click();await page.locator('.game-dock [data-popup="city"]').click();await page.locator('#popupContent [data-city-section-button="trade"]').click();
+  const trade=page.locator('[data-city-section="trade"]:not([hidden])');const tradeText=await trade.innerText();assert.match(tradeText,/Acero por barco/i);assert.match(tradeText,/17 unidades en viaje o descarga/);assert.match(tradeText,/7 \/ 24 unidades descargadas/);assert.match(tradeText,/Descarga limitada por turno/);
+  const layout=await page.locator('#popupContent').evaluate(el=>{const r=el.getBoundingClientRect();return{left:r.left,right:r.right,width:r.width,scroll:el.scrollWidth,client:el.clientWidth,grids:[...el.querySelectorAll('[data-city-section="trade"] .detail-grid')].map(grid=>{const boxes=[...grid.children].map(c=>{const b=c.getBoundingClientRect();return{left:b.left,right:b.right,top:b.top,bottom:b.bottom}});let overlaps=false;for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++)if(boxes[i].left<boxes[j].right-1&&boxes[i].right>boxes[j].left+1&&boxes[i].top<boxes[j].bottom-1&&boxes[i].bottom>boxes[j].top+1)overlaps=true;return{overflow:grid.scrollWidth>grid.clientWidth+2,overlaps,outside:boxes.some(b=>b.left<r.left-1||b.right>r.right+1)}})}});
+  assert.ok(layout.scroll<=layout.client+2,`${name}: panel económico con desborde horizontal ${JSON.stringify(layout)}`);assert.ok(layout.grids.every(g=>!g.overflow&&!g.overlaps&&!g.outside),`${name}: tarjetas portuarias recortadas o superpuestas ${JSON.stringify(layout)}`);
+  await trade.locator('.workplaces').nth(1).scrollIntoViewIfNeeded();const lastRow=trade.locator('.workplaces').nth(1).locator('.workplace');assert.ok(await lastRow.count()===1,`${name}: no se encontró remesa visible`);assert.deepEqual(errors,[],`${name}: error JS`);await page.close();
+ }
+}finally{await browser.close();server.kill('SIGTERM')}

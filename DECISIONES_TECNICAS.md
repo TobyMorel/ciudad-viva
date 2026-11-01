@@ -1,3 +1,9 @@
+# Decisiones técnicas · Alfa 0.139
+
+## Viajes de acero importado por mar
+
+Cada remesa `steelShipments` persiste un `voyageId` enlazado a `supply.portVoyages`, con origen oceánico, puerto de destino, días de zarpe/arribo, carga de acero y unidades descargadas. Los guardados que ya tenían remesas activas obtienen el viaje al avanzar sin repetir unidades ni costo. El actor 3D usa progreso fraccional según reloj simulado (pausa incluida); al arribar queda atracado hasta que la capacidad diaria autoriza descargar. Solo entonces sube el stock del proveedor. El informe distingue importaciones de exportaciones.
+
 # Decisiones técnicas · Alfa 0.138
 
 ## Estimación preliminar de ciclo de vida

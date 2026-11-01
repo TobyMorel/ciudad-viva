@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.113",
+  "currentVersion": "0.114",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.114",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 85,
+      "overallProgress": null,
+      "changes": [
+        "Los motores Online y Offline acumulan el tiempo de simulación y procesan un solo día por paso: X1, X2 y X4 conservan el orden sin ejecutar ráfagas de jornadas atrasadas.",
+        "La actualización del estado acompaña la velocidad seleccionada; en Offline procesa jornadas separadas y muestra cada fecha, y la pausa limpia el tiempo pendiente.",
+        "Los vehículos animados avanzan con el reloj de simulación: aceleran en X2/X4 y se detienen al pausar. Los autos mantienen distancia de seguridad en el mismo carril y esperan el semáforo.",
+        "El render adaptativo queda limitado a intervalos breves para evitar que las escenas costosas se ralenticen a varios segundos por cuadro."
+      ]
+    },
     {
       "version": "0.113",
       "date": "2026-11-01",
@@ -1127,8 +1140,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.114 · capacidad por horario y colas",
-      "detail": "Añadir variación horaria reproducible de demanda, colas persistentes y su efecto en viajes laborales y transporte colectivo."
+      "title": "Alfa 0.115 · demanda horaria y colas de tránsito",
+      "detail": "Construir perfiles de tráfico por hora y colas persistentes que afecten colectivos, viajes laborales, tiempos y emisiones en Online/Offline."
     },
     {
       "title": "Validación de experiencia",
@@ -1207,9 +1220,9 @@
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
       "progress": 85,
-      "summary": "Capacidad diferenciada por tramo, congestión y accidentes con cierre, causa y respuesta municipal Online/Offline",
+      "summary": "Movilidad Online/Offline con capacidad vial, congestión y choques causales; animación ligada al reloj, seguimiento básico por carril y semáforos.",
       "pending": [
-        "Capacidad y flujo por franja horaria con colas persistentes.",
+        "Demanda por franja horaria, colas persistentes y servicio de transporte colectivo afectado de extremo a extremo.",
         "Incidentes adicionales de movilidad y transporte multimodal con capacidad y servicio integrados."
       ]
     },

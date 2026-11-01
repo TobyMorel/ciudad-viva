@@ -5292,18 +5292,25 @@ class Handler(BaseHTTPRequestHandler):
                 loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
         self._send(404,{"error":"No encontrado"})
 
+def advance_simulation_clock(day_progress,elapsed,speed):
+    """Acumula tiempo sin descartar días; entrega como máximo un paso por vuelta."""
+    progress=max(0.0,float(day_progress))+max(0.0,float(elapsed))*max(1,int(speed))
+    if progress>=1.0:return progress-1.0,True
+    return progress,False
+
 def simulation_loop():
     last=time.monotonic()
+    day_progress=0.0
     while True:
-        time.sleep(.25)
+        time.sleep(.05)
         now=time.monotonic()
         with LOCK:
-            if state["paused"]: last=now; continue
-            elapsed=now-last
-            if elapsed>=1/max(1,state["speed"]):
-                days=int(elapsed*max(1,state["speed"]))
-                last=now
-                for _ in range(min(days,60)): tick_one_day()
+            if state["paused"]: last=now; day_progress=0.0; continue
+            day_progress,run_day=advance_simulation_clock(day_progress,now-last,state["speed"])
+            last=now
+            # Una jornada como máximo por iteración: conserva el orden y deja
+            # responder a la UI entre días en lugar de ejecutar ráfagas de catch-up.
+            if run_day:tick_one_day()
 
 def main():
     global state

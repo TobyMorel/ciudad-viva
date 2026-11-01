@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {roadCapacity,trafficFactorForRoute} from '../traffic.js';
+import {roadCapacity,trafficFactorForRoute,applyTrafficQueue} from '../traffic.js';
 
 test('la capacidad estructural duplica la de una calle barrial y cae con el deterioro',()=>{
   assert.equal(roadCapacity([0,0],[1,0]),1.2);
@@ -13,4 +13,14 @@ test('el factor de viaje responde al flujo de sus tramos y omite accesos peatona
   assert.equal(trafficFactorForRoute(route,new Map(),roads),1);
   assert.equal(trafficFactorForRoute(route,flow,roads),1.175);
   assert.equal(trafficFactorForRoute([[0,0]],flow,roads),1);
+});
+
+test('los vehículos mantienen distancia de seguimiento en el mismo carril',()=>{
+ const cars=[{vehicle:true,laneKey:'10,4>10,5:1',progress:.8},{vehicle:true,laneKey:'10,4>10,5:1',progress:.79},{vehicle:true,laneKey:'10,4>10,5:1',progress:.78}];
+ applyTrafficQueue(cars,.2);
+ assert.ok(cars[0].progress-cars[1].progress>=.2-1e-9);
+ assert.ok(cars[1].progress-cars[2].progress>=.2-1e-9);
+ const opposite={vehicle:true,laneKey:'10,5>10,4:-1',progress:.79};
+ applyTrafficQueue([...cars,opposite],.2);
+ assert.equal(opposite.progress,.79,'el carril contrario no debe frenar esta fila');
 });

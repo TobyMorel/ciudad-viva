@@ -1,5 +1,13 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.114 · reloj escalonado y tránsito fluido
+
+Online acumula tiempo a la velocidad seleccionada y consume como máximo una jornada por iteración de simulación; el atraso se conserva y nunca se liquida como una ráfaga de días. Offline de juego real procesa como máximo una jornada por consulta a la frecuencia X1/X2/X4. Pausar limpia el acumulador y detiene actores móviles. El reloj de Three.js escala peatones y vehículos con X1/X2/X4, mantiene animación de cámara y limita el intervalo adaptativo del render a 50 ms. Coches comparten separación segura por carril y esperan los semáforos rojos. 59 pruebas Online y 42 Offline pasaron; la batería de 30 años conserva cuatro perfiles. Playwright de cámara pasó en 390×844 y 1440×900. No hay pruebas de LAN física.
+
+Fase 7 se mantiene en 85% orientativo: falta la demanda horaria y el transporte multimodal con colas persistentes. Progreso global sin estimar por falta de pesos estables verificables para las 34 fases.
+
+# Estado de desarrollo · Ciudad Viva
+
 ## Alfa 0.113 · iconos de cámara e incidentes viales
 
 Los iconos flotantes del mapa se reproyectan por frame mientras se arrastra o cambia zoom/rotación; el test Playwright verifica el desplazamiento antes de soltar a 390×844 y 1440×900. Los incidentes viales tienen causa por deterioro, congestión o lluvia, cierran el tramo afectado, modifican rutas y generan alerta localizada. Bomberos con dotación/ruta pueden responder; sin respuesta, la calle permanece cerrada más tiempo y el servicio/costo refleja la demora. Online y Offline implementan el ciclo. Fase 7: 85% orientativo. Progreso total sin estimar por falta de pesos verificables estables para las 34 fases.

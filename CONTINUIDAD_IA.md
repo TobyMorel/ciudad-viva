@@ -1,5 +1,17 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.114
+
+En `server.py`, `advance_simulation_clock()` preserva tiempo pendiente y `simulation_loop()` procesa como máximo una jornada por vuelta, a intervalos de 50 ms; una pausa pone el acumulador a cero. Mantén el límite de un día por vuelta para evitar ráfagas que bloqueen peticiones LAN.
+
+En `offline.js`, `setRealtimeClock(true)` activa el modo interactivo: una sola jornada por consulta y deuda de tiempo pendiente conservada. `game.js:poll()` consulta a 1/2/4 Hz de juego (una vez, dos o cuatro veces por segundo) compensando el tiempo que tardó la consulta. Las pruebas de regresión no activan el reloj real salvo `tests/test_realtime_clock_offline.mjs`; no alteres el modo determinista que usan los tests existentes.
+
+En `world3d.js`, `simulationClock` escala actores con la velocidad y los congela en pausa sin detener la cámara ni el oleaje. `applyTrafficQueue()` en `traffic.js` ordena actores por tramo dirigido y carril para mantener distancia; en una señal roja el primero se detiene y los demás forman fila. La función de cola se prueba en `tests/test_traffic_model.mjs`. Próximo: demanda por hora con colas persistentes que entren al cálculo de viajes y colectivos Online/Offline. No dedicar versiones a pequeños detalles mientras el resto de las 34 fases siga parcial.
+
+Progreso global no estimable; fase 7=85% orientativo. Validar ambas plataformas al ampliar la lógica; la conexión entre dos equipos LAN sigue sin verificación física.
+
+# Continuidad de desarrollo para otra IA
+
 ## Continuidad inmediata · Alfa 0.113
 
 Cambio de cámara: en `game.js`, las rutas de arrastre, rueda, zoom, rotación y teclado llaman `setCameraView()`, que agrupa un `requestAnimationFrame` y ejecuta `renderAlertMarkers()` mientras el gesto sigue activo. No volver a actualizar solo en `pointerup`/`wheel` terminado. `tests/test_camera_markers.mjs` comprueba coordenadas cambiantes antes de `mouseup` en móvil y escritorio.

@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.114
+
+1. Fase 7: modelar demanda por franja horaria y cola persistente en cada tramo congestionado. Integrar el retraso al recorrido de colectivos, coches, asistencia laboral y consumo de combustible/emisiones en ambos motores.
+2. Mantener el reloj por pasos ordenados de un día y los actores visuales enlazados a ×1/×2/×4; no recuperar atrasos en un único lote.
+3. Validar el seguimiento entre autos en filas largas y cruces con semáforo, incluidos giros y carriles opuestos.
+4. Ejecutar Python/Offline, stress de 30 años y pruebas visuales móvil/escritorio; publicar `main`, comprobar SHA/Vercel y generar ZIP completo.
+
+Fase actual: 7 (85% orientativo); próxima tarea: demanda horaria y colas persistentes. Progreso global sin estimar: no existe matriz de pesos verificable para las 34 fases.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.113
 
 1. Fase 7: demanda vial por horario, colas persistentes y tiempos que cambian según hora, capacidad y deterioro; hacer que colectivos, coches y asistencia laboral compartan su efecto en Online/Offline.

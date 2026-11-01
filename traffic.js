@@ -7,6 +7,16 @@ export function roadCapacity(a,b,roadAssets=[]){
   return (arterial?2.4:1.2)*Math.max(.35,Math.min(1,quality/82));
 }
 
+export function applyTrafficQueue(cursors,gap=.43){
+  const lanes=new Map();
+  for(const cursor of cursors){if(!cursor.vehicle||!cursor.laneKey)continue;if(!lanes.has(cursor.laneKey))lanes.set(cursor.laneKey,[]);lanes.get(cursor.laneKey).push(cursor)}
+  for(const lane of lanes.values()){
+    lane.sort((a,b)=>b.progress-a.progress);
+    for(let i=1;i<lane.length;i++)lane[i].progress=Math.min(lane[i].progress,Math.max(0,lane[i-1].progress-gap));
+  }
+  return cursors;
+}
+
 export function trafficFactorForRoute(route,segmentFlow,roads,roadAssets=[]){
   if(!route||route.length<2)return 1;
   const roadSet=roads instanceof Set?roads:new Set((roads||[]).map(([x,y])=>`${x},${y}`));

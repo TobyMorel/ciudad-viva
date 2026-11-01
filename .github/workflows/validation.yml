@@ -25,11 +25,11 @@ jobs:
       - name: Regresión Online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --experimental-default-type=module --test tests/test_*.mjs
+        run: node --experimental-default-type=module --test tests/test_materials_offline.mjs tests/test_industry_offline.mjs
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.92
+          name: ciudad-viva-alfa-0.93
           path: |
             .
             !.git/**
@@ -38,3 +38,28 @@ jobs:
             !ciudad_guardada.json
           include-hidden-files: true
           retention-days: 90
+
+  responsive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar navegador de pruebas
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Comprobar UI y panel Economía (390/1440 px)
+        run: node tests/test_ui_layout.mjs
+      - name: Capturas de comprobación
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ciudad-viva-alfa-0.93-responsive
+          path: ui-captures/
+          if-no-files-found: ignore
+          retention-days: 30

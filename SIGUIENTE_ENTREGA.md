@@ -262,3 +262,8 @@ Comercios abiertos asumen una renta mensual según localización y `monthlyRent`
 ## Continuación · mercado regional de acero y pruebas
 
 El Corralón del Puerto aplica cotización por existencias al abastecer metalúrgicas: multiplicador 1,5 bajo 20 unidades, 1,25 bajo 60 y 1 desde 60. Online/Offline calculan costo antes de reservar lote y deducen efectivo y acero físico; la producción posterior aún requiere llegada por carretera, trabajadores y servicios. Se registra `lastSteelPriceFactor` en el proveedor; tests nuevos Online miden precio, caja y stock. No se alteró la interfaz. Se revisaron dos fallos de CI previos: vencimientos escalonados del test Offline y remesa ficticia desconectada del test responsive. Revalidar ejecución CI; porcentajes sin cambios. Próximo: completar contratos entre otras materias primas y pruebas de décadas.
+
+
+## Continuación · accesibilidad comercial real en Offline
+
+La asignación de demanda minorista de hogares utiliza ahora `offlineRoadRoute`, con conectividad y calidad vial, en lugar de una distancia Manhattan que admitía compras a través de barrios incomunicados. Solo comercios alcanzables compiten por precio y distancia efectiva de ruta; un corte puede suprimir ventas, ingresos y, en cierres posteriores, provocar reducción de empleos o insolvencia. Online ya exigía `route_between` y conserva la misma condición. Nueva regresión Node compara demanda con calles conectadas frente a una red completamente retirada, incluida en CI. No hubo cambio de interfaz. Siguiente tarea: escenarios largos de fase 33 y contratos B2B restantes; no aumentar porcentajes sin resultados CI.

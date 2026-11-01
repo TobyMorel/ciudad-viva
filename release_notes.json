@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.90",
+  "currentVersion": "0.91",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.91",
+      "date": "2026-11-01",
+      "changes": [
+        "Fase 18 agrega una metalúrgica privada como cuarta cadena de obra: compra acero del Corralón por ruta vial, lo convierte en componentes y los ofrece a constructoras desde un proveedor local.",
+        "La producción depende de personal, electricidad, agua, saneamiento, caja y capacidad de almacén; insolvencia libera empleos y el cierre reduce el stock vendible. La nueva especialidad aparece después del aserradero en el orden de habilitación industrial Online y Offline.",
+        "El proveedor local reduce físicamente su inventario al vender componentes y acredita el pago a la firma. Offline incluye compra de acero, entrega a la planta y venta desde su coordenada vial. Economía muestra acero en planta, producción, stock y causa operativa.",
+        "Verificado: motor Online, con 20 puestos, tres servicios y 30 aceros disponibles, produjo 24 componentes; la rutina repuso 18 aceros mediante una orden vial. La venta de 8 abonó $2.208 y dejó 16 componentes. Offline confirmó pedido de 4 componentes desde la coordenada real de la metalúrgica: $1.104, stock 12→8 y caja 5.000→6.104. Economía inspeccionada a 390×844 y 1440×900, sin overflow horizontal ni errores JS. Pendiente: obra detenida/reanudada por materiales y flujo industrial end-to-end en ambos motores; LAN física no probada. Fase 18: 85%; progreso global no estimable por falta de pesos comunes verificables para las 34 fases."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 85,
+      "overallProgress": null
+    },
     {
       "version": "0.90",
       "date": "2026-11-01",
@@ -1010,12 +1023,12 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 80,
-      "summary": "Tres cadenas materiales con producción local y consumo en obra: alimentos regionales, cantera → hormigón, y bosque → aserradero → madera. Producción, servicios, personal, capacidad y stock condicionan la oferta; pedidos usan rutas reales y caja empresarial.",
+      "progress": 85,
+      "summary": "Cadenas materiales locales de alimentos, áridos→hormigón, bosque→madera y acero regional→metalúrgica→componentes. Stock, servicios, personal, caja, producción y transporte vial limitan oferta y consumo en obras.",
       "pending": [
-        "Probar la cadena del aserradero desde licitación y construcción hasta apertura, producción, pedido y consumo en una obra Online y Offline",
-        "Completar el circuito de acero local/regional y medir importaciones/exportaciones físicas por corredor",
-        "Validar expresamente detención y reanudación de obras sin duplicar material, pagos o avance; integrar almacenes y cierres empresariales"
+        "Probar extremo a extremo la obra suspendida por componentes/acero y su reanudación tras entrega en Online y Offline",
+        "Completar acero local primario, comercio regional y abastecimiento físico de depósitos",
+        "Verificar ciclo de construcción y apertura de metalúrgica desde adjudicación en ambos motores"
       ]
     },
     {

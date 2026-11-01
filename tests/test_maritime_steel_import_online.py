@@ -15,12 +15,12 @@ class MaritimeSteelImport(unittest.TestCase):
         s["money"]=2800
         depot=s["supply"]["suppliers"]["Corralón del Puerto"]
         depot["steel"]=0
-        s["buildings"].append({"kind":"port","x":4,"y":10,"name":"Puerto prueba","operational":True})
+        s["buildings"].append({"kind":"port","x":4,"y":10,"name":"Puerto prueba","operational":True,"shipCapacity":6,"cargoCapacity":10,"cargoStored":6})
         with patch.object(server,"route_between",return_value=[[4,10]]):
             server.tick_one_day()
-        self.assertEqual(s["supply"]["steelImportedUnits"],10)
-        self.assertEqual(s["supply"]["steelImportSpend"],2800)
-        self.assertEqual(depot["steel"],10)
+        self.assertEqual(s["supply"]["steelImportedUnits"],4)
+        self.assertEqual(s["supply"]["steelImportSpend"],1120)
+        self.assertEqual(depot["steel"],4)
 
 if __name__=="__main__":
     unittest.main()

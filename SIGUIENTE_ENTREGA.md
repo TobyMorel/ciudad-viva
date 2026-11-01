@@ -282,3 +282,8 @@ La reposición mensual de acero de los tres proveedores regionales consume ahora
 ## Continuación · recuperación de acero desde chatarra municipal
 
 El sistema de residuos acumula `waste.scrapSteelTons` a razón de 0,2 toneladas de chatarra separable por tonelada reciclada efectivamente. Cada cierre mensual, ambos motores pueden transformar hasta dos unidades de acero por tonelada de chatarra a costo municipal de $12 por unidad, solo con caja disponible y espacio en el stock del Corralón del Puerto. Se descuentan la masa recuperada y el dinero, se agrega acero físico al proveedor y se registra `supply.steelRecyclingSpend`. Esta fuente de acero complementa la reserva regional finita y puede sostener industria durante partidas largas sin recursos mágicos; sin plantas de reciclaje y recolección no hay insumo nuevo. Prueba económica Online incorporada; CI pendiente. Interfaz sin modificaciones. Prioridad posterior: comprobación 30 años y contratos industriales adicionales.
+
+
+## Continuación · abastecimiento marítimo de acero
+
+El stock del Corralón del Puerto por debajo de 30 unidades permite una compra marítima extraordinaria de hasta 60 unidades por mes **solo si existe un puerto operativo con ruta hasta el depósito**. Cada unidad importada cuesta $280 municipales (divisas y flete); se descuentan fondos efectivos y se registran `supply.steelImportSpend` y `supply.steelImportedUnits`. El acero físico aparece en el proveedor regional, donde las metalúrgicas deben comprarlo y recibirlo mediante su logística ordinaria. No se utiliza la reserva mineral regional ni se duplica chatarra. Implementado Online/Offline; nueva regresión Python de importación. Validar CI. Interfaz intacta. Siguiente: escenarios largos de fase 33 y control de balances.

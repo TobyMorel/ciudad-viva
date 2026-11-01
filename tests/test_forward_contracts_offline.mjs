@@ -30,6 +30,7 @@ async function play(s,callback){
     const adapter=await createOfflineAdapter();
     const tick=()=>{now+=1000;return adapter.request('/api/state')};
     await callback({adapter,tick});
+    return JSON.parse(persisted);
   }finally{globalThis.fetch=f;globalThis.localStorage=l;Date.now=n}
 }
 test('Offline: contrato de tres remesas aparta áridos y difiere pago hasta recepción',async()=>{
@@ -91,5 +92,41 @@ test('Offline: comprador insolvente dispara devolución de todas las remesas no 
     assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock,30);
     assert.equal(city.supply.suppliers['Cantera local'].aggregate,30);
     assert.ok(city.supply.marketOrders.every(o=>o.status==='cancelado'&&o.contractSettled));
+  });
+});
+
+test('Offline: una prórroga paga al vendedor y rescata remesas sin duplicación',async()=>{
+  const s=scenarioSeed();s.lastMonth=1;s.roads=[];
+  const seller=s.buildings.find(b=>b.business?.id==='quarry-alfa').business,buyer=s.buildings.find(b=>b.business?.id==='concrete-beta').business;
+  seller.aggregateStock=24;buyer.cash=19760;s.supply.suppliers['Cantera local'].aggregate=24;
+  s.supply.tradeContracts=[{id:'blocked-1',buyerId:buyer.id,vendorId:seller.id,buyerName:'Hormigonera Beta',
+    vendorName:'Cantera Alfa',commodity:'áridos',status:'en curso',quantity:6,deliveredUnits:0,
+    refundedUnits:0,contractValue:240,escrow:240,paidToSeller:0,paidToLogistics:0,refunded:0,installments:3,extensionFee:20}];
+  s.supply.marketOrders=[0,1,2].map(i=>({id:'blocked-'+i,type:'industrial_raw',commodity:'áridos',
+    businessId:buyer.id,businessName:'Hormigonera Beta',supplier:'Cantera local',vendorId:seller.id,
+    supplyContractId:'blocked-1',quantity:2,productCost:80,freight:0,cost:80,source:[4,9],x:6,y:9,
+    supplierReadyDay:31+i*7,arrivalDay:31+i*7,deadlineDay:33+i*7,travelDistance:2,status:'en tránsito'}));
+  const saved=await play(s,async({adapter,tick})=>{
+    let city=await tick();
+    assert.equal(city.supply.marketOrders[0].statusCause,'Sin acceso vial');
+    city=await adapter.request('/api/action',{action:'renegotiateTradeContract',id:'blocked-1'});
+    assert.equal(city.supply.tradeContracts[0].extensionFeePaid,20);
+    assert.deepEqual(city.supply.marketOrders.map(o=>o.deadlineDay),[47,54,61]);
+    assert.equal(city.supply.tradeContracts[0].escrow,240);
+    assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.cash,19740);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,5020);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock,24);
+    await assert.rejects(adapter.request('/api/action',{action:'renegotiateTradeContract',id:'blocked-1'}),/renegociado/);
+  });
+  saved.day=38;saved.lastMonth=1;saved.roads=seed().roads;
+  await play(saved,async({tick})=>{
+    let city=await tick();
+    for(let i=0;i<15;i++)city=await tick();
+    const contract=city.supply.tradeContracts[0];
+    assert.equal(contract.status,'cumplido');
+    assert.equal(contract.escrow,0);
+    assert.equal(contract.refunded,0);
+    assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.rawMaterialInventory,6);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,5260);
   });
 });

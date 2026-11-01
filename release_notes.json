@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.99",
+  "currentVersion": "1.00",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "1.00",
+      "date": "2026-11-01",
+      "roadmapPhase": 25,
+      "phaseProgress": 40,
+      "overallProgress": null,
+      "changes": [
+        "Nuevo sistema de eventos turísticos municipales: ferias de productores ($1.200), festivales culturales ($3.500) y congresos ($5.200); se contratan para el próximo mes con caja libre después de reservar proyectos públicos y sin duplicar eventos.",
+        "La celebración exige un recinto cívico y comercios conectados. Congreso requiere hotel; el corte de calles o servicios insuficientes puede cancelar la actividad con costo de organización hundido. El aforo depende de servicios, comercios y limpieza pagada con fondos municipales.",
+        "Visitantes externos separados de residentes gastan en existencias reales de comercios con ruta y pueden ocupar hoteles operativos incluso sin vuelo. Las ventas ingresan a cajas privadas, se registra costo de limpieza y consumo de agua y residuos como indicadores; no hay créditos automáticos ficticios.",
+        "Acciones y resumen de operaciones incorporados a Ciudad > Turismo; pruebas de motor Online/Offline, cancelación, economía e idempotencia y verificación responsive automatizada. Fase 25: 40%; avance global continúa no estimable."
+      ]
+    },
     {
       "version": "0.99",
       "date": "2026-11-01",
@@ -1187,10 +1200,12 @@
     {
       "phase": 25,
       "title": "Turismo, hoteles, eventos y economía visitante",
-      "progress": 30,
-      "summary": "Hoteles privados, huéspedes de vuelos, ocupación, tarifas e impuestos",
+      "progress": 40,
+      "summary": "Hoteles y vuelos con resultado económico, más ferias, festivales y congresos municipales con aforo, presupuesto, visitantes y compras en comercios físicos",
       "pending": [
-        "Eventos, temporadas, múltiples orígenes e impactos territoriales del turismo."
+        "Equipamientos turísticos especializados y estacionalidad de eventos",
+        "Visitantes por origen, presión territorial y limpieza con capacidad física de plantas",
+        "Promotores privados de hoteles y regulación de alquiler temporario más profunda"
       ]
     },
     {

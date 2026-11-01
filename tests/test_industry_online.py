@@ -38,18 +38,23 @@ class IndustryChainTest(unittest.TestCase):
         self.assertEqual(quarry["business"]["quarryReserve"],70)
         server.advance_local_concrete_plants(workforce,[])
         orders=[o for o in s["supply"]["marketOrders"] if o.get("commodity")=="áridos"]
-        self.assertEqual(len(orders),1)
-        order=orders[0]
-        self.assertGreater(order["quantity"],0)
+        self.assertEqual(len(orders),3,"El contrato divide el lote en tres envíos semanales")
+        contract=s["supply"]["tradeContracts"][-1]
+        self.assertEqual(sum(o["quantity"] for o in orders),extracted)
+        self.assertEqual(contract["escrow"],contract["contractValue"])
         self.assertEqual(s["supply"]["suppliers"]["Cantera local"]["aggregate"],0)
         self.assertEqual(quarry["business"]["aggregateStock"],0)
-        self.assertGreater(quarry["business"]["cash"],initial_quarry_cash)
-        self.assertTrue(order["route"])
-        for day in range(2,20):
+        cash_before=quarry["business"]["cash"]
+        self.assertLess(cash_before,initial_quarry_cash,"Aún solo pagó nómina y operación")
+        self.assertTrue(all(order["route"] for order in orders))
+        for day in range(2,30):
             s["day"]=day
             server.process_market_orders()
-            if order["status"]=="entregado":break
-        self.assertEqual(order["status"],"entregado")
+            if all(o["status"]=="entregado" for o in orders):break
+        self.assertTrue(all(o["status"]=="entregado" for o in orders))
+        self.assertEqual(contract["status"],"cumplido")
+        self.assertEqual(contract["escrow"],0)
+        self.assertGreater(quarry["business"]["cash"],cash_before)
         self.assertEqual(plant["business"]["rawMaterialInventory"],extracted)
         server.advance_local_concrete_plants(workforce,[])
         self.assertEqual(plant["business"]["lastProduction"],15)

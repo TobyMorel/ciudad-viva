@@ -350,3 +350,8 @@ El siguiente emprendimiento industrial posterior a cantera y hormigonera puede e
 ## Alfa 0.91 · actualización de fase 18
 
 Se suma el tramo acero regional → metalúrgica privada → componentes usados por las recetas de obra. El acero baja del stock del proveedor local al crear la orden industrial, viaja por carretera a la planta y pasa a materia prima al llegar. La producción fabrica hasta 24 componentes/ciclo según personal y servicios; los pedidos de obras venden existencias de la planta y acreditan su caja. Fase 18: 85%, siguiendo la misma granularidad de cinco puntos ya documentada. Pendiente validar recepción→consumo de componentes desde un proyecto real en ambos motores y comprobar visualmente el nuevo renglón de Economía en móvil/escritorio. No se afirma LAN entre equipos físicos.
+
+
+### Alfa 0.92 — fase 18 (85%)
+
+Separar las cuatro especialidades industriales del proceso alimentario Offline corrige doble contabilización de gastos y producción inexistente. Regresiones automatizadas Online/Offline confirman abastecimiento de componentes desde metalúrgica controlada a una obra detenida, transporte, consumo e inspección. No cubren habilitación desde una obra industrial ni todos los mercados/meses; sin nueva ponderación verificable no se altera el 85% de la fase ni se calcula un total global.

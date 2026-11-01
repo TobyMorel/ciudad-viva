@@ -18,7 +18,7 @@ async function scenario(city,fn){
 test('Offline: planta con excedentes persistentes reduce vacantes, no crea caja',async()=>{
   const s=seed();
   s.day=30;s.lastMonth=0;s.paused=false;s.speed=1;s.privateCapital=0;s.money=80000;
-  s.supply.suppliers['Cantera local'].aggregate=40;
+  s.supply.suppliers['Cantera local']={aggregate:40,concrete:0,steel:0,timber:0,components:0,cash:0};
   s.buildings.push({x:4,y:9,kind:'factory',name:'Cantera saturada',status:'habilitado',
     jobSlots:20,monthlyOperatingCost:320,
     utilityAccess:{powerServedPct:0,waterServedPct:0,wastewaterTreatedPct:0},

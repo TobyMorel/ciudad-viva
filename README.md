@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.92
+# Ciudad Viva · Alfa 0.93
 
 Simulador municipal cooperativo con cámara 3D isométrica, obras por etapas, materiales, cuadrillas y migración condicionada por vivienda y empleo. La escena usa Three.js, incluido en `vendor/`; después de descargar el paquete, el juego funciona sin Internet ni npm.
 
@@ -280,3 +280,8 @@ Un nuevo emprendimiento industrial puede especializarse como aserradero. Mantien
 ## Alfa 0.92 · paridad industrial y regresión de suministro
 
 Las fábricas especializadas dejaron de ingresar al proceso alimentario mensual Offline, evitando una doble operación y un proveedor ficticio. Se añadieron pruebas de integración para materiales de obra (bloqueo, pedido, transporte, recepción, consumo e inspección) en Online/Offline. GitHub Actions ejecuta las regresiones de ambos motores y sintaxis. Todavía falta validar la apertura de la metalúrgica desde obra industrial, producción con empleados y escasez prolongada. El progreso de fase 18 sigue al 85% y el global no es estimable.
+
+
+## Alfa 0.93 · cantera y hormigonera autónomas en Offline
+
+La cadena industrial de áridos→hormigón→obra funciona en ambos motores: extracción limitada por reserva y mano de obra, compras desde cantera a hormigonera por calles, precio pagado desde caja empresarial, transporte, entrada a inventario y conversión 2 áridos : 1 hormigón. Los promotores fijan el tipo de industria al contratar y reservan $4.200 de caja operativa; el contrato mantiene la especialidad hasta inspección y apertura. Testes automáticos verifican logística, trabajadores, reservas y costos sin crear dinero. La guía de fases conserva el progreso total sin estimación; la fase 18 avanza a 90% de cobertura documentada.

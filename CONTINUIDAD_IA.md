@@ -225,3 +225,8 @@ Hay regresiones Online/Offline de caja, inventario, extensión y entrega tras el
 ## Continuación · incumplimiento económico B2B
 
 Los contratos de áridos entre cantera y hormigonera ahora penalizan una remesa vencida mientras ambas firmas siguen abiertas: el proveedor transfiere al comprador hasta un 5% del producto no entregado, limitado por su caja. La devolución del depósito permanece separada de esta indemnización; `defaultPenaltyPaid` se registra por remesa y contrato y la liquidación idempotente evita cobros repetidos. Misma regla en Online y Offline. Pruebas específicas de vencimiento incorporadas; comprobar CI. Próximo: ampliar contratos a otras cadenas y escenarios de 30 años. Porcentajes sin cambios; LAN/Vercel pendientes.
+
+
+## Continuación · quiebra del proveedor en contrato B2B
+
+Si una cantera proveedora cierra mientras mantiene remesas reservadas para una hormigonera, el procesador diario Online/Offline cancela todas las pendientes de inmediato, sin esperar al vencimiento. Restituye desde escrow el importe pagado por cada remesa al comprador y anota `lostReservedUnits` si el inventario del proveedor insolvente no se puede recuperar. Una línea `contractSettled` no se liquida dos veces. La causa `Proveedor insolvente` permanece en las órdenes y el contrato termina incumplido. La multa por plazo vencido no se cobra a una firma ya cerrada. Pruebas para ambos motores añadidas; validar CI. No hubo modificaciones visuales. Fases y estimación global sin cambios. Siguiente contenido: acuerdos de otras cadenas B2B y simulaciones de décadas.

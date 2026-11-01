@@ -1,3 +1,11 @@
+# Decisiones técnicas · Alfa 0.128
+
+## Anexos escolares como obra pública
+
+`expandSchool` localiza una escuela habilitada, valida modelo educativo y acceso vial, comprueba presupuesto después de compromisos y permite un anexo activo por sede. El proyecto usa `kind=school`, `projectType=schoolExpansion`, cuatro etapas y materiales proporcionales a la receta de escuela. Cobra 20% al contratar; la capacidad permanece sin cambios hasta inspección. En la recepción, amplía aulas y vacantes de maestros, registra historial de calidad y añade gasto mensual al municipio. El crecimiento de capacidad no asigna docentes: sigue dependiendo del sistema de empleo, salarios, rutas y presupuesto.
+
+Online se procesa en `server.py`; Offline reproduce la misma acción y campos en `offline.js`. El panel cliente lee el proyecto sincronizado y no simula la obra localmente. El anexo máximo es de seis aulas sobre la base del modelo. La prueba automatizada cubre contrato, fondos, materiales, bloqueo de duplicado, capacidad al inspeccionar y presentación responsive; la entrega de materiales y la inspección a través del avance de días requieren una prueba integral adicional.
+
 # Decisiones técnicas · Alfa 0.127
 
 ## Prioridad de pagos municipales

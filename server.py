@@ -4392,15 +4392,17 @@ def tick_one_day():
                 state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
                 ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
             elif p["kind"]=="school":
-                model=SCHOOL_MODELS.get(p.get("serviceModel"))
-                jobs=model["jobs"] if model else 12
-                monthly=model["monthlyCost"] if model else 820
-                building={"x":p["x"],"y":p["y"],"kind":"school","name":model["label"] if model else "Escuela primaria municipal",
-                          "level":1,"occupants":0,"jobSlots":jobs,"classrooms":model["classrooms"] if model else 4,
-                          "status":"habilitado","monthlyCost":monthly,"quality":quality}
-                if model:building["serviceModel"]=p["serviceModel"]
-                state["buildings"].append(building);state["jobs"]+=jobs;state["monthlyExpenses"]+=monthly
-                ev("Centro educativo habilitado",f"{building['name']}: {jobs} puestos y {building['classrooms']} aulas. Operación $ {monthly}/mes; se requieren docentes, rutas y servicios.")
+                if p.get("projectType")=="schoolExpansion":complete_school_expansion(p,quality)
+                else:
+                    model=SCHOOL_MODELS.get(p.get("serviceModel"))
+                    jobs=model["jobs"] if model else 12
+                    monthly=model["monthlyCost"] if model else 820
+                    building={"x":p["x"],"y":p["y"],"kind":"school","name":model["label"] if model else "Escuela primaria municipal",
+                              "level":1,"occupants":0,"jobSlots":jobs,"classrooms":model["classrooms"] if model else 4,
+                              "status":"habilitado","monthlyCost":monthly,"quality":quality}
+                    if model:building["serviceModel"]=p["serviceModel"]
+                    state["buildings"].append(building);state["jobs"]+=jobs;state["monthlyExpenses"]+=monthly
+                    ev("Centro educativo habilitado",f"{building['name']}: {jobs} puestos y {building['classrooms']} aulas. Operación $ {monthly}/mes; se requieren docentes, rutas y servicios.")
             elif p["kind"]=="fireStation":
                 model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["firePost"])
                 monthly=round(model["cost"]*.065)
@@ -4443,6 +4445,39 @@ def invest_hospital_care(action,x,y):
     else:ward["ambulances"]=int(ward.get("ambulances",0))+1
     ev("Inversión hospitalaria",f"{center.get('name','Centro de salud')}: {action}; inversión municipal $ {cost}. La atención depende del personal sanitario, las redes y las calles.")
     return center["hospitalWard"]
+
+def contract_school_expansion(x,y,contractor):
+    school=next((b for b in state.get("buildings",[]) if b.get("kind")=="school" and b.get("x")==x and b.get("y")==y and b.get("status") in ("habilitado","operativo")),None)
+    if not school:raise ValueError("La ampliación requiere una escuela habilitada.")
+    model=service_model(school)
+    if not model or model.get("kind")!="school":raise ValueError("No se pudo identificar el nivel educativo de la escuela.")
+    if route_between((4,10),(x,y)) is None:raise ValueError("La obra necesita acceso vial para entregar materiales y movilizar la cuadrilla.")
+    contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
+    active=[p for p in state.get("projects",[]) if p.get("projectType")=="schoolExpansion" and (p.get("targetX"),p.get("targetY"))==(x,y) and p.get("status") not in ("pausada","cancelada","suspendida","finalizada")]
+    current=max(0,int(school.get("classrooms",model["classrooms"])));planned=sum(max(0,int(p.get("classroomsAdded",2))) for p in active);limit=model["classrooms"]+6
+    classrooms=min(2,max(0,limit-current-planned))
+    if classrooms<=0:raise ValueError("La escuela alcanzó su límite de ampliación; construí otro establecimiento para cubrir más alumnos.")
+    if active:raise ValueError("Esta escuela ya tiene un anexo en obra; esperá la inspección para proyectar el siguiente.")
+    total=round(4100*classrooms*CONTRACTORS[contractor]["price"]);duration=max(24,round((24*classrooms)*CONTRACTORS[contractor]["days"]/30))
+    reserved=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+    if available<total:raise ValueError(f"Fondos disponibles insuficientes. Contrato: $ {total:,}; disponible después de compromisos: $ {available:,}.".replace(",","."))
+    teachers=math.ceil(classrooms*model["seatsPerClass"]/model["studentsPerTeacher"]);advance=round(total*.2)
+    project={"id":uuid.uuid4().hex,"kind":"school","projectType":"schoolExpansion","targetX":x,"targetY":y,"x":x,"y":y,"label":f"Anexo escolar · {school.get('name','Escuela municipal')}","contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":["Diseño y permisos","Cimientos del anexo","Aulas y conexiones","Equipamiento e inspección"],"stageIndex":0,"status":"contratada","cause":"Ampliación de capacidad escolar","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"workersAssigned":LABOR_NEEDS["school"],"materialsRequired":{k:math.ceil(v*total/PROJECTS["school"]["cost"]) if v else 0 for k,v in material_plan("school").items()},"materialsUsed":{k:0 for k in MATERIAL_NAMES},"retentionPct":.1,"classroomsAdded":classrooms,"seatsAdded":classrooms*model["seatsPerClass"],"teachersAdded":teachers,"monthlyCostAdded":classrooms*310}
+    state["money"]-=advance;state["supply"]["contractorCash"][contractor]+=advance;state.setdefault("projects",[]).append(project)
+    ev("Anexo escolar contratado",f"{school.get('name','La escuela')} sumará {classrooms} aulas y {teachers} puestos docentes tras {duration} días de obra, entrega de materiales e inspección. Contrato $ {total:,}; operación futura +$ {project['monthlyCostAdded']}/mes.".replace(",","."))
+    return project
+
+def complete_school_expansion(project,quality):
+    school=next((b for b in state.get("buildings",[]) if b.get("kind")=="school" and (b.get("x"),b.get("y"))==(project.get("targetX",project.get("x")),project.get("targetY",project.get("y")))),None)
+    if not school:
+        ev("Anexo escolar sin destino",f"Se inspeccionó {project.get('label','el anexo')}, pero la escuela objetivo ya no existe.");return False
+    classrooms=max(1,int(project.get("classroomsAdded",2)));teachers=max(1,int(project.get("teachersAdded",3)));monthly=max(0,int(project.get("monthlyCostAdded",classrooms*310)))
+    school["classrooms"]=max(0,int(school.get("classrooms",4)))+classrooms;school["jobSlots"]=max(0,int(school.get("jobSlots",12)))+teachers;school["monthlyCost"]=max(0,int(school.get("monthlyCost",0)))+monthly
+    school.setdefault("expansionHistory",[]).append({"day":state.get("day",1),"classrooms":classrooms,"teachers":teachers,"contractor":project.get("contractor"),"quality":quality,"cost":project.get("cost",0)})
+    state["jobs"]=max(0,int(state.get("jobs",0)))+teachers;state["monthlyExpenses"]=max(0,int(state.get("monthlyExpenses",0)))+monthly
+    seats=max(0,int(project.get("seatsAdded",classrooms*(service_model(school) or {}).get("seatsPerClass",24))))
+    ev("Anexo escolar habilitado",f"{school.get('name','La escuela')} abrió {classrooms} aulas nuevas, {teachers} vacantes docentes y {seats} plazas físicas. Contratación de personal y redes determinan cuántos alumnos puede atender; operación +$ {monthly}/mes.")
+    return True
 
 def hospital_care_report(workplaces,homes,advance=False):
     """Camas con rotación de 3 días, equipos sanitarios y traslados con ruta física."""
@@ -5033,6 +5068,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200,public_state(pid));return
                 if action in HOSPITAL_COSTS:
                     try:invest_hospital_care(action,int(data.get("x",-1)),int(data.get("y",-1)))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
+                if action=="expandSchool":
+                    try:contract_school_expansion(int(data.get("x",-1)),int(data.get("y",-1)),str(data.get("contractor","")))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action=="scheduleTourismEvent":

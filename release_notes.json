@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.127",
+  "currentVersion": "0.128",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.128",
+      "date": "2026-11-01",
+      "roadmapPhase": 9,
+      "phaseProgress": 67,
+      "overallProgress": null,
+      "changes": [
+        "Las escuelas habilitadas pueden contratar un anexo en vez de colocar otra escuela: cada obra agrega hasta dos aulas, vacantes docentes y costo de operación cuando pasa la inspección final.",
+        "El anexo exige acceso por calles, contratista, reserva de presupuesto, anticipo, cuadrilla, materiales y etapas de construcción. Una escuela no puede abrir dos anexos simultáneamente y tiene un límite de ampliación; las aulas no aparecen al contratar.",
+        "Ciudad > Educación muestra las plazas, aulas y vacantes del centro, su obra activa, constructora, etapa y tiempo estimado. Se puede elegir la empresa y contratar desde ese panel.",
+        "Verificación: 85 pruebas Python Online y 57 pruebas Node Offline; pruebas de contrato, anticipo, materiales, límites, vacantes y costo posterior. Playwright inspecciona y acciona el panel en 390×844 y 1440×900; comprueba recorte, desbordes y solapamientos.",
+        "Fase 9 avanza de 65% a 67% por añadir ampliación escolar financiada como obra real. Sigue incompleta: falta verificar el ciclo material hasta inspección en partidas completas y desarrollar protección social, formación docente/técnica y cobertura educativa más amplia. Progreso global no estimable sin pesos comunes verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.127",
       "date": "2026-11-01",
@@ -1325,8 +1339,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.128 · crisis fiscal completa y transición a servicios",
-      "detail": "Fase 8: verificar una crisis recuperable con prioridad de gasto, deuda, presupuesto y continuidad de salud, educación, redes/residuos y transporte; luego ampliar cobertura y capacidad dentro de fase 9."
+      "title": "Alfa 0.129 · capacidad educativa y contratación de personal",
+      "detail": "Fase 9: seguir la ampliación desde la obra hasta materiales, certificados e inspección; después cubrir nuevas plazas con contratación docente efectiva y demanda educativa por distrito. Mantener las obras existentes y la crisis fiscal en pruebas."
     },
     {
       "title": "Validación de experiencia y red",
@@ -1425,10 +1439,12 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 65,
-      "summary": "Clínicas, hospitales, comisarías, cuarteles y bases de higiene urbana con tres niveles de obras y cobertura limitada por calles",
+      "progress": 67,
+      "summary": "Centros de salud, policía, bomberos, higiene urbana y educación por niveles con cobertura vial; escuelas ampliables por contratos municipales.",
       "pending": [
-        "Educación secundaria y técnica, protección social y especialización profesional del personal."
+        "Completar y probar en una partida el ciclo de ampliación escolar hasta entrega de materiales e inspección.",
+        "Educación técnica y formación docente; ampliar la capacidad y cobertura por distritos.",
+        "Protección social y especialización profesional del personal."
       ]
     },
     {

@@ -1,3 +1,12 @@
+# Estado de desarrollo · Alfa 0.128
+
+## Ampliación escolar con obra contratada
+
+- Ciudad > Educación permite contratar un anexo de hasta dos aulas en una escuela habilitada. La obra exige acceso vial, presupuesto no comprometido, anticipo, cuadrilla, materiales y cuatro etapas; solo al pasar inspección se suman capacidad, vacantes docentes y gasto mensual. No se abren anexos duplicados y hay límite por centro.
+- Online y Offline tienen la acción y el mismo modelo de contrato. La interfaz informa empresa, etapa y tiempo; verificada en móvil 390×844 y escritorio 1440×900, sin desbordes, recorte ni solapamientos.
+- Verificación local: 85 pruebas Python, 57 pruebas Node Offline y Playwright de ampliación en ambos tamaños. La ejecución del ciclo completo de materiales e inspección dentro de una partida queda pendiente.
+- Fase actual: 9, 67% orientativo. Próxima: terminar verificación del ciclo de obra y cubrir plazas mediante docentes contratados. Global no estimable sin ponderación verificable para 34 fases; LAN física pendiente.
+
 # Estado de desarrollo · Alfa 0.127
 
 ## Prioridad de gasto en crisis de caja

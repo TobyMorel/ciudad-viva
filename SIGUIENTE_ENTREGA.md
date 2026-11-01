@@ -1,5 +1,16 @@
 # Siguiente entrega
 
+## Punto exacto · después de Alfa 0.128
+
+1. Probar un anexo escolar Online y Offline de principio a fin: anticipo, despacho y consumo de materiales, certificaciones, inspección y cambio de capacidad.
+2. Cubrir las vacantes nuevas con docentes identificados; comprobar que suben cupos, asistencia y cobertura por distrito solo con personal, rutas y servicios disponibles.
+3. Extender a demanda de secundaria/técnica, capacitación docente y protección social, manteniendo el foco en mecánicas del roadmap.
+4. Si cambia la interfaz, inspeccionar 390×844 y 1440×900; publicar en `main`, comprobar SHA/CI/Vercel y adjuntar ZIP completo.
+
+Fase actual 9, 67% orientativo; próximo alcance: operación integral de anexos y capacidad educativa por distrito. Global no estimable por falta de ponderación común verificable para las 34 fases. LAN física pendiente.
+
+# Siguiente entrega
+
 ## Punto exacto · después de Alfa 0.127
 
 1. Ejecutar una crisis fiscal recuperable de principio a fin en Online y Offline: caída de ingresos/caja, mora, elección de prioridad, deuda/reserva y estabilización.

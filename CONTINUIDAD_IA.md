@@ -1,3 +1,11 @@
+## Continuidad inmediata · Alfa 0.128
+
+La acción municipal **Ampliar escuela** vive en `server.py` (`contract_school_expansion`, `complete_school_expansion`) y `offline.js` (`contractOfflineSchoolExpansion`, `completeOfflineSchoolExpansion`). El panel está en `game.js` dentro de `educationPanel()` y sus controles responsive en `style.css`. Agrega hasta dos aulas por contrato, una obra activa por sede y máximo de seis aulas adicionales sobre el modelo inicial. El pago de anticipo no habilita cupos: aulas, vacantes docentes y costo de operación cambian al inspeccionar. El empleo de docentes sigue siendo una decisión de simulación; las vacantes no se cubren mágicamente.
+
+Pruebas nuevas: `tests/test_school_expansion.py`, `tests/test_school_expansion_offline.mjs`, `tests/test_school_expansion_ui.mjs`; el workflow responsive incluye la última. En el estado de esta entrega pasan 85 pruebas Python, 57 Node Offline y la prueba UI 390×844/1440×900. La prueba completa de entrega/consumo de materiales y recepción final sigue pendiente.
+
+No volver a pulir pantallas durante varias versiones: cerrar esta mecánica con una prueba de obra integral y luego añadir cobertura/docentes/demanda y otro sistema del roadmap. Fase 9=67%; progreso global null por falta de pesos comunes verificables. Conservar el autor de GitHub `66056611+TobyMorel@users.noreply.github.com`, publicar cada versión en `main` y comprobar SHA/CI antes de cerrar.
+
 ## Continuidad inmediata · Alfa 0.127
 
 En Economía se elige `programPriority` para ordenar los pagos de servicios, redes/residuos y movilidad cuando hay caja insuficiente. `server.py`: `municipal_program_priority`, `set_municipal_program_priority`, `settle_municipal_program_budgets`, action `setProgramPriority`. `offline.js`: migración en `defaultProgramBudgets`, action equivalente y liquidación que respeta el orden. `game.js`: botón “Poner primero” por programa. Las asignaciones impagas conservan mora y afectan cobertura/mantenimiento/recogida/operación. Pruebas: `tests/test_municipal_budget_priority.py`, `_offline.mjs` y UI integrada en `test_municipal_forecast_ui.mjs`.

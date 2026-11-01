@@ -237,3 +237,8 @@ Ya hay contratos B2B de áridos por fábrica concreta, inversión de compra real
 Nueva decisión ante corte de carretera: renegociar una vez los contratos cantera/hormigonera para añadir 14 días a remesas pendientes. La compensación sale de la caja compradora e ingresa a la vendedora; no modifica reserva física ni custodia financiera. Economía muestra el control y la traza de pago. Pruebas cubren rechazo sin corte, segundo intento, caja y recepción tras plazo original en Online/Offline.
 
 **Próximo contenido:** contratos similares para otras industrias/constructoras con cuotas y rutas, comercio minorista y alquileres efectivos; después pruebas de 30 años en ciudades pequeña, metropolitana, portuaria y turística. Fase 17=80%, 18=90%, global no estimable. LAN y Vercel pendientes.
+
+
+## Continuación · penalización por vencimiento
+
+Remesas de áridos no entregadas al vencimiento generan devolución desde custodia y, si comprador y proveedor siguen abiertos, una indemnización adicional desde caja real del proveedor (5% de producto, limitada a fondos disponibles). Nunca se emite dinero nuevo; cada remesa se liquida una vez. Pruebas Online/Offline agregadas. Próximo: extensión B2B a otras materias primas y escenarios multidecada.

@@ -62,18 +62,34 @@ test('Offline: contrato de tres remesas aparta áridos y difiere pago hasta rece
     assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,receivedCash);
   });
 });
-test('Offline: calle cortada causa incumplimiento, devolución y devolución del stock reservado',async()=>{
+test('Offline: comprador insolvente dispara devolución de todas las remesas no enviadas',async()=>{
   const s=scenarioSeed();
-  await play(s,async({adapter,tick})=>{
-    let city=await tick();
-    const contract=city.supply.tradeContracts[0],buyer=city.buildings.find(b=>b.business?.id==='concrete-beta').business;
-    const cash=buyer.cash+contract.contractValue;
-    city.roads=[];
-    // Persistir la interrupción en el guardado que procesa el adaptador.
-    await adapter.request('/api/save');
-    // El estado retornado no es mutable dentro del motor: usar acción validada de calles.
-    // Por eso comprobamos la expiración al cerrar el comprador desde el fixture independiente.
-    assert.equal(contract.status,'en curso');
-    assert.ok(cash>buyer.cash);
+  s.lastMonth=1;
+  s.buildings.find(b=>b.business?.id==='concrete-beta').business.status='cerrado';
+  s.buildings.find(b=>b.business?.id==='concrete-beta').business.cash=19100;
+  s.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock=0;
+  s.supply.suppliers['Cantera local'].aggregate=0;
+  const contract={id:'contract-test',buyerId:'concrete-beta',vendorId:'quarry-alfa',
+    vendorName:'Cantera Alfa',commodity:'áridos',status:'en curso',quantity:30,
+    deliveredUnits:0,refundedUnits:0,escrow:900,contractValue:900,refunded:0,paidToSeller:0,paidToLogistics:0};
+  s.supply.tradeContracts=[contract];
+  s.supply.marketOrders=Array.from({length:3},(_,i)=>({
+    id:'contract-test-'+i,businessId:'concrete-beta',vendorId:'quarry-alfa',
+    supplyContractId:'contract-test',commodity:'áridos',type:'industrial_raw',quantity:10,
+    productCost:300,freight:0,orderedDay:30,supplierReadyDay:31+i*7,deadlineDay:45+i*7,
+    arrivalDay:32+i*7,source:[4,9],x:6,y:9,status:'en tránsito'
+  }));
+  await play(s,async({tick})=>{
+    const city=await tick();
+    const settled=city.supply.tradeContracts[0];
+    assert.equal(settled.status,'incumplido');
+    assert.equal(settled.escrow,0);
+    assert.equal(settled.refunded,900);
+    assert.equal(settled.refundedUnits,30);
+    assert.equal(settled.deliveredUnits,0);
+    assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.cash,20000);
+    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.aggregateStock,30);
+    assert.equal(city.supply.suppliers['Cantera local'].aggregate,30);
+    assert.ok(city.supply.marketOrders.every(o=>o.status==='cancelado'&&o.contractSettled));
   });
 });

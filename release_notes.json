@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.117",
+  "currentVersion": "0.118",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.118",
+      "date": "2026-11-01",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Las rutas Online y Offline ahora ponderan la distancia, las colas persistentes por calle y la fricción de obras viales cercanas para elegir recorridos alternativos.",
+        "Al abrir un acceso alternativo, los viajes y camiones pueden redistribuirse; calles saturadas o afectadas por obras provocan desvíos y cambian la distancia de viaje y entrega. Cuando se despeja la cola, la ruta más directa vuelve a ser elegida.",
+        "Se agregó una regresión Online que comprueba elección del corredor directo, desvío bajo congestión y retorno al despejar la cola. Las calles cerradas por incidentes siguen sin ser transitables.",
+        "Verificación: 64 pruebas Python, 46 pruebas Node no visuales, compilación de Python/JavaScript y estrés de 30 años en cuatro perfiles pasan. El chequeo Playwright de marcadores pasó; la captura responsive completa excedió el tiempo disponible con SwiftShader, así que la inspección visual integral queda pendiente. No se cambió la estructura de la interfaz. LAN física y Vercel quedan pendientes de verificación.",
+        "Fase 7=95% orientativo; queda ampliar medición sistémica de impacto en la logística y el rendimiento con redes grandes. Progreso global no estimable sin pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.117",
       "date": "2026-11-01",

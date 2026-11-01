@@ -1,5 +1,10 @@
 # Decisiones técnicas · Ciudad Viva
 
+## Alfa 0.118 · selección de rutas considerando congestión y obras
+
+Online y Offline usan Dijkstra determinista con costo por tramo: una unidad base de distancia, más penalización acotada por la cola persistente/capacidad, y fricción temporal cuando una obra vial activa está junto al tramo. Los desempates siguen coordenadas estables para que una misma partida genere los mismos recorridos. Las calles cerradas por incidentes o deterioro se filtran antes de buscar la ruta. Se aplica el mismo criterio a pasajeros, emergencias y logística para evitar redes de transporte incompatibles. La interfaz no cambia; la ruta alimenta los tiempos y reportes existentes. Fase 7 avanza a 95% por alternativa dinámica funcional; falta medición de impacto integral y rendimiento sobre redes grandes. El progreso global sigue sin base ponderada verificable.
+
+
 ## Alfa 0.110 · arte procedural reutilizable
 
 Se mantiene Three.js y el formato de datos. `world3d.js` incorpora una caché de BoxGeometry, IcosahedronGeometry y CylinderGeometry por dimensiones. `clear(dynamicRoot)` no libera estas geometrías compartidas; sí elimina geometrías y materiales efímeros. Las fachadas se modelan en varias caras para permitir rotación. La vista previa del menú se difiere 1,8 segundos y se cancela si el usuario ya inició una partida para que el render no bloquee el clic. Los cruces se dibujan solo en intersecciones del grafo existente y las etapas visuales usan `project.progress`, sin tiempo ni costo inventado. Referencias en `design_reference_3d/` y dirección técnica en `ARTE_3D.md`. La fase 15 avanza a 80%; no se calcula porcentaje global sin ponderación estable.

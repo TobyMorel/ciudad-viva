@@ -1,12 +1,12 @@
 # Continuidad de desarrollo para otra IA
 
-## Continuidad inmediata · Alfa 0.117
+## Continuidad inmediata · Alfa 0.118
 
-Se corrigieron los tirones al cruzar medianoche: `offline_client.js` manda operaciones a `offline_worker.js`, que contiene su propio estado local y corre `createOfflineAdapter`; el hilo principal conserva el render y los controles. El servidor LAN conserva su reloj autoritativo. Ambos motores incrementan `stateRevision` por acción/día y no por el reloj, y `game.js:poll()` evita `JSON.stringify` del estado completo y redibujos en cada consulta. El HUD actualiza la hora/franja aparte.
+La fase 7 incorpora rutas ponderadas en Online (`server.py:route_between`) y Offline (`offline.js:offlineRoadRoute`). El costo compara distancia, cola persistente por tramo/capacidad y una penalización temporal en calles próximas a proyectos viales activos. Sigue excluyendo tramos cerrados por accidentes y calzadas inutilizables. Como los pasajeros y pedidos recalculan el recorrido con el grafo actual, una conexión alternativa redistribuye el tránsito y puede modificar distancia, asistencia laboral y plazo de entrega; al bajar la cola se recupera la ruta directa. Las obras cercanas elevan fricción hasta que finalizan.
 
-`world3d.js:sync()` no incluye el día ni datos internos de residentes en su firma visual, usa proyecciones de elementos que realmente se ven, y `animate()` renderiza cada RAF sin limitador adaptativo. No reintroducir el límite de 50 ms ni el vaciado/recreación total de actores por cambios invisibles. Los umbrales de construcción, incidentes y rutas sí deben invalidar el mapa si alteran objetos visibles.
+Pruebas de esta entrega: 64 tests Python; 46 tests Node no visuales; `py_compile`, `node --check` y stress de 30 años en cuatro perfiles pasan. Tres pruebas Playwright requieren un paquete ausente en el entorno, por lo que no se ejecutaron. No cambió la interfaz. Fase 7=95% orientativo; el avance global sigue sin porcentaje porque falta ponderación verificable común para las 34 fases. LAN física no comprobada; estado Vercel por verificar tras publicación.
 
-Pruebas locales: 46 Node/Offline, 63 Python y stress 30 años/4 perfiles pasan. Un smoke Playwright alcanzó Día 2 con Worker y sin errores JS. La captura responsive con SwiftShader agotó 30 s; repetir en GPU/dispositivo real para medir fluidez y terminar batería completa. Revisar que la carga `offline_worker.js` está permitida en `server.py` para el iniciador LAN. Pendiente de verificación física LAN y de Vercel tras el push. Fase 7: 90%; próximo: desvíos viales y su efecto en logística.
+Siguiente mecánica: ampliar el efecto medido de rutas alternativas en logística/obras y probar redes grandes; luego continuar sistemas pendientes de otras fases sin dedicar entregas a pulido menor.
 
 
 ## Continuidad inmediata · Alfa 0.116

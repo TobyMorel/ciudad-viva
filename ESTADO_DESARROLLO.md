@@ -1,5 +1,11 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.118 · desvíos según colas y obras viales
+
+Los motores Online y Offline ya no eligen siempre la ruta con menos tramos: el algoritmo de costo mínimo pondera la distancia, la cola persistente respecto a la capacidad de cada segmento y una penalización temporal en calles cercanas a obras viales activas. Los cortes por choque y los tramos deteriorados continúan cerrados. Los recorridos laborales, respuestas de emergencia y camiones de suministro usan la misma red; por eso un desvío puede cambiar longitud de viaje y fecha estimada de entrega. Una ruta alternativa abierta recibe tránsito al recalcularse la demanda, y una vez despejada la cola el algoritmo vuelve al corredor directo. No se añadieron controles ni textos de interfaz.
+
+Pruebas: 64 pruebas Python; 46 Node no visuales; `python -m py_compile server.py`, `node --check offline.js` y `tests/stress_30_years.py` pasan (30 años en cuatro perfiles). Las pruebas de navegador no se ejecutaron: Playwright no está instalado en este entorno. Fase 7=95% orientativo. Global sin estimar por ausencia de pesos estables verificables para las 34 fases. LAN física pendiente; confirmar Vercel después del push.
+
 ## Alfa 0.117 · quitar los tirones al cambiar el día
 
 El hilo principal queda libre de la simulación Offline: `offline_client.js` solicita un Worker dedicado (`offline_worker.js`) para procesar jornadas y devolver estados. Online expone una revisión que cambia al cerrar un día o ejecutar una acción; Offline aplica la misma idea. El sondeo compara esa revisión en vez de serializar dos veces el estado completo a cada actualización del reloj. El indicador de hora cambia por separado, sin volver a dibujar los paneles.

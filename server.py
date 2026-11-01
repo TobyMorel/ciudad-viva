@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Servidor LAN local de Ciudad Viva. Solo biblioteca estándar de Python."""
-import json, math, os, socket, sys, threading, time, uuid, webbrowser
+import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -1647,13 +1647,30 @@ def route_between(start_coord, destination_coord):
     starts={start_coord} if start_coord in roads else adjacent(start_coord)&roads
     goals={destination_coord} if destination_coord in roads else adjacent(destination_coord)&roads
     if not starts or not goals:return None
-    queue=list(starts);previous={point:None for point in starts};target=None
-    for current in queue:
-        if current in goals: target=current;break
+    # Dijkstra combina distancia, colas persistentes y la fricción local de las obras
+    # viales activas. Así un cierre o un corredor saturado induce un desvío real.
+    traffic=state.get("traffic",{});queue_state=traffic.get("queueState",{}).get("queues",{})
+    if not queue_state:
+        queue_state={edge:float(row.get("queueAfter",0)) for edge,row in traffic.get("queueReport",{}).get("segments",{}).items()}
+    active_roadworks=[p for p in state.get("projects",[]) if p.get("kind")=="road" and p.get("status") not in ("pausada","cancelada","suspendida","finalizada")]
+    def edge_cost(a,b):
+        capacity=road_traffic_capacity(a,b)*6
+        congestion=min(4.0,max(0.0,float(queue_state.get(traffic_edge_key(a,b),0)))/max(1,capacity))
+        worksite=any(min(abs(a[0]-p.get("x",0))+abs(a[1]-p.get("y",0)),abs(b[0]-p.get("x",0))+abs(b[1]-p.get("y",0)))<=1 for p in active_roadworks)
+        return 1.0+congestion*1.25+(1.25 if worksite else 0.0)
+    frontier=[];best={};previous={}
+    for point in sorted(starts):best[point]=0.0;previous[point]=None;heapq.heappush(frontier,(0.0,point[0],point[1]))
+    target=None
+    while frontier:
+        cost,x,y=heapq.heappop(frontier);current=(x,y)
+        if cost>best.get(current,float("inf"))+1e-9:continue
+        if current in goals:target=current;break
         for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
-            neighbor=(current[0]+dx,current[1]+dy)
-            if neighbor in roads and neighbor not in previous:
-                previous[neighbor]=current;queue.append(neighbor)
+            neighbor=(x+dx,y+dy)
+            if neighbor not in roads:continue
+            candidate=cost+edge_cost(current,neighbor)
+            if candidate+1e-9<best.get(neighbor,float("inf")):
+                best[neighbor]=candidate;previous[neighbor]=current;heapq.heappush(frontier,(candidate,neighbor[0],neighbor[1]))
     if target is None:return None
     path=[];current=target
     while current is not None:path.append([current[0],current[1]]);current=previous[current]

@@ -1,12 +1,12 @@
 # Siguiente entrega
 
-## Punto exacto · después de Alfa 0.117
+## Punto exacto · después de Alfa 0.118
 
-1. Validar suavidad de animaciones al cruzar día y noche en X1/X2/X4 y pausa, móvil y escritorio; confirmar que la jornada Offline se procesa en Worker y el estado queda guardado.
-2. Completar fase 7 con desvíos/rutas alternativas y efecto de congestión sobre pedidos y obras, Online/Offline. No pasar demasiado tiempo refinando los colectivos; continuar añadiendo mecánicas de otras fases.
-3. Publicar a `main` con email válido y verificar SHA, Vercel, flujo CI y ZIP integral por entrega. La prueba de LAN en dos equipos sigue pendiente.
+1. Fase 7 queda en 95% orientativo. Medir cuánto cambian viajes, asistencia laboral y llegada de suministros con congestión, obras activas y aperturas de accesos en ambos motores; optimizar el cálculo para redes grandes.
+2. Después seguir con el sistema jugable pendiente de mayor impacto en fases F, manteniendo mecánicas Online/Offline y sus pruebas de regresión.
+3. Publicar cada entrega a `main`, revisar SHA/estado Vercel, actualizar historial y continuidad, y dejar un ZIP integral. LAN física entre dos equipos sigue pendiente.
 
-Progreso global no estimable: falta una matriz verificable de pesos estables para las 34 fases. Fase actual 7: 90% orientativo. Próximo hito: rutas alternativas y logística afectada por colas.
+Progreso global sin porcentaje: hace falta una matriz estable de pesos y criterios verificables para las 34 fases. Hito actual F; próximo hito: completar la simulación vial de fase 7 y continuar con los sistemas pendientes.
 
 
 ## Punto exacto · después de Alfa 0.116

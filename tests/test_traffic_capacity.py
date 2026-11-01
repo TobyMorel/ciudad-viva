@@ -48,6 +48,23 @@ class TrafficCapacityTests(unittest.TestCase):
         self.assertTrue(returns)
         self.assertTrue(all("queueDelayMinutes" in trip for trip in returns))
 
+    def test_route_avoids_a_saturated_corridor_and_uses_it_when_queue_clears(self):
+        direct = [[x, 0] for x in range(5)]
+        alternate = [[x, -1] for x in range(5)]
+        server.state.update({"roads": direct + alternate, "roadAssets": [], "projects": [],
+                             "traffic": {"queueState": {"queues": {}}}})
+        route = server.route_between((0, 0), (4, 0))
+        self.assertEqual(route, direct)
+
+        queues = {server.traffic_edge_key(a, b): 100 for a, b in zip(direct, direct[1:])}
+        server.state["traffic"]["queueState"]["queues"] = queues
+        route = server.route_between((0, 0), (4, 0))
+        self.assertNotEqual(route, direct)
+        self.assertGreater(len(route), len(direct))
+
+        server.state["traffic"]["queueState"]["queues"] = {}
+        self.assertEqual(server.route_between((0, 0), (4, 0)), direct)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -318,3 +318,10 @@ El acero se fabrica en componentes de obra con una metalúrgica privada; no se c
 ### Alfa 0.92 — exclusividad de industria y validación automática
 
 Una planta con industryType quarry, concrete, sawmill o metalworks solo participa en su cadena específica, no en la de alimentos. Offline ya filtra estas cuatro clases igual que simulate_business_month Online. Las pruebas de logística construyen una obra controlada con faltante de componentes, camión y una metalúrgica existente para evitar confundir la simulación de pedidos con la habilitación de plantas nuevas, que sigue pendiente. El workflow de GitHub Actions corre tests Python y Node sobre main.
+
+
+### Alfa 0.93 — identidad de planta a la adjudicación y transformación sin generación de materia
+
+Las construcciones `kind=factory` nuevas guardan `industryType` al contratar (actividad elegida según especialidades abiertas o ya adjudicadas), no al pasar la inspección. Secuencia compartida: food, quarry, concrete, sawmill, metalworks. El destino queda fijado para obras en curso aunque otra fábrica termine primero. Para nuevos contratos industriales la reserva operativa pertenece al capital privado y se traspasa a caja de la empresa al abrir, sin inventar dinero.
+
+Offline incorpora `Cantera local` y `Hormigonera local` a los proveedores persistentes usando migración de existencias por defaults. La cantera reduce `quarryReserve` al extraer y la hormigonera consume 2 unidades de `rawMaterialInventory` para crear 1 `concreteStock`. La compra resta simultáneamente stock del proveedor y stock vendible de la cantera, acredita caja de cantera, debita caja de hormigonera y crea una sola orden de transporte. La recepción se bloquea si se corta la ruta vial; los materiales no aparecen por haber pagado. La venta de hormigón a constructoras reduce el stock vendible de planta y mantiene el contador industrial. Tests acotan diferencias con el servidor.

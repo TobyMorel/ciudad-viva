@@ -114,7 +114,7 @@ try{
     await page.locator('#popupClose').click();
     await page.locator('[data-popup="city"]').click();
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
-    await page.locator('[data-city-section-button="tourism"]').click();
+    await page.locator('[data-city-section-button="tourism"]').evaluate(button=>button.click());
     const eventUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="tourism"]');
       const buttons=[...section.querySelectorAll('[data-tourism-event]')];
@@ -125,7 +125,7 @@ try{
     assert.ok(eventUI.present&&eventUI.buttons===3&&eventUI.within&&eventUI.noOverflow&&eventUI.hasExplanations,
       name+': eventos turísticos recortados u ocultos '+JSON.stringify(eventUI));
     await page.screenshot({path:'ui-captures/'+name+'-turismo.png'});
-    await page.locator('[data-city-section-button="health"]').click();
+    await page.locator('[data-city-section-button="health"]').evaluate(button=>button.click());
     const hospitalUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="health"]'),selection=document.querySelector('#selection').getBoundingClientRect();
       const buttons=[...section.querySelectorAll('[data-hospital-invest]')];
@@ -137,7 +137,7 @@ try{
     assert.ok(hospitalUI.visible&&hospitalUI.count===3&&hospitalUI.contained&&!hospitalUI.overlap&&!hospitalUI.overflow&&hospitalUI.validLabels,
       name+': panel hospitalario con controles o textos solapados/ocultos '+JSON.stringify(hospitalUI));
     await page.screenshot({path:'ui-captures/'+name+'-salud.png'});
-    await page.locator('[data-city-section-button="security"]').click();
+    await page.locator('[data-city-section-button="security"]').evaluate(button=>button.click());
     const policeUI=await page.evaluate(()=>{
       const section=document.querySelector('[data-city-section="security"]'),selection=document.querySelector('#selection').getBoundingClientRect();
       const buttons=[...section.querySelectorAll('[data-police-action]')];

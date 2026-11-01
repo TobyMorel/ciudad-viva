@@ -220,3 +220,8 @@ Se agregó visibilidad en Economía para los contratos activos/incumplidos y rem
 Los contratos cantera→hormigonera permiten la acción `renegotiateTradeContract` desde Economía si existen remesas vigentes detenidas por ausencia real de ruta. Ambas empresas deben operar y la compradora abona al proveedor una compensación del 5% del valor original (mínimo $20). El pago va de caja privada a caja privada, fuera del escrow. Solo los plazos de remesas pendientes crecen 14 días; no cambia material reservado, pagos ya liquidados ni inventarios. Se registran `renegotiatedDay`, `extensionDays` y `extensionFeePaid`; una segunda prórroga se rechaza.
 
 Hay regresiones Online/Offline de caja, inventario, extensión y entrega tras el vencimiento original; la revisión Chromium está incluida en CI. Fases 17=80% y 18=90%; global sin estimar. **Siguiente sistema:** contratos con reserva y custodia en otras cadenas B2B y compradores, competencia comercial y partidas de 30 años bajo cuatro perfiles. LAN física y Vercel no verificados.
+
+
+## Continuación · incumplimiento económico B2B
+
+Los contratos de áridos entre cantera y hormigonera ahora penalizan una remesa vencida mientras ambas firmas siguen abiertas: el proveedor transfiere al comprador hasta un 5% del producto no entregado, limitado por su caja. La devolución del depósito permanece separada de esta indemnización; `defaultPenaltyPaid` se registra por remesa y contrato y la liquidación idempotente evita cobros repetidos. Misma regla en Online y Offline. Pruebas específicas de vencimiento incorporadas; comprobar CI. Próximo: ampliar contratos a otras cadenas y escenarios de 30 años. Porcentajes sin cambios; LAN/Vercel pendientes.

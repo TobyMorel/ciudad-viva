@@ -58,8 +58,10 @@ test('Offline: promotor autónomo compra mercancía que llega en camión, no ins
       'Cada pedido recibe fecha real de entrega');
   });
 });
-test('Offline: sin inventario de ningún proveedor no inicia obra con recursos mágicos',async()=>{
+test('Offline: sin capacidad de descarga no inicia una obra que exigiría materiales mágicos',async()=>{
   const city=base();
+  city.supply.yardCapacity=1;
+  for(const depot of city.supply.depots||[])depot.capacity=0;
   for(const stock of Object.values(city.supply.suppliers))
     for(const key of ['aggregate','concrete','steel','timber','components'])if(key in stock)stock[key]=0;
   const cash=city.privateCapital;

@@ -615,8 +615,10 @@ export async function createOfflineAdapter(){
     for(const order of state.supply.marketOrders||[]){
       if(!order.supplyContractId||order.status!=='en tránsito')continue;
       const buyer=(state.buildings||[]).find(b=>b.business?.id===order.businessId)?.business;
-      if(!buyer||buyer.status!=='abierto'||state.day>order.deadlineDay){
-        order.status='cancelado';order.statusCause=!buyer||buyer.status!=='abierto'?'Comprador cerrado':'Plazo contractual vencido';
+      const seller=(state.buildings||[]).find(b=>b.business?.id===order.vendorId)?.business;
+      const buyerClosed=!buyer||buyer.status!=='abierto',sellerClosed=!seller||seller.status!=='abierto';
+      if(buyerClosed||sellerClosed||state.day>order.deadlineDay){
+        order.status='cancelado';order.statusCause=buyerClosed?'Comprador cerrado':sellerClosed?'Proveedor insolvente':'Plazo contractual vencido';
         settleOfflineAggregateContractLine(order,false);
       }
     }

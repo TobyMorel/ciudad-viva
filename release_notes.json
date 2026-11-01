@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.92",
+  "currentVersion": "0.93",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.93",
+      "date": "2026-10-31",
+      "changes": [
+        "La fase 18 completa en Offline dos cadenas que antes operaban solo Online: extracción con reserva geológica agotable de áridos y hormigonera que compra la materia prima por carretera, paga a la cantera, recibe inventario y transforma dos áridos en un hormigón. Personal, servicios, caja, rutas y capacidad limitan la producción.",
+        "Las especialidades alimentaria, cantera, hormigonera, aserradero y metalúrgica se reservan en el contrato de fábrica Online/Offline, incluso con otras plantas en obra. Construcción, inspección y apertura mantienen ese destino y los fondos operativos nuevos salen del capital privado, sin crear caja al finalizar.",
+        "Pruebas automáticas Online/Offline: especialidades reservadas, capital inicial pagado, explotación, transporte de áridos, conversión 2:1 y regresión de materiales hacia obras. Prueba responsive Chromium 390×844 y 1440×900 añadida al workflow. Fase 18: 90%; avance global no estimable. No se probaron LAN física ni Vercel."
+      ],
+      "roadmapPhase": 18,
+      "phaseProgress": 90,
+      "overallProgress": null
+    },
     {
       "version": "0.92",
       "date": "2026-10-31",
@@ -1035,10 +1047,10 @@
     {
       "phase": 18,
       "title": "Industrias, cadenas de suministro y comercio regional",
-      "progress": 85,
+      "progress": 90,
       "summary": "Cadenas materiales locales de alimentos, áridos→hormigón, bosque→madera y acero regional→metalúrgica→componentes. Stock, servicios, personal, caja, producción y transporte vial limitan oferta y consumo en obras.",
       "pending": [
-        "Probar extremo a extremo la obra suspendida por componentes/acero y su reanudación tras entrega en Online y Offline",
+        "Integrar una fábrica construida en partida con personal, servicios, insumos, producción y venta bajo escasez y competencia en ambos modos",
         "Completar acero local primario, comercio regional y abastecimiento físico de depósitos",
         "Verificar ciclo de construcción y apertura de metalúrgica desde adjudicación en ambos motores"
       ]

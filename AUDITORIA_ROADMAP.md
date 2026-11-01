@@ -375,3 +375,8 @@ La competencia entre empresas de una misma rama industrial dejó de ser una abst
 ### Alfa 0.96 — fase 17 (75%), fase 18 (90%)
 
 Se comprobó un sistema central de producción y economía: las construcciones de inversores privados ya no fabrican insumos en la parcela al pagar, sino que contratan camiones sujetos a stock comercial, distancia, rutas, costos, espacio de descarga y tiempos de viaje. La entrada al inventario se registra al recibir. Las empresas privadas también amplían o achican vacantes según desempeño financiero, invierten caja real en equipamiento y desocupan personas identificables. La industria metalúrgica dispone de capacidad incremental con equipos y puestos ocupados. Quedan pendientes contratos a plazo con garantías y contingencias, planificación comercial avanzada, control real de alquiler, logística ferroviaria/portuaria total y estrés multidecenal; por eso fase 17 avanza solo cinco puntos y fase 18 se conserva. No existe progreso global cuantificable.
+
+
+### Alfa 0.97 — fase 17 (80%), 18 (90%)
+
+Los proveedores privados ya celebran contratos de suministro a plazo para la cadena cantera→hormigonera. La materia reservada sale de la oferta disponible, pero el comprador solo recibe inventario al descargar cada remesa; la caja retenida se libera por entrega o se devuelve si el plazo expira. La liquidez empresarial, precio, ubicación y acceso vial determinan los acuerdos. Los estados y saldos quedan auditables por contrato en Economía. Es mecánica B2B verificable pero acotada a áridos: otros sectores, garantías adicionales, sanciones y comercio a largo plazo siguen pendientes, así como partidas de 30 años. No se extrapola a porcentaje global.

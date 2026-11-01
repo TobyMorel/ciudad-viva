@@ -1,5 +1,10 @@
 # Continuidad de desarrollo para otra IA
 
+## Continuidad inmediata · Alfa 0.110
+
+El usuario aportó siete imágenes en `design_reference_3d/` y un texto de requisitos. `ARTE_3D.md` resume la dirección e inventario. La implementación visual nueva está en `world3d.js`: `premiumArchitecture`, `roof`, `tree`, `addRoad`, `addSite`, costa y caché de geometrías. No modificar mecánicas ni inventar datos; viviendas, comercios, industrias y servicios deben depender del estado real. Comprobar las cuatro rotaciones, selección, calles conectadas y zoom. Evitar que el trabajo de detalle frene nuevas mecánicas: el siguiente sistema prioritario es tráfico autoritativo y accidentes. `reference.css` corrige solapamiento en Tesorería y evita que el aviso temporal cubra el menú. `game.js` difiere la vista previa 3D del menú 1,8 segundos y la cancela al empezar, para no bloquear el clic. Progreso global no estimable; fase 15 80% orientativo, hito F en curso.
+
+
 ## Continuidad inmediata · Alfa 0.109 (2026-11-01)
 
 El usuario quiere que el juego se vea como las trece referencias en `design_reference/`. La interfaz actual usa `reference.css` y `reference-ui.js`; `game.js` decora los paneles existentes y conserva los nodos funcionales en `.ref-source`. Al modificar una pantalla, revisar que sus controles sigan accesibles, sin solapamiento en 390/1440 px y que cualquier nueva cifra venga del estado real `S`. Los trece PNG son referencias de diseño, no instrucciones de arquitectura ni datos de juego. El backend LAN y el motor Offline no fueron reemplazados. La siguiente mecánica prioritaria es tráfico autoritativo y accidentes; no dedicar varias versiones seguidas a detalles de una sola mecánica. Guardar ZIP y publicar cada cambio en `main` con email válido. Progreso global sin estimar por falta de matriz estable de pesos; fase 15 al 75%, hitos A–E parciales y F en curso.

@@ -1,5 +1,10 @@
 # Decisiones técnicas · Ciudad Viva
 
+## Alfa 0.110 · arte procedural reutilizable
+
+Se mantiene Three.js y el formato de datos. `world3d.js` incorpora una caché de BoxGeometry, IcosahedronGeometry y CylinderGeometry por dimensiones. `clear(dynamicRoot)` no libera estas geometrías compartidas; sí elimina geometrías y materiales efímeros. Las fachadas se modelan en varias caras para permitir rotación. La vista previa del menú se difiere 1,8 segundos y se cancela si el usuario ya inició una partida para que el render no bloquee el clic. Los cruces se dibujan solo en intersecciones del grafo existente y las etapas visuales usan `project.progress`, sin tiempo ni costo inventado. Referencias en `design_reference_3d/` y dirección técnica en `ARTE_3D.md`. La fase 15 avanza a 80%; no se calcula porcentaje global sin ponderación estable.
+
+
 ## Alfa 0.109 · implementación de las referencias visuales
 
 El usuario aportó trece PNG como especificación visual. Los archivos `reference.css` y `reference-ui.js` implementan el nuevo lenguaje de forma adaptable y mantienen los paneles originales como `ref-source`, evitando perder acciones de mecánicas existentes. Las tarjetas nuevas leen `S` y nunca copian números de las imágenes. Los PNG permanecen en `design_reference/` para continuidad. El render de Three.js limita resolución y detalle lejano en pantallas grandes para sostener la respuesta del navegador. La fase 15 pasa de 70% a 75%; el porcentaje total sigue sin base ponderada.

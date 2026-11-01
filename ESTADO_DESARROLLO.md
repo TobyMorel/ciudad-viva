@@ -1,5 +1,13 @@
 # Estado de desarrollo · Ciudad Viva
 
+## Alfa 0.110 · arte 3D según siete referencias (2026-11-01)
+
+- En `world3d.js`: geometrías básicas compartidas, cubiertas a dos aguas con volumen, variantes de vivienda con balcón y fachada posterior, escaparates y toldos comerciales, equipos por tipo industrial, anexos de salud/educación, árboles con formas y colores distintos, iluminación lateral cálida y sombras de copa, cruces peatonales conectados al grafo, paseo costero y obras visualizadas por progreso real. No se cambiaron estados ni contratos de la simulación.
+- Cámara, selección y orientación de edificios preservadas; zoom inicial de escritorio acercado para apreciar el arte. Se corrigieron el solapamiento de Tesorería y la superposición del mensaje temporal con el menú inferior. La vista previa de la pantalla inicial se difiere para no bloquear el inicio.
+- Python 52/52 y Offline 38/38 pasaron. Inspección en Chromium de escritorio y móvil sin errores de página ni desborde horizontal en las vistas revisadas. Capturas comparativas en `art_validation/`; siete referencias en `design_reference_3d/`.
+- Fase 15: 80% orientativo. Progreso global sin estimar por falta de pesos y criterios de aceptación estables para las 34 fases. Faltan parque público jugable, detalle de infraestructura de mayor escala, LOD por distancia y prueba de rendimiento con ciudades densas. LAN física aún sin verificar.
+
+
 ## Alfa 0.109 · interfaz según las trece referencias del usuario (2026-11-01)
 
 - `reference.css` y `reference-ui.js` implementan cabecera, indicadores, barra de mapa, navegación y ventanas de las referencias, en claro y oscuro. Las vistas de Ciudad, Economía, Obras, Avisos, Ayuda, Registro, Cambios y Construir usan datos reales y mantienen los controles existentes en secciones desplazables.
@@ -8,7 +16,7 @@
 - Fase 15: 75% orientativo por evidencia visual y funcional. Progreso global sin estimar: faltan pesos y criterios de aceptación estables para las 34 fases. Hito actual y siguiente: F, comenzando por tiempos de tráfico autoritativos y accidentes.
 
 
-**Entrega:** Alfa 0.91 · 1 de noviembre de 2026
+**Entrega:** Alfa 0.110 · 1 de noviembre de 2026
 **Especificación:** [roadmap maestro](ROADMAP_JUGABILIDAD_CIUDAD_VIVA_V2_REALISMO_PROFUNDO.md), 34 fases (0–33). La base implementada continúa desde las alfas anteriores.
 
 ## Medición del progreso global

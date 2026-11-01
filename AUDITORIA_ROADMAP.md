@@ -1,4 +1,9 @@
-# Auditoría del roadmap · Alfa 0.84
+# Auditoría del roadmap · Alfa 0.110
+
+## Revisión de alcance · Alfa 0.110
+
+La entrega amplía el sistema visual de la fase 15 de 75% a 80% mediante modelos 3D procedurales integrados, variación ambiental y validación básica de pantallas. No agrega mecánicas del roadmap ni cierra la fase. El progreso global sigue sin estimarse porque no existe ponderación estable y comprobable para las 34 fases. Hito actual F; siguiente paso F, tráfico autoritativo y accidentes.
+
 
 ## Revisión de alcance · Alfa 0.109
 

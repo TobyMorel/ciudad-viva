@@ -1,5 +1,13 @@
 # Siguiente entrega · continuidad
 
+## Punto de continuación después de Alfa 0.110
+
+1. Revisión visual de `design_reference_3d/` frente a `art_validation/`. Refinar proporciones, fachada cercana y costa sin cambiar `waterTile` ni la topología de rutas.
+2. Implementar LOD por distancia y medir render en ciudades grandes; el pase actual comparte geometrías pero añade mallas a los edificios.
+3. Volver a mecánicas nuevas: fase 7, tiempos viales autoritativos con capacidad y semáforos, accidentes y respuesta municipal. Mantener Online/Offline alineados.
+4. Mantener ZIP completo, commit en `main` con email válido, verificación del commit, historial de versiones y porcentajes por fase honestos. LAN entre dos equipos físicos y accesibilidad siguen pendientes.
+
+
 ## Punto de continuación después de Alfa 0.109
 
 1. Verificar el despliegue de `main` y una sesión LAN física de dos equipos; la UI no garantiza esa prueba.

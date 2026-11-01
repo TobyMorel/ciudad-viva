@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.109",
+  "currentVersion": "0.110",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.110",
+      "date": "2026-11-01",
+      "roadmapPhase": 15,
+      "phaseProgress": 80,
+      "overallProgress": null,
+      "changes": [
+        "Nuevo pase de arte 3D basado en siete referencias: cubierta de vivienda con volumen y tejas, balcones y fachada posterior, toldos y escaparates de comercios, industrias con equipos por especialidad y anexos de salud y educación.",
+        "Calles conectadas con cruces peatonales en intersecciones, asfalto pizarra y farolas; árboles de distintas siluetas, costa turquesa con paseo, bancos y rocas. Sol más lateral y cálido, relleno moderado, sombras en copas y cubiertas.",
+        "Las obras muestran cimientos, columnas, forjados y grúa según progreso real. Se conservan selección, orientación hacia la calle, cámara, mapa y mecánicas.",
+        "Materiales y geometrías reutilizados; revisión visual de 900 y 390 píxeles desde dos rotaciones. Las referencias y capturas de comparación quedan en el repositorio."
+      ]
+    },
     {
       "version": "0.109",
       "date": "2026-11-01",
@@ -1078,8 +1091,8 @@
   ],
   "upcoming": [
     {
-      "title": "Alfa 0.110 · capacidad vial y accidentes",
-      "detail": "Integrar capacidad y espera semafórica en tiempos de viaje; crear accidentes causales y respuesta municipal."
+      "title": "Alfa 0.111 · capacidad vial y accidentes",
+      "detail": "Incorporar capacidad y semáforos a los tiempos de viaje; simular accidentes con respuestas municipales."
     },
     {
       "title": "Validación de experiencia",
@@ -1231,11 +1244,11 @@
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 75,
-      "summary": "Interfaz basada en trece referencias visuales: inicio, indicadores, mapa, ventanas, formularios, navegación y temas claro/oscuro; sistemas y datos originales conservados",
+      "progress": 80,
+      "summary": "Interfaz según 13 referencias y nuevo pase de arte 3D según siete referencias: edificios, calles, vegetación, costa y obras",
       "pending": [
-        "Pruebas de usabilidad con jugadores y revisión de contraste con tecnologías de asistencia.",
-        "Equilibrio de experiencia y rendimiento en sesiones largas y ciudades extensas."
+        "Validación de usabilidad, contraste y accesibilidad con personas y tecnologías de asistencia.",
+        "LOD por distancia, rendimiento en ciudades grandes y un segundo pase de detalle arquitectónico y entorno."
       ]
     },
     {

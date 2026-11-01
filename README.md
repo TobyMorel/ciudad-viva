@@ -1,4 +1,9 @@
-# Ciudad Viva · Alfa 0.97
+# Ciudad Viva · Alfa 0.110
+
+## Alfa 0.110 · rediseño de arte 3D
+
+`world3d.js` transforma edificios, árboles, calles, costa y obras siguiendo siete referencias conservadas en `design_reference_3d/`. Los modelos son geometría 3D interactiva, no imágenes superpuestas. La simulación, selección y guardado continúan en los modos Offline y LAN. `ARTE_3D.md` describe el sistema y sus límites. Progreso global del juego: aún no estimable sin pesos verificables del roadmap.
+
 
 ## Alfa 0.109 · interfaz según referencias del usuario
 

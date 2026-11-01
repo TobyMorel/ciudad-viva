@@ -57,3 +57,9 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
 .ref-panel-build.service-mode .build-group:nth-child(6){order:0}.ref-panel-build.service-mode .build-group:nth-child(8){order:1}.ref-panel-build.service-mode .build-group:nth-child(7){order:2}.ref-panel-build.service-mode .build-group:nth-child(10){order:3}
 .popup-header .modal-close,.bid-modal .modal-close{border:0;box-shadow:none}
 .popup-header .modal-close:focus-visible,.bid-modal .modal-close:focus-visible{outline:2px solid #e08e58;outline-offset:2px}
+/* La tarjeta de Tesorería reserva el detalle lateral solo cuando hay ancho real. */
+@media(max-width:1850px){.metric:first-child{grid-template-columns:54px minmax(0,1fr)}.metric:first-child .treasury-extra{display:none}}
+@media(max-width:650px){.metric:first-child{grid-template-columns:27px minmax(0,1fr)}}
+.toast{bottom:106px;max-width:min(420px,calc(100vw - 24px));text-align:center;line-height:1.35;white-space:normal}
+@media(max-width:650px){.toast{bottom:76px;left:50%;width:max-content;max-width:calc(100vw - 20px)}}
+@media(max-width:650px){.toast{bottom:110px}}

@@ -4927,6 +4927,9 @@ class Handler(BaseHTTPRequestHandler):
                     if kind in ("home","shop","factory") and (not zone or zone["kind"]!=kind):
                         required="residencial" if kind=="home" else "comercial" if kind=="shop" else "industrial"
                         self._send(409,{"error":f"Primero asigná uso {required} a esta parcela."}); return
+                    industry_choice=data.get("industryType") if kind=="factory" else None
+                    if industry_choice is not None and industry_choice not in FACTORY_LABELS:
+                        self._send(400,{"error":"Industria desconocida: elegí cantera, hormigonera, aserradero, metalúrgica o alimentos."});return
                     if kind=="road":
                         if not any(abs(rx-x)+abs(ry-y)<=1 for rx,ry in state["roads"]): self._send(409,{"error":"La calle debe conectar con la red existente"}); return
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
@@ -4951,7 +4954,7 @@ class Handler(BaseHTTPRequestHandler):
                         p["materialsRequired"]={k:math.ceil(q*model["cost"]/PROJECTS[kind]["cost"]) if q else 0 for k,q in p["materialsRequired"].items()}
                     if kind=="busStop":p["busLineId"]=bus_line["id"]
                     if kind=="factory":
-                        p["industryType"]=next_factory_industry()
+                        p["industryType"]=industry_choice or next_factory_industry()
                         p["label"]=FACTORY_LABELS[p["industryType"]]
                     if kind in ("home","shop","hotel","factory"):
                         p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]

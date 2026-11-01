@@ -42,11 +42,11 @@ try{
     await page.locator('[data-popup="build"]').click();
     const catalog=await page.evaluate(()=>{
       const pane=document.querySelector('#panelPopup:not(.hidden)'),buttons=[...pane.querySelectorAll('[data-model]')];
-      return {count:buttons.length,categories:[...pane.querySelectorAll('.tool-category')].map(x=>x.textContent.trim()),
+      return {count:buttons.length,factoryCount:pane.querySelectorAll('[data-industry]').length,categories:[...pane.querySelectorAll('.tool-category')].map(x=>x.textContent.trim()),
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===16&&catalog.categories.length===5&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===16&&catalog.factoryCount===5&&catalog.categories.length===6&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').click();
 

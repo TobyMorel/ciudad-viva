@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.104",
+  "currentVersion": "0.105",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.105",
+      "date": "2026-11-01",
+      "roadmapPhase": 28,
+      "phaseProgress": 76,
+      "overallProgress": null,
+      "changes": [
+        "Interfaz renovada con rosa pastel, blanco cálido, paneles más limpios, botones claros y navegación con Ayuda y Avisos; adaptable a pantallas pequeñas.",
+        "Eventos auténticos de la simulación (robos/incidentes policiales, incendios, ambulancias, basura, calles deterioradas y obras detenidas) aparecen como iconos 2D flotantes sobre edificios/calles. Se tocan para ver qué pasó, cuándo, su respuesta y cómo actuar. No se inventan eventos por razones estéticas.",
+        "Los contenedores, bolsas de basura y barreras de calles deterioradas explican al seleccionarlos qué son, sus cantidades/condición y cómo solucionar el problema.",
+        "Guía paso a paso para los materiales, especialmente hormigón: comprar a proveedor mediante Obras → Pedir materiales, o construir Cantera y Hormigonera en dos parcelas industriales. Las tarjetas de obra muestran consumos pendientes y causas de espera.",
+        "Las fábricas ahora se eligen por especialidad explícita (cantera, hormigonera, procesadora, aserradero, metalúrgica), con la misma contratación y financiación reales Online/Offline. Se conserva el orden automático anterior cuando no se elige especialidad.",
+        "Segunda pasada de fachadas y props 3D en todas las familias de edificios y fábricas por actividad, iluminación y estilo urbano pastel; mantiene los vehículos y la ruta física. Pruebas del flujo industrial, avisos, stock, versión y 390/1440 px."
+      ]
+    },
     {
       "version": "0.104",
       "date": "2026-11-01",
@@ -1006,12 +1021,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 17 · contratos comerciales multisectoriales",
-      "detail": "Extender acuerdos a madera, alimentos y componentes con plazos, sanciones, financiación privada y rutas."
+      "title": "Alfa 0.106 · seguimiento de eventos y ayuda guiada",
+      "detail": "Profundizar estados, historial por parcela y respuesta municipal directa con presupuestos y acciones; ampliar casos de enfermedades, cortes y accidentes."
     },
     {
-      "title": "Fase 33 · partidas de estrés multidecenales",
-      "detail": "Validar cuatro perfiles de ciudad a 30 años y eliminar desequilibrios emergentes de presupuesto, servicios, empleo y logística."
+      "title": "Alfa 0.107 · renovación 3D por distritos",
+      "detail": "Optimizar rendimiento móvil, materiales, variación de modelos y detalles animados por actividad a escala de barrio."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1281,10 +1296,11 @@
     {
       "phase": 28,
       "title": "Salud, educación, seguridad y protección social profundas",
-      "progress": 75,
+      "progress": 76,
       "summary": "Infraestructura de servicios independiente y cuatro niveles educativos construibles con puestos, aulas, costos y radios viales.",
       "pending": [
-        "Protección social con presupuestos y hogares, educación técnica, carreras profesionales y desplazamientos estudiantiles visibles."
+        "Protección social con presupuestos y hogares, educación técnica, carreras profesionales y desplazamientos estudiantiles visibles.",
+        "Iconos de incidentes disponibles; aún falta despacho interactivo y una simulación longitudinal más profunda."
       ]
     },
     {

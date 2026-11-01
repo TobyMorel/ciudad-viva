@@ -297,3 +297,8 @@ El acero marítimo requiere ahora capacidad física adicional del puerto: el lot
 ## Continuación · prospección siderúrgica finita
 
 El capital privado puede financiar prospección de mineral de hierro cuando la reserva regional operativa cae por debajo de 900 unidades: cada campaña cuesta $4500 y acredita 300 unidades desde `supply.unexploredSteelOre`, un yacimiento restante que inicialmente dispone de 12000 unidades, sin creación infinita de recursos. Se contabiliza `geologicalExplorationSpend`; el nuevo mineral se usa en reposiciones mensuales posteriores. Online y Offline implementados; prueba Online de caja y conservación agregada. El CI anterior confirmó el motor pero falló la comprobación responsive de la prórroga de contratos, pendiente de corregir. No hubo cambios de interfaz. Prioridad próxima: validación larga de 30 años y reparación del escenario UI.
+
+
+## Continuación · stress mensual de 30 años por cuatro perfiles
+
+Agregado `tests/stress_30_years.py`: ejecutable manualmente mediante `python tests/stress_30_years.py`, recorre 360 cierres mensuales para pueblo, metrópolis, puerto y ciudad turística, con capital/población/reservas distintos. Controla no negatividad de mineral, chatarra y stock siderúrgico, además de ausencia de NaN en caja privada. Se trata de una **prueba de cierres mensuales con salto de días**, no una simulación íntegra de 10.950 ticks diarios ni verificación de transporte LAN. Falta ejecutar y validar resultados, expandir métricas anuales y cubrir tráficos portuarios. También se agregó espera del panel contractual al test responsive anterior; no darlo por resuelto sin CI. Interfaz sin cambios.

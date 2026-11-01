@@ -232,22 +232,42 @@ def advance_local_concrete_plants(workplaces,employees):
         pending=sum(o.get("quantity",0) for o in orders if o.get("businessId")==firm.get("id") and o.get("status")=="en tránsito" and o.get("commodity")=="áridos")
         target=min(72,max(24,capacity*2));need=max(0,target-raw-pending)
         quarry_stock=state["supply"]["suppliers"].setdefault("Cantera local",SUPPLIER_STOCK["Cantera local"].copy())
-        quarry=next((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("industryType")=="quarry" and b.get("business",{}).get("status")=="abierto" and b.get("business",{}).get("aggregateStock",0)>0),None)
-        route=route_between((quarry["x"],quarry["y"]),(plant["x"],plant["y"])) if need and quarry else None
-        quantity=min(need,int(quarry_stock.get("aggregate",0)),int(quarry.get("business",{}).get("aggregateStock",0))) if route else 0
-        unit_cost=MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]+max(0,len(route or [])-1)*.08
-        quantity=min(quantity,max(0,int(max(0,firm.get("cash",0)-500)//max(.01,unit_cost))))
+        candidates=[]
+        if need:
+            for site in state.get("buildings",[]):
+                owner=site.get("business",{})
+                if site.get("kind")!="factory" or owner.get("industryType")!="quarry" or owner.get("status")!="abierto":continue
+                route=route_between((site["x"],site["y"]),(plant["x"],plant["y"]))
+                if not route or owner.get("aggregateStock",0)<=0:continue
+                factor=max(.8,min(1.35,float(owner.get("materialPriceFactor",1))))
+                distance=max(0,len(route)-1)
+                unit_cost=MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]*factor+distance*.08
+                capacity=min(need,int(quarry_stock.get("aggregate",0)),int(owner.get("aggregateStock",0)),
+                             max(0,int(max(0,firm.get("cash",0)-500)//max(.01,unit_cost))))
+                if capacity>0:candidates.append((unit_cost,distance,site["x"],site["y"],site,route,capacity,factor))
+        winner=min(candidates,key=lambda row:row[:4]) if candidates else None
+        quantity=winner[6] if winner else 0
         firm["lastMaterialPurchase"]=quantity
-        if quantity:
-            cost=round(quantity*unit_cost);quarry_stock["aggregate"]-=quantity;settle_quarry_sale(quantity);firm["cash"]-=cost
-            distance=max(0,len(route)-1);ready=state["day"]+1
-            orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"áridos","businessId":firm["id"],"businessName":firm.get("name",plant.get("name","Hormigonera")),"supplier":"Cantera local","quantity":quantity,"unitCost":unit_cost,"cost":cost,"orderedDay":state["day"],"supplierReadyDay":ready,"travelDistance":distance,"travelledDistance":0,"source":[quarry["x"],quarry["y"]],"x":plant["x"],"y":plant["y"],"route":route,"status":"en tránsito","statusCause":"Áridos locales en viaje a la hormigonera"})
-            firm["lastMaterialCause"]="Áridos locales en tránsito"
-            ev("Áridos en camino a hormigonera",f"{plant.get('name','Hormigonera')}: {quantity} unidades desde {quarry.get('name','cantera')}; ruta de {distance} tramos.")
-        elif need and not quarry:firm["lastMaterialCause"]="Sin cantera local operativa"
-        elif need and not route:firm["lastMaterialCause"]="Sin ruta vial entre cantera y hormigonera"
-        elif need and quarry_stock.get("aggregate",0)<=0:firm["lastMaterialCause"]="Cantera sin áridos disponibles"
-        elif need and firm.get("cash",0)<=500:firm["lastMaterialCause"]="Caja insuficiente para comprar materia prima"
+        if winner:
+            unit_cost,distance,_,_,quarry,route,_,factor=winner
+            product_cost=round(quantity*MATERIAL_PRICE["aggregate"]*SUPPLIERS["Cantera local"]["price"]*factor)
+            cost=round(quantity*unit_cost)
+            quarry_stock["aggregate"]-=quantity
+            settle_industrial_vendor_offer("Cantera local","aggregate",quantity,
+                {"site":quarry,"productCost":product_cost,"factor":factor})
+            firm["cash"]-=cost
+            ready=state["day"]+1
+            orders.append({"id":uuid.uuid4().hex,"type":"industrial_raw","commodity":"áridos",
+                "businessId":firm["id"],"businessName":firm.get("name",plant.get("name","Hormigonera")),
+                "supplier":"Cantera local","vendorId":quarry["business"]["id"],"vendorName":quarry.get("name"),
+                "quantity":quantity,"unitCost":unit_cost,"cost":cost,"productCost":product_cost,
+                "orderedDay":state["day"],"supplierReadyDay":ready,"travelDistance":distance,
+                "travelledDistance":0,"source":[quarry["x"],quarry["y"]],"x":plant["x"],"y":plant["y"],
+                "route":route,"status":"en tránsito","statusCause":"Áridos locales en viaje a hormigonera"})
+            firm["lastMaterialCause"]="Áridos de "+quarry.get("name","cantera")+" en tránsito"
+            ev("Áridos en camino a hormigonera",f"{plant.get('name','Hormigonera')}: {quantity} áridos comprados a {quarry.get('name','cantera')} por $ {cost}.")
+        elif need:
+            firm["lastMaterialCause"]="Sin cantera conectada con stock y precio que la caja pueda pagar"
 
 def advance_local_sawmills(workplaces,employees):
     industry=state.setdefault("localIndustry",{});industry.setdefault("timberProduced",0);industry.setdefault("timberSold",0)

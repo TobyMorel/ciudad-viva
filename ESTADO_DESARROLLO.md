@@ -664,3 +664,7 @@ El desarrollo automático en suelo zonificado y los comercios privados delegados
 ## Alfa 0.97 · contratos de suministro industrial con fondos retenidos
 
 Implementados en ambos motores acuerdos cantera/hormigonera que inmovilizan stock, descuentan caja privada, reparten entregas semanales y acreditan productor/transporte solo al llegar. En corte vial los camiones esperan; al vencer sin entrega se cancelan las remesas restantes, se restituyen pagos y material al productor activo. La contabilidad `supply.tradeContracts` guarda remesas, escrow, ingresos, devolución, pérdidas por quiebra y estado final. Economía muestra esta información. Tests de integración nuevos y regresiones de industria actualizadas. Alcance limitado a áridos; falta cobertura contractual para otros sectores, penalizaciones y renegociación explícita. Fase 17 80%, fase 18 90%, sin avance global calculable.
+
+## Alfa 0.98 · renegociación de vencimientos industriales
+
+Online y Offline admiten `renegotiateTradeContract` para acuerdos activos, una vez, cuando hay remesas pendientes con plazo vigente y corte vial comprobado, ambas firmas abiertas y dinero de compensación. La extensión de 14 días exige pago directo del 5% del contrato (mínimo $20) entre empresas, sin modificar lotes reservados ni fondos en custodia. Se persisten causa, fecha, días y compensación; el panel Economía permite decidir. Tests Online/Offline y verificación responsive integrados al CI. La cobertura de fase 17 sigue en 80% y 18 en 90%; el global carece de ponderación. LAN física/Vercel sin probar.

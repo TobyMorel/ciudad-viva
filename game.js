@@ -2,6 +2,8 @@ import {createWorld} from './world3d.js';
 import {createOfflineAdapter} from './offline.js';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
+// Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
+window.__ciudadViva3D=()=>world.getEmergencyActors();
 const ui={};['cityName','mapCityName','dateLabel','mapDate','money','budgetFlow','population','jobs','employment','employmentNote','services','serviceNote','approval','approvalCause','netLabel','inviteAddress','selection','supply','projects','projectCount','events','playersLabel','speedLabel','pauseBtn','toast','fileInput','bidBackdrop','bidTitle','bidEyebrow','bidSummary','bidOffers','bidError','bidConfirm','supplyBackdrop','orderClose','orderProject','orderSupplier','orderDestination','orderPriority','orderSupplierNote','orderItems','orderError','orderConfirm'].forEach(id=>ui[id]=document.getElementById(id));
 const pid=localStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).slice(2,9));localStorage.setItem('cv-player',pid);
 let S=null,gameMode=null,offlineAdapter=null,disconnectToast=false,selectedActor=null,tool='inspect',selected=null,zoom=window.innerWidth<650?.88:1.5,panX=0,panY=0,rotation=0,drag=null,toastTimer,bid=null,bidX=null,bidY=null,selectedContractor=null,orderProjectId=null;

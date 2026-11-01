@@ -257,3 +257,8 @@ Al cierre mensual las tiendas cambian autónomamente precio según demanda efect
 ## Continuación · alquiler comercial operativo
 
 Comercios abiertos asumen una renta mensual según localización y `monthlyRent` opcional; el costo reduce caja/beneficio y puede llevar a cierre por insolvencia. Los pagos efectivamente cubiertos quedan en `supply.propertyRentalCash` como recaudación de propietarios, no ingreso del municipio ni capital generado. Se implementó en Online y Offline sin modificar UI; Online eliminó además el ajuste minorista anterior duplicado para mantener una sola decisión de precios por cierre. Pendiente validar resultados de CI y ajustar pruebas de rentas en escenarios largos. Fases sin cambiar; próximo sistema: contratos B2B ampliados y escenarios de 30 años.
+
+
+## Continuación · mercado regional de acero y pruebas
+
+El Corralón del Puerto aplica cotización por existencias al abastecer metalúrgicas: multiplicador 1,5 bajo 20 unidades, 1,25 bajo 60 y 1 desde 60. Online/Offline calculan costo antes de reservar lote y deducen efectivo y acero físico; la producción posterior aún requiere llegada por carretera, trabajadores y servicios. Se registra `lastSteelPriceFactor` en el proveedor; tests nuevos Online miden precio, caja y stock. No se alteró la interfaz. Se revisaron dos fallos de CI previos: vencimientos escalonados del test Offline y remesa ficticia desconectada del test responsive. Revalidar ejecución CI; porcentajes sin cambios. Próximo: completar contratos entre otras materias primas y pruebas de décadas.

@@ -360,3 +360,8 @@ Separar las cuatro especialidades industriales del proceso alimentario Offline c
 ### Alfa 0.93 — Fase 18: 90%
 
 Dos cadenas del roadmap pasan a funcionar también Offline (cantera geológica agotable → áridos, áridos comprados por carretera → hormigón físico 2:1 → suministro a obras). Los tests comprobaron compras, entregas y producción con mano de obra; se reserva el tipo de planta y la caja de operación en los contratos en ambos motores. Falta competencia más profunda entre suministradores, destinos logísticos alternativos, exportación industrial, quiebras con reorganización empresarial, escenarios de escasez sostenida y revisión plurianual. Por eso se incrementa solo 5 puntos de cobertura respecto del 85% anterior, sin atribuir avance global.
+
+
+### Alfa 0.94 — fase 17 (65% de cobertura)
+
+La quiebra de una fábrica ya no equivale a pérdida permanente de su edificio. Un promotor independiente puede rehabilitar y reocupar la instalación tras 90 días de inactividad, con demanda real, parcela industrial, acceso vial, mínimo de tres servicios, precio privado pagado, cuadrilla con cupo durante siete días e inspección final. Empresa nueva abre sin stock y debe contratar trabajadores. Reutiliza la geología restante sin recargarla. Se expone causa y presupuesto en Economía y parcela. Tests aseguran no reabrir gratis ni dos veces. Siguen pendientes competencia empresarial plena, expansión, reasignación laboral detallada, adquisición por competencia y escenarios de décadas. Se suman cinco puntos a la fase 17, no se estima progreso global.

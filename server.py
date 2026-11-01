@@ -264,7 +264,7 @@ def advance_local_metalworks(workplaces,employees):
         if firm["cash"]<0:
             firm["status"]="cerrado";plant["status"]="cerrado";supplier["components"]=max(0,supplier["components"]-int(firm.get("componentStock",0)));firm["componentStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Metalúrgica insolvente",f"{plant.get('name','Metalúrgica')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
-        raw=max(0,int(firm.get("rawSteelInventory",0)));potential=max(0,min(24,round(staff*1.2)));capacity=max(0,round(potential*services));output=min(capacity,raw,max(0,180-supplier["components"]))
+        raw=max(0,int(firm.get("rawSteelInventory",0)));potential=max(0,min(24+max(0,int(firm.get("jobSlots",20))-20)*2,round(staff*1.2)));capacity=max(0,round(potential*services));output=min(capacity,raw,max(0,180-supplier["components"]))
         firm["rawSteelInventory"]=raw-output;firm["componentStock"]=max(0,int(firm.get("componentStock",0)))+output;supplier["components"]+=output;firm["lastProduction"]=output;firm["lastProductionPotential"]=potential;firm["lastMaterialShortage"]=max(0,potential-output);firm["lastLocalSales"]=0;industry["componentsProduced"]+=output
         firm["lastMaterialCause"]=("Esperando acero regional" if raw<1 else "Faltan electricidad, agua o saneamiento" if services<1 else "Sin trabajadores suficientes" if staff<20 else "Almacén de componentes completo") if output<potential else ""
         pending=sum(o.get("quantity",0) for o in orders if o.get("businessId")==firm.get("id") and o.get("status")=="en tránsito" and o.get("commodity")=="acero")

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {collectCityAlerts,projectGuide,MATERIAL_HELP,INDUSTRIES} from '../cityGuide.js';
+import {collectCityAlerts,projectGuide,MATERIAL_HELP,INDUSTRIES,gettingStarted} from '../cityGuide.js';
 
 test('Incidentes físicos muestran marcador 2D con acción y sin inventar eventos',()=>{
  const empty={day:32,policeReport:{recentIncidents:[]},fireReport:{recentIncidents:[]},waste:{report:{litterTiles:[]}},projects:[],roadAssets:[]};
@@ -32,4 +32,14 @@ test('La guía de hormigón explica cantera, planta, orden de compra y trabajo r
  assert.equal(p.remaining.find(x=>x.key==='concrete').required,20);
  assert.equal(p.remaining.find(x=>x.key==='concrete').used,7);
  assert.ok(p.reason.includes('pausaste'));
+});
+
+test('Tutorial inicial marca únicamente pasos alcanzados por el estado real',()=>{
+ const empty=gettingStarted({roads:[],zones:[],projects:[],buildings:[],supply:{orders:[]}});
+ assert.equal(empty.length,6);
+ assert.equal(empty.filter(x=>x.done).length,1,'Reconocer la ciudad es el único paso inicial no condicionado.');
+ const advanced=gettingStarted({roads:[[4,10]],zones:[{kind:'factory'}],projects:[{kind:'factory'}],
+  buildings:[{kind:'school',name:'Escuela'}],supply:{orders:[{id:'order'}]}});
+ assert.ok(advanced.every(x=>x.done));
+ assert.ok(advanced.every(x=>x.description.length>=40));
 });

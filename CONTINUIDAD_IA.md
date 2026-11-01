@@ -381,3 +381,7 @@ Los cubos junto a calles corresponden a **contenedores de residuos**, **bolsas d
 Three.js añade detalles decorativos y diferenciación a todas las familias, patios, señalética, jardineras, fachadas, cubiertas, instalaciones industriales y luminarias, además de iluminación más cálida; se mantiene como base el modelado procedural previo, sin importar modelos CAD externos. En móvil se omiten adornos adicionales costosos. **Pendientes**: efectos activos de humo/llamas, tutorial con pasos validados, remodelación total de cada activo con malla de alta calidad, despacho manual de emergencias y mejoras adicionales de rendimiento. No declarar esos sistemas completos. Las regresiones cubren clasificación de avisos, fuentes, guía de materiales, especialidad industrial Offline y UI responsive. Verificar CI después de publicar; red LAN física y Vercel requieren comprobación separada.
 
 **Próxima etapa:** emergencias con decisiones y respuesta municipal sobre el mundo; después optimización visual y tutorial por objetivos persistente.
+
+### Ajuste Alfa 0.105 · primeros pasos guiados
+
+El panel Ayuda ahora ofrece seis pasos con estado derivado del juego (calles existentes, suelo industrial, fábrica contratada, pedido de materiales y equipamientos). No confundir un permiso amarillo con la obra ni marcar avances sin evidencia: el primer paso es orientación, los restantes dependen de entidades existentes. Tests en cityGuide verifican este comportamiento. Los paneles Avisos y Ayuda son accesibles desde el dock.

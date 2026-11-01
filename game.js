@@ -1,6 +1,6 @@
 import {createWorld} from './world3d.js';
 import {createOfflineAdapter} from './offline.js';
-import {collectCityAlerts,projectGuide,MATERIAL_HELP,INDUSTRIES} from './cityGuide.js';
+import {collectCityAlerts,projectGuide,MATERIAL_HELP,INDUSTRIES,gettingStarted} from './cityGuide.js';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -118,7 +118,10 @@ function renderAlertsPanel(){
 function renderGuidePanel(key='concrete',project=null){
  const resource=MATERIAL_HELP[key]||MATERIAL_HELP.concrete;
  const active=project?projectGuide(S,project):null;
- guidePanel.innerHTML='<p class="guide-intro">Las zonas amarillas dan permiso industrial, pero todavía no son fábricas. Para construir tenés que contratar una obra, recibir materiales y avanzar el tiempo.</p>'+
+ const onboarding=gettingStarted(S);
+ guidePanel.innerHTML='<section class="quick-start"><div class="quick-start-heading"><h3>Primeros pasos en tu ciudad</h3><span>'+onboarding.filter(step=>step.done).length+'/'+onboarding.length+' preparados</span></div>'+
+ onboarding.map((step,index)=>'<article class="quick-start-step"><span aria-hidden="true">'+(step.done?'✓':index+1)+'</span><div><b>'+escHtml(step.title)+'</b><p>'+escHtml(step.description)+'</p></div><small>'+(step.done?'Listo':'Por hacer')+'</small></article>').join('')+'</section>'+
+ '<p class="guide-intro">Las zonas amarillas dan permiso industrial, pero todavía no son fábricas. Para construir tenés que contratar una obra, recibir materiales y avanzar el tiempo.</p>'+
  (active?'<article class="guide-block"><h3>'+escHtml(active.title)+'</h3><p>'+escHtml(active.reason)+'</p><p><b>Materiales todavía no consumidos:</b> '+escHtml(active.remaining.map(x=>(materialLabel[x.key]||x.key)+' '+(x.required-x.used)).join(' · ')||'Ninguno; revisá pagos, trabajadores y plazos.')+'</p><ol>'+active.steps.map(x=>'<li>'+escHtml(x)+'</li>').join('')+'</ol><button data-guide-order="'+escHtml(project.id)+'">Pedir materiales para esta obra</button></article>':'')+
  '<article class="guide-block"><h3>'+escHtml(resource.title)+'</h3><p>'+escHtml(resource.description)+'</p><ol>'+resource.steps.map(x=>'<li>'+escHtml(x)+'</li>').join('')+'</ol></article>'+
  '<div class="guide-materials">'+Object.entries(MATERIAL_HELP).map(([id,r])=>'<button data-guide-material="'+id+'" class="'+(id===key?'selected':'')+'">'+escHtml(r.title)+'</button>').join('')+'</div>'+

@@ -75,3 +75,17 @@ export function collectCityAlerts(state){
  }
  return items.sort((a,b)=>a.priority-b.priority||b.day-a.day||a.id.localeCompare(b.id)).slice(0,32);
 }
+
+
+export function gettingStarted(state){
+ const roads=state?.roads||[],zones=state?.zones||[],projects=state?.projects||[],buildings=state?.buildings||[];
+ const activeOrders=state?.supply?.orders||[];
+ return [
+  {title:'Reconocé tu ciudad',done:true,description:'Tocá una parcela para saber qué hay y qué necesita. Abrí Avisos para ver emergencias reales.'},
+  {title:'Conectá calles',done:roads.length>0,description:'Usá Construir → Proyectar calle. Las obras y los servicios necesitan caminos terminados conectados al resto de la ciudad.'},
+  {title:'Prepará suelo industrial',done:zones.some(z=>z?.kind==='factory'),description:'Elegí Zona industrial y pintá una parcela libre junto a una calle. El suelo amarillo solo es un permiso, no una fábrica.'},
+  {title:'Licitá la fábrica correcta',done:projects.some(p=>p?.kind==='factory')||buildings.some(b=>b?.kind==='factory'),description:'En Construir elegí Cantera para producir áridos o Hormigonera para producir hormigón. Seleccioná constructora y verificá el capital.'},
+  {title:'Pedí materiales para una obra',done:activeOrders.length>0,description:'En Obras, elegí un contrato → Pedir materiales. Revisá stock del proveedor, caja, espacio de destino y conexión vial.'},
+  {title:'Sostené servicios municipales',done:buildings.some(b=>b?.kind==='fireStation'||b?.kind==='school'||(b?.kind==='civic'&&b.name!=='Municipalidad')),description:'Construí escuelas, policía, bomberos y salud. No funcionan sin trabajadores, energía, agua, presupuesto y calles.'}
+ ];
+}

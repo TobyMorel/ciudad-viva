@@ -280,3 +280,16 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
  .guide-intro{padding:11px}
 }
 @media(prefers-reduced-motion:reduce){.city-alert-pin{animation:none;transition:none}}
+
+
+/* Guía inicial basada en hechos de la partida, sin marcar avances ficticios. */
+.quick-start{display:grid;gap:7px;background:#fff;border:1px solid #efdbe5;border-radius:17px;padding:14px}
+.quick-start-heading{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.quick-start-heading h3{font-size:15px;color:#5a394f;margin:0}
+.quick-start-heading span{background:#f8e5ef;color:#83506e;border-radius:99px;padding:5px 9px;font-size:10px;font-weight:800;white-space:nowrap}
+.quick-start-step{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:start;padding:11px 7px;border-top:1px solid #f3e8ee}
+.quick-start-step>span{width:27px;height:27px;background:#f6e4ec;color:#905a79;border-radius:9px;display:grid;place-items:center;font-weight:850;font-size:12px}
+.quick-start-step b{color:#624458;font-size:12px}
+.quick-start-step p{color:#826c7d;font-size:11px;line-height:1.5;margin:3px 0 0}
+.quick-start-step>small{color:#947a8c;white-space:nowrap;font-size:9px;padding-top:5px}
+@media(max-width:650px){.quick-start{padding:11px}.quick-start-step{grid-template-columns:24px minmax(0,1fr)}.quick-start-step>small{grid-column:2;padding:0}}

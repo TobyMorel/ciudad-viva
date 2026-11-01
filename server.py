@@ -3690,6 +3690,20 @@ def tick_one_day():
             supplier_stock["Corralón del Puerto"]["steel"]+=recycled_units
             state["supply"]["steelRecyclingSpend"]=state["supply"].get("steelRecyclingSpend",0)+cost
             ev("Acero reciclado",f"Recuperadas {recycled_units} unidades desde chatarra municipal; procesamiento $ {cost}.")
+        # Importación marítima excepcional: requiere puerto operativo, acceso vial y fondos.
+        depot=supplier_stock["Corralón del Puerto"]
+        if int(depot.get("steel",0))<30:
+            ports=[b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("operational")]
+            viable=any(route_between((b["x"],b["y"]),(4,10)) is not None for b in ports)
+            if viable:
+                units=min(60,240-max(0,int(depot.get("steel",0))),max(0,int(state.get("money",0)//280)))
+                if units>0:
+                    cost=units*280
+                    state["money"]-=cost
+                    depot["steel"]=int(depot.get("steel",0))+units
+                    state["supply"]["steelImportSpend"]=state["supply"].get("steelImportSpend",0)+cost
+                    state["supply"]["steelImportedUnits"]=state["supply"].get("steelImportedUnits",0)+units
+                    ev("Acero importado por puerto",f"{units} unidades de acero desembarcaron; costo de divisas y flete $ {cost}.")
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)

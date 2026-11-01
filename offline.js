@@ -598,6 +598,12 @@ export async function createOfflineAdapter(){
       if(buyer)buyer.cash=(buyer.cash||0)+amount;
       else supply.unclaimedContractRefunds=(supply.unclaimedContractRefunds||0)+amount;
       contract.refunded+=amount;contract.refundedUnits+=units;
+      // Penalización por vencimiento financiada por el proveedor, sin tocar la custodia.
+      if(buyer?.status==='abierto'&&seller?.status==='abierto'&&order.statusCause==='Plazo contractual vencido'){
+        const penalty=Math.min(Math.max(0,Math.trunc(seller.cash||0)),Math.max(1,Math.floor((product+19)/20)));
+        seller.cash-=penalty;buyer.cash=(buyer.cash||0)+penalty;
+        order.defaultPenaltyPaid=penalty;contract.defaultPenaltyPaid=(contract.defaultPenaltyPaid||0)+penalty;
+      }
       event('Contrato incumplido',contract.vendorName+': entrega cancelada; devolución $'+amount+'.');
     }
     const lines=(supply.marketOrders||[]).filter(o=>o.supplyContractId===contract.id);

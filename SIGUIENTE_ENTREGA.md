@@ -307,3 +307,8 @@ Agregado `tests/stress_30_years.py`: ejecutable manualmente mediante `python tes
 ## Continuación · estrés 30 años integrado a CI
 
 `validation.yml` ejecuta `python tests/stress_30_years.py` en cada push a main, tras las regresiones de motores: cuatro perfiles y 360 cierres mensuales por perfil con controles de inventario siderúrgico, reservas, chatarra, caja municipal, capital privado y gasto de importación/prospección/reciclaje. Este test automatizado no reemplaza 10.950 ticks diarios completos ni valida LAN real. No se modificó la interfaz. Confirmar resultado del último workflow, resolver el fallo responsive de botón de prórroga y continuar con mecanismos jugables pendientes.
+
+
+## Continuación · viajes marítimos reales de acero
+
+Las compras extraordinarias de acero ya no acreditan metal instantáneamente. Online/Offline descuentan el costo de importación al contratar, crean `supply.steelShipments` con puerto, cantidad, fecha y estado `en viaje`, y completan descarga no antes de 12 días. El puerto debe permanecer operativo y conectado al Corralón del Puerto; si se corta la conexión, el lote queda esperando sin duplicar stock ni repetir gastos. La reserva de capacidad y límite comercial descuentan cargamentos en tránsito. `steelImportedUnits` solo aumenta tras recepción. Se amplió regresión Online para verificar demora, llegada y ausencia de doble recepción. Interfaz no modificada. Siguiente: validar CI y corregir fallo responsive previo.

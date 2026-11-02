@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.155",
+  "currentVersion": "0.156",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.156",
+      "date": "2026-11-02",
+      "title": "Días más largos, obras continuas, farolas alternas y más árboles",
+      "changes": [
+        "El reloj del juego tarda 96 segundos reales por día en x1, 48 en x2 y 24 en x4; amanecer, noche y horas pico avanzan con ese mismo reloj en LAN y offline.",
+        "Las farolas se colocan en tramos alternos de calle y conservan el brazo orientado hacia la calzada.",
+        "Las obras nuevas públicas y privadas reducen sus plazos aproximadamente a un octavo; la barra y la escena 3D avanzan durante el día y se detienen al pausar.",
+        "El terreno visible genera más árboles y vegetación, con densidad adaptada al zoom y la pantalla."
+      ],
+      "verification": "Pruebas del reloj Python y JavaScript, continuidad del porcentaje de obra en medianoche, arranque offline/render y conteo de farolas pasadas. Sintaxis y JSON correctos. Las liquidaciones e inspecciones contractuales siguen ocurriendo en el cierre diario. Progreso global no estimable; fase 7=95%, fase 4=60%, fase 9=75%."
+    },
     {
       "version": "0.155",
       "date": "2026-11-02",

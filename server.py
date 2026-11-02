@@ -3810,7 +3810,7 @@ def refresh_private_investment_opportunity(report,local_unmet=0):
             if not suppliers:feasible=False;break
             factor,name=suppliers[0];cost=round(shortage*MATERIAL_PRICE[material]*factor);purchases.append((name,material,shortage,cost));bill+=cost
     if feasible and state["privateCapital"]>=private_cost+bill+1200:
-        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":materials,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True,"zonedDevelopment":True}
+        project={"id":project_id,"kind":"shop","label":PROJECTS["shop"]["label"],"x":zone["x"],"y":zone["y"],"contractor":contractor,"cost":private_cost,"duration":duration,"elapsed":0,"progress":0,"paid":advance,"stages":PROJECTS["shop"]["stageNames"],"stageIndex":0,"status":"contratada","cause":company["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS["shop"],"materialsRequired":materials,"materialsUsed":zero,"privatePaid":True,"municipalPermitPaid":permit,"delegated":True,"zonedDevelopment":True}
         for supplier,material,amount,cost in purchases:
             state["supply"]["suppliers"][supplier][material]-=amount;state["supply"]["contractors"][contractor][material]+=amount;state["supply"].setdefault("supplierCash",{}).setdefault(supplier,0);state["supply"]["supplierCash"][supplier]+=cost
             settle_local_material_sale(supplier,{material:amount})
@@ -4340,7 +4340,7 @@ def advance_zoned_development():
         if not options:continue
         _,name,company,permit,private_cost,purchases,material_bill,reserve=min(options,key=lambda row:(row[0],row[1]))
         project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
-        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":round(specification["days"]*company["days"]/30),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
+        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":max(3,round(specification["days"]*company["days"]/240)),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
         state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance;state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
         zone["status"]="en obra"
         if kind=="factory":
@@ -6032,9 +6032,9 @@ class Handler(BaseHTTPRequestHandler):
                     if data.get("serviceModel") and (model is None or model["kind"]!=kind):
                         self._send(400,{"error":"Categoría de servicio inválida para esta obra"});return
                     spec=({**PROJECTS[kind],"cost":model["cost"],"days":model["days"],"label":model["label"]} if model else PROJECTS[kind])
-                    c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=round(spec["days"]*c["days"]/30)
+                    c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=max(3,round(spec["days"]*c["days"]/240))
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if model:
                         p["serviceModel"]=service_id
                         p["materialsRequired"]={k:math.ceil(q*model["cost"]/PROJECTS[kind]["cost"]) if q else 0 for k,q in p["materialsRequired"].items()}
@@ -6268,7 +6268,7 @@ class Handler(BaseHTTPRequestHandler):
                     if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} no tiene {LABOR_NEEDS[kind]} trabajadores libres para el rescate."}); return
                     total=round(spec["cost"]*(1-initial)*c["price"]); duration=max(1,round(spec["days"]*(1-initial)*c["days"]/30))
                     milestone_base=min(len(spec["stageNames"]),int(initial*len(spec["stageNames"])))
-                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"milestoneBase":milestone_base,"certifiedMilestones":0,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
+                    p={"id":uuid.uuid4().hex,"kind":kind,"label":abandoned["label"],"x":abandoned["x"],"y":abandoned["y"],"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":initial,"initialProgress":initial,"milestoneBase":milestone_base,"certifiedMilestones":0,"paid":0,"priorSpent":abandoned.get("spent",0),"stages":spec["stageNames"],"stageIndex":min(len(spec["stageNames"])-1,int(initial*len(spec["stageNames"]))),"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind,initial),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
                     if kind=="busStop":p["busLineId"]=abandoned.get("busLineId")
                     private=kind in ("home","shop","hotel","factory")
                     if private:
@@ -6295,9 +6295,11 @@ class Handler(BaseHTTPRequestHandler):
                 loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360)); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
         self._send(404,{"error":"No encontrado"})
 
+REAL_SECONDS_PER_GAME_HOUR=4
+
 def advance_simulation_clock(day_progress,elapsed,speed):
     """Avanza horas de juego y entrega un nuevo día al cruzar la medianoche."""
-    progress=max(0.0,float(day_progress))+max(0.0,float(elapsed))*max(1,int(speed))
+    progress=max(0.0,float(day_progress))+max(0.0,float(elapsed))*max(1,int(speed))/REAL_SECONDS_PER_GAME_HOUR
     if progress>=24.0:return progress-24.0,True
     return progress,False
 

@@ -1,3 +1,7 @@
+## Alfa 0.156 · escala temporal común
+
+Cuatro segundos reales equivalen a una hora del juego en x1. x2 y x4 multiplican esa tasa, dando días de 48 y 24 segundos. El servidor y el Worker offline aplican la misma conversión. La iluminación consulta la hora del estado, sin un reloj paralelo. Farolas: paridad de coordenadas `(x+y)%2===0`, que alterna cada tramo recto y mantiene cobertura en los ejes horizontal y vertical.
+
 # Decisiones añadidas · Alfa 0.155
 
 - No ocultar el selector Offline antes de completar el primer `/api/state`; ante fallo, no dejar controles que parezcan jugables sin sesión válida. El adaptador local es prioritario en `api()`.

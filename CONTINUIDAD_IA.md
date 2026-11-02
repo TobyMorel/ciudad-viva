@@ -1,3 +1,7 @@
+## Continuidad más reciente · Alfa 0.156
+
+El reloj compartido pasa a 4 segundos reales por hora del juego en x1: días de 96/48/24 segundos en x1/x2/x4. `simulation_time.js` define el factor JS; `offline.js` lo usa en tiempo real y `server.py` replica la tasa. El render coloca farolas en `(x+y)%2===0`. Las pruebas dedicadas están en `tests/test_simulation_time.mjs` y `tests/test_simulation_clock.py`. Siguiente mecánica: fase 7, pasajeros/transbordos.
+
 # Continuidad inmediata · Alfa 0.154
 
 El menú Offline debe permanecer visible hasta completar `createOfflineWorkerAdapter()` y la primera petición `/api/state`; solo entonces ocultarlo y renderizar después de dos `requestAnimationFrame`. Si falla, mantener el menú, limpiar `S` y permitir reintento. `api()` debe preferir `offlineAdapter` siempre que exista, aunque una ruta vieja intente cambiar el modo. Regresión en `tests/test_offline_boot_recovery.mjs`: Play/Pausa debe alternar el guardado, Ciudad abre `Informe municipal`, construcción no consulta `/api/action` HTTP.

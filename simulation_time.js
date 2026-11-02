@@ -1,4 +1,6 @@
 export const MINUTES_PER_DAY=1440;
+export const REAL_SECONDS_PER_GAME_HOUR=4;
+export function gameMinutesForElapsedSeconds(seconds,speed=1){return Math.max(0,Number(seconds)||0)*Math.max(1,Number(speed)||1)*60/REAL_SECONDS_PER_GAME_HOUR}
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const smoothstep=value=>{const t=clamp(value,0,1);return t*t*(3-2*t)};
 
@@ -21,3 +23,11 @@ export function trafficWindowAt(minutes){
 }
 
 export function trafficWindowLabel(key){return({early:'Mañana temprana',morningPeak:'Pico de mañana',dayMorning:'Mañana',dayNoon:'Mediodía',midday:'Primera tarde',afternoon:'Tarde',eveningPeak:'Pico de tarde',evening:'Noche',late:'Noche tardía',night:'Madrugada'})[key]||'—'}
+
+export function visualProjectProgress(project,minutes){
+  const base=Number(project.progress)||0;if(project.status!=='contratada')return base;
+  const duration=Math.max(1,Number(project.duration)||1),start=Number(project.initialProgress)||0,elapsed=Math.max(0,Number(project.elapsed)||0);
+  const fraction=Math.max(0,elapsed+((Number(minutes)||0)-(Number(project.contractedMinute)||0))/MINUTES_PER_DAY);
+  const visual=start+(1-start)*fraction/duration;
+  return Math.min(.999,project.contractedMinute==null?Math.max(base,visual):visual);
+}

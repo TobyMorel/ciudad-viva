@@ -1,4 +1,8 @@
-# Siguiente entrega · después de Alfa 0.155
+## Después de Alfa 0.156
+
+Retomar mecánicas de fase 7: pasajeros/transbordos y conexiones de subte, puerto y aeropuerto. Comprobar en partida real que el nuevo ritmo permite observar ciclos completos a x1/x2/x4. Mantener regresión de arranque offline y pruebas del reloj en cada publicación.
+
+# Siguiente entrega · después de Alfa 0.156
 
 1. Continuar hito de fase 7 con pasajeros/transbordos, subte/cámara inferior, cruceros y conexión del aeropuerto; no dedicar iteraciones seguidas solo a detalles.
 2. Probar LAN física entre dos equipos y mantener las regresiones de modo local/Play/Pausa/Construir/Ciudad en CI.

@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.156 · duración del día y farolas
+
+Se amplió cuatro veces la duración del día sin cambiar reglas económicas ni los horarios de noche y tráfico. El reloj Offline y LAN usan la misma tasa. La escena reduce farolas a tramos alternos. Los porcentajes de fase no cambian; el total continúa sin estimarse por falta de pesos verificables de las 34 fases.
+
 # Auditoría · Alfa 0.154 · sesión offline, paneles y acceso
 
 No cambia la estimación: fase 7 sigue 95%, fase 4 60% y fase 9 75%. Se corrigen controles ya existentes; el global permanece sin estimar por falta de pesos verificables comunes a 34 fases. Test offline cubre Play/Pausa y panel Ciudad, además de construcción, respuesta LAN tardía y visibilidad del túnel corto.

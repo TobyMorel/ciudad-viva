@@ -1,4 +1,8 @@
-# Estado de desarrollo · Alfa 0.155
+# Estado de desarrollo · Alfa 0.156
+
+## Alfa 0.156 · ritmo diario e iluminación vial
+
+Un día completo dura 96 segundos reales en x1, 48 en x2 y 24 en x4, tanto Offline como LAN. La hora sigue avanzando continuamente y las reglas de amanecer, noche y hora pico conservan sus horarios. Cada tramo alterno de calle lleva una farola, también en la conexión exterior; el brazo apunta a la calzada. Las nuevas obras municipales y privadas tienen plazos cercanos a un octavo de los anteriores; su barra y su modelo visual avanzan durante cada día. El terreno visible contiene más árboles y arbustos. Pruebas del reloj en Python y JavaScript pasadas. Fases 7=95%, 4=60%, 9=75%; progreso total aún no estimable por falta de pesos comunes verificables.
 
 ## Controles de sesión, panel Ciudad, miniaturas 3D y túnel
 

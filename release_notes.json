@@ -1,7 +1,26 @@
 {
-  "currentVersion": "0.171",
+  "currentVersion": "0.172",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.172",
+      "date": "2026-11-02",
+      "title": "Red física de cinco servicios esenciales con cupos, alertas 3D y abandono por cortes",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Una ciudad nueva no recibe electricidad, agua, gas, televisión por cable ni Wi-Fi automáticamente. Las farolas solo se encienden cuando existe un proveedor eléctrico capaz de atenderlas y un tendido eléctrico conectado.",
+        "Centrales eléctricas, potabilizadoras y plantas de gas existentes generan su capacidad máxima por edificio habilitado y conectado a calles. Se añadieron dos edificios 3D construibles en Redes y servicios: cabecera de TV (180 conexiones, $13.800, 72 días) y centro de internet/Wi-Fi (160 conexiones, $14.900, 78 días). Estos últimos requieren energía para funcionar.",
+        "La red de cables y cañerías sigue los segmentos construidos sobre calles conectadas. Los proveedores aumentan la oferta al terminar su obra y conectarse a la calle; los consumidores reciben el servicio solo si tienen acceso al tendido y queda capacidad suficiente. Los clientes existentes conservan prioridad ante saturaciones.",
+        "Cada edificio 3D que necesita un servicio y no lo obtiene muestra un ícono flotante por recurso faltante. La ficha del edificio explica si la causa es falta de cable o capacidad, y Ciudad → Servicios informa capacidad, uso y conexiones disponibles.",
+        "Las viviendas habitadas acumulan días de corte individual por luz (120 días), agua (135), gas (165), TV por cable (200) y Wi-Fi (200). Si el servicio no se recupera, el edificio deja de albergar habitantes y queda abandonado físicamente; reconectar a tiempo reinicia el contador. Una consulta al estado no avanza el reloj.",
+        "Los motores JavaScript Offline y Python LAN usan reglas equivalentes y tienen regresiones de ciudad sin centrales, saturación, prioridades de suministro, recuperación y abandono."
+      ],
+      "verification": "Comprobación aislada de sintaxis y lógica JS realizada. Suites CI, navegador Chromium y LAN física pendientes de confirmar.",
+      "pending": [
+        "Rehabilitación de edificios residenciales abandonados por servicios, modelos avanzados de subestaciones y redundancia entre proveedores, pruebas LAN entre dos equipos físicos y extensión de la regla de infraestructura física a más ámbitos de la ciudad."
+      ]
+    },
     {
       "version": "0.171",
       "date": "2026-11-02",

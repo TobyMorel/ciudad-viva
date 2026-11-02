@@ -1,3 +1,4 @@
+from essential_services import evaluate_essential_services,advance_essential_service_day
 #!/usr/bin/env python3
 """Servidor LAN local de Ciudad Viva. Solo biblioteca estándar de Python."""
 import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
@@ -1646,6 +1647,8 @@ def initial_state():
         {"x":9,"y":9,"kind":"powerPlant","name":"Central eléctrica existente","level":1,"status":"habilitado","quality":82,"jobSlots":18,"generationKw":900,"monthlyCost":460},
         {"x":14,"y":11,"kind":"waterPlant","name":"Potabilizadora existente","level":1,"status":"habilitado","quality":82,"jobSlots":12,"treatmentM3Day":220,"monthlyCost":340},
         {"x":17,"y":9,"kind":"gasPlant","name":"Estación de gas existente","level":1,"status":"habilitado","quality":82,"jobSlots":10,"gasCapacityM3Day":160,"monthlyCost":320},
+        {"x":18,"y":9,"kind":"civic","name":"Cabecera municipal de TV existente","serviceModel":"tvHeadend","level":1,"status":"habilitado","quality":82,"jobSlots":10,"tvConnections":180,"monthlyCost":550},
+        {"x":21,"y":9,"kind":"civic","name":"Centro de internet y Wi-Fi existente","serviceModel":"wifiHub","level":1,"status":"habilitado","quality":82,"jobSlots":12,"wifiConnections":160,"monthlyCost":620},
         {"x":8,"y":9,"kind":"home","name":"Viviendas del Parque","level":2,"occupants":126,"status":"operativo"},
         {"x":10,"y":9,"kind":"home","name":"Barrio Estación","level":2,"occupants":78,"status":"operativo"},
         {"x":15,"y":9,"kind":"shop","name":"Mercado Central","level":1,"occupants":0,"status":"operativo"},
@@ -1856,6 +1859,8 @@ def material_fraction(material, progress):
 
 # Tipologías de equipamiento: el radio se mide por calles conectadas, nunca en línea recta.
 SERVICE_MODELS={
+ "tvHeadend":{"kind":"civic","label":"Cabecera municipal de TV por cable","cost":13800,"days":72,"radius":20,"jobs":10,"tvConnections":180},
+ "wifiHub":{"kind":"civic","label":"Centro de internet y Wi-Fi","cost":14900,"days":78,"radius":20,"jobs":12,"wifiConnections":160},
  "clinic":{"kind":"civic","label":"Consultorio barrial","cost":8000,"days":62,"radius":6,"jobs":12,"care":True},
  "medicalCenter":{"kind":"civic","label":"Policlínico municipal","cost":14200,"days":85,"radius":10,"jobs":24,"care":True},
  "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
@@ -2286,7 +2291,7 @@ def ensure_utility_state():
     utilities.setdefault("gasLines",roads.copy())
     utilities.setdefault("telecomLines",roads.copy())
     utilities.setdefault("baseGasCapacityM3Day",0)
-    utilities.setdefault("baseTelecomCapacityMbps",500)
+    utilities.setdefault("baseTelecomCapacityMbps",0)
     utilities.setdefault("baseDrainageCapacityM3Day",3300)
     utilities.setdefault("basePowerCapacityKw",0)
     utilities.setdefault("baseWaterCapacityM3Day",0)
@@ -2582,7 +2587,7 @@ def calculate_utility_balance(apply_effects=False):
         building["utilityDemand"]={"powerKw":round(kw,1),"waterM3Day":round(m3,1),"gasM3Day":round(gas,2),"telecomMbps":round(telecom,2)}
         building["utilityAccess"]={"powerConnected":utility_building_connected(building,"power"),"waterConnected":utility_building_connected(building,"water"),"sewerConnected":utility_building_connected(building,"sewer"),"gasConnected":utility_building_connected(building,"gas"),"telecomConnected":utility_building_connected(building,"telecom"),"gasServedPct":0,"telecomServedPct":0,"powerServedPct":0,"waterServedPct":0,"wastewaterTreatedPct":0}
     power_tiles=energized_utility_tiles("power");water_tiles=energized_utility_tiles("water");sewer_tiles=energized_utility_tiles("sewer")
-    generation=sum(b.get("generationKw",900)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
+    generation=sum(b.get("generationKw",900)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="powerPlant" and utility_building_connected(b,"power"))
     potable=sum(b.get("treatmentM3Day",220)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
     wastewater=sum(b.get("treatmentM3Day",260)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="wastewaterPlant" and all(utility_building_connected(b,n) for n in ("power","water","sewer")))
     maintenance_factor=max(0,min(1,float(utilities.get("maintenanceFundingFactor",1))))
@@ -2633,7 +2638,7 @@ def calculate_utility_balance(apply_effects=False):
     coverage=round((power_delivered/max(1,power_total)+water_delivered/max(1,water_total)+sewer_coverage/100)/3*100)
     gas_tiles=energized_utility_tiles("gas");telecom_tiles=energized_utility_tiles("telecom")
     gas_capacity=sum(b.get("gasCapacityM3Day",160)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="gasPlant" and utility_building_connected(b,"gas") and utility_building_connected(b,"power") and b.get("utilityAccess",{}).get("powerServedPct",0)>=50)*maintenance_factor
-    telecom_capacity=utilities["baseTelecomCapacityMbps"]+len(telecom_tiles)*8
+    telecom_capacity=0
     gas_total,gas_connected,gas_delivered=allocate("gas",gas_capacity,"gasM3Day","gasServedPct")
     telecom_total,telecom_connected,telecom_delivered=allocate("telecom",telecom_capacity,"telecomMbps","telecomServedPct")
     gas_coverage=gas_delivered/max(1,gas_total);telecom_coverage=telecom_delivered/max(1,telecom_total)
@@ -4803,7 +4808,7 @@ def tick_one_day():
     advance_urban_renewals()
     advance_adaptive_reuse()
     advance_utility_repairs()
-    calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
+    calculate_utility_balance();evaluate_essential_services(state);advance_essential_service_day(state,ev);advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
     daily_economy=commute_model();fire_service_report(daily_economy["workplaces"],advance=True);police_service_report(daily_economy["workplaces"],advance=True);road_incident_report(daily_economy,advance=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
@@ -4868,6 +4873,7 @@ def tick_one_day():
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)
+        evaluate_essential_services(state)
         economic=commute_model()
         public_payroll=pay_public_wages(economic)
         simulate_airport_month(economic)
@@ -5690,7 +5696,7 @@ def public_state(player_id=None):
     record_municipal_cash_movement()
     cutoff=time.time()-25
     online=sum(1 for t in state["players"].values() if t>cutoff)
-    ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
+    ensure_utility_state();calculate_utility_balance();evaluate_essential_services(state);calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
     view["buildings"]=[]

@@ -23,13 +23,14 @@ jobs:
           node-version: '22'
       - name: Sintaxis y JSON
         run: |
-          python -m py_compile server.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py
+          python -m py_compile server.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py essential_services.py
           node --check offline.js
           node --check taxi_passengers.js
           node --check bus_nonwork.js
           node --check rail_bus_intermodal.js
           node --check metro.js
           node --check rail_sites.js
+          node --check essential_services.js
           node --check metro_visuals.js
           node --check growth_demand.js
           node --check offline_client.js
@@ -51,7 +52,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.171
+          name: ciudad-viva-alfa-0.172
           path: |
             .
             !.git/**
@@ -80,12 +81,12 @@ jobs:
           npm install --no-save playwright
           npx playwright install --with-deps chromium
       - name: Comprobar UI, construcción y Economía (390/1440 px)
-        run: node tests/test_metro_ui.mjs && node tests/test_bus_route_ui.mjs && node tests/test_offline_boot_recovery.mjs && node tests/test_growth_demand_ui.mjs && node tests/test_instant_public_services_ui.mjs && node tests/test_camera_markers.mjs && node tests/test_ui_layout.mjs && node tests/test_utility_response_ui.mjs && node tests/test_municipal_forecast_ui.mjs && node tests/test_school_expansion_ui.mjs && node tests/test_build_preview_ui.mjs && node tests/test_port_import_ui.mjs && node tests/test_funeral_ui.mjs && node tests/test_land_expansion_ui.mjs && node tests/test_traffic_signal_ui.mjs && node tests/test_citizen_inbox_ui.mjs && node tests/test_taxi_route_ui.mjs
+        run: node tests/test_essential_services_ui.mjs && node tests/test_metro_ui.mjs && node tests/test_bus_route_ui.mjs && node tests/test_offline_boot_recovery.mjs && node tests/test_growth_demand_ui.mjs && node tests/test_instant_public_services_ui.mjs && node tests/test_camera_markers.mjs && node tests/test_ui_layout.mjs && node tests/test_utility_response_ui.mjs && node tests/test_municipal_forecast_ui.mjs && node tests/test_school_expansion_ui.mjs && node tests/test_build_preview_ui.mjs && node tests/test_port_import_ui.mjs && node tests/test_funeral_ui.mjs && node tests/test_land_expansion_ui.mjs && node tests/test_traffic_signal_ui.mjs && node tests/test_citizen_inbox_ui.mjs && node tests/test_taxi_route_ui.mjs
       - name: Informe responsive
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.171-responsive
+          name: ciudad-viva-alfa-0.172-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

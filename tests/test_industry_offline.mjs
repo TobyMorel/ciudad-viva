@@ -39,6 +39,14 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     business:{id:'quarry-test',name:'Cantera de prueba',industryType:'quarry',status:'abierto',cash:30000,jobSlots:20,wage:12,quarryReserve:100,aggregateStock:0}};
   const plant={x:6,y:9,kind:'factory',name:'Hormigonera de prueba',status:'habilitado',utilityAccess:{...access},monthlyOperatingCost:450,
     business:{id:'concrete-test',name:'Hormigonera de prueba',industryType:'concrete',status:'abierto',cash:30000,jobSlots:20,wage:12,rawMaterialInventory:0,concreteStock:0}};
+  // La industria de prueba dispone de plantas físicas conectadas, no de red gratuita.
+  for(const source of s.buildings){
+    if(source.kind==='powerPlant')source.generationKw=10000;
+    if(source.kind==='waterPlant')source.treatmentM3Day=10000;
+    if(source.kind==='gasPlant')source.gasCapacityM3Day=10000;
+  }
+  s.buildings.push({x:20,y:9,kind:'civic',name:'Central Wi-Fi industrial',
+    serviceModel:'wifiHub',status:'habilitado',quality:82,jobSlots:12,wifiConnections:160});
   s.buildings.push(quarry,plant);s.jobs+=40;
   let assigned=0;
   for(const home of s.buildings.filter(b=>b.kind==='home'))for(const person of home.residents||[]){
@@ -61,14 +69,22 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     assert.ok(orders.every(o=>o.supplyContractId===v.supply.tradeContracts[0].id));
     assert.equal(v.supply.suppliers['Cantera local'].aggregate,q.aggregateStock);
     assert.ok(orders[0].route.length>0);
-    let delivered=false;
-    for(let day=0;day<31;day++){
+    let delivered=false,produced=false,repairs=0;
+    // Un corte real de red puede detener la industria: reparar físicamente los tramos averiados,
+    // sin regalar capacidad ni forzar valores de servicios en el estado.
+    for(let day=0;day<85;day++){
       v=await tick();
       delivered ||=v.supply.marketOrders.some(o=>o.commodity==='áridos'&&o.status==='entregado');
+      for(const fault of (v.utilities.failures||[]).filter(f=>f.status==='avería'&&['power','water','sewer'].includes(f.network))){
+        v=await adapter.request('/api/action',{action:'repairUtilityEmergency',id:fault.id});
+        repairs++;
+      }
+      produced ||= (v.localIndustry.concreteProduced||0)>0;
+      if(delivered&&produced)break;
     }
     assert.equal(delivered,true,'La compra debe llegar realmente a la planta');
     const factory=v.buildings.find(b=>b.business?.id==='concrete-test').business;
-    assert.ok(factory.lastProduction>0,'En el siguiente cierre se debe producir hormigón');
+    assert.ok((v.localIndustry.concreteProduced||0)>0,'La hormigonera debe haber producido hormigón a partir de áridos entregados: '+JSON.stringify({lastProduction:factory.lastProduction,aggregateInventory:factory.rawMaterialInventory,produced:v.localIndustry.concreteProduced,services:v.buildings.find(b=>b.business?.id==='concrete-test')?.utilityAccess}));
     assert.equal(v.supply.suppliers['Hormigonera local'].concrete,factory.concreteStock);
 
     assert.ok(v.localIndustry.concreteProduced>=factory.lastProduction);

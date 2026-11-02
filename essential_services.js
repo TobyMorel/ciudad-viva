@@ -26,6 +26,7 @@ function demand(b,service){
  return Math.max(1,Math.ceil(n/5),b.kind==='home'?1:Math.ceil(workers/8));
 }
 function required(b){
+ if(b.kind==='railStation')return ['power'];
  if(b.kind==='home')return ['power','water','gas','tv','wifi'];
  if(b.kind==='hotel')return ['power','water','gas','tv','wifi'];
  if(['powerPlant','waterPlant','gasPlant','wastewaterPlant'].includes(b.kind))return ['power','water'];
@@ -34,7 +35,7 @@ function required(b){
  return ['power','water','gas'];
 }
 export function evaluateEssentialServices(city){
- const u=city.utilities||(city.utilities={}),buildings=(city.buildings||[]).filter(active);
+ const u=city.utilities||(city.utilities={}),buildings=[...(city.buildings||[]),...(city.railStations||[]).filter(site=>site.status==='active')].filter(active);
  const roadTiles=connectedTiles(new Set((city.roads||[]).map(p=>k(...p))),'4,10');
  const nets={};
  for(const type of Object.keys(NETWORK)){
@@ -101,7 +102,7 @@ export function evaluateEssentialServices(city){
 export function advanceEssentialServiceDay(city,notify=()=>{}){
  const day=Number(city.day)||1,abandoned=[];
  for(const b of [...(city.buildings||[])]){
-  if(b.kind!=='home'||!active(b))continue;
+  if(b.kind!=='home'||!active(b)||(!Number(b.occupants||0)&&!(b.residents||[]).length))continue;
   if(b.lastServiceCheckDay===day)continue;
   const days=Math.max(1,Math.min(30,day-(Number(b.lastServiceCheckDay)||day-1)));
   b.lastServiceCheckDay=day;

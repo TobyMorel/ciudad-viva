@@ -34,7 +34,7 @@ try{
   await page.locator('.game-dock [data-popup="city"]').evaluate(e=>e.click());
   await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
   await page.locator('#popupContent [data-city-section-button="mobility"]').evaluate(e=>e.click());
-  await page.locator('#popupContent .metro-panel').waitFor();
+  await page.locator('#popupContent .metro-panel:not(.rail-panel)').waitFor();
   const panel=await page.evaluate(()=>document.querySelector('#popupContent').innerText);
   assert.match(panel,/Subte Norte/);assert.match(panel,/Tren elevado 1/);
   assert.match(panel,/Construir/);

@@ -5723,6 +5723,8 @@ def public_state(player_id=None):
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["metroRiders"]=commute.get("metroRiders",0)
     view["traffic"]["metroLinesOperational"]=commute.get("metroLinesOperational",0)
+    view["traffic"]["railRiders"]=commute.get("railRiders",0)
+    view["traffic"]["railLinesOperational"]=commute.get("railLinesOperational",0)
     for key in ("busNonworkPassengers","busNonworkTransfers","busNonworkFareRevenue"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
@@ -6044,10 +6046,10 @@ class Handler(BaseHTTPRequestHandler):
                 elif action=="createTaxiRouteFromDepot":
                     try:create_taxi_route_from_depot(data.get("depotX"),data.get("depotY"),data.get("stops",[]))
                     except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
-                elif action in ("planMetroLine","buyMetroTrain","pauseMetroLine","resumeMetroLine"):
+                elif action in ("planMetroLine","buyMetroTrain","pauseMetroLine","resumeMetroLine","planRailLine","buyRailTrain","pauseRailLine","resumeRailLine"):
                     try:
                         line=metro_action(state,action,data)
-                        ev("Subte municipal",f"{line['name']}: {line['stage']} · {line['trainCount']} formaciones.")
+                        ev("Tren elevado" if line.get("mode")=="elevated" else "Subte municipal",f"{line['name']}: {line['stage']} · {line['trainCount']} formaciones.")
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action in ("pauseTaxiRoute","resumeTaxiRoute","cancelTaxiRoute"):
                     taxi=next((t for t in state.setdefault("taxiRoutes",[]) if t.get("id")==str(data.get("id"))),None)

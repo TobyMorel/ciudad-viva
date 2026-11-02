@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.183",
+  "currentVersion": "0.184",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.184",
+      "date": "2026-11-02",
+      "title": "Informes municipales visuales y ampliados",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las 19 pantallas de informes ahora abren con indicadores destacados, diagramas y explicaciones espec?ficas de cada sistema.",
+        "Las cifras se toman de la partida actual; los detalles operativos y controles de cada informe siguen disponibles debajo del resumen visual."
+      ],
+      "verification": "Sintaxis de m?dulos y JSON de versiones revisados.",
+      "pending": []
+    },
     {
       "version": "0.183",
       "date": "2026-11-02",

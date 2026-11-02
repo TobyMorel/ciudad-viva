@@ -17,10 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Clean old deployments (dry-run by default)
+      - name: Delete old deployments
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_PROJECT_IDS: prj_wh9aoQeN5RkzYQaxvGB0xE7z6Ksi
           VERCEL_TEAM_ID: team_KPxPfebDgL6MlGlV711WEPwg
-          ENABLE_DELETION: ${{ vars.ENABLE_DELETION }}
         run: node .github/scripts/cleanup-vercel.mjs

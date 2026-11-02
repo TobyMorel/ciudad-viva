@@ -1,13 +1,9 @@
-// Safe-by-default deployment cleanup for the Ciudad Viva Vercel project.
-// ENABLE_DELETION must equal "true" to make DELETE requests.
+// Automatic deployment cleanup for the Ciudad Viva Vercel project.
 const token = process.env.VERCEL_TOKEN;
 const ids = (process.env.VERCEL_PROJECT_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
 const teamId = process.env.VERCEL_TEAM_ID || '';
-const live = process.env.ENABLE_DELETION === 'true';
 if (!token) {
-  if (live) throw new Error('ENABLE_DELETION=true requires the VERCEL_TOKEN secret.');
-  console.warn('Skipping cleanup: VERCEL_TOKEN is not configured. Add it as a repository secret to inspect deployments.');
-  process.exit(0);
+  throw new Error('VERCEL_TOKEN secret is required to list and delete deployments.');
 }
 if (ids.length !== 1 || new Set(ids).size !== 1) {
   throw new Error('Configure exactly one VERCEL_PROJECT_IDS before running.');
@@ -73,10 +69,6 @@ for (const projectId of ids) {
     for (const deployment of sorted) {
       if (keep.has(deployment.uid)) continue;
       if (!['READY', 'ERROR', 'CANCELED'].includes(deployment.state || deployment.readyState)) continue;
-      if (!live) {
-        console.log(`DRY RUN would delete ${deployment.uid}`);
-        continue;
-      }
       try {
         await api('/v13/deployments/' + encodeURIComponent(deployment.uid), { method: 'DELETE' });
         console.log(`Deleted ${deployment.uid}`);

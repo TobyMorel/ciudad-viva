@@ -1,8 +1,8 @@
-# Ciudad Viva · Alfa 0.168
+# Ciudad Viva · Alfa 0.169
 
-La nueva entrega de la fase 22 muestra en el mapa 3D la infraestructura del subte: accesos a estaciones terminadas, señalización de las obras sin habilitar y proyección translúcida de túneles y formaciones. La proyección indica su recorrido bajo tierra, **no representa trenes circulando por calles**. Los trenes solo aparecen cuando la línea está operativa; el motor mantiene sus requisitos reales de trenes, energía y presupuesto.
+Esta versión añade la primera red de **trenes elevados urbanos** (fase 22). Desde Ciudad → Movilidad se puede contratar un viaducto ferroviario entre dos edificios accesibles por calles conectadas, elegir trenes, pagar obra y flota, seguir el avance por etapas, y operar con suministro eléctrico y presupuesto. El mundo muestra el viaducto y sus trenes 3D solo cuando están habilitados. Pasajeros y boletos se calculan a partir de viajes reales en LAN y Offline, y el cupo no se asigna dos veces al mismo viajero.
 
-En Ciudad → Movilidad se sigue contratando y gestionando el servicio implementado en Alfa 0.167. La versión visible y **Cambios y novedades** se actualizan en conjunto mediante `release_notes.json`. Continúan pendientes estaciones multiacceso, ramales, conexión metro-colectivo, empleados ferroviarios especializados e insumos de obra. La conexión LAN entre dos equipos reales requiere validación separada.
+El subte 3D continúa disponible desde Alfa 0.168. **Alcance actual:** dos estaciones por línea, hasta tres líneas elevadas sin corredor compartido, sin cruce ferroviario del río. No hay estaciones intermedias, trenes interurbanos, carga por ferrocarril, talleres ni plantilla ferroviaria especializada. La prueba LAN en dos computadoras reales sigue pendiente.
 
 ## Historial completo
 

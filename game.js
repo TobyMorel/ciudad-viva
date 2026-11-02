@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.161';
+import {createWorld} from './world3d.js?v=0.163';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {collectCityAlerts,projectGuide,INDUSTRIES,gettingStarted} from './cityGuide.js';
 import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js';

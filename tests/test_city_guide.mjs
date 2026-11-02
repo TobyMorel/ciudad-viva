@@ -51,3 +51,9 @@ test('Los cortes de redes son avisos accionables y reflejan la respuesta despach
  assert.ok(alerts.some(a=>a.title==='Corte de electricidad'&&a.detail.includes('$1000')&&a.action.includes('Servicios')));
  assert.ok(alerts.some(a=>a.title==='Cuadrilla reparando red'&&a.detail.includes('Respuesta urgente')));
 });
+
+test('Edificio sin camino continuo a la entrada muestra aviso seleccionable',()=>{
+ const alerts=collectCityAlerts({day:40,buildings:[{x:8,y:10,name:'Casa aislada',roadAccessConnected:false,roadAccessReason:'Sin una ruta vial continua hasta el acceso exterior.'}]});
+ assert.equal(alerts.length,1);assert.equal(alerts[0].kind,'roadAccess');assert.equal(alerts[0].id,'road-access-8-10');
+ assert.match(alerts[0].detail,/Casa aislada/);assert.match(alerts[0].action,/Reconectá los tramos/);
+});

@@ -4134,7 +4134,11 @@ def advance_zoned_development():
             existing_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("status") not in ("cerrado","abandonado"))+sum(1 for p in state.get("projects",[]) if p.get("kind")=="shop" and p.get("status") not in ("cancelada","finalizada"))
             needed_shops=max(1,int(state.get("population",0))//90)
             if int(state.get("population",0))<24 or existing_shops>=needed_shops:continue
-        if kind=="factory" and not any(b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0) for b in state.get("buildings",[])):continue
+        if kind=="factory":
+            active_demand_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0))
+            target_factories=min(6,math.ceil(active_demand_shops/2))
+            existing_factories=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("status")!="cerrado")+sum(1 for p in state.get("projects",[]) if p.get("kind")=="factory" and p.get("status") not in ("cancelada","finalizada"))
+            if existing_factories>=target_factories:continue
         candidates=[]
         for z in state.get("zones",[]):
             if z.get("kind")!=kind or z.get("status") not in (None,"disponible") or (z.get("x"),z.get("y")) in reserved:continue
@@ -5313,6 +5317,11 @@ def fire_service_report(workplaces=None,advance=False):
         if any(s["firefighters"]>=4 and (station:=next((b for b in state["buildings"] if b.get("kind")=="fireStation" and b["x"]==s["x"] and b["y"]==s["y"]),None)) and service_route_within(station,target) for s in stations):covered+=1
     return {"day":day,"stations":stations,"coveragePct":round(covered/max(1,len(eligible))*100),"coveredBuildings":covered,"eligibleBuildings":len(eligible),"dispatches":fire.get("dispatches",0),"resolved":fire.get("resolved",0),"unanswered":fire.get("unanswered",0),"activeIncidents":[dict(i) for i in incidents if i.get("status")=="ardiendo"],"recentIncidents":[dict(i) for i in incidents[-8:][::-1]],"monthlyOperatingCost":len(stations)*950}
 
+def building_road_access(building):
+    """Un edificio tiene acceso cuando una calle continua lo une con la entrada regional."""
+    if not isinstance(building,dict) or not isinstance(building.get("x"),int) or not isinstance(building.get("y"),int):return False
+    return bool(route_between((4,10),(building["x"],building["y"])))
+
 def public_state(player_id=None):
     ensure_supply_state()
     ensure_finance_state()
@@ -5322,6 +5331,10 @@ def public_state(player_id=None):
     ensure_utility_state();calculate_utility_balance();calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
     view={k:v for k,v in state.items() if k not in ("players","host")}
+    view["buildings"]=[]
+    for building in state.get("buildings",[]):
+        connected=building_road_access(building)
+        view["buildings"].append({**building,"roadAccessConnected":connected,"roadAccessReason":None if connected else "Sin una ruta vial continua hasta el acceso exterior."})
     view["stateRevision"]=STATE_REVISION
     view["governmentReport"]=government_report()
     view["municipalTeam"]=municipal_team_report(player_id)

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.143",
+  "currentVersion": "0.144",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.144",
+      "date": "2026-11-02",
+      "roadmapPhase": 4,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "La partida nueva conserva el inicio vacío: una conexión regional, 0 edificios, 0 habitantes y 36 personas buscando vivienda. Al extender calles y pintar parcelas verdes, los promotores inician viviendas privadas por etapas automáticamente; las casas zonificadas no piden materiales al municipio.",
+        "El mapa principal ahora mantiene tres medidores verticales de demanda de viviendas, comercios y fábricas, con porcentaje y cantidad. Se actualizan con los mismos umbrales de población, comercios ocupados y ventas que usa el crecimiento automático.",
+        "El acceso vial de cada edificio se recalcula contra una ruta continua a la salida exterior. Cuando un corte lo aísla, aparece un aviso seleccionable y la ficha identifica que viajes, abastecimiento y servicios por carretera están interrumpidos; al reconectar la ruta se restablece el acceso.",
+        "Verificado: 5 pruebas Python de partida nueva/acceso, 2 Offline de crecimiento privado sin materiales, Chromium responsive de la UI general a 390×844 y 1440×900; sintaxis Python/JavaScript. La fase 4 se mantiene en 60%: faltan ampliar y validar el crecimiento privado a largo plazo y su realimentación económica."
+      ]
+    },
     {
       "version": "0.143",
       "date": "2026-11-02",

@@ -60,6 +60,10 @@ export function collectCityAlerts(state){
    (v.name||'Edificio')+'. '+(active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
    active?'Construí y equipá un cuartel de bomberos. Un vehículo no sale sin cuatro bomberos cualificados y ruta vial.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
  }
+ for(const b of state.buildings||[]){
+  if(!b||b.roadAccessConnected!==false||!site(b.x,b.y))continue;
+  push(item('roadAccess','⛔','Edificio aislado de la red vial',`${b.name||'Edificio'}: ${b.roadAccessReason||'no tiene una calle conectada a la salida regional'}`,'Reconectá los tramos hasta la entrada exterior. El acceso y los viajes se recuperan cuando vuelve a existir un camino continuo.',b.x,b.y,state.day,`road-access-${b.x}-${b.y}`,0));
+ }
  for(const d of state.urbanEvolution?.deceased||[]){
   if(d?.disposition!=="en espera"||!site(d.homeX,d.homeY))continue;
   const cremation=d.funeralPreference==="crematorium",need=cremation?"cremación":"sepultura",facility=cremation?"crematorio":"cementerio",reason=d.waitReason||`La familia solicita ${need}, pero todavía no hay un ${facility} operativo, conectado y dentro de alcance.`;

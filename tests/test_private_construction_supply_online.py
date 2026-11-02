@@ -59,6 +59,20 @@ class PrivateConstructionFreightTests(unittest.TestCase):
         self.assertEqual(len(s["supply"]["orders"]),0)
         self.assertEqual(s["privateCapital"],original)
 
+    def test_factory_growth_tracks_active_shop_demand_without_duplicating_target(self):
+        s=self.s;s["buildings"]=[{"kind":"shop","x":i,"y":2,"business":{"status":"abierto","lastSales":8,"lastInputUnits":6}} for i in range(4)]
+        s["projects"]=[];s["roads"]=[[4,10],[5,10],[6,10],[7,10]]
+        s["zones"]=[{"x":5,"y":11,"kind":"factory","status":"disponible"},{"x":6,"y":11,"kind":"factory","status":"disponible"}]
+        server.advance_zoned_development()
+        factories=[p for p in s["projects"] if p.get("zonedDevelopment") and p["kind"]=="factory"]
+        self.assertEqual(len(factories),1,"un ciclo de demanda inicia una fábrica")
+        server.advance_zoned_development()
+        self.assertEqual(len([p for p in s["projects"] if p.get("zonedDevelopment") and p["kind"]=="factory"]),2,
+                         "el siguiente ciclo cubre el segundo comercio")
+        server.advance_zoned_development()
+        self.assertEqual(len([p for p in s["projects"] if p.get("zonedDevelopment") and p["kind"]=="factory"]),2,
+                         "las obras existentes se descuentan de la demanda industrial")
+
     def test_automatic_zoned_development_includes_private_materials_without_municipal_delivery(self):
         s=self.s
         s["zones"]=[{"x":7,"y":11,"kind":"home","status":"disponible"}]

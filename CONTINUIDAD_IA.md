@@ -1,4 +1,13 @@
-# Continuidad inmediata · Alfa 0.143
+# Continuidad inmediata · Alfa 0.144
+
+## Flujo de partida nueva, acceso vial y demanda visible · fase 4
+
+La nueva partida inicia vacía con sólo la conexión de acceso exterior, sin viviendas ni habitantes, y una demanda inicial de 36 personas. Las calles municipales se trazan desde una calle existente; cualquier edificio requiere una calle terminada junto a su parcela. El desarrollo zonificado sigue siendo privado: las viviendas inician por etapas automáticamente cuando hay demanda y terreno verde conectado, con materiales privados incluidos y sin pedidos al inventario municipal. La llegada de habitantes impulsa la necesidad de comercios; las ventas comerciales impulsan fábricas.
+
+El HUD del mapa presenta tres barras verticales siempre visibles: vivienda (personas que esperan / 36), comercio (locales que requiere la población según la regla actual) e industria (fábricas locales aún requeridas por la actividad comercial). Se recalculan con cada actualización Online/Offline y no exigen abrir Ciudad. Cada edificio expone `roadAccessConnected`, calculado por camino real a la salida regional; si se corta, un marcador sobre el edificio y su inspección explican la interrupción. Al reconstruir una ruta continua el indicador se restablece. Los desplazamientos, abastecimientos y coberturas que ya dependen de rutas se recalculan con la red.
+
+Verificado: `tests/test_new_settlement.py` (5), `tests/test_new_settlement_offline.mjs` (2), `tests/test_ui_layout.mjs` en Chromium a 390×844 y 1440×900; sintaxis y diff limpios. La fase 4 queda en 60%; no se sube el porcentaje hasta comprobar expansión sostenida y su economía derivada. El progreso total no es estimable hasta definir pesos verificables comunes para las 34 fases.
+
 
 El cambio activo agrega transporte funerario real en el mapa. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. No vuelvas a empezar desde cero ni declares que todas las fases están hechas. El usuario prioriza sistemas jugables nuevos, entregas acumulativas, interfaz sin solapamientos y publicación de cada cambio a la rama `main`.
 

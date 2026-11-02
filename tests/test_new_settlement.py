@@ -31,6 +31,15 @@ class NewSettlement(unittest.TestCase):
         self.assertEqual(server.state["housingDemand"]["unmet"],40)
         self.assertEqual(server.state["population"],0)
 
+    def test_building_loses_and_recovers_external_road_access_when_route_is_cut(self):
+        home={"kind":"home","x":5,"y":11,"name":"Hogar de prueba"}
+        server.state["roads"]=[[4,10],[5,10]]
+        self.assertTrue(server.building_road_access(home))
+        server.state["roads"]=[[4,10]]
+        self.assertFalse(server.building_road_access(home))
+        server.state["roads"]=[[4,10],[5,10]]
+        self.assertTrue(server.building_road_access(home))
+
     def test_private_home_project_does_not_wait_for_city_material_delivery(self):
         server.state["zones"]=[{"x":5,"y":10,"kind":"home","status":"disponible"}]
         before=server.state["privateCapital"]

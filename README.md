@@ -1,8 +1,10 @@
-# Ciudad Viva · Alfa 0.169
+# Ciudad Viva · Alfa 0.170
 
-Esta versión añade la primera red de **trenes elevados urbanos** (fase 22). Desde Ciudad → Movilidad se puede contratar un viaducto ferroviario entre dos edificios accesibles por calles conectadas, elegir trenes, pagar obra y flota, seguir el avance por etapas, y operar con suministro eléctrico y presupuesto. El mundo muestra el viaducto y sus trenes 3D solo cuando están habilitados. Pasajeros y boletos se calculan a partir de viajes reales en LAN y Offline, y el cupo no se asigna dos veces al mismo viajero.
+La fase 22 incorpora **transbordos reales entre colectivos y subtes o trenes elevados** para viajes existentes de compras y servicios. Un viaje puede ir primero en colectivo y continuar en tren, o hacer el trayecto inverso, si los accesos están próximos, el recorrido es válido y los dos vehículos tienen cupo. Se suman espera, caminata, conexión y tiempo a bordo: la combinación debe competir en tiempo con el modo original. El segundo boleto tiene una bonificación del 25% y ambos componentes se registran por hogar; no se cobra hasta el cierre municipal.
 
-El subte 3D continúa disponible desde Alfa 0.168. **Alcance actual:** dos estaciones por línea, hasta tres líneas elevadas sin corredor compartido, sin cruce ferroviario del río. No hay estaciones intermedias, trenes interurbanos, carga por ferrocarril, talleres ni plantilla ferroviaria especializada. La prueba LAN en dos computadoras reales sigue pendiente.
+Las mismas reglas operan en LAN y Offline. Los pasajeros intermodales se cuentan una sola vez en la demanda de transporte, pero ocupan lugar en cada vehículo; los informes de movilidad muestran transbordos, pasajeros y tarifas. Se bloquean líneas ferroviarias sin energía o pausadas, colectivos sin plazas y corredores viales cortados. Se conserva Alfa 0.169 con trenes elevados 3D y Alfa 0.168 con subtes 3D.
+
+**Pendiente:** estaciones intermedias, enlaces entre dos líneas ferroviarias, conexión ferroviaria de carga con el puerto, personal especializado, planificación de andenes y verificación LAN entre dos equipos. No hay ponderación global verificable de las 34 fases.
 
 ## Historial completo
 

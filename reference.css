@@ -63,3 +63,10 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
 .toast{bottom:106px;max-width:min(420px,calc(100vw - 24px));text-align:center;line-height:1.35;white-space:normal}
 @media(max-width:650px){.toast{bottom:76px;left:50%;width:max-content;max-width:calc(100vw - 20px)}}
 @media(max-width:650px){.toast{bottom:110px}}
+
+/* Modo de demolición siempre visible junto a los controles de cámara. */
+.world-toolbar #demolishTool{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:83px;padding:0 9px;background:#fff2f0;color:#9e3d39;border:1px solid #e4b6b2;font-weight:750;white-space:nowrap}
+.world-toolbar #demolishTool .demolish-caption{font-size:11px}
+.world-toolbar #demolishTool:hover,.world-toolbar #demolishTool:focus-visible{background:#f9dbd7;color:#842d29}
+.world-toolbar #demolishTool.active{background:#ac4039;color:#fff;border-color:#902e2a;box-shadow:0 0 0 2px #bc4d4355}
+@media(max-width:650px){.world-toolbar #demolishTool{min-width:37px;padding:0 7px}.world-toolbar #demolishTool .demolish-caption{display:none}}

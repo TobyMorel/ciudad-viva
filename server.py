@@ -5780,6 +5780,81 @@ def change_building_site(action,x,y,to_x=None,to_y=None):
     ev("Edificio demolido",f"{building.get('name','Edificio')} fue demolido sin devolución de fondos.")
     return building
 
+
+def demolish_at(x,y):
+    """Retira una construcción del mapa sin reembolso; mantiene el acceso regional."""
+    if type(x) is not int or type(y) is not int:raise ValueError("Seleccioná coordenadas válidas.")
+    at=lambda item:item.get("x")==x and item.get("y")==y
+    building=next((b for b in state.get("buildings",[]) if at(b)),None)
+    if building:
+        change_building_site("demolishBuilding",x,y)
+        return
+    station=next((s for s in state.get("railStations",[]) if at(s)),None)
+    if station:
+        state["railStations"].remove(station)
+        state["metroLines"]=[line for line in state.get("metroLines",[]) if [x,y] not in line.get("stations",[])]
+        ev("Estación demolida",f"{station.get('name','Estación')} fue retirada, junto con sus líneas asociadas.")
+        return
+    project=next((p for p in state.get("projects",[]) if at(p)),None)
+    if project:
+        state["projects"].remove(project)
+        supply=state.get("supply",{})
+        if project.get("id") is not None and isinstance(supply.get("orders"),list):
+            supply["orders"]=[o for o in supply["orders"] if o.get("projectId")!=project["id"]]
+        ev("Obra demolida",f"{project.get('label','Obra')} fue cancelada sin reintegro de lo gastado.")
+        return
+    abandoned=next((a for a in state.get("abandoned",[]) if at(a)),None)
+    if abandoned:
+        state["abandoned"].remove(abandoned)
+        ev("Restos retirados",f"Se despejó la obra inconclusa en {x+1},{y+1}.")
+        return
+    ruins=state.get("fireService",{}).get("ruins",[])
+    ruin=next((r for r in ruins if at(r)),None)
+    if ruin:
+        ruins.remove(ruin)
+        ev("Escombros retirados",f"Se despejó la parcela {x+1},{y+1}.")
+        return
+    road=[x,y] in state.get("roads",[])
+    if road:
+        if (x,y)==(4,10):raise ValueError("No se puede demoler el acceso regional inicial.")
+        assets=state.get("roadAssets",[])
+        bridge=any(at(a) and a.get("bridge") for a in assets)
+        tiles={(x,y)}
+        if bridge:
+            tiles={(cx,y) for cx in (24,25) if any(a.get("x")==cx and a.get("y")==y and a.get("bridge") for a in assets)}
+        removed_assets=[a for a in assets if (a.get("x"),a.get("y")) in tiles]
+        state["roads"]=[r for r in state["roads"] if tuple(r) not in tiles]
+        state["roadAssets"]=[a for a in assets if (a.get("x"),a.get("y")) not in tiles]
+        state["monthlyExpenses"]=max(0,state.get("monthlyExpenses",0)-sum(a.get("monthlyCost",15) for a in removed_assets))
+        utilities=state.get("utilities",{})
+        for key in ("powerLines","waterPipes","sewerLines","drainLines","gasLines","telecomLines"):
+            if key in utilities:utilities[key]=[r for r in utilities[key] if tuple(r) not in tiles]
+        waste=state.get("waste",{})
+        if "containers" in waste:waste["containers"]=[c for c in waste["containers"] if (c.get("x"),c.get("y")) not in tiles]
+        signals=state.get("trafficSignalOverrides",{})
+        for tx,ty in tiles:signals.pop(f"{tx},{ty}",None)
+        for key in ("recoveryNeeds","recoveryContracts"):
+            if key in state:state[key]=[item for item in state[key] if not (item.get("targetType")=="road" and (item.get("x"),item.get("y")) in tiles)]
+        for key in ("busRoutes","taxiRoutes"):
+            for route in state.get(key,[]):
+                if any(tuple(point) in tiles for point in route.get("route",[])) and route.get("status")!="cancelled":
+                    route["status"]="paused"
+                    route["operational"]=False
+        ev("Calle demolida",f"Se retiraron {len(tiles)} tramo(s) de la red vial en {x+1},{y+1} sin reintegro.")
+        return
+    zone=next((z for z in state.get("zones",[]) if at(z)),None)
+    if zone:
+        state["zones"].remove(zone)
+        ev("Zona eliminada",f"Se quitó el permiso de uso del suelo en {x+1},{y+1}.")
+        return
+    containers=state.get("waste",{}).get("containers",[])
+    container=next((c for c in containers if at(c)),None)
+    if container:
+        containers.remove(container)
+        ev("Contenedor retirado",f"Se retiró el contenedor de {x+1},{y+1}.")
+        return
+    raise ValueError("No hay ninguna construcción para demoler en esa parcela.")
+
 def public_state(player_id=None):
     ensure_land_claims()
     state.setdefault("trafficSignalOverrides",{})
@@ -6144,6 +6219,9 @@ class Handler(BaseHTTPRequestHandler):
                     state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
+                elif action=="demolishAt":
+                    try:demolish_at(data.get("x"),data.get("y"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action in ("demolishBuilding","relocateBuilding"):
                     try:change_building_site(action,data.get("x"),data.get("y"),data.get("toX"),data.get("toY"))
                     except ValueError as error:self._send(409,{"error":str(error)});return

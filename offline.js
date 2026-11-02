@@ -1536,6 +1536,41 @@ export async function createOfflineAdapter(){
     save();
   }
   function action(d){
+
+    if(d.action==='demolishAt'){
+      if(['derrotado','destituido'].includes(state.government?.status))throw Error('El equipo dejó el gobierno. La partida está en modo observación.');
+      const x=d.x,y=d.y,at=q=>q.x===x&&q.y===y;
+      if(!Number.isInteger(x)||!Number.isInteger(y))throw Error('Seleccioná coordenadas válidas.');
+      if(state.buildings.some(at)){action({action:'demolishBuilding',x,y});return}
+      const station=(state.railStations||[]).find(at);
+      if(station){state.railStations=state.railStations.filter(q=>q!==station);state.metroLines=(state.metroLines||[]).filter(line=>!(line.stations||[]).some(p=>p[0]===x&&p[1]===y));event('Estación demolida',`${station.name||'Estación'} fue retirada, junto con sus líneas asociadas.`);return}
+      const project=(state.projects||[]).find(at);
+      if(project){state.projects=state.projects.filter(q=>q!==project);if(project.id!=null&&Array.isArray(state.supply?.orders))state.supply.orders=state.supply.orders.filter(o=>o.projectId!==project.id);event('Obra demolida',`${project.label||'Obra'} fue cancelada sin reintegro de lo gastado.`);return}
+      const abandoned=(state.abandoned||[]).find(at);
+      if(abandoned){state.abandoned=state.abandoned.filter(q=>q!==abandoned);event('Restos retirados',`Se despejó la obra inconclusa en ${x+1},${y+1}.`);return}
+      const ruins=state.fireService?.ruins||[],ruin=ruins.find(at);
+      if(ruin){state.fireService.ruins=ruins.filter(q=>q!==ruin);event('Escombros retirados',`Se despejó la parcela ${x+1},${y+1}.`);return}
+      if(state.roads.some(([rx,ry])=>rx===x&&ry===y)){
+        if(x===4&&y===10)throw Error('No se puede demoler el acceso regional inicial.');
+        const assets=state.roadAssets||[],bridge=assets.some(a=>at(a)&&a.bridge);
+        const tiles=bridge?new Set(assets.filter(a=>a.bridge&&a.y===y&&(a.x===24||a.x===25)).map(a=>`${a.x},${a.y}`)):new Set([`${x},${y}`]);
+        const included=(rx,ry)=>tiles.has(`${rx},${ry}`),removed=assets.filter(a=>included(a.x,a.y));
+        state.roads=state.roads.filter(([rx,ry])=>!included(rx,ry));
+        state.roadAssets=assets.filter(a=>!included(a.x,a.y));
+        state.monthlyExpenses=Math.max(0,(state.monthlyExpenses||0)-removed.reduce((n,a)=>n+(a.monthlyCost??15),0));
+        for(const key of ['powerLines','waterPipes','sewerLines','drainLines','gasLines','telecomLines'])if(Array.isArray(state.utilities?.[key]))state.utilities[key]=state.utilities[key].filter(([rx,ry])=>!included(rx,ry));
+        if(state.waste?.containers)state.waste.containers=state.waste.containers.filter(c=>!included(c.x,c.y));
+        for(const coord of tiles)delete(state.trafficSignalOverrides||{})[coord];
+        for(const key of ['recoveryNeeds','recoveryContracts'])if(state[key])state[key]=state[key].filter(r=>r.targetType!=='road'||!included(r.x,r.y));
+        for(const key of ['busRoutes','taxiRoutes'])for(const route of state[key]||[])if(route.status!=='cancelled'&&(route.route||[]).some(([rx,ry])=>included(rx,ry))){route.status='paused';route.operational=false}
+        event('Calle demolida',`Se retiraron ${tiles.size} tramo(s) de la red vial en ${x+1},${y+1} sin reintegro.`);return;
+      }
+      const zone=(state.zones||[]).find(at);
+      if(zone){state.zones=state.zones.filter(q=>q!==zone);event('Zona eliminada',`Se quitó el permiso de uso del suelo en ${x+1},${y+1}.`);return}
+      const container=(state.waste?.containers||[]).find(at);
+      if(container){state.waste.containers=state.waste.containers.filter(q=>q!==container);event('Contenedor retirado',`Se retiró el contenedor de ${x+1},${y+1}.`);return}
+      throw Error('No hay ninguna construcción para demoler en esa parcela.');
+    }
     if(['demolishBuilding','relocateBuilding'].includes(d.action)){
       if(['derrotado','destituido'].includes(state.government?.status))throw Error('El equipo dejó el gobierno. La partida está en modo observación.');
       const x=d.x,y=d.y,toX=d.toX,toY=d.toY;

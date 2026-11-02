@@ -22,7 +22,15 @@ async function api(path, options = {}) {
     });
     if (response.status === 429 || response.status >= 500) {
       if (attempt < 3) {
-        await sleep(1000 * 2 ** attempt);
+        const retryAfter = Number(response.headers.get('retry-after'));
+        const reset = Number(response.headers.get('x-ratelimit-reset'));
+        const resetMs = reset > 1e12 ? reset : reset * 1000;
+        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : Number.isFinite(reset) && resetMs > Date.now()
+            ? resetMs - Date.now()
+            : 1000 * 2 ** attempt;
+        await sleep(Math.min(waitMs, 60_000) + Math.random() * 250);
         continue;
       }
     }
@@ -66,16 +74,25 @@ for (const projectId of ids) {
     }
 
     console.log(`Project ${projectId}: ${sorted.length} deployments, ${keep.size} locally protected`);
-    for (const deployment of sorted) {
-      if (keep.has(deployment.uid)) continue;
-      if (!['READY', 'ERROR', 'CANCELED'].includes(deployment.state || deployment.readyState)) continue;
-      try {
-        await api('/v13/deployments/' + encodeURIComponent(deployment.uid), { method: 'DELETE' });
-        console.log(`Deleted ${deployment.uid}`);
-      } catch (error) {
-        console.warn(`Skipped ${deployment.uid}: ${error.message}`);
+    const candidates = sorted.filter(deployment =>
+      !keep.has(deployment.uid) && ['READY', 'ERROR', 'CANCELED'].includes(deployment.state || deployment.readyState)
+    );
+    let nextIndex = 0;
+    let deletedCount = 0;
+    const concurrency = Math.min(8, candidates.length);
+    await Promise.all(Array.from({ length: concurrency }, async () => {
+      while (nextIndex < candidates.length) {
+        const deployment = candidates[nextIndex++];
+        try {
+          await api('/v13/deployments/' + encodeURIComponent(deployment.uid), { method: 'DELETE' });
+          deletedCount++;
+          console.log(`Deleted ${deployment.uid}`);
+        } catch (error) {
+          console.warn(`Skipped ${deployment.uid}: ${error.message}`);
+        }
       }
-    }
+    }));
+    console.log(`Project ${projectId}: deleted ${deletedCount}/${candidates.length} eligible deployments`);
   } catch (error) {
     console.error(`Project ${projectId} aborted: ${error.message}`);
     process.exitCode = 1;

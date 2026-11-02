@@ -4766,7 +4766,7 @@ def tick_one_day():
     advance_adaptive_reuse()
     advance_utility_repairs()
     calculate_utility_balance();advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
-    daily_economy=commute_model();fire_service_report(daily_economy["workplaces"],advance=True);road_incident_report(daily_economy,advance=True)
+    daily_economy=commute_model();fire_service_report(daily_economy["workplaces"],advance=True);police_service_report(daily_economy["workplaces"],advance=True);road_incident_report(daily_economy,advance=True)
     month=(day-1)//30
     if month>state["lastMonth"]:
         police_service_report(advance=True)
@@ -5281,6 +5281,11 @@ def police_service_report(workplaces=None,advance=False):
         choices.sort(key=lambda pair:(pair[0],pair[1]["name"]))
         protected=bool(choices and any(u["active"]>0 for _,u,_ in choices))
         rows.append({"building":b,"choices":choices,"protected":protected})
+    if advance:
+        for mission in police.get("recentIncidents",[]):
+            if mission.get("status")=="en respuesta" and state.get("day",1)>=mission.get("arrivalDay",state.get("day",1)+1):
+                mission["status"]="atendido";mission["resolvedDay"]=state["day"]
+                ev("Patrulla llegó al incidente",f"{mission.get('station','La policía')} intervino en {mission.get('location','el barrio')} después de recorrer su ruta vial.")
     if advance and month>police.get("lastProcessedMonth",state.get("lastMonth",0)):
         police["lastProcessedMonth"]=month
         incidents=[];unanswered=responded=damage=0
@@ -5305,8 +5310,8 @@ def police_service_report(workplaces=None,advance=False):
                     firm=b["business"];lost=min(3,max(0,int(firm.get("inventory",0))))
                     firm["inventory"]=max(0,int(firm.get("inventory",0))-lost);damage+=lost
             incidents.append({"id":f"seg-{month}-{kind}-{b['x']}-{b['y']}","month":month,
-                "day":state["day"],"location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
-                "x":b["x"],"y":b["y"],"status":"atendido" if response else "sin respuesta",
+                "day":state["day"],"arrivalDay":state["day"]+1,"location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
+                "x":b["x"],"y":b["y"],"status":"en respuesta" if response else "sin respuesta",
                 "responseMinutes":response["minutes"] if response else None,
                 "station":response["station"] if response else None,"stationX":response["stationX"] if response else None,
                 "stationY":response["stationY"] if response else None,"route":response["route"] if response else None})
@@ -5316,7 +5321,7 @@ def police_service_report(workplaces=None,advance=False):
         police["totalUnanswered"]=police.get("totalUnanswered",0)+unanswered
         if unanswered>=2:state["approval"]=max(0,state.get("approval",0)-1)
         if unanswered>=4:state["services"]=max(0,state.get("services",0)-1)
-        if incidents:ev("Operativo mensual de seguridad",f"{len(incidents)} incidentes de convivencia y comercio; {responded} atendidos, {unanswered} sin dotación. Pérdidas físicas de comercios: {damage} unidades.")
+        if incidents:ev("Operativo mensual de seguridad",f"{len(incidents)} incidentes de convivencia y comercio; {responded} patrullas despachadas, {unanswered} sin dotación. Pérdidas físicas de comercios: {damage} unidades.")
     coverage=sum(1 for x in rows if x["protected"])
     base=sum(u["vehicles"]*390 for u in units)
     variable=max(0,int(police.get("lastResponded",0)))*70

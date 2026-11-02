@@ -1,3 +1,13 @@
+# Ciudad Viva · Alfa 0.163
+
+La versión visible de la aplicación y **Cambios y novedades** se actualizan juntos. Alfa 0.162 registra puentes viales y Alfa 0.163 registra pasajeros y recaudación de taxis. Cada nueva entrega jugable debe sumar una nota en `release_notes.json`, incrementar el título y cache-busting del cliente y renombrar los paquetes de CI; una prueba rechaza un PR con cambios de juego sin incremento de versión.
+
+## Historial completo
+
+Abrí **Cambios** en el menú inferior para consultar las versiones actuales y anteriores; el historial carga desde `release_notes.json` y muestra las novedades más recientes primero.
+
+## Archivo histórico
+
 # Ciudad Viva · Alfa 0.110
 
 ## Alfa 0.110 · rediseño de arte 3D

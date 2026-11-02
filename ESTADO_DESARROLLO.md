@@ -1,3 +1,9 @@
+## Alfa 0.168 · Proyección 3D del subte (fase 22)
+
+La fase 22 incorpora accesos 3D de estaciones habilitadas, señalización de estaciones en obra y una proyección translúcida de túneles a medida que avanza la excavación e instalación de vías. Las formaciones aparecen animadas y seleccionables solo cuando la línea está activa y el motor declara servicio operativo; son marcadores visuales de viajes subterráneos y no vehículos de calle. Se excluyen rutas corruptas y cortes no contiguos. No se modifican pasajeros, capacidad, economía ni rutas del motor LAN/Offline.
+
+Prueba específica: `tests/test_metro_visuals.mjs`; CI agrega su ejecución, la comprobación sintáctica del módulo y la numeración Alfa 0.168 de los paquetes. Pendientes de confirmar: resultado de CI, inspección Chromium en móvil/escritorio, y sesión LAN física entre dos equipos. Quedan por desarrollar estaciones multiacceso, ramales, transbordos metro-colectivo, personal especializado e insumos reales en obras ferroviarias. Progreso global no estimable sin pesos homogéneos para las 34 fases.
+
 ## Alfa 0.167 · Red subterránea inicial
 
 La fase 22 incorpora la primera línea de metro con estaciones subterráneas vinculadas a edificios existentes, trazado ortogonal, obra civil secuencial, cuadrillas, inversión pagada, trenes, frecuencia, capacidad, energía y presupuesto de movilidad. Ofrece viajes reales de compras y servicios en competencia modal con autos, elimina doble asignación en taxis y cobra al cierre de los hogares. Se publica panel responsive, novedades y pruebas LAN/Offline. **Pendiente para la fase 22 completa:** trazados de varias estaciones y transbordos metro/autobús, representación 3D, trenes de superficie y logística ferroviaria.

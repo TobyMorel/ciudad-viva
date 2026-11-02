@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.180",
+  "currentVersion": "0.181",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.181",
+      "date": "2026-11-02",
+      "title": "Avisos al costado de los informes",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "El panel de mensajes de vecinos se ubica a la derecha de los iconos municipales para que no queden ocultos.",
+        "El ancho del panel se adapta al espacio disponible en pantallas angostas y mantiene su lectura en modo claro y oscuro."
+      ],
+      "verification": "Posici?n y ancho del panel revisados en escritorio y m?vil.",
+      "pending": []
+    },
     {
       "version": "0.180",
       "date": "2026-11-02",

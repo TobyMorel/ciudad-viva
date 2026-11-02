@@ -9,13 +9,13 @@ try{
  await freshPage.waitForFunction(()=>document.querySelectorAll('#releaseNotes .release-card').length>=2,{timeout:10000});
  assert.match(await freshPage.locator('.ref-version-banner').first().innerText(),/Alfa 0\.177/,'Cambios y novedades muestra la versión actual desde la primera apertura');
  const releaseTitles=await freshPage.locator('#releaseNotes .release-card .release-head b').allTextContents();
- assert.deepEqual(releaseTitles.slice(0,3),['Alfa 0.180','Alfa 0.179','Alfa 0.178'],'el historial muestra primero la versión publicada y conserva las anteriores');
+ assert.deepEqual(releaseTitles.slice(0,3),['Alfa 0.181','Alfa 0.180','Alfa 0.179'],'el historial muestra primero la versión publicada y conserva las anteriores');
  assert.match(await freshPage.locator('#releaseNotes').innerText(),/pasajeros|taxis/i,'los viajes de taxi se describen en Cambios');
  await freshPage.locator('#popupClose').evaluate(e=>e.click());
  await freshPage.close();
  // Un recurso 3D defectuoso no debe dejar los botones sin respuesta ni explicación.
  const broken=await browser.newPage({viewport:{width:390,height:844}});
- await broken.route('**/world3d.js?v=0.180',route=>route.fulfill({status:200,contentType:'application/javascript',body:'export ];'}));
+ await broken.route('**/world3d.js?v=0.181',route=>route.fulfill({status:200,contentType:'application/javascript',body:'export ];'}));
  await broken.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
  await broken.locator('#offlineMode').click();

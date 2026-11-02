@@ -18,3 +18,16 @@ test('collective to subway: seat reservation and one unique rider',()=>{const f=
 test('subway to collective has discounted second leg',()=>{const f=fixture(true),r=run(f);assert.equal(r.intermodalTransfers,2);assert.equal(f.trip.intermodalJourneys[0].fareCents,79)});
 test('elevated train to collective has separate rail count',()=>{const f=fixture(true,'tren'),r=run(f);assert.equal(r.railRiders,2);assert.equal(r.metroRiders,0)});
 test('unavailable power, bus seats, roads or service blocks transfers',()=>{for(const kind of ['power','seats','road','paused']){const f=fixture();if(kind==='power')f.state.buildings.pop();if(kind==='seats')f.bus.capacityByWindow.midday=0;if(kind==='road')f.state.roads=f.state.roads.filter(p=>p[0]!==2);if(kind==='paused')f.rail.status='paused';assert.equal(run(f).intermodalTransfers,0,kind)}});
+
+test('recalcular el mismo día no duplica tarifas ni usa dos veces los asientos',()=>{
+ const f=fixture();run(f);
+ const oldBus=JSON.stringify(f.bus.nonworkFaresByDay),oldRail=JSON.stringify(f.rail.fareByDay);
+ f.bus.ridersByWindow.midday=0;
+ f.trip={...f.trip,intermodalRiders:999};
+ assert.equal(run(f).intermodalTransfers,2);
+ assert.equal(f.trip.intermodalRiders,2);
+ assert.equal(JSON.stringify(f.bus.nonworkFaresByDay),oldBus);
+ assert.equal(JSON.stringify(f.rail.fareByDay),oldRail);
+ assert.equal(f.bus.ridersByWindow.midday,2);
+ assert.equal(f.rail.dailyRiders,2);
+});

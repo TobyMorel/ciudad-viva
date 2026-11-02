@@ -3138,7 +3138,7 @@ def commute_model():
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
         return _commute_cache
-    weights={"shop":1.0,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
+    weights={"shop":1.0,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"gasPlant":.85,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
     company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel","factory"))
     public_sites=[b for b in sites if b["kind"] in ("civic","school","fireStation","depot","landfill","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant")]
     public_jobs=max(0,state["jobs"]-company_jobs)

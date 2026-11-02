@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.167",
+  "currentVersion": "0.168",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.168",
+      "date": "2026-11-02",
+      "title": "Subte visible en 3D: accesos, túneles y formaciones",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "El mapa muestra accesos con marquesina para estaciones habilitadas y señalización de obra mientras la línea está en construcción.",
+        "La ruta subterránea se proyecta mediante tramos translúcidos. Los túneles aparecen progresivamente después de estudios y permisos, sin alterar el terreno ni convertirlos en calles.",
+        "Las formaciones se muestran como proyecciones animadas, seleccionables y con datos de la línea. Solo aparecen cuando la simulación declara la línea operativa con trenes, suministro eléctrico y financiación.",
+        "Los trenes proyectados no se frenan ante semáforos, no ocupan carriles de autos ni generan ingresos o viajeros adicionales; las reglas y guardados Online/Offline se conservan."
+      ],
+      "verification": "Incluye test_metro_visuals.mjs con escenarios de obra, operación, pausa y datos inválidos. Ejecución del test y verificación visual pendientes de CI o prueba local del navegador.",
+      "pending": [
+        "Estaciones multiacceso, conexiones metro-colectivo, ramales, personal ferroviario y materiales de obra de proveedores; validar LAN entre dos equipos físicos."
+      ]
+    },
     {
       "version": "0.167",
       "date": "2026-11-02",

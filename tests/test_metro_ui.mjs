@@ -29,6 +29,11 @@ try{
   await page.locator('[data-metro-to]').selectOption('11,9');
   await page.locator('[data-metro-build]').evaluate(e=>e.click());
   await page.waitForFunction(()=>document.querySelector('#popupContent .metro-line')?.textContent?.includes('En obra'),null,{timeout:15000});
+  // La obra nueva marca dos estaciones, pero los estudios aún no han excavado.
+  await page.waitForFunction(()=>window.__ciudadVivaScene?.().metroStations===2,null,{timeout:15000});
+  const scene=await page.evaluate(()=>window.__ciudadVivaScene());
+  assert.equal(scene.metroTunnelSegments,0,name+': los estudios no dibujan túneles terminados');
+  assert.equal(scene.metroTrains,0,name+': no circulan trenes antes de la habilitación');
   const layout=await page.evaluate(()=>{
    const root=document.querySelector('#popupContent .metro-panel');
    const r=root.getBoundingClientRect(),controls=[...root.querySelectorAll('.metro-build label,.metro-build button')].map(el=>el.getBoundingClientRect());

@@ -1,8 +1,8 @@
-# Ciudad Viva · Alfa 0.164
+# Ciudad Viva · Alfa 0.168
 
-En Alfa 0.164, la demanda de vivienda solo sube cuando no hay plazas habitables libres: una vivienda vacía reduce la presión a 0% y la llegada de residentes continúa. Los comercios aprovechan capacidad de ventas existente antes de pedir más locales; no hay oficinas independientes todavía.
+La nueva entrega de la fase 22 muestra en el mapa 3D la infraestructura del subte: accesos a estaciones terminadas, señalización de las obras sin habilitar y proyección translúcida de túneles y formaciones. La proyección indica su recorrido bajo tierra, **no representa trenes circulando por calles**. Los trenes solo aparecen cuando la línea está operativa; el motor mantiene sus requisitos reales de trenes, energía y presupuesto.
 
-La versión visible de la aplicación y **Cambios y novedades** se actualizan juntos. Alfa 0.162 registra puentes viales y Alfa 0.163 registra pasajeros y recaudación de taxis. Cada nueva entrega jugable debe sumar una nota en `release_notes.json`, incrementar el título y cache-busting del cliente y renombrar los paquetes de CI; una prueba rechaza un PR con cambios de juego sin incremento de versión.
+En Ciudad → Movilidad se sigue contratando y gestionando el servicio implementado en Alfa 0.167. La versión visible y **Cambios y novedades** se actualizan en conjunto mediante `release_notes.json`. Continúan pendientes estaciones multiacceso, ramales, conexión metro-colectivo, empleados ferroviarios especializados e insumos de obra. La conexión LAN entre dos equipos reales requiere validación separada.
 
 ## Historial completo
 

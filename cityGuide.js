@@ -52,11 +52,11 @@ export function collectCityAlerts(state){
  const fires=[...(state.fireReport?.activeIncidents||[]),...(state.fireReport?.recentIncidents||[])];
  for(const v of fires){
   if(!site(v.x,v.y))continue;
-  const active=v.status==='ardiendo';
+  const active=['ardiendo','despachado'].includes(v.status);
   if(!active&&now-(v.resolvedDay??v.startDay??0)>14)continue;
-  push(item('fire','🔥',active?'Se necesita una dotación de bomberos':'Incendio registrado',
-   (v.name||'Edificio')+'. '+(active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
-   active?'Construí y equipá un cuartel de bomberos. Un vehículo no sale sin cuatro bomberos cualificados y ruta vial.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
+  push(item('fire','🔥',v.status==='despachado'?'Bomberos en camino':active?'Se necesita una dotación de bomberos':'Incendio registrado',
+   (v.name||'Edificio')+'. '+(v.status==='despachado'?`La autobomba de ${v.station||'un cuartel'} viene por las calles y llegará el día ${v.arrivalDay}.`:active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
+   v.status==='despachado'?'Seguí la autobomba en el mapa 3D hasta el edificio.':active?'Construí un cuartel conectado; su guardia inicial puede despachar una autobomba.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
  }
  for(const b of state.buildings||[]){
   if(!b||b.roadAccessConnected!==false||!site(b.x,b.y))continue;

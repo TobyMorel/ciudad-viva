@@ -14,19 +14,20 @@ try{
   await page.locator('#newBtn').evaluate(el=>el.click());
   await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('48.000')&&document.getElementById('population')?.textContent.trim()==='0');
   for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
-  const lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4));
+  const lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));
   assert.ok(lock.visible,`${name}: el sector bloqueado queda visible desde la cámara inicial`);
-  await page.mouse.click(lock.x,lock.y);
+  const lockPin=page.locator('[data-land-lock="2,0"]');await lockPin.waitFor({state:'visible'});
+  assert.equal(await lockPin.locator('svg').count(),1,`${name}: el candado usa un icono SVG 2D`);
+  await lockPin.click();
   const card=page.locator('.land-unlock-card');await card.waitFor();
-  const copy=await card.innerText();assert.match(copy,/Zona construible bloqueada/);assert.match(copy,/64 parcelas nuevas/);assert.match(copy,/8 × 8 parcelas/);assert.ok(copy.includes('$ 3.500'),`${name}: precio inicial legible`);
+  const copy=await card.innerText();assert.match(copy,/Zona construible bloqueada/);assert.match(copy,/64 parcelas nuevas/);assert.match(copy,/8 × 8 parcelas/);assert.ok(copy.includes('$ 5.700'),`${name}: precio del sector oriental legible`);
   const bounds=await card.evaluate(el=>{const r=el.getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,scroll:el.scrollWidth,client:el.clientWidth}});
   assert.ok(bounds.left>=0&&bounds.right<=width&&bounds.top>=0&&bounds.bottom<=height,`${name}: ficha dentro del viewport ${JSON.stringify(bounds)}`);
   assert.ok(bounds.scroll<=bounds.client+3,`${name}: ficha sin desborde horizontal ${JSON.stringify(bounds)}`);
   await page.locator('[data-unlock-land]').evaluate(el=>el.click());
   await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'));
-  await page.mouse.click(lock.x,lock.y);
-  await page.locator('#popupTitle').filter({hasText:'Parcela seleccionada'}).waitFor();
-  assert.equal(await page.locator('[data-unlock-land]').count(),0,`${name}: parcela comprada deja de mostrar compra`);
+  await page.waitForFunction(()=>!document.querySelector('[data-land-lock="2,0"]'));
+  assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes('2,0')),`${name}: el sector comprado queda guardado`);
   assert.deepEqual(errors,[],`${name}: errores JavaScript`);await page.close();
  }
 }finally{await browser.close();server.kill('SIGTERM')}

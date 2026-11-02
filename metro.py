@@ -73,7 +73,7 @@ def plan_elevated_rail(state,from_point,to_point,trains=1):
         raise ValueError("El nuevo viaducto no puede superponerse a otro corredor ferroviario.")
     trains=int(trains)
     if trains not in (1,2):raise ValueError("Contratá uno o dos trenes inicialmente.")
-    construction=9500+950*d+3600;total=construction+trains*RAIL_TRAIN_COST
+    construction=9500+950*d;total=construction+trains*RAIL_TRAIN_COST
     reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
     if state.get("money",0)-reserved<total:raise ValueError(f"Fondos disponibles insuficientes: se necesitan $ {total:,}.")
     state["money"]-=total
@@ -99,7 +99,7 @@ def plan_metro(state,from_point,to_point,trains=1):
         raise ValueError("Ya existe una línea entre esas estaciones.")
     trains=int(trains)
     if trains not in (1,2,3):raise ValueError("La flota inicial permite de uno a tres trenes.")
-    construction=12500+distance*1150+2*2200
+    construction=12500+distance*1150
     total=construction+trains*METRO_TRAIN_COST
     reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
     if state.get("money",0)-reserved<total:raise ValueError(f"La inversión requiere $ {total:,} de fondos disponibles.")

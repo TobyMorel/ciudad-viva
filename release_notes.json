@@ -1,7 +1,41 @@
 {
-  "currentVersion": "0.161",
+  "currentVersion": "0.163",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.163",
+      "date": "2026-11-02",
+      "title": "Viajes reales de pasajeros en taxis y recaudación",
+      "roadmapPhase": 7,
+      "overallProgress": null,
+      "changes": [
+        "Los taxis municipales ahora transportan parte de los residentes que ya viajaban en automóvil a comercios y servicios públicos. Exigen circuito vial conectado y origen/destino próximos a paradas distintas.",
+        "Cada taxi puede trasladar hasta ocho pasajeros por día. Los viajes reasignados reducen los autos particulares calculados, mientras que el taxi aporta recorrido y emisiones propios.",
+        "Movilidad informa pasajeros del día, recaudación registrada y proyección mensual. Las tarifas se acumulan una vez por día en cada mes, sin volver a cobrarse al consultar el estado.",
+        "El transporte funciona en simulación LAN y Offline; se añadieron pruebas de aforo, pausa, ruta interrumpida, mes nuevo y repetición de consultas."
+      ],
+      "verification": "Regresiones Python y JavaScript Offline y estrés económico de 30 años aprobados en GitHub Actions para el PR #2. La comprobación visual de Chromium estaba pendiente de finalizar al fusionar.",
+      "pending": [
+        "Conductores y turnos reales, despachos individuales, subte e intermodalidad, pruebas de LAN física."
+      ]
+    },
+    {
+      "version": "0.162",
+      "date": "2026-11-02",
+      "title": "Puentes viales para expandir la ciudad al otro lado del río",
+      "roadmapPhase": 7,
+      "overallProgress": null,
+      "changes": [
+        "Se puede contratar un puente vial de dos tramos sobre el río (x=24–25), conectado a una calle de la ribera oeste y con sectores desbloqueados.",
+        "La obra pasa por estudios, pilotes, estructura, tablero e inspección. Los dos tramos se habilitan solo al finalizar y permiten construir la conexión hacia el este.",
+        "Se agregaron tablero, barandas y pilotes 3D, activos de mantenimiento de $80 mensuales por tramo, implementación equivalente LAN/Offline y pruebas de conectividad.",
+        "Las verificaciones de motor Python, JavaScript y estrés económico finalizaron correctamente."
+      ],
+      "verification": "PR #1 integrado en main. Regresiones y pruebas de estrés económico aprobadas; la suite visual de Chromium todavía no había concluido al fusionar.",
+      "pending": [
+        "Recorrido visual de vehículos sobre el puente y conexión LAN física entre dos equipos."
+      ]
+    },
     {
       "version": "0.161",
       "date": "2026-11-02",

@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.173';
+import {createWorld} from './world3d.js?v=0.174';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,projectGuide,INDUSTRIES,gettingStarted} from './cityGuide.js';

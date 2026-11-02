@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.173",
+  "currentVersion": "0.174",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.174",
+      "date": "2026-11-02",
+      "title": "Animación suave de los avisos sobre edificios",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los iconos sobre edificios y calles aumentan y reducen su tamaño suavemente para llamar la atención sin tapar el mapa.",
+        "Al tocar o enfocar un aviso, la animación se detiene y el icono se agranda para facilitar su selección. La preferencia de movimiento reducido desactiva el efecto."
+      ],
+      "verification": "Animación CSS y sincronización de versión comprobadas en navegador y pruebas de publicación.",
+      "pending": [
+        "Continuar ampliando las interacciones de los avisos según las necesidades de cada barrio."
+      ]
+    },
     {
       "version": "0.173",
       "date": "2026-11-02",

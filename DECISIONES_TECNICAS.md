@@ -1,4 +1,10 @@
-# Decisiones añadidas · Alfa 0.153
+# Decisiones añadidas · Alfa 0.154
+
+- No ocultar el selector Offline antes de completar el primer `/api/state`; ante fallo, no dejar controles que parezcan jugables sin sesión válida. El adaptador local es prioritario en `api()`.
+- Mantener previews 3D suficientemente grandes (120px desktop/100px móvil) y acercar cámara/escala, pero vigilar visibilidad y scroll en pantallas cortas.
+- Mantener un tramo de conexión exterior abierto: túnel 4,4 unidades para carretera de cuatro tramos.
+
+# Decisiones anteriores · Alfa 0.153
 
 - Inicio de modos secuenciado con `modeGeneration`: la última elección del jugador prevalece sobre respuestas de red tardías. En offline, `api()` exige el adaptador y nunca recurre al fetch HTTP.
 - La primera escena y las escenas pausadas deben renderizarse de forma explícita; una pausa detiene el tiempo simulado, no el dibujo WebGL.

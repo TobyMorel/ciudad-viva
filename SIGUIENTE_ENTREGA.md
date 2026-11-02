@@ -1,7 +1,7 @@
-# Siguiente entrega · después de Alfa 0.153
+# Siguiente entrega · después de Alfa 0.154
 
-1. Diagnosticar el timeout de la prueba UI de taxi al inspeccionar el actor, y mantener cubiertos los flujos locales.
-2. Continuar fase 7 con embarque de pasajeros y transbordos; luego subte/cámara inferior, cruceros y conexiones aeroportuarias.
-3. Validar exportaciones industriales por barco y avión, con órdenes/capacidad/vehículos y liquidación.
-4. Probar LAN en dos equipos y revisión del build en navegadores físicos; Chromium verificó móvil 390×844 y escritorio 1440×900.
-5. Progreso global sin estimar mientras falte una base de pesos homogénea para las 34 fases. Mantener actualizados estado, auditoría, continuidad, notas y ZIP en cada publicación.
+1. Continuar hito de fase 7 con pasajeros/transbordos, subte/cámara inferior, cruceros y conexión del aeropuerto; no dedicar iteraciones seguidas solo a detalles.
+2. Probar LAN física entre dos equipos y mantener las regresiones de modo local/Play/Pausa/Construir/Ciudad en CI.
+3. Validar las miniaturas en dispositivos reales y ajustar el scroll del catálogo si el aumento de tamaño reduce demasiado el área de tarjetas.
+4. Avanzar exportación industrial marítima/aérea con viajes y liquidación verificables.
+5. Global permanece sin estimar mientras falten pesos homogéneos para las 34 fases.

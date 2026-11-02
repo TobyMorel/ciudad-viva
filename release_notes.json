@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.153",
+  "currentVersion": "0.154",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.154",
+      "date": "2026-11-02",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Los objetos 3D de las tarjetas de Construir ahora ocupan más espacio y la cámara de miniatura encuadra las piezas más cerca.",
+        "El túnel cubre solo los dos tramos junto a la entrada y deja los dos tramos exteriores más lejanos como carretera descubierta.",
+        "Ciudad abre el informe municipal y Play/Pausa ejecuta el cambio de estado local. El menú de modo permanece visible hasta tener el guardado offline cargado; el adaptador local tiene prioridad sobre cualquier ruta HTTP."
+      ],
+      "pending": [
+        "La conexión LAN entre dos computadoras y la revisión en dispositivos físicos siguen pendientes."
+      ]
+    },
     {
       "version": "0.153",
       "date": "2026-11-02",

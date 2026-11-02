@@ -1,4 +1,17 @@
-# Estado de desarrollo · Alfa 0.153
+# Estado de desarrollo · Alfa 0.154
+
+## Controles de sesión, panel Ciudad, miniaturas 3D y túnel
+
+Play/Pausa y las órdenes de construir se validan en modo local; el menú inicial se mantiene abierto hasta que se haya creado el Worker y leído el estado. Si esa carga falla, la partida no queda expuesta detrás del menú. Cuando existe el adaptador offline, `api()` siempre usa su cola local antes de considerar HTTP. El panel Ciudad y su vista municipal vuelven a comprobarse en Chromium.
+
+Las miniaturas de Construir son más grandes en escritorio y móvil; el encuadre de la cámara 3D acerca los modelos. El túnel ahora mide 4,4 unidades y cubre los dos tramos junto a la entrada, dejando otros dos tramos regionales al aire libre.
+
+Verificado: `tests/test_offline_boot_recovery.mjs` comprueba render inicial, túnel corto, acciones Play/Pausa offline, panel Ciudad, construcción local sin `/api/action` web y protección ante respuesta LAN tardía. `tests/test_build_catalog_ui.mjs` verifica miniaturas 3D, tamaño y filtros en 390×844 y 1440×900. Las pruebas Offline de colectivo, taxi y calle instantánea pasan; cinco pruebas Python de rutas, sintaxis JavaScript/JSON y `git diff --check` pasan. La conexión LAN física sigue pendiente.
+
+Fase 7 · 95%; fase 4 · 60%; fase 9 · 75%. Global no estimable: falta una ponderación verificable común para las 34 fases.
+
+## Estado anterior · Alfa 0.153
+
 
 ## Reparación de render inicial, construcción offline y acceso regional
 

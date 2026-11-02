@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.154 · sesión offline, paneles y acceso
+
+No cambia la estimación: fase 7 sigue 95%, fase 4 60% y fase 9 75%. Se corrigen controles ya existentes; el global permanece sin estimar por falta de pesos verificables comunes a 34 fases. Test offline cubre Play/Pausa y panel Ciudad, además de construcción, respuesta LAN tardía y visibilidad del túnel corto.
+
 # Auditoría · Alfa 0.153 · reparación de render y construcción
 
 Esta entrega corrige regresiones de presentación/flujo y conserva el progreso por fase: fase 7=95%, fase 4=60%, fase 9=75%. No se atribuye avance porcentual por reparar visualización. Tests Chromium cubren render local, construir local, carreras de modo, catálogo con previews y el túnel de 8,4 unidades. LAN física sigue pendiente; la UI heredada de inspección de taxi conserva un timeout. El progreso total sigue sin estimar por falta de pesos verificables comunes para 34 fases.

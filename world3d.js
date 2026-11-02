@@ -49,13 +49,13 @@ export function createWorld(canvas){
   box(staticRoot,.05,.055,30.5,'#dcc09b',47.17,.49,23.5);
   const gatewayTunnel=new THREE.Group();gatewayTunnel.position.set(4*TILE,0,10.5*TILE);staticRoot.add(gatewayTunnel);
   // La boca cubre los cuatro tramos de carretera exterior (x=0..3) y llega a la entrada urbana.
-  const tunnelLength=8.4,tunnelCenter=-3.9,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
+  const tunnelLength=4.4,tunnelCenter=-1.9,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
   box(gatewayTunnel,tunnelLength,.07,1.98,'#4c5754',tunnelCenter,1.82,0,{cast:false});
   for(const z of [-1.08,1.08]){box(gatewayTunnel,tunnelLength,2,.28,'#978f7c',tunnelCenter,.91,z,{cast:true});box(gatewayTunnel,tunnelLength,.13,.34,'#c0b59a',tunnelCenter,1.88,z,{cast:false})}
   box(gatewayTunnel,.24,2.25,2.16,'#172629',.12,1.05,0,{cast:false});
   const archPts=[];for(let i=0;i<=16;i++){const a=Math.PI-i*Math.PI/16;archPts.push(new THREE.Vector3(.12,1.12+Math.sin(a)*1.08,Math.cos(a)*1.08))}const tunnelArch=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPts),48,.16,12,false),mat('#c2b69a'));tunnelArch.castShadow=true;tunnelArch.receiveShadow=true;gatewayTunnel.add(tunnelArch);
   for(const z of [-.84,.84]){box(gatewayTunnel,.26,1.1,.28,'#c2b69a',.12,.55,z,{cast:true});box(gatewayTunnel,.35,.15,.35,'#d0c3a6',.12,1.12,z,{cast:false})}
-  for(const x of [-7.75,-6.8,-5.85,-4.9,-3.95,-3,-2.05,-1.1,-.45])for(const z of [-1.16,1.16])box(gatewayTunnel,.32,.16,.36,'#b3a990',x,1.91,z,{cast:false});
+  for(const x of [-3.85,-2.95,-2.05,-1.15,-.45])for(const z of [-1.16,1.16])box(gatewayTunnel,.32,.16,.36,'#b3a990',x,1.91,z,{cast:false});
   const waterMat=mat(COLORS.water,{metalness:.08,roughness:.28,transparent:true,opacity:.97});
   plane(staticRoot,2,40,waterMat,49,-.09,23);
   plane(staticRoot,10,6,waterMat,43,-.08,3);
@@ -545,7 +545,7 @@ export function createWorld(canvas){
   function setView(nextView){view=nextView;updateCamera();updateVegetation();renderer.render(scene,camera)}
   function focusTile(x,y,nextView=view){view={...nextView};resize();updateVegetation();const yaw=Math.PI/4+view.rotation*Math.PI/2,right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),span=58/clamp(view.zoom,.55,4),units=span/Math.max(1,canvas.clientHeight),dx=cameraAnchor.x*TILE-(Number(x)+.5)*TILE,dz=cameraAnchor.y*TILE-(Number(y)+.5)*TILE;view.panX=(dx*right.x+dz*right.z)/units;view.panY=(dx*upGround.x+dz*upGround.z)/units;updateCamera();renderer.render(scene,camera);return{panX:view.panX,panY:view.panY}}
   const buildPreviewCache=new Map(),previewWidth=144,previewHeight=100,previewCanvas=document.createElement('canvas');let previewRenderer=null;
-  const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#dce9da');previewScene.add(new THREE.HemisphereLight('#fff8e7','#637b68',1.3));const previewSun=new THREE.DirectionalLight('#fff0cd',2.1);previewSun.position.set(4,8,6);previewScene.add(previewSun);const previewCamera=new THREE.PerspectiveCamera(32,previewWidth/previewHeight,.1,30);previewCamera.position.set(4.5,4.2,6.2);previewCamera.lookAt(0,1,0);
+  const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#dce9da');previewScene.add(new THREE.HemisphereLight('#fff8e7','#637b68',1.3));const previewSun=new THREE.DirectionalLight('#fff0cd',2.1);previewSun.position.set(4,8,6);previewScene.add(previewSun);const previewCamera=new THREE.PerspectiveCamera(32,previewWidth/previewHeight,.1,30);previewCamera.position.set(3.7,3.1,4.8);previewCamera.lookAt(0,1,0);
   function makeBuildPreview(item){
     const group=new THREE.Group(),tool=item.tool,model=item.model||'',industry=item.industry||'food',label=(item.title||'').toLowerCase();previewScene.add(group);
     plane(group,3.7,3.7,'#9fc58d',0,-.08,0);
@@ -573,7 +573,7 @@ export function createWorld(canvas){
     else if(tool==='powerLine'||tool==='waterPipe'||tool==='sewerLine'||tool==='drainLine'||tool==='gasLine'||tool==='telecomLine'){const color=tool==='powerLine'||tool==='telecomLine'?'#725f4e':tool==='waterPipe'?'#4b9fbd':tool==='gasLine'?'#dd9b4f':'#786f8d';if(tool==='powerLine'||tool==='telecomLine'){box(group,.1,2,.1,color,0,1,0);box(group,1.3,.09,.09,color,0,1.75,0);for(const x of [-.5,.5])box(group,.06,.65,.06,color,x,1.45,0)}else{cylinder(group,.2,.2,.85,color,0,.15,0,20);cylinder(group,.17,.17,.1,'#d1e2dc',0,.6,0,20)}}
     else if(tool==='wasteContainer'){box(group,.95,.85,.7,'#517c66',0,.43,0);box(group,1.02,.12,.76,'#394f46',0,.88,0);box(group,.5,.08,.12,'#e6c56f',0,.91,.4)}
     else {box(group,1.65,1.2,1.45,'#c9bb9f',0,.62,0);box(group,1.78,.12,1.58,'#5b7c73',0,1.26,0);box(group,.65,.55,.12,'#6a9ca3',0,.57,.79)}
-    group.rotation.y=-.4;const bounds=new THREE.Box3().setFromObject(group),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());group.position.set(-center.x,-bounds.min.y+.1,-center.z);const scale=2.9/Math.max(size.x,size.y,size.z,1);group.scale.setScalar(scale);return group;
+    group.rotation.y=-.4;const bounds=new THREE.Box3().setFromObject(group),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());group.position.set(-center.x,-bounds.min.y+.1,-center.z);const scale=3.5/Math.max(size.x,size.y,size.z,1);group.scale.setScalar(scale);return group;
   }
   function renderBuildPreviews(items){
     const todo=items.filter(({canvas:target,item})=>target&&item&&!buildPreviewCache.has(JSON.stringify(item)));

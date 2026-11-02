@@ -1,4 +1,10 @@
-# Continuidad inmediata · Alfa 0.153
+# Continuidad inmediata · Alfa 0.154
+
+El menú Offline debe permanecer visible hasta completar `createOfflineWorkerAdapter()` y la primera petición `/api/state`; solo entonces ocultarlo y renderizar después de dos `requestAnimationFrame`. Si falla, mantener el menú, limpiar `S` y permitir reintento. `api()` debe preferir `offlineAdapter` siempre que exista, aunque una ruta vieja intente cambiar el modo. Regresión en `tests/test_offline_boot_recovery.mjs`: Play/Pausa debe alternar el guardado, Ciudad abre `Informe municipal`, construcción no consulta `/api/action` HTTP.
+
+El catálogo usa preview 120px escritorio/100px móvil y escala/cámara más cercana; ajustar el grid si el nuevo tamaño provoca scroll excesivo, sin volver a hacer las tarjetas diminutas. Túnel regional = 4,4 unidades; deja 2 tramos del acceso descubiertos. Verificar en Chromium de catálogo y en miniatura visual al ampliar.
+
+# Continuidad anterior · Alfa 0.153
 
 La partida offline debe quedar como modo autoritativo antes de iniciar y usar un contador `modeGeneration` para invalidar solicitudes LAN antiguas. `startOffline()` espera a que el layout del mapa esté listo, obtiene estado local, invalida `visualSignature` y fuerza `draw()`. `world3d.sync()` construye una escena vacía aunque haya un panel abierto; el bucle animado mantiene `renderer.render()` activo incluso en pausa. Para el túnel `gatewayTunnel`, techo y laterales cubren 8,4 unidades (cuatro tramos exteriores). El panel Construir omite la capa antigua de pestañas de `reference-ui.js`: no volver a envolver `.tool-list`, porque cambia su jerarquía y deja sin altura el grid. Las previews usan un renderer compartido, manejo de error por pieza y geometrías Three válidas.
 

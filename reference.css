@@ -70,3 +70,37 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
 .world-toolbar #demolishTool:hover,.world-toolbar #demolishTool:focus-visible{background:#f9dbd7;color:#842d29}
 .world-toolbar #demolishTool.active{background:#ac4039;color:#fff;border-color:#902e2a;box-shadow:0 0 0 2px #bc4d4355}
 @media(max-width:650px){.world-toolbar #demolishTool{min-width:37px;padding:0 7px}.world-toolbar #demolishTool .demolish-caption{display:none}}
+
+
+/* El tablero respeta el espacio disponible; las etiquetas largas no se superponen. */
+.metrics,.metric,.metric>span,.metric>b,.metric>small{min-width:0}
+.metric>span,.metric>b,.metric>small{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+@media (min-width:651px) and (max-width:1000px){
+ .metrics{gap:7px}
+ .metric{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto;align-content:center;row-gap:3px;padding:10px 11px!important}
+ .metric .metric-icon{display:none}
+ .metric>span,.metric>b,.metric>small{grid-column:1}
+ .metric>span{grid-row:1;white-space:normal;overflow-wrap:anywhere;line-height:1.2}
+ .metric>b{grid-row:2;white-space:nowrap;font-size:clamp(15px,1.9vw,20px)!important}
+ .metric>small{grid-row:3;white-space:normal;line-height:1.3;overflow-wrap:anywhere}
+}
+@media (max-width:650px){
+ #app{grid-template-rows:57px 76px minmax(0,1fr) 0!important}
+ .metrics{min-height:76px;align-items:stretch;gap:5px;padding:5px}
+ .metric{min-height:65px;grid-template-columns:23px minmax(0,1fr);grid-template-rows:auto auto auto;align-content:center;row-gap:2px;column-gap:5px;padding:5px!important}
+ .metric .metric-icon{width:23px;height:27px;font-size:14px}
+ .metric>span{font-size:8px!important;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+ .metric>b{font-size:14px!important;line-height:1.12;white-space:nowrap}
+ .metric>small{font-size:8px!important;line-height:1.2;white-space:normal;overflow-wrap:anywhere;display:block!important}
+ .world-toolbar .map-city{overflow:hidden}
+ .world-toolbar .map-city b{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+@media (max-width:380px){
+ .metric{grid-template-columns:minmax(0,1fr)}
+ .metric .metric-icon{display:none}
+ .metric>span,.metric>b,.metric>small{grid-column:1}
+ .metric>span{grid-row:1}
+ .metric>b{grid-row:2}
+ .metric>small{grid-row:3}
+ .world-toolbar .map-city span{display:none}
+}

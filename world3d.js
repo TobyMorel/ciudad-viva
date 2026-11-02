@@ -426,6 +426,19 @@ export function createWorld(canvas){
   function makePlane(){const g=new THREE.Group();box(g,.18,.17,.98,'#f0e8d4',0,.13,0,{cast:true});box(g,1.12,.07,.28,'#70969a',0,.14,.02,{cast:true});box(g,.37,.055,.2,'#bf6954',0,.17,.35);box(g,.09,.11,.2,'#6b7e83',0,.22,-.42);box(g,.16,.22,.22,'#75a9b0',0,.25,-.31);box(g,.1,.23,.1,'#b95345',-.07,.24,0);trafficRoot.add(g);return g}
 
   // La formación se dibuja como proyección translúcida sobre el trazado: no circula por la calle.
+  function makeElevatedTrain(){
+    const g=new THREE.Group();
+    box(g,.72,.46,1.43,'#c7d8db',0,.42,0,{cast:true});
+    box(g,.69,.13,1.36,'#386475',0,.72,0,{cast:true});
+    box(g,.72,.09,.14,'#e6ad58',0,.29,.69);
+    for(const x of [-.372,.372])for(const z of [-.43,-.06,.32])
+      box(g,.025,.23,.26,'#48879d',x,.49,z);
+    for(const z of [-.52,.52])for(const x of [-.26,.26])
+      box(g,.1,.2,.15,'#34424b',x,.12,z);
+    box(g,.42,.2,.025,'#d5ecf0',0,.48,.73);
+    box(g,.34,.07,.04,'#e2a857',0,.64,.73);
+    g.userData.railTrain=true;trafficRoot.add(g);return g;
+  }
   function makeMetroProjection(){
     const g=new THREE.Group(),ghost=mat('#55c8d2',{transparent:true,opacity:.58,depthWrite:false,emissive:'#207688',emissiveIntensity:.24});
     box(g,.45,.25,.86,ghost,0,.29,0);
@@ -448,7 +461,7 @@ export function createWorld(canvas){
       (state.urbanEvolution?.deceased||[]).filter(d=>d.disposition==='en traslado').map(d=>[d.residentId,d.funeralTrip?.route,d.funeralTrip?.departDay,d.funeralTrip?.arrivalDay,d.funeralTrip?.facilityX,d.funeralTrip?.facilityY]),
       (state.busRoutes||[]).map(b=>[b.id,b.status,b.operational,b.effectiveBuses,b.buses,b.route,b.driverIds,b.originName,b.destinationName,b.ridersThisPass,b.capacity,b.headwayMinutes,b.stops,b.monthlyFareRevenue]),
       (state.taxiRoutes||[]).map(t=>[t.id,t.status,t.operational,t.route,t.stops,t.depotX,t.depotY,t.monthlyOperatingCost]),
-      (state.metroLines||[]).map(m=>[m.id,m.status,m.operational,m.trainCount,m.elapsed,m.duration,m.stations,m.route]),
+      (state.metroLines||[]).map(m=>[m.id,m.mode,m.status,m.operational,m.trainCount,m.elapsed,m.duration,m.stations,m.route]),
       state.utilities?.powerLines,state.utilities?.waterPipes,state.utilities?.sewerLines,state.utilities?.drainLines,state.utilities?.gasLines,state.utilities?.telecomLines,
       (state.utilities?.report?.failures||[]).map(f=>[f.id,f.network,f.x,f.y,f.status,f.responseRoute,f.completedDay]),state.utilities?.report?.drainage?.floodedTiles,
       (state.roadAssets||[]).filter(a=>a.bridge||(a.quality??82)<25||a.accidentClosed).map(a=>[a.x,a.y,a.bridge,a.accidentClosed]),
@@ -486,6 +499,48 @@ export function createWorld(canvas){
     for(const z of state.zones||[])addZone(dynamicRoot,z);for(const chunk of state.landClaims?.frontierChunks||[])addLandLock(dynamicRoot,chunk);
     for(const ruin of state.fireService?.ruins||[]){if((state.buildings||[]).some(b=>b.x===ruin.x&&b.y===ruin.y)||(state.projects||[]).some(p=>p.x===ruin.x&&p.y===ruin.y))continue;const [rx,rz]=tilePos(ruin.x,ruin.y);plane(dynamicRoot,1.82,1.82,'#4c4b47',rx,.088,rz);for(let i=0;i<15;i++){const dx=(seeded(i+ruin.x*11+ruin.y*29)-.5)*1.4,dz=(seeded(i+ruin.x*19+ruin.y*13+50)-.5)*1.4,block=box(dynamicRoot,.12+(i%3)*.06,.06+(i%4)*.055,.15+(i%2)*.05,i%3?'#77716b':'#b3a498',rx+dx,.13,rz+dz);block.rotation.y=i*.71}for(let i=0;i<4;i++)plane(dynamicRoot,.35,.32,'#292d2b',rx+(i-1.5)*.29,.093,rz+(i%2?.26:-.29))}
     const renewalKeys=new Set((state.urbanRenewalWorks||[]).map(w=>key(w.x,w.y)));for(const b of state.buildings)addBuilding(dynamicRoot,b,roads,renewalKeys);
+
+
+    // Primer ferrocarril urbano: un viaducto propio sobre tramos de calle ya conectados.
+    for(const trainLine of (state.metroLines||[]).filter(l=>l.mode==='elevated')){
+      if(!['building','active','paused'].includes(trainLine.status))continue;
+      const route=trainLine.route||[];
+      if(route.length<5||!route.every(p=>Array.isArray(p)&&p.length===2&&p.every(Number.isInteger)))continue;
+      if(route.some((p,i)=>i&&Math.abs(p[0]-route[i-1][0])+Math.abs(p[1]-route[i-1][1])!==1))continue;
+      const completed=trainLine.status!=='building',ratio=completed?1:clamp((trainLine.elapsed||0)/Math.max(1,trainLine.duration||1),0,1);
+      const max=route.length-1;
+      const supports=completed?max:Math.floor(max*clamp(ratio/.58,0,1));
+      const rails=completed?max:Math.floor(max*clamp((ratio-.58)/.36,0,1));
+      for(let i=1;i<=supports;i++){
+        const [ax,ay]=route[i-1],[bx,by]=route[i],across=ax!==bx,[cx,cz]=tilePos((ax+bx)/2,(ay+by)/2);
+        if(i%2===1){
+          const [px,pz]=tilePos(ax,ay);
+          box(dynamicRoot,.23,1.65,.23,'#b2b7ad',px+.68,.72,pz+.68,{cast:true});
+          box(dynamicRoot,.72,.16,.72,'#b2b7ad',px+.4,1.48,pz+.4);
+        }
+        const deck=box(dynamicRoot,across?2.03:.8,.15,across?.8:2.03,'#738d8f',cx,1.67,cz,{cast:true});
+        deck.userData.railDeck=true;
+        if(i<=rails){
+          for(const side of [-.25,.25]){
+            const track=box(dynamicRoot,across?1.97:.055,.07,across?.055:1.97,'#36474d',cx+(across?0:side),1.79,cz+(across?side:0));
+            track.userData.railTrack=true;
+          }
+          for(let k=0;k<3;k++)box(dynamicRoot,across?.06:.7,.05,across?.7:.06,'#977e62',
+            cx+(across?(k-1)*.58:0),1.74,cz+(across?0:(k-1)*.58));
+        }
+      }
+      if(completed){
+        for(const p of [route[0],route.at(-1)]){
+          const [px,pz]=tilePos(...p),platform=new THREE.Group();
+          platform.position.set(px,1.74,pz);
+          box(platform,1.38,.12,.42,'#d5d5c4',0,.04,.59);
+          for(const side of [-.52,.52])box(platform,.08,.58,.08,'#507681',side,.38,.77);
+          box(platform,1.25,.11,.55,'#4a7880',0,.73,.7);
+          box(platform,.52,.21,.07,'#eff3dd',0,.56,.98);
+          platform.userData.railPlatform=true;dynamicRoot.add(platform);
+        }
+      }
+    }
 
     // Vista técnica de la infraestructura subterránea: trazado proyectado, no vías sobre la calzada.
     const stationTiles=new Set();
@@ -529,6 +584,21 @@ export function createWorld(canvas){
     for(const a of state.abandoned||[])addSite(dynamicRoot,a,true);
     for(const p of state.projects)addSite(dynamicRoot,p,false);for(const w of state.adaptiveReuseWorks||[])addSite(dynamicRoot,w,false);
     addSelection(dynamicRoot,chosen);
+
+
+    for(const trainLine of (state.metroLines||[]).filter(l=>l.mode==='elevated'&&l.operational&&l.status==='active')){
+      const path=(trainLine.route||[]).map(([x,y])=>tilePos(x,y));
+      if(path.length<5)continue;
+      const count=Math.min(4,Math.max(0,Math.trunc(trainLine.trainCount||0)));
+      for(let i=0;i<count;i++)routeActors.push({
+        mesh:makeElevatedTrain(),route:path,offset:i*(path.length-1)*TILE*2/Math.max(1,count),
+        speed:2.15,side:0,height:1.82,railTrain:true,
+        selection:{type:'Tren elevado de pasajeros',title:trainLine.name+' · formación '+(i+1),
+          description:'Tren eléctrico real del servicio municipal elevado. Requiere obras habilitadas, flota, energía y presupuesto.',
+          metrics:[['Pasajeros hoy',trainLine.dailyRiders||0],['Capacidad por día',trainLine.dailyCapacity||0],
+            ['Frecuencia',(trainLine.headwayMinutes||0)+' min'],['Costo mensual',trainLine.monthlyOperatingCost||0]]}
+      });
+    }
 
     // Solo hay trenes visuales cuando el motor autoritativo declara la línea operativa.
     for(const metro of state.metroLines||[]){
@@ -588,15 +658,15 @@ export function createWorld(canvas){
       let progress=direction===1?f:1-f;
       const nextTile=direction===1?a.route[index+1]:a.route[index],gridX=Math.round(nextTile[0]/TILE-.5),gridY=Math.round(nextTile[1]/TILE-.5);
       const signalKey=key(gridX,gridY),axis=Math.abs(dx)>Math.abs(dz)?0:1;
-      const waiting=!isWalker&&!a.metroProjection&&signalTiles.has(signalKey)&&axis!==signalPhase;
+      const waiting=!isWalker&&!a.metroProjection&&!a.railTrain&&signalTiles.has(signalKey)&&axis!==signalPhase;
       if(waiting)progress=Math.min(progress,.76);
       const from=direction===1?a.route[index]:a.route[index+1],to=direction===1?a.route[index+1]:a.route[index];
       const laneKey=`${Math.round(from[0]/TILE-.5)},${Math.round(from[1]/TILE-.5)}>${Math.round(to[0]/TILE-.5)},${Math.round(to[1]/TILE-.5)}:${Math.sign(a.side||.18)*direction}`;
-      cursors.push({a,index,f,progress,direction,p,q,dx,dz,isWalker,waiting,vehicle:!isWalker&&!a.metroProjection&&a.selection?.type!=='Avión de pasajeros',laneKey});
+      cursors.push({a,index,f,progress,direction,p,q,dx,dz,isWalker,waiting,vehicle:!isWalker&&!a.metroProjection&&!a.railTrain&&a.selection?.type!=='Avión de pasajeros',laneKey});
     }
     // Mantén una distancia de seguridad entre vehículos que avanzan por el mismo carril.
     applyTrafficQueue(cursors,.43);
-    for(const c of cursors){const {a,index,direction,p,q,dx,dz,isWalker}=c;let f=direction===1?c.progress:1-c.progress;const count=a.route.length-1,next=a.route[Math.min(count,index+2)],ndx=next[0]-q[0],ndz=next[1]-q[1],turn=f>.75&&index<count-1?(f-.75)/.25:0,bend=turn&&Math.abs(ndx*dz-ndz*dx)>0?turn*turn*(3-2*turn)*.16:0,side=isWalker?a.side:-Math.abs(a.side||.18)*direction,targetX=p[0]+dx*f+dz/TILE*side+ndx/TILE*bend,targetZ=p[1]+dz*f-dx/TILE*side+ndz/TILE*bend;
+    for(const c of cursors){const {a,index,direction,p,q,dx,dz,isWalker}=c;let f=direction===1?c.progress:1-c.progress;const count=a.route.length-1,next=a.route[Math.min(count,index+2)],ndx=next[0]-q[0],ndz=next[1]-q[1],turn=f>.75&&index<count-1?(f-.75)/.25:0,bend=turn&&Math.abs(ndx*dz-ndz*dx)>0?turn*turn*(3-2*turn)*.16:0,side=a.railTrain?0:isWalker?a.side:-Math.abs(a.side||.18)*direction,targetX=p[0]+dx*f+dz/TILE*side+ndx/TILE*bend,targetZ=p[1]+dz*f-dx/TILE*side+ndz/TILE*bend;
       a.mesh.position.set(targetX,a.height||0,targetZ);const angle=Math.atan2(dx*direction+ndx/TILE*bend,dz*direction+ndz/TILE*bend),delta=Math.atan2(Math.sin(angle-a.mesh.rotation.y),Math.cos(angle-a.mesh.rotation.y));a.mesh.rotation.y+=delta*.22;
     }
     for(const a of routeActors){
@@ -668,7 +738,7 @@ export function createWorld(canvas){
   function paintBuildPreview({canvas:target,item}){if(!target||!item)return;const data=buildPreviewCache.get(JSON.stringify(item));if(!data)return;const ctx=target.getContext('2d');if(!ctx)return;target.width=previewWidth;target.height=previewHeight;ctx.putImageData(new ImageData(data,previewWidth,previewHeight),0,0)}
   window.addEventListener('resize',updateCamera);
   return {sync,screenToTile,screenToActor,setView,focusTile,projectTile,renderBuildPreviews,invalidate(){visualSignature=''},
-    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,streetLightCount:streetLights.length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
+    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
     getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
     getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),
     getFireParticleCounts:()=>({incidents:fireVisuals.length,flames:fireVisuals.reduce((n,f)=>n+f.flames.length,0),smoke:fireVisuals.reduce((n,f)=>n+f.smoke.length,0)}),

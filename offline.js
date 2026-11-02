@@ -1478,7 +1478,8 @@ export async function createOfflineAdapter(){
   function settleOfflineDailyCash(){
     const period=Math.floor((state.day-2)/30),flow=state.dailyCashFlow?.period===period?state.dailyCashFlow:(state.dailyCashFlow={period,raw:{},scheduled:{},paid:{},income:0});
     const gameDay=(state.day-1)+Math.max(0,Math.min(1440,Number(state.timeOfDayMinutes)||0))/1440;
-    const elapsed=Math.max(0,gameDay-(flow.lastGameDay==null?gameDay:Number(flow.lastGameDay)));
+    if(flow.lastGameDay==null){flow.lastGameDay=gameDay;return}
+    const elapsed=Math.max(0,gameDay-Number(flow.lastGameDay));
     if(elapsed<=0)return;
     const monthly={income:Math.max(0,state.grossMonthlyIncome||0,state.monthlyIncome||0),services:Math.max(0,(state.monthlyExpenses||0)+(state.publicPayroll||0)+offlinePoliceReport(state.workplaces||[]).monthlyOperatingCost),mobility:Math.max(0,(state.busRoutes||[]).filter(r=>r.operational).reduce((n,r)=>n+(r.monthlyOperatingCost||0),0)+(state.taxiRoutes||[]).filter(r=>r.operational).reduce((n,r)=>n+(r.monthlyOperatingCost||0),0)),networks:Math.max(0,(state.utilities.report?.monthlyMaintenance||0)+(state.waste.report?.monthlyOperatingCost||0)+(state.roadMaintenanceReport?.monthlyRequired||0)),debt:Math.max(0,(state.finance?.municipalLoans||[]).filter(l=>l.status==='active').reduce((n,l)=>n+(l.payment||0),0))};
     flow.lastPaid={};for(const [key,value] of Object.entries(monthly)){flow.raw[key]=(flow.raw[key]||0)+value*elapsed/30;const target=Math.round(flow.raw[key]),due=Math.max(0,target-(flow.scheduled[key]||0));flow.scheduled[key]=target;if(key==='income'){state.money+=due;flow.income+=due;flow.lastIncome=due}else{const paid=Math.min(Math.max(0,state.money),due);state.money-=paid;flow.paid[key]=(flow.paid[key]||0)+paid;flow.lastPaid[key]=paid}}

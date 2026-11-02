@@ -153,7 +153,7 @@ def metro_refresh(state):
         d=max(1,len(line.get("route",[]))-1)
         n=line.get("trainCount",0)
         rail=line.get("mode")=="elevated"
-        line["headwayMinutes"]=max(5,math.ceil(d*(5 if rail else 4)/max(1,n)))
+        line["headwayMinutes"]=max(5,math.ceil(d*(3 if rail else 4)/max(1,n)))
         line["dailyCapacity"]=n*(RAIL_SEATS if rail else METRO_SEATS)*3 if ready else 0
         line["monthlyOperatingCost"]=round((390 if rail else 230)+(110 if rail else 85)*d+(260 if rail else 140)*n+line.get("powerRequiredKw",0)*.7) if ready else 0
         line["energyKw"]=line.get("powerRequiredKw",0) if ready else 0
@@ -203,7 +203,7 @@ def metro_assign_passengers(state,trips):
             can_backward=abs(b[0]-trip["from"][0])+abs(b[1]-trip["from"][1])<=2 and abs(a[0]-trip["to"][0])+abs(a[1]-trip["to"][1])<=2
             if not (can_forward or can_backward):continue
             wait=line["headwayMinutes"]/2
-            minutes=8+wait+(len(line["route"])-1)*1.25
+            minutes=(4 if line.get("mode")=="elevated" else 8)+wait+(len(line["route"])-1)*(1 if line.get("mode")=="elevated" else 1.25)
             car_minutes=7+trip.get("distance",0)*2.5
             if minutes>car_minutes*1.3:continue
             count=min(remaining,max(0,line["dailyCapacity"]-line["dailyRiders"]))

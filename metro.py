@@ -169,7 +169,8 @@ def metro_action(state,action,data):
         rail=line.get("mode")=="elevated";cost=RAIL_TRAIN_COST if rail else METRO_TRAIN_COST;limit=4 if rail else 5
         if (action=="buyRailTrain")!=rail:raise ValueError("Acción incorrecta para este tipo de tren.")
         if line.get("status") not in ("active","paused") or line.get("trainCount",0)>=limit:raise ValueError("La línea no está habilitada o alcanzó su flota máxima.")
-        if state.get("money",0)<cost:raise ValueError("No hay fondos para otro tren.")
+        reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
+        if state.get("money",0)-reserved<cost:raise ValueError("No hay fondos libres para otro tren.")
         state["money"]-=cost;line["trainCount"]+=1
     elif action in ("pauseMetroLine","pauseRailLine"):
         if (action=="pauseRailLine")!=(line.get("mode")=="elevated"):raise ValueError("Acción incorrecta para la línea.")

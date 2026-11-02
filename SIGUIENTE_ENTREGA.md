@@ -1,3 +1,9 @@
+## Alfa 0.164 · Demanda basada en plazas y locales disponibles
+
+Se separa interés por migrar de déficit habitacional: si queda capacidad habitable la presión residencial es 0%, se siguen ocupando viviendas en los siguientes días y el promotor no inicia más casas; con todas las plazas completas vuelve la presión acumulada. Comercio: locales con ventas cubiertas son oferta todavía disponible y frenan obra nueva, independientemente del umbral de población; se mantiene la construcción cuando falta capacidad y existe demanda insatisfecha. El juego incluye un test visual equivalente al escenario 0/28 y pruebas de ambos motores.
+
+**Próximo:** introducir oficinas como edificios distintos y su oferta laboral/comercial con ocupación propia; continuar conductores de taxis y subte, verificar LAN entre dos equipos y capacidad en 30 años.
+
 ## Publicación Alfa 0.163 · historial completo y preventivo
 
 Se publicaron entradas específicas de Alfa 0.162 para el puente y de Alfa 0.163 para viajes de pasajeros de taxi en la pantalla «Cambios y novedades». Se sincronizan título de pestaña, metadato de versión, importaciones y recuperación de caché, paquetes de CI y prueba de arranque de Cambios. El pipeline exige en cada PR con código nuevo una versión superior y notas visibles. **Próximo hito de simulación:** personal y turnos de taxis, despacho, subte e intermodalidad.

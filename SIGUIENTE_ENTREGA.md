@@ -1,3 +1,9 @@
+## Alfa 0.167 · Primera línea de subte operativa (fase 22)
+
+Una línea municipal de subte se proyecta entre dos edificios conectados por calles, con túnel subterráneo y dos estaciones. Contratarla descuenta la inversión por trazado y compra de trenes; el contrato pasa por estudios, excavación, instalaciones e inspección durante varios días y se detiene si faltan cuadrillas. Tras habilitarse, requiere energía, formaciones y presupuesto. Frecuencia, aforo y gastos dependen de la flota; utiliza visitas reales a comercios y servicios y reemplaza autos particulares cuando el tiempo de viaje lo justifica. Se cobran boletos de hogares al cierre sin inventar ingresos. LAN/Offline, pruebas y panel responsive.
+
+**Próximo sistema (no detalles):** ramales y red de subte con transbordos metro-colectivo, trenes metropolitanos de superficie y carga industrial vinculada al puerto. La primera etapa no cruza el río y no ofrece representación 3D de túneles.
+
 ## Alfa 0.166 · colectivos intermodales para compras y servicios
 
 El viaje no laboral conserva visitantes reales de comercios y equipamientos. Los colectivos de turno mediodía llevan solo pasajeros con plazas y paradas accesibles. Los viajes se pueden transbordar entre dos líneas con descuento y reserva de capacidad en cada tramo; el remanente utiliza el modo de origen. Una misma persona no puede subir a un taxi y colectivo a la vez. Se cobra a cada hogar el boleto efectivamente consumido al cierre municipal y se registra el dinero recibido. Movilidad expone pasajeros por línea y total de transbordos.

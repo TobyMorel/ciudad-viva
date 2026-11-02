@@ -98,10 +98,10 @@
   max-width: 60px;
   max-height: 18px;
   overflow: hidden;
-  color: #f1f5e9;
+  color: #173d39;
   font: 700 8.5px/1.05 system-ui;
   text-align: center;
-  text-shadow: 0 1px 3px #10251dcc;
+  text-shadow: 0 1px 2px #f4f6e9e8, 0 -1px 2px #f4f6e9e8, 1px 0 2px #f4f6e9e8, -1px 0 2px #f4f6e9e8;
   text-overflow: ellipsis;
   white-space: normal;
 }
@@ -142,8 +142,30 @@ body[data-theme="dark"] .city-report-rail button small {
   color: #d8e9e1;
 }
 
+body[data-theme="dark"] .city-report-rail button small {
+  text-shadow: 0 1px 3px #081614e8;
+}
+
 body[data-theme="dark"] .city-report-rail {
   background: transparent !important;
+}
+
+.game-dock>[data-popup] span {
+  border: 1px solid transparent;
+}
+
+body[data-theme="dark"] .game-dock>[data-popup="alerts"] span { background: #45392e; border-color: #8b6c4f; }
+body[data-theme="dark"] .game-dock>[data-popup="build"] span { background: #4a3c2b; border-color: #92734e; }
+body[data-theme="dark"] .game-dock>[data-popup="traffic"] span { background: #21483e; border-color: #4e9a78; }
+body[data-theme="dark"] .game-dock>[data-popup="city"] span { background: #234648; border-color: #4f8e88; }
+body[data-theme="dark"] .game-dock>[data-popup="supply"] span { background: #49472e; border-color: #95884d; }
+body[data-theme="dark"] .game-dock>[data-popup="projects"] span { background: #51363d; border-color: #9a626b; }
+body[data-theme="dark"] .game-dock>[data-popup="events"] span { background: #3d3850; border-color: #7770a1; }
+body[data-theme="dark"] .game-dock>[data-popup="changes"] span { background: #2e4257; border-color: #5d83aa; }
+
+body[data-theme="dark"] .game-dock>[data-popup]:hover span,
+body[data-theme="dark"] .game-dock>[data-popup]:focus-visible span {
+  filter: brightness(1.2);
 }
 
 @media (max-width: 950px) {

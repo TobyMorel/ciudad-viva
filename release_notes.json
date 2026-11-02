@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.178",
+  "currentVersion": "0.179",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.179",
+      "date": "2026-11-02",
+      "title": "Contraste claro y oscuro en menús",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los fondos de iconos del menú inferior se adaptan al modo oscuro con colores profundos y bordes visibles.",
+        "Las etiquetas de informes laterales usan contraste legible en modo claro y oscuro."
+      ],
+      "verification": "Contraste de menús comprobado en ambos temas desde GitHub Pages.",
+      "pending": []
+    },
     {
       "version": "0.178",
       "date": "2026-11-02",

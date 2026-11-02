@@ -474,7 +474,7 @@ export async function createOfflineAdapter(){
             target.quality=Math.max(20,(target.quality||75)-damage);
             if(target.kind==='home')target.householdCash=Math.max(0,(target.householdCash||0)-damage*25);
             else if(target.business)target.business.cash=Math.max(0,(target.business.cash||0)-damage*45);
-            Object.assign(incident,{status:'controlado',route:incident.responseRoute,damage,resolvedDay:day});
+            Object.assign(incident,{status:'controlado',responseStatus:'intervención terminada',route:incident.responseRoute,damage,resolvedDay:day});
             fire.resolved=(fire.resolved||0)+1;
             event('Incendio controlado',(incident.station||'Bomberos')+' llegó a '+incident.name+' y sofocó las llamas. Daño: '+damage+' puntos.');
           }else incident.burningDays=(incident.burningDays||0)+1;

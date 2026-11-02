@@ -559,6 +559,7 @@ JOB_PROFILES = {
     "hotel": ("comercio", "Hotelería", 35),
     "powerPlant": ("logistica", "Operación eléctrica", 42),
     "waterPlant": ("logistica", "Operación de agua", 42),
+    "gasPlant": ("logistica", "Operación de gas", 42),
     "wastewaterPlant": ("logistica", "Operación sanitaria", 42),
     "landfill": ("logistica", "Gestión de residuos", 42),
     "recyclingPlant": ("logistica", "Recuperación de materiales", 42),
@@ -1673,7 +1674,7 @@ def initial_state():
 def new_settlement_state():
     """Empty playable map: the only road is the westbound regional gate."""
     fresh=initial_state();gate=[[4,10]]
-    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":48000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Buscan parcelas verdes conectadas para financiar y construir sus viviendas."}]})
+    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":85000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Buscan parcelas verdes conectadas para financiar y construir sus viviendas."}]})
     fresh["fireService"]={"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0}
     fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
     fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}

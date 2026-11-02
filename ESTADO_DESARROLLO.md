@@ -1,3 +1,7 @@
+## Alfa 0.166 · trayectos intermodales no laborales
+
+El tráfico de compras y servicios usa la demanda preexistente de hogares y destinos, sin crear pasajeros. Cada línea de colectivo requiere operación, paradas accesibles y asientos de mediodía; los viajes pueden transbordar entre dos líneas y ambas descuentan capacidad. La tarifa integrada se registra por hogar/día y se cobra al cierre mensual limitada a su caja, sin dobles ingresos ni asignaciones simultáneas a taxi. Panel y documentación actualizados, verificación automática de layout móvil/escritorio agregada. Próximo: metro con obras, energía y material rodante.
+
 ## Alfa 0.165 · viajes persistentes en el mapa 3D
 
 Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.

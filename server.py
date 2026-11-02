@@ -5553,14 +5553,14 @@ def destroy_burning_building(incident):
     ev("Edificio reducido a cenizas",f"{incident['name']} se perdió por completo. Fallecieron {dead} habitantes dentro y {displaced} que estaban fuera deben buscar otra vivienda.")
     update_social_shelters()
 
-def fire_service_report(workplaces=None,advance=False):
+def fire_service_report(workplaces=None,advance=False,dispatch_only=False):
     """Incendios urbanos deterministas: cobertura, despacho y daño dependen de personal y calles."""
     fire=state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
     incidents=fire.setdefault("incidents",[]);day=state.get("day",1)
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
-    if advance:
+    if advance or dispatch_only:
         month=(day-1)//30
-        if day%30==10 and month>fire.get("lastGeneratedMonth",-1):
+        if advance and day%30==10 and month>fire.get("lastGeneratedMonth",-1):
             fire["lastGeneratedMonth"]=month
             active=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","hotel","airport","port","school") and b.get("status") not in ("cerrado","abandonado")]
             climate=state.get("climate",{});heat=(climate.get("heatForecast") or {}).get("active",False);drought=(climate.get("droughtForecast") or {}).get("status")=="activa"
@@ -5581,6 +5581,9 @@ def fire_service_report(workplaces=None,advance=False):
             if target is None:
                 incident.update({"status":"destruido","resolvedDay":day});continue
             if incident.get("responseRoute"):
+                if dispatch_only:continue
+                if day-int(incident.get("startDay",day))>=5:
+                    destroy_burning_building(incident);fire["unanswered"]+=1;continue
                 if day>=incident.get("arrivalDay",day+1):
                     damage=max(1,min(24,round(incident.get("responseMinutes",15)/4)+incident.get("burningDays",0)*2))
                     target["quality"]=max(20,target.get("quality",75)-damage)
@@ -5603,7 +5606,7 @@ def fire_service_report(workplaces=None,advance=False):
                 incident.update({"station":station["building"].get("name","Cuartel municipal"),"stationX":station["building"]["x"],"stationY":station["building"]["y"],"responseRoute":path,"route":path,"responseMinutes":round(minutes),"dispatchDay":day,"arrivalDay":day+1,"responseStatus":"en camino"})
                 fire["dispatches"]+=1
                 ev("Autobomba despachada",f"{incident['station']} envió su camión hacia {incident['name']} por {max(0,len(path)-1)} cuadras; la intervención se realiza al llegar.")
-            else:
+            elif advance:
                 incident["burningDays"]=incident.get("burningDays",0)+1
                 target["quality"]=max(20,target.get("quality",75)-2)
                 if incident["burningDays"]>=5:
@@ -6102,6 +6105,8 @@ class Handler(BaseHTTPRequestHandler):
                     if instant_public:
                         try:place_instant_public_service(kind,x,y,service_id)
                         except ValueError as error:self._send(409,{"error":str(error)});return
+                        if kind=="fireStation" and any(i.get("status")=="ardiendo" for i in state.get("fireService",{}).get("incidents",[])):
+                            fire_service_report(commute_model().get("workplaces",[]),dispatch_only=True)
                         self._send(200,public_state(pid));return
                     c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=max(3,round(spec["days"]*c["days"]/240))
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.

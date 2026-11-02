@@ -1,3 +1,7 @@
+## En revisión · puente vial de fase 7 (posterior a Alfa 0.161)
+
+Propuesta: puente de dos tramos sobre el río, con contrato municipal, estudio de suelo, pilotes, estructura, tablero e inspección. El cruce necesita una calle en la ribera oeste y terreno habilitado; antes de terminar no existe como red vial. El contrato reserva presupuesto, utiliza cuadrillas y deja un activo con desgaste y mantenimiento ($80 por tramo y mes). Offline/LAN, catálogo y render 3D se actualizan juntos. Se agregaron regresiones de validación, habilitación tras la obra y continuación de calle al este. Pendiente de ejecutar y aprobar CI y de probar visualmente en una partida; sin modificar el porcentaje global ni declarar entrega publicada.
+
 # Estado de desarrollo · Alfa 0.159
 
 ## Alfa 0.159 · servicios públicos inmediatos

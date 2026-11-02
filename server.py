@@ -41,6 +41,7 @@ SUPPLIER_STOCK = {
 CONTRACTOR_CASH = {"Sur Obras":5000,"Constructora Delta":9000,"Estudio y Obra Norte":14000}
 MATERIAL_NEEDS = {
     "road":{"aggregate":16,"concrete":6,"steel":0,"timber":0,"components":2},
+    "bridge":{"aggregate":40,"concrete":26,"steel":28,"timber":8,"components":14},
     "home":{"aggregate":20,"concrete":7,"steel":9,"timber":15,"components":10},
     "factory":{"aggregate":36,"concrete":14,"steel":28,"timber":10,"components":35},
     "shop":{"aggregate":18,"concrete":6,"steel":14,"timber":8,"components":12},
@@ -1832,6 +1833,7 @@ CONTRACTORS = {
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
 PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Asignación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y movilización","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
+PROJECTS["bridge"]={"label":"Puente vial sobre el río","cost":13000,"days":84,"stageNames":["Estudio de suelo y permisos","Pilotes y estribos","Estructura metálica","Tablero y señalización","Inspección y habilitación"]}
 PROJECTS["factory"]={"label":"Procesadora de alimentos","cost":9200,"days":68,"stageNames":["Licencia y capital privado","Cimentación y nave","Maquinaria y servicios","Pruebas de producción","Inspección y apertura"]}
 PROJECTS["powerPlant"]={"label":"Central eléctrica","cost":18800,"days":96,"stageNames":["Estudio y permisos","Cimientos y turbina","Conexión eléctrica","Pruebas de generación","Inspección y puesta en marcha"]}
 PROJECTS["gasPlant"]={"label":"Planta de suministro de gas","cost":15900,"days":90,"stageNames":["Permisos y seguridad","Depósitos de distribución","Conexión con red de gas","Control de presión","Habilitación industrial"]}
@@ -1841,7 +1843,7 @@ PROJECTS["waterPlant"]={"label":"Planta potabilizadora","cost":14200,"days":84,"
 PROJECTS["wastewaterPlant"]={"label":"Planta depuradora","cost":16600,"days":90,"stageNames":["Estudio ambiental y permisos","Colectores y tanques","Digestores y filtros","Pruebas de calidad","Inspección y puesta en marcha"]}
 PROJECTS["landfill"]={"label":"Relleno sanitario municipal","cost":9800,"days":72,"stageNames":["Evaluación ambiental y movilización","Impermeabilización del terreno","Celdas de disposición","Báscula y control de acceso","Inspección y habilitación"]}
 PROJECTS["recyclingPlant"]={"label":"Planta de reciclaje","cost":14800,"days":88,"stageNames":["Estudio ambiental y movilización","Separación y clasificación","Línea de lavado","Pruebas de recuperación","Inspección y habilitación"]}
-LABOR_NEEDS = {"road":4,"home":6,"shop":7,"factory":12,"civic":11,"school":12,"fireStation":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"gasPlant":10,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
+LABOR_NEEDS = {"road":4,"bridge":10,"home":6,"shop":7,"factory":12,"civic":11,"school":12,"fireStation":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"gasPlant":10,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -2155,6 +2157,20 @@ def begin_unloading(order):
 def is_water(x,y):
     # Río continuo: ambas orillas siguen siendo terreno disponible.
     return x in (24,25)
+
+def validate_bridge_site(x,y):
+    """El puente une dos celdas de cauce y nace en una calle conectada del oeste."""
+    if x!=24:raise ValueError("El puente empieza en la celda oeste del río (x=24).")
+    if not all(land_tile_unlocked(cx,y) for cx in (24,25)):
+        raise ValueError("Desbloqueá ambas parcelas del cauce antes de construir el puente.")
+    if [23,y] not in state.get("roads",[]) or not route_between((4,10),(23,y)):
+        raise ValueError("El puente necesita una calle terminada y conectada en la ribera oeste (x=23).")
+    for cx in (24,25):
+        if [cx,y] in state.get("roads",[]) or any(
+            item.get("x")==cx and item.get("y")==y
+            for group in ("projects","buildings","abandoned") for item in state.get(group,[])
+        ):
+            raise ValueError("El corredor del puente ya está ocupado.")
 
 INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand"}
 
@@ -4952,7 +4968,14 @@ def tick_one_day():
         p["stageIndex"]=min(len(p["stages"])-1,stage)
         if p["progress"]>=1:
             quality=max(35,round(c["quality"]*100-p.get("qualityPenalty",0)))
-            if p["kind"]=="road":
+            if p["kind"]=="bridge":
+                for cx in (24,25):
+                    if [cx,p["y"]] not in state["roads"]:
+                        state["roads"].append([cx,p["y"]])
+                        state.setdefault("roadAssets",[]).append({"x":cx,"y":p["y"],"bridge":True,"quality":quality,"monthlyCost":80})
+                        state["monthlyExpenses"]+=80
+                ev("Puente vial habilitado",f"Se abrió el cruce del río a la altura {p['y']+1}; dos tramos, mantenimiento $160/mes. La extensión de calles al este ya es posible.")
+            elif p["kind"]=="road":
                 state["roads"].append([p["x"],p["y"]])
                 state["monthlyIncome"]+=85
                 maintenance=round(70*(1.2-c["quality"]))
@@ -6063,10 +6086,13 @@ class Handler(BaseHTTPRequestHandler):
                         except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                         self._send(200,public_state(pid));return
                     if not land_tile_unlocked(x,y):self._send(409,{"error":"La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir."});return
+                    if kind=="bridge":
+                        try:validate_bridge_site(x,y)
+                        except ValueError as error:self._send(409,{"error":str(error)});return
                     investment_id=str(data.get("investmentId", ""));investment_book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)});investment_offer=investment_book.get("proposal")
                     if investment_id and (not investment_offer or investment_offer.get("status")!="disponible" or investment_offer.get("id")!=investment_id or investment_offer.get("x")!=x or investment_offer.get("y")!=y or contractor!=investment_offer.get("contractor") or kind!="shop" or state["day"]>investment_offer.get("expiresDay",0)):
                         self._send(409,{"error":"La oportunidad privada cambió o venció. Revisá la propuesta actual."});return
-                    if is_water(x,y) and not (kind=="port" and x==23 and not is_water(x,y) and is_water(x+1,y)): self._send(409,{"error":"La terminal debe ocupar la franja costera edificable, junto al agua."}); return
+                    if is_water(x,y) and kind!="bridge" and not (kind=="port" and x==23 and not is_water(x,y) and is_water(x+1,y)): self._send(409,{"error":"La terminal debe ocupar la franja costera edificable, junto al agua."}); return
                     if kind=="port" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":"La terminal portuaria necesita una calle terminada al lado."});return
                     if kind=="port" and any(b.get("kind")=="port" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene una terminal portuaria."}); return
                     if kind=="airport" and any(b.get("kind")=="airport" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene un aeropuerto regional."}); return
@@ -6077,7 +6103,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
-                    if (instant_public or kind in ("airport","hotel","school","fireStation","powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill","recyclingPlant")) and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
+                    if (instant_public or kind in ("bridge","airport","hotel","school","fireStation","powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill","recyclingPlant")) and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
                     bus_line=None
                     if kind=="busStop":
                         bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)

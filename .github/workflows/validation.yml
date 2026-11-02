@@ -2,6 +2,8 @@ name: Validación Ciudad Viva
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 concurrency:
   group: ciudad-viva-validacion-${{ github.ref }}

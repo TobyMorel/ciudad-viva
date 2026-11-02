@@ -45,7 +45,7 @@ export function evaluateEssentialServices(city){
  }
  const live=b=>active(b)&&adjacent(b,roadTiles);
  const capacity={
-  power:buildings.filter(b=>b.kind==='powerPlant'&&live(b)&&adjacent(b,nets.power)).reduce((n,b)=>n+(b.generationKw??900)*Math.max(0,Math.min(1,(b.quality??82)/82)),0),
+  power:buildings.filter(b=>b.kind==='powerPlant'&&live(b)).reduce((n,b)=>n+(b.generationKw??900)*Math.max(0,Math.min(1,(b.quality??82)/82)),0),
   water:0,gas:0,tv:0,wifi:0
  };
  const assigned={power:new Set(),water:new Set(),gas:new Set(),tv:new Set(),wifi:new Set()};
@@ -56,18 +56,19 @@ export function evaluateEssentialServices(city){
  });
  // Cupo indivisible por inmueble: nunca se reparte el 20% a cinco casas.
  for(const service of ['power','water','gas','tv','wifi']){
-  if(service==='water')capacity.water=buildings.filter(b=>b.kind==='waterPlant'&&live(b)&&adjacent(b,nets.water)&&assigned.power.has(b)).reduce((n,b)=>n+(b.treatmentM3Day??220)*Math.max(0,Math.min(1,(b.quality??82)/82)),0);
-  if(service==='gas')capacity.gas=buildings.filter(b=>b.kind==='gasPlant'&&live(b)&&adjacent(b,nets.gas)&&assigned.power.has(b)).reduce((n,b)=>n+(b.gasCapacityM3Day??160)*Math.max(0,Math.min(1,(b.quality??82)/82)),0);
+  if(service==='water')capacity.water=buildings.filter(b=>b.kind==='waterPlant'&&live(b)&&assigned.power.has(b)).reduce((n,b)=>n+(b.treatmentM3Day??220)*Math.max(0,Math.min(1,(b.quality??82)/82)),0);
+  if(service==='gas')capacity.gas=buildings.filter(b=>b.kind==='gasPlant'&&live(b)&&assigned.power.has(b)).reduce((n,b)=>n+(b.gasCapacityM3Day??160)*Math.max(0,Math.min(1,(b.quality??82)/82)),0);
   if(service==='tv'||service==='wifi'){
    const model=service==='tv'?'tvHeadend':'wifiHub',field=service==='tv'?'tvConnections':'wifiConnections',fallback=service==='tv'?180:160;
-   capacity[service]=buildings.filter(b=>b.kind==='civic'&&b.serviceModel===model&&live(b)&&adjacent(b,nets[service])&&assigned.power.has(b))
+   capacity[service]=buildings.filter(b=>b.kind==='civic'&&b.serviceModel===model&&live(b)&&assigned.power.has(b))
     .reduce((n,b)=>n+(b[field]??fallback)*Math.max(0,Math.min(1,(b.quality??82)/82)),0);
   }
   let remaining=capacity[service];
-  for(const b of consumers){
+  const prior=[...consumers].sort((a,b)=>(Number(Boolean(b.serviceConnectionHistory?.[service]))-Number(Boolean(a.serviceConnectionHistory?.[service])))||0);
+  for(const b of prior){
    if(!required(b).includes(service))continue;
    const qty=demand(b,service),connected=live(b)&&adjacent(b,nets[service]);
-   if(connected&&remaining+1e-9>=qty){remaining-=qty;served[service]+=qty;assigned[service].add(b)}
+   if(connected&&remaining+1e-9>=qty){remaining-=qty;served[service]+=qty;assigned[service].add(b);(b.serviceConnectionHistory||(b.serviceConnectionHistory={}))[service]=true}
   }
   capacity[service]=Math.round(capacity[service]*100)/100;
  }

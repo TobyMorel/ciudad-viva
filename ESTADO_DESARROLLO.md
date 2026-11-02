@@ -1,3 +1,9 @@
+## Alfa 0.170 · Transbordos colectivos, subtes y trenes elevados
+
+Una persona que viaje por compras o servicios puede enlazar una línea municipal de colectivo operativa con un subte o tren elevado, en cualquiera de los dos sentidos. La parada debe coincidir con el recorrido vial, el acceso a la estación debe quedar próximo y ambos medios reservar asientos. Se calcula espera, caminata, conexión y tiempos de cada tramo; si la combinación es demasiado lenta se conserva el desplazamiento original. El segundo boleto tiene una rebaja del 25%. Se registran los dos componentes tarifarios por hogar y día y se liquidan en los cierres existentes de colectivos y ferrocarril, sin doble asignación de personas ni autos.
+
+LAN/Offline comparten reglas. La vista municipal publica transferencias diarias, frecuencias y conteos en cada medio. Las pruebas nuevas verifican ambos sentidos, tren elevado, energía, pausa, aforo, calles cortadas, recaudación real y coherencia del total de pasajeros. La prueba LAN física continúa pendiente y el avance global de 34 fases no admite una cifra sin ponderaciones homologadas.
+
 ## Alfa 0.169 · Primer tren elevado urbano con pasajeros (fase 22)
 
 Se incorpora una modalidad ferroviaria diferente del subte: viaductos sobre corredores de calles conectadas, contratos por etapas con inversión pagada y cuadrillas disponibles, material rodante, frecuencia y aforo, energía, presupuesto, tarifas y recaudación. Las formaciones 3D se desplazan por vías elevadas; no circulan por el tráfico rodado ni obedecen semáforos. La demanda nace de visitas de compras y servicios existentes y compite con otros modos sin duplicar pasajeros. Los motores LAN y Offline aplican las mismas reglas y exponen conteos separados para subte y tren elevado.

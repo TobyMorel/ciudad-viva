@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.166",
+  "currentVersion": "0.167",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.167",
+      "date": "2026-11-02",
+      "title": "Primera red de subte jugable: obras, trenes y pasajeros",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Desde Ciudad → Movilidad se puede contratar una línea subterránea entre dos edificios con acceso vial, elegir entre uno y tres trenes y seguir la obra por estudios, excavación, vías/estaciones e inspección.",
+        "La construcción avanza por días y requiere cuadrillas disponibles. La inversión se descuenta de la caja municipal: estaciones, longitud de túneles y material rodante tienen costos concretos.",
+        "Las líneas habilitadas solo funcionan con generación eléctrica suficiente, formaciones disponibles y financiación de movilidad. La compra de trenes aumenta capacidad y frecuencia; es posible pausar y reanudar el servicio.",
+        "Los vecinos utilizan el subte para viajes existentes de compras y servicios cuando sus estaciones son accesibles y el tiempo compite con el automóvil. Hay cupo de pasajeros; quienes viajan en metro no duplican su viaje en taxi o colectivo.",
+        "Los boletos se registran por hogar y se liquidan al cierre mensual, con dinero efectivamente disponible; la red tiene mantenimiento, consumo energético y gastos operativos. Motor LAN y Offline, pruebas y revisión de legibilidad móvil/escritorio."
+      ],
+      "verification": "Pruebas de Python, JavaScript y Playwright de construcción, energía, recaudación, aforo y legibilidad, más estrés económico de 30 años en CI.",
+      "pending": [
+        "Representación de túneles y formaciones en el mapa 3D, estaciones multiacceso, ramales y conexiones metro-colectivo, dotación ferroviaria especializada, obras con consumo de insumos proveedor a proveedor."
+      ]
+    },
     {
       "version": "0.166",
       "date": "2026-11-02",

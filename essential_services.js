@@ -95,6 +95,11 @@ export function evaluateEssentialServices(city){
   if(required(b).includes('wifi'))access.telecomServedPct=access.wifiServedPct;
   b.missingServices=missing;
   b.missingServiceReasons=reason;
+  if(b.business){
+   const factors=required(b).map(type=>access[{power:'powerServedPct',water:'waterServedPct',gas:'gasServedPct',tv:'tvServedPct',wifi:'wifiServedPct'}[type]]??0);
+   const sanitation=access.wastewaterTreatedPct??100;
+   b.business.utilityFactor=+(Math.min(sanitation,...factors)/100*Math.max(0,Math.min(1,b.business.waterRestrictionFactor??1))).toFixed(3);
+  }
  }
  u.essentialServices=summary;
  return summary;

@@ -12,6 +12,7 @@ test('Offline: el centro asigna visitas a mayores por plantilla y ruta y conserv
    {id:'care-senior',age:82,workerEligible:false,status:'jubilado',skills:{},expectedMonthlyWage:8,carAccess:false}]},
   {kind:'civic',name:'Centro de cuidados diurnos',serviceModel:'elderCare',x:5,y:10,status:'habilitado',jobSlots:10,monthlyCost:1450,elderCare:{careSlots:36},utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}}
  ];
+ city.buildings.push({kind:'powerPlant',name:'Central de prueba',x:4,y:9,status:'habilitado',quality:82,jobSlots:0,generationKw:900},{kind:'waterPlant',name:'Potabilizadora de prueba',x:5,y:9,status:'habilitado',quality:82,jobSlots:0,treatmentM3Day:220});
  city.socialServices={housingAidBudget:0,lastReport:{},history:[],shelterResidents:[],shelterReport:{},elderCareReport:{}};
  city.finance.programBudgets={servicesPct:100,mobilityPct:100,networksPct:100,programPriority:['services','networks','mobility'],arrears:{services:0,mobility:0,networks:0},underfundedMonths:{services:0,mobility:0,networks:0},financialServiceImpact:0,lastReport:{},history:[]};
  city.utilities=city.utilities||{};for(const k of ['powerLines','waterPipes','sewerLines','drainLines','gasLines','telecomLines'])city.utilities[k]=roads;city.utilities.basePowerCapacityKw=3000;city.utilities.baseWaterCapacityM3Day=1000;city.utilities.baseWastewaterTreatmentM3Day=1000;city.utilities.baseDrainageCapacityM3Day=3000;city.utilities.baseTelecomCapacityMbps=2000;

@@ -18,4 +18,5 @@ assert.equal(metroVisualPlan({...base,status:'active'}).tunnelSegments,4,'El tú
 assert.equal(metroVisualPlan({...base,status:'retired'}),null,'No se dibuja una línea retirada');
 assert.equal(metroVisualPlan({...base,route:[[1,2],['x',2],[5,2]]}),null,'Se descartan rutas corruptas');
 assert.equal(metroVisualPlan({...base,stations:[[1,2],[9,9]]}),null,'Los extremos deben coincidir');
+assert.equal(metroVisualPlan({...base,route:[[1,2],[2,2],[5,2]]}),null,'Se rechazan saltos entre tramos');
 console.log('OK: proyección del subte, progreso de obras y flota operativa');

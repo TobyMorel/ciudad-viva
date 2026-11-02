@@ -20,7 +20,12 @@ try{
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.evaluate(async()=>{const state=await fetch('/offline_seed.json').then(r=>r.json());state.money=200000;state.paused=true;state.newSettlement=true;state.buildings=[];state.projects=[];state.roads=[[4,10]];state.zones=[];state.taxiRoutes=[];state.busRoutes=[];localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(state))});
  await page.locator('#offlineMode').click();await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
- await page.waitForTimeout(300);
+ // El modal se oculta antes del render WebGL; SwiftShader puede tardar más de 300 ms.
+ // Comprobar la escena de la ciudad real, no el mapa de vista previa anterior.
+ await page.waitForFunction(()=>{
+   const scene=window.__ciudadVivaScene?.();
+   return scene?.tunnel?.visible===true&&scene?.streetLightCount===3;
+ },null,{timeout:20000});
  const first=await page.evaluate(()=>window.__ciudadVivaScene());assert.ok(first.drawCalls>0&&first.canvasWidth>0&&first.canvasHeight>0&&!first.contextLost,`3D inicial: ${JSON.stringify(first)}`);assert.ok(first.dynamicObjects>0,`la escena debe contener la ruta inicial: ${JSON.stringify({first,popup:await page.locator('#panelPopup').getAttribute('class')})}`);assert.deepEqual(first.tunnel,{visible:true,roofVisible:true,length:4.4},'el túnel corto deja dos tramos de la vía exterior descubiertos');assert.equal(first.streetLightCount,3,'cinco tramos de acceso llevan tres farolas alternadas');
  assert.match(await page.locator('#netLabel').innerText(),/Partida offline/);
  await page.locator('.game-dock [data-popup="traffic"]').evaluate(e=>e.click());await page.waitForSelector('#trafficPanel:not(.hidden)');await page.locator('#trafficPanel [data-close-traffic]').evaluate(e=>e.click());await page.waitForTimeout(40);const afterTraffic=await page.evaluate(()=>window.__ciudadVivaScene());assert.ok(afterTraffic.drawCalls>0&&afterTraffic.dynamicObjects>0,`la ciudad se mantiene visible al abrir/cerrar Tráfico: ${JSON.stringify(afterTraffic)}`);

@@ -1647,6 +1647,8 @@ def initial_state():
         {"x":9,"y":9,"kind":"powerPlant","name":"Central eléctrica existente","level":1,"status":"habilitado","quality":82,"jobSlots":18,"generationKw":900,"monthlyCost":460},
         {"x":14,"y":11,"kind":"waterPlant","name":"Potabilizadora existente","level":1,"status":"habilitado","quality":82,"jobSlots":12,"treatmentM3Day":220,"monthlyCost":340},
         {"x":17,"y":9,"kind":"gasPlant","name":"Estación de gas existente","level":1,"status":"habilitado","quality":82,"jobSlots":10,"gasCapacityM3Day":160,"monthlyCost":320},
+        {"x":18,"y":9,"kind":"civic","name":"Cabecera municipal de TV existente","serviceModel":"tvHeadend","level":1,"status":"habilitado","quality":82,"jobSlots":10,"tvConnections":180,"monthlyCost":550},
+        {"x":21,"y":9,"kind":"civic","name":"Centro de internet y Wi-Fi existente","serviceModel":"wifiHub","level":1,"status":"habilitado","quality":82,"jobSlots":12,"wifiConnections":160,"monthlyCost":620},
         {"x":8,"y":9,"kind":"home","name":"Viviendas del Parque","level":2,"occupants":126,"status":"operativo"},
         {"x":10,"y":9,"kind":"home","name":"Barrio Estación","level":2,"occupants":78,"status":"operativo"},
         {"x":15,"y":9,"kind":"shop","name":"Mercado Central","level":1,"occupants":0,"status":"operativo"},

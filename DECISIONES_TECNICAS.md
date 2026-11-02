@@ -1,4 +1,9 @@
-# Decisiones añadidas · Alfa 0.151
+# Decisiones añadidas · Alfa 0.152
+
+- Las vistas previas del catálogo se renderizan con una escena WebGL pequeña usando un solo renderer reutilizable para la galería y se copian a los canvas de tarjeta. Evitar múltiples contextos WebGL por pieza; los modelos usan primitivas/funciones de construcción del mundo, no ilustraciones externas.
+- El panel Construir es un drawer inferior responsive; las categorías filtran herramientas y la búsqueda consulta sus títulos/descripciones. Los tool buttons existentes conservan sus event handlers al pasar a la cuadrícula.
+- Paradas de colectivo/taxi son accesos directos al diseñador vial existente: el jugador selecciona el depósito y marca orden de paradas. Los costos actuales se mantienen; no se agrega una segunda entidad de parada que duplique el circuito.
+- Una coordenada hover de servicio no forma parte de la firma de reconstrucción del mundo. El overlay de cobertura se recalcula separado, preservando orientación y movimiento suave de actores.
 
 - Las obras urbanas no dependen de una cadena logística municipal de materiales. En las partidas guardadas se migran cantidades requeridas/usadas a cero y se reactiva una obra cuyo único bloqueo era la falta de material. Las fábricas sí consumen insumos para su producción comercial.
 - Las viviendas y otros permisos privados reaccionan a la zonificación en cada día simulado. La cohorte inicial puede ocupar las primeras viviendas aunque todavía no haya empleo; el ciclo laboral empieza a reaccionar con los negocios que abre la ciudad.

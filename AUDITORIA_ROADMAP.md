@@ -1,3 +1,11 @@
+# Auditoría · Alfa 0.152 · catálogo 3D y transporte
+
+La fase 7 se mantiene en 95% (estimación anterior; esta entrega mejora la interfaz de las acciones ya existentes, no agrega por sí sola cobertura completa de pasajeros). La bandeja agrupa y filtra el catálogo, usa miniaturas de modelos 3D generados en WebGL y lista costos/características del objeto seleccionado. Los accesos de paradas seleccionan una cochera o depósito y pasan al diseñador vial existente; las tarifas por parada siguen siendo $350 para colectivo y $220 para taxi. La entidad de pasajeros en taxi y el abordaje continúan pendientes.
+
+Se corrigió la previsualización vial: la baldosa verde ocupa casi todo el tramo de calle y el cambio de ubicación del cursor refresca solo esa capa, sin reconstruir tráfico ni restablecer orientación de vehículos.
+
+El global no se calcula: faltan ponderaciones comparables verificables para las 34 fases. Fases 4/7/9 conservan 60/95/75%.
+
 # Auditoría · Alfa 0.151 · crecimiento y actividad industrial
 
 La fase 4 mantiene el 60%: ahora la demanda residencial puede iniciar obra privada zonificada en el ciclo diario y la cohorte de 36 residentes puede alojarse al habilitarse sus viviendas. Una prueba confirma creación de proyecto en `tick_one_day`; otra del flujo Offline confirma disparo automático sin pedidos. Esto verifica la mecánica inicial, no la economía/comportamiento completo de las fases de empresas.

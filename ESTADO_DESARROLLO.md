@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.151
+# Estado de desarrollo · Alfa 0.152
+
+## Catálogo 3D y colocación de transporte · fase 7
+
+Construir abre una bandeja inferior con búsqueda y filtros. Las tarjetas renderizan miniaturas desde geometría 3D propia del juego, no recursos de imagen. El cursor de ayuda organiza la información en un párrafo y después atributos. El catálogo ofrece explícitamente Depósito de colectivos, Depósito de taxis, Paradas de colectivo y Paradas de taxi; las dos opciones de paradas abren el editor de ruta que cobra y numera las paradas sobre la vía. Aclaración: son posiciones de ruta; el embarque físico/pasajeros de taxi aún queda pendiente.
+
+La previsualización de alcance ahora cubre la baldosa completa de cada tramo vial. El movimiento del cursor actualiza solo esa capa y deja estables los actores 3D para evitar que los vehículos reinicien su giro al reconstruirse la escena.
+
+Verificado en Chromium a 390×844 y 1440×900: la bandeja permanece en pantalla, las miniaturas presentan variación de píxeles desde la geometría 3D, funcionan los filtros, la ficha ordena párrafo e ítems, y Transporte contiene ambos depósitos y los dos accesos de paradas. La cobertura abarca seis segmentos contiguos de la ruta de prueba. Colectivos: flujo UI y Offline pasan; taxis: Offline pasa y la prueba UI heredada de selección/inspección agotó el timeout al abrir información del actor, queda pendiente de diagnóstico (el catálogo y selección de depósito sí pasan). También pasan cinco pruebas Python manuales de rutas, sintaxis JS, JSON y `git diff --check`. El progreso de la fase 7 permanece en 95%; el global sigue sin estimarse porque las 34 fases no tienen ponderación de criterios verificables compartida. Fases 4 y 9: 60% y 75%.
 
 ## Crecimiento, vías de entrada, exportación y escena ambiental
 

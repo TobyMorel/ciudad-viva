@@ -1,4 +1,10 @@
-# Continuidad inmediata · Alfa 0.151
+# Continuidad inmediata · Alfa 0.152
+
+El catálogo del botón Construir se compone en `setupBuildCatalog()` en `game.js`: conserva los listeners de cada herramienta, mueve tarjetas con canvas a una bandeja inferior, filtra por `data-build-category` y llama a `world.renderBuildPreviews()`. Ese método usa un único WebGL renderer reutilizable y una escena de miniaturas generadas con la geometría del juego; no crear un renderer/contexto por tarjeta. Para ampliar los modelos revisar `makeBuildPreview`. En teléfonos: 3 columnas, en escritorio: 6.
+
+Las herramientas `busStop` y `taxiStop` sirven para elegir un depósito existente en el mapa, abrir el editor de línea/circuito y marcar posiciones de parada en calles. El backend de ruta cobra por parada ($350 bus, $220 taxi). Todavía no existe un asiento de pasajero/embarque físico de taxi ni una entidad `taxiStop`; no describirlos como completados.
+
+En `world3d.js`, `view.servicePreview` solo debe reconstruir su cobertura vial. Su coordenada no debe formar parte de `visualSignature`, pues invalidar `trafficRoot` reinicia la orientación de los vehículos en cada desplazamiento del cursor. La cobertura usa celdas de `TILE*.92` para ocupar todo el tramo y se reemplaza con `refreshServiceCoverage()`.
 
 Se corrigió el crecimiento automático inicial para que corra cada día y se quite la barrera de empleos a la primera cohorte de residentes. Verificar zonas conectadas en la misma coordenada de acceso. Las calles se conectan desde `[4,10]`; para visitantes el render usa `cityEntryRoute(openRoads)`, debe recalcularse al cambiar el conjunto de calles. La vegetación procedural de `world3d.js` se actualiza por vista/zoom; no ampliar la densidad sin medir el costo de render. El túnel de entrada se centra en el extremo exterior de esa misma vía.
 

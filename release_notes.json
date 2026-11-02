@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.151",
+  "currentVersion": "0.152",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.152",
+      "date": "2026-11-02",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Construir ahora se abre como una bandeja inferior con filtros por calles, zonas, servicios, industria, transporte y redes, además de búsqueda. Cada opción incluye una miniatura generada en tiempo real desde una escena 3D con geometría del juego.",
+        "El catálogo distingue el depósito de colectivos y el de taxis, y agrega entradas directas para diseñar las paradas de ambas redes. Se elige el depósito en el mapa y las paradas se marcan, numeran y cobran al crear el recorrido.",
+        "La ficha al pasar el puntero muestra primero una explicación corta y luego una lista de precio, alcance, costo por parada y tiempo cuando corresponde.",
+        "La vista de alcance de servicios ahora cubre cada tramo vial completo. Al mover el cursor, se refresca el alcance sin reconstruir los vehículos ni reiniciar su orientación, evitando giros bruscos de 360 grados."
+      ],
+      "pending": [
+        "La prueba física en pantallas/teléfonos reales sigue pendiente; Chromium automatizado verificó 390×844 y 1440×900.",
+        "Las posiciones de ruta no son entidades físicas de parada; completar embarque y transbordos. La UI de prueba de taxi también conserva un timeout heredado al inspeccionar el actor, pendiente de diagnóstico.",
+        "La prueba LAN entre dos computadoras físicas sigue pendiente; el progreso global no se estima sin pesos homogéneos verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.151",
       "date": "2026-11-02",

@@ -209,7 +209,7 @@ try{
     await live.goto('http://127.0.0.1:18765/',{waitUntil:'domcontentloaded'});
     await live.evaluate(async()=>{
       const city=await fetch('/offline_seed.json').then(r=>r.json());
-      city.paused=true;city.day=31;city.lastMonth=1;
+      city.paused=true;city.day=31;city.lastMonth=1;city.population=60;city.jobs=76;city.employment=100;
       // Una comisaría sin agua o electricidad debe permanecer en base. Para esta
       // prueba de movimiento conectamos instalaciones y calles físicamente.
       const lines=[[4,10],[5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[10,11],[11,11],[12,11]];
@@ -218,7 +218,8 @@ try{
        for(const network of ['powerLines','waterPipes','sewerLines'])city.utilities[network]=lines.map(tile=>[...tile]);
        city.buildings.push({kind:'powerPlant',name:'Central de prueba 3D',x:9,y:11,status:'habilitado',quality:90,generationKw:900,jobSlots:0},{kind:'waterPlant',name:'Potabilizadora de prueba 3D',x:8,y:11,status:'habilitado',quality:90,treatmentM3Day:220,jobSlots:0});
       city.utilities.failures=[{id:'repair-3d',network:'telecom',x:8,y:10,day:31,repairCost:500,affectedBuildings:4,status:'en reparación',remainingDays:1,responseKind:'emergencia',responseStartedDay:31,responseDurationDays:1,responseProgress:.5,responseRoute:[[4,10],[5,10],[6,10],[7,10],[8,10]]}];
-      city.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Comisaría visual de prueba',x:10,y:11,status:'operativo',
+      city.buildings.push({kind:'home',name:'Barrio de trabajadores de emergencia',x:5,y:9,status:'habilitado',quality:85,capacity:80,occupants:60,residents:Array.from({length:60},(_,i)=>({id:'emergency-worker-'+i,age:29,workerEligible:true,status:'buscando',skills:{salud:95,bomberos:95,comercio:65,administracion:65,logistica:65,educacion:65},expectedMonthlyWage:8,carAccess:false}))});
+       city.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Comisaría visual de prueba',x:10,y:11,status:'operativo',
         policeUnit:{vehicles:1,priority:'mixto'},jobSlots:22,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
       city.buildings.push({kind:'civic',serviceModel:'generalHospital',name:'Hospital visual de prueba',x:11,y:11,status:'operativo',
         hospitalWard:{beds:20,ambulances:1},jobSlots:40,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});

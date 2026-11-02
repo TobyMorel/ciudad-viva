@@ -98,10 +98,10 @@
   max-width: 60px;
   max-height: 18px;
   overflow: hidden;
-  color: #173d39;
-  font: 700 8.5px/1.05 system-ui;
+  color: #fff;
+  font: 750 9px/1.05 system-ui;
   text-align: center;
-  text-shadow: 0 1px 2px #f4f6e9e8, 0 -1px 2px #f4f6e9e8, 1px 0 2px #f4f6e9e8, -1px 0 2px #f4f6e9e8;
+  text-shadow: 0 1px 2px #071b16, 0 0 4px #071b16;
   text-overflow: ellipsis;
   white-space: normal;
 }
@@ -139,11 +139,11 @@
 
 body[data-theme="dark"] .city-report-rail button,
 body[data-theme="dark"] .city-report-rail button small {
-  color: #d8e9e1;
+  color: #fff;
 }
 
 body[data-theme="dark"] .city-report-rail button small {
-  text-shadow: 0 1px 3px #081614e8;
+  text-shadow: 0 1px 2px #071b16, 0 0 4px #071b16;
 }
 
 body[data-theme="dark"] .city-report-rail {

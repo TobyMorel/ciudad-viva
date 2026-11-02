@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.182",
+  "currentVersion": "0.183",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.183",
+      "date": "2026-11-02",
+      "title": "Etiquetas blancas legibles en ambos temas",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las etiquetas de los iconos municipales se muestran en blanco en modo claro y oscuro.",
+        "Un contorno oscuro mejora la lectura sobre el mapa sin importar el terreno que quede detr?s."
+      ],
+      "verification": "Reglas de contraste y tipograf?a responsive actualizadas.",
+      "pending": []
+    },
     {
       "version": "0.182",
       "date": "2026-11-02",

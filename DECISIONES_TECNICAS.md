@@ -2,6 +2,10 @@
 
 El cauce permanece en x=24–25; la nueva herramienta `bridge` se ancla en (24,y) y reserva ambas celdas. El acceso debe venir de la calle (23,y) con ruta hasta el acceso regional. El cruce se abre solo cuando la constructora termina sus etapas: dos entradas a `roads`, cada una con `roadAssets.bridge=true`, calidad y $80/mes de mantenimiento. La calle (26,y) queda a cargo del jugador para extenderse por el este; nunca se construye automáticamente en terreno privado. Se reutilizan las validaciones de parcela, contrato, cuadrillas, anticipos, inspección y garantía, en LAN y Offline. Las calles normales siguen prohibidas sobre el agua. El primer puente no incorpora todavía simulación de cargas máximas, geotecnia local comparada ni derrumbe: documentar esa profundidad pendiente para fase 16/28.
 
+## Fase 7 · contabilización de pasajeros de taxi
+
+El aforo inicial es de ocho pasajeros por taxi/día. Solo se reasignan viajes existentes de compras o servicios modelados como automóvil con distancia de al menos cuatro tramos, y que se encuentren a una cuadra o menos de dos paradas distintas del circuito. Una vía desconectada, un depósito cerrado o un taxi pausado anulan nuevas recogidas. La emisión del circuito de taxi se añade una vez; los autos particulares desplazados salen del aforo de sus viajes. El registro por día en cada taxi evita que múltiples lecturas de estado dupliquen recaudación; `fareMonth` y `fareByDay` se reinician en cada ciclo de 30 días, y se cobra al cierre mensual junto con el transporte existente. Quedan pendientes conductores reales, espera, despacho y tarifa dinámica.
+
 ## Alfa 0.159 · equipamientos públicos inmediatos
 
 Solo los modelos de salud, policía y bomberos declarados en `INSTANT_PUBLIC_MODELS` se colocan al instante. Se valida parcela, conexión vial y caja libre antes de cobrar. La misma regla se aplica a `offline.js` y el servidor; `game.js` omite la selección automática de constructora para estos modelos. Los proyectos antiguos en curso no se migran ni cancelan para evitar cobrar dos veces. Escuelas y otros equipamientos conservan su flujo actual.

@@ -77,6 +77,9 @@ class PrivateConstructionFreightTests(unittest.TestCase):
         s=self.s
         s["zones"]=[{"x":7,"y":11,"kind":"home","status":"disponible"}]
         s["housingDemand"]={"unmet":80,"lastGenerated":0,"lastFilled":0}
+        # La presión constructiva solo aparece al ocuparse las plazas ya edificadas.
+        for home in s["buildings"]:
+            if home.get("kind")=="home":home["occupants"]=home.get("capacity",0)
         s["projects"]=[]
         for stock in s["supply"]["contractors"].values():
             for key in server.MATERIAL_NAMES:stock[key]=0

@@ -1,9 +1,11 @@
-# Siguiente entrega · después de Alfa 0.140
+# Siguiente entrega · después de Alfa 0.141
 
-1. Hacer jugable mortalidad por edad: definir una curva natural estable, retirar fallecidos del hogar/empleo sin inconsistencias y conservar identidad/historial. Añadir cementerio y crematorio con capacidad limitada, operación/costos, ocupación y avisos de falta de cupo en Online y Offline.
-2. Mostrar robos de forma física en el mapa y patrullas que salen de comisarías/cuarteles, siguen rutas y responden; ligar la respuesta a personal, unidades y cobertura ya existentes.
-3. Garantizar al menos una farola por cada tramo de calle construido y orientarla a calzada; evitar una luz global que no corresponde a los activos reales.
-4. Acelerar y validar el desarrollo privado para que varias parcelas residenciales permitidas produzcan crecimiento visible, sin saltar la construcción por etapas, y que comercio/industria sigan a población y ventas. Revisar el tope inicial de demanda y condiciones de permanencia.
-5. Ejecutar 102+ pruebas Online, la suite completa Offline, stress y responsive a 390×844/1440×900; publicar en `main`, comprobar SHA/Actions y entregar ZIP completo.
+Prioridad de mecánicas, con un corte corto por sistema para no dejar subsistemas en pulido indefinido:
 
-Fase principal actual: 4 (60% según la rúbrica previa; los bloques todavía no tienen evidencia para cambiar puntuación). Fases relacionadas: 1, 5 y 9 parciales. Global no estimable sin pesos verificables compartidos entre 34 fases.
+1. **Fase 9 · incidentes y patrullaje visible:** convertir robos registrados en escenas/avisos 3D estables; despachar una patrulla desde una comisaría con dotación y unidad disponible, recorrer calles y cerrar el incidente al llegar. Informar por qué no pudo responder y evitar dobles asignaciones.
+2. **Fase 1/5 · calles:** garantizar una farola de calzada por cada calle construida y que su iluminación dependa del ciclo día/noche sin una luz global fingida. Revisar guardados y colocación de tramos nuevos.
+3. **Fase 4 · crecimiento inicial:** partida vacía, acceso exterior conectado, demanda residencial en aumento y ocupación de parcelas verdes con obras privadas por etapas; después vincular población a demanda comercial y producción industrial. Hacer que el progreso sea visible con varias parcelas permitidas, no sólo contadores.
+4. **Fase 9 · capacidad funeraria:** validar la renovación de cremación por año, cupo persistente, red desconectada, baja de empleo y muerte en partidas largas. Añadir transporte funerario sólo si el resto del ciclo anual sigue estable.
+5. Verificar suites completas Python/Node, prueba responsive existente a 390×844/1440×900 y carga del panel de Ciudad. Publicar en `main`, revisar estado CI y entregar ZIP.
+
+Estado actual: mortalidad natural determinista, retiro del hogar/padrón, cementerio (120 sepulturas), crematorio (24 anuales), colas por carretera/cupo, gastos y reportes funcionan en Online y Offline. Fase 9 orientativa: 75%; fase 4: 60% (sin evidencia nueva para cambiarla). Fase 9 está parcial. Global no estimable sin pesos comunes verificables para las 34 fases. No se ha probado la conexión LAN física entre dos computadoras.

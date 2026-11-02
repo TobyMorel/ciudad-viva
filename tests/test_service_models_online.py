@@ -25,7 +25,7 @@ class ServiceConstruction(unittest.TestCase):
     def test_service_models_have_monotone_costs_and_road_radii(self):
         families=(("clinic","medicalCenter","generalHospital"),("policePost","policeStation","policeHQ"),
             ("firePost","fireStationPlus","fireCommand"),("wasteYard","wasteDepot","wasteComplex"))
-        self.assertEqual(len(server.SERVICE_MODELS),14)
+        self.assertEqual(len(server.SERVICE_MODELS),16)
         for family in families:
             models=[server.SERVICE_MODELS[k] for k in family]
             self.assertEqual([m["cost"] for m in models],sorted(m["cost"] for m in models))

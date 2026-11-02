@@ -1,3 +1,11 @@
+## Alfa 0.141 · mortalidad y servicios funerarios
+
+`urbanEvolution.deceased` conserva hasta 2.000 fallecimientos recientes con ID de residente, edad, año/día, hogar y disposición funeraria. La edad avanza al cambiar el año de simulación; la curva anual determinista por ID evita resultados arbitrarios y reproducibilidad rota al recargar. Los umbrales por edad están implementados en `natural_death_threshold()` y `offlineNaturalDeathThreshold()`. Al morir, la identidad se retira del hogar y del padrón en la misma transición. La vacante puede recibir migración en el cierre mensual normal.
+
+`cemetery` guarda `funeralService.burials`, con tope de 120 plazas permanentes; `crematorium` registra `cremationsThisYear`, `totalCremations` e historial, con tope anual de 24. Se buscan servicios habilitados con ruta al acceso regional y ruta desde el hogar; se usa el cementerio más cercano que tenga plaza, después se intenta cremación. Sin servicio alcanzable o con capacidad agotada, la disposición queda `en espera`; la búsqueda diaria hace que una obra habilitada pueda resolverla ese mismo año. El contador anual se reinicia al cambiar de año. Las instalaciones conservan el gasto fijo mensual en el gasto municipal y sus puestos son vacantes de empleo ordinarias.
+
+El reporte `urbanEvolutionReport` / `offlineUrbanEvolutionReport` conserva capacidad, ocupación, espera, cremaciones, rutas y costos. La interfaz está en Ciudad → Evolución; la escena muestra modelos distintos en `world3d.js`. Próxima extensión debe cubrir transporte funerario físico y los demás eventos del fin de vida únicamente después de avanzar sistemas que aún están vacíos.
+
 # Decisiones técnicas · Alfa 0.140
 
 - El servidor Online y el primer inicio Offline arrancan en una partida nueva vacía. La acción Nueva partida Online limpia el estado actual; Offline aplica el inicio vacío solo si no hay guardado. Se conserva el modelo de servicios y hay una única puerta vial exterior. El mapa construye visualmente la continuación de esa ruta sin fingir que son calles municipales construidas. Offline solo aplica el escenario vacío cuando no hay guardado; no migra ni borra guardados anteriores.

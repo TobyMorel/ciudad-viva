@@ -1,3 +1,17 @@
+# Estado de desarrollo · Alfa 0.141
+
+## Ciclo de vida y servicios funerarios · fase 9
+
+La población envejece una vez por año simulado. A partir de los 75 años se aplica una probabilidad natural creciente, determinista por identidad y año; cumplir 115 años causa el fallecimiento. Se conserva un registro histórico limitado, se elimina a la persona del hogar y se libera la plaza. El cierre mensual puede ocupar después esa vacante con migración si aún hay demanda y atractivo.
+
+Cementerio municipal: 120 sepulturas permanentes. Crematorio municipal: 24 cremaciones por año simulado, con contador anual reiniciado. Ambos son equipamiento público construido por etapas; al habilitarse agregan puestos y costo municipal mensual. La asignación exige ruta vial desde la vivienda hasta el servicio y conexión de la instalación a la red urbana. Se prioriza el cementerio accesible con menor distancia; si no hay cupo, se intenta el crematorio. Sin ruta o capacidad, el registro queda en espera y emite aviso. La cola se reintenta a diario para atender instalaciones nuevas sin esperar un año.
+
+El panel Ciudad → Evolución muestra población por edades, defunciones del año, lista de espera, capacidad ocupada/libre y conectividad/costo de cada instalación. Cementerio y crematorio se distinguen en el mapa 3D.
+
+Verificado: 107 pruebas Python y 71 Node; estrés de 30 años × cuatro perfiles; `tests/test_funeral_ui.mjs` y `tests/test_ui_layout.mjs` en Chromium a 390×844 y 1440×900. Ambas vistas comprueban desborde, contención de tarjetas y datos/capacidad. Sintaxis, JSON y `git diff --check` limpios. Pruebas nuevas: `tests/test_funeral_services_online.py` y `tests/test_funeral_services_offline.mjs`. La cobertura de un año de capacidad funeraria se conserva entre guardados.
+
+Fase 9 sube de 70% a 75% al verificarse estos bloques; quedan pendientes los servicios educativos completos y el despacho físico de patrullas. Progreso global no estimable: falta una ponderación común verificable para las 34 fases. No declarar la fase terminada.
+
 # Estado de desarrollo · Alfa 0.140
 
 ## Ciudad vacía, acceso regional y expansión privada · fases 1, 4 y 5

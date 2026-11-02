@@ -47,6 +47,8 @@ try{
     await page.locator('#lanBack').evaluate(button=>button.click());
     await page.locator('#offlineMode').click();
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+    // Freeze the 3D draw loop after the static city loads; this test measures layout, not animation frame rate.
+    await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
     await page.waitForTimeout(400);
     let viewport=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,inner:window.innerWidth}));
     assert.ok(viewport.scroll<=viewport.inner+2,name+': desborde horizontal en el juego '+JSON.stringify(viewport));
@@ -85,7 +87,7 @@ try{
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===18&&catalog.factoryCount===5&&catalog.categories.length===7&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===20&&catalog.factoryCount===5&&catalog.categories.length===8&&catalog.categories.some(x=>x.includes('SERVICIOS FUNERARIOS'))&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').evaluate(button=>button.click());
 

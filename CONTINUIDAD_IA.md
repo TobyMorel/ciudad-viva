@@ -1,3 +1,15 @@
+# Continuidad para otra IA · Alfa 0.141
+
+**No empezar de cero.** Lee `CONTINUIDAD_IA.md`, `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md` antes de modificar el motor. Conserva Online/Offline en paridad y los guardados viejos; no cambies servicios, economía o infraestructura existente por contadores cosméticos.
+
+Esta entrega agrega mortalidad y capacidad funeraria: `server.py` (`ensure_urban_evolution_state`, `natural_death_threshold`, `process_funeral_queue`, `advance_urban_evolution`, `urban_evolution_report`); `offline.js` tiene la paridad con `ensureOfflineUrbanEvolution`, `offlineNaturalDeathThreshold`, `processOfflineFuneralQueue`, `advanceOfflineUrbanEvolution`, `offlineUrbanEvolutionReport`. Los catálogos de modelo están duplicados coherentemente en `game.js`, `server.py` y `offline.js`; el catálogo UI está en `index.html`; el aspecto 3D en `world3d.js`. Pruebas añadidas: `tests/test_funeral_services_online.py`, `tests/test_funeral_services_offline.mjs`; UI dedicada en `tests/test_funeral_ui.mjs` y catálogo ajustado en `tests/test_ui_layout.mjs`. Verificado: 107 Python, 71 Node, estrés de 30 años × cuatro perfiles y Chromium en 390×844/1440×900.
+
+Importante: `ensureOfflineUrbanEvolution()` corre antes de que algunas constantes del catálogo estén inicializadas. Mantén esa migración sin leer `SERVICE_MODELS` desde la zona TDZ. El fallecimiento retira a la persona y deja una plaza; la migración mensual puede ocuparla después, esto no es duplicación de población. La cola funeraria debe procesarse a diario aunque la edad sólo avance por cambio anual. Cemetery limit 120 permanente; crematorium limit 24/año; conectividad vial hasta acceso `(4,10)` y ruta de origen a instalación.
+
+Continuar en este orden: (1) robo con patrulla física y asignación de unidades disponibles, (2) farola por tramo apuntando a calzada y ciclo nocturno, (3) revisar crecimiento visible de nueva partida y demanda residencial. Cortes breves por mecánica; el usuario prioriza sistemas jugables sobre pulido visual prolongado. No retirar materiales de la obra pública ni el flujo de contratista: las exenciones ya existentes son para desarrollo residencial/comercial/industrial privado.
+
+Para publicar cada versión: configurar commit como `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, subir a rama `main`, comprobar SHA/estado CI y crear ZIP completo excluyendo `.git`, archivos ZIP antiguos y caches. Progreso total sigue `null`/no estimable mientras no se establezcan pesos verificables comunes para las 34 fases.
+
 # Continuidad para otra IA · Alfa 0.140
 
 Objetivo vigente del usuario: desarrollar sistemas nuevos del roadmap de forma acumulativa; evitar varias entregas de pulido. Mantener todo en GitHub `main`, probar Online/Offline y la UI si cambia, no afirmar cobertura sin evidencia. Cada paquete de continuidad debe incluir el repositorio completo. Conservar autor Git configurado `66056611+TobyMorel@users.noreply.github.com`.

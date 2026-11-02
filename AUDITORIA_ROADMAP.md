@@ -1,3 +1,9 @@
+# Auditoría · Alfa 0.141 · servicios funerarios (fase 9)
+
+La fase 9 aumenta de 70% a 75%: las edades avanzan anualmente, la mortalidad natural es estable por identidad/edad, los fallecidos dejan el hogar y se registra su disposición. Cementerio limita a 120 tumbas, crematorio a 24 cremaciones por año; ambas instalaciones cuestan, emplean, requieren acceso por calle y declaran capacidad/espera en la UI. Pruebas de ambos motores verifican fallecimiento, plaza liberada, cementerio agotado y fallback a cremación. `test_funeral_ui.mjs` verifica el panel a 390×844/1440×900, y `test_ui_layout.mjs` actualiza los conteos y categorías del catálogo.
+
+La fase continúa parcial: faltan servicios escolares y especialización de personal, escena/recorrido/resolución de robo por patrulla, y cobertura integral de todos los servicios. Global permanece no estimable por ausencia de pesos comunes verificables.
+
 # Auditoría del roadmap · Alfa 0.133
 
 ## Cambio de alcance de construcción

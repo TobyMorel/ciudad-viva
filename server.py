@@ -704,7 +704,13 @@ def architectural_style_for(year):
 def ensure_urban_evolution_state():
     year=2026+(max(0,int(state.get("day",1))-1)//360)
     evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year,"history":[],"lastBirthYear":2026})
-    evolution.setdefault("lastProcessedYear",year);evolution.setdefault("history",[]);evolution.setdefault("lastBirthYear",2026)
+    evolution.setdefault("lastProcessedYear",year);evolution.setdefault("history",[]);evolution.setdefault("lastBirthYear",2026);evolution.setdefault("deceased",[])
+    for building in state.get("buildings",[]):
+        model=service_model(building) if building.get("kind")=="civic" else None
+        if model and model.get("funeralType")=="cemetery":building.setdefault("funeralService",{"burials":[]})
+        elif model and model.get("funeralType")=="crematorium":
+            service=building.setdefault("funeralService",{"year":year,"cremationsThisYear":0,"totalCremations":0,"history":[]})
+            if service.get("year")!=year:service.update({"year":year,"cremationsThisYear":0})
     state.setdefault("urbanRenewalNeeds",[]);state.setdefault("urbanRenewalWorks",[]);state.setdefault("urbanRenewalHistory",[])
     for building in state.get("buildings",[]):
         if building.get("kind") in ("home","shop","hotel","factory"):
@@ -720,6 +726,53 @@ def ensure_urban_evolution_state():
             person["age"]=max(0,int(person["age"]))
             person.setdefault("lifeStage","infancia" if person["age"]<18 else "jubilación" if person["age"]>=67 else "vida laboral")
 
+def process_funeral_queue(year):
+    evolution=state.setdefault("urbanEvolution",{});deceased=evolution.setdefault("deceased",[])
+    cemeteries=[];crematoria=[]
+    for building in state.get("buildings",[]):
+        if building.get("kind")!="civic" or building.get("status") not in ("habilitado","operativo"):continue
+        model=service_model(building) or {};kind=model.get("funeralType")
+        if not kind:continue
+        service=building.setdefault("funeralService",{"burials":[]} if kind=="cemetery" else {"year":year,"cremationsThisYear":0,"totalCremations":0,"history":[]})
+        path=route_between((building["x"],building["y"]),(4,10))
+        if not path:continue
+        if kind=="cemetery":cemeteries.append((building,model,service))
+        else:
+            if service.get("year")!=year:service.update({"year":year,"cremationsThisYear":0})
+            crematoria.append((building,model,service))
+    cemeteries.sort(key=lambda x:(x[0]["x"],x[0]["y"]));crematoria.sort(key=lambda x:(x[0]["x"],x[0]["y"]))
+    for record in deceased:
+        if record.get("disposition")!="en espera":continue
+        origin=(record.get("homeX",4),record.get("homeY",10));choices=[]
+        for building,model,service in cemeteries:
+            graves=service.setdefault("burials",[]);capacity=max(0,int(model.get("graveCapacity",120)))
+            if len(graves)>=capacity:continue
+            route=route_between(origin,(building["x"],building["y"]))
+            if route:choices.append((len(route),building,service,route))
+        if choices:
+            _,building,service,route=min(choices,key=lambda x:(x[0],x[1]["x"],x[1]["y"]))
+            burial={"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"burialDay":state.get("day",1)}
+            service["burials"].append(burial);record.update({"disposition":"sepultado","facility":building.get("name"),"facilityX":building["x"],"facilityY":building["y"],"disposedDay":state.get("day",1),"route":route})
+            ev("Residente sepultado",f"{record['name']} fue trasladado al Cementerio municipal. Quedan {max(0,int(model.get('graveCapacity',120))-len(service['burials']))} parcelas funerarias.")
+            continue
+        for building,model,service in crematoria:
+            capacity=max(0,int(model.get("annualCapacity",24)))
+            if service.get("cremationsThisYear",0)>=capacity:continue
+            route=route_between(origin,(building["x"],building["y"]))
+            if not route:continue
+            service["cremationsThisYear"]+=1;service["totalCremations"]=service.get("totalCremations",0)+1
+            service.setdefault("history",[]).append({"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"cremationDay":state.get("day",1)})
+            service["history"]=service["history"][-120:]
+            record.update({"disposition":"cremado","facility":building.get("name"),"facilityX":building["x"],"facilityY":building["y"],"disposedDay":state.get("day",1),"route":route})
+            ev("Residente cremado",f"{record['name']} recibió sepultura por cremación en el crematorio municipal. Capacidad utilizada este año: {service['cremationsThisYear']}/{capacity}.")
+            break
+        if record.get("disposition")=="en espera" and not record.get("notifiedWaiting"):
+            record["notifiedWaiting"]=True
+            ev("Falta capacidad funeraria",f"{record['name']} falleció a los {record['age']} años. No hay una sepultura con acceso vial ni cupo anual de cremación; construí un cementerio o crematorio conectado.")
+
+def natural_death_threshold(age):
+    return 10000 if age>=115 else 3500 if age>=110 else 1800 if age>=105 else 900 if age>=100 else 500 if age>=95 else 250 if age>=90 else 100 if age>=85 else 40 if age>=80 else 10 if age>=75 else 0
+
 def urban_evolution_report():
     year=2026+(max(0,int(state.get("day",1))-1)//360);districts=[]
     for district_id,name,xmin,xmax in (("oeste","Oeste",0,10),("centro","Centro",10,18),("puerto","Puerto",18,100)):
@@ -728,16 +781,27 @@ def urban_evolution_report():
         buildings=[b for b in state.get("buildings",[]) if xmin<=b.get("x",0)<xmax]
         ages=[p.get("age",0) for p in people]
         districts.append({"id":district_id,"name":name,"population":sum(int(h.get("occupants",0)) for h in homes),"children":sum(a<18 for a in ages),"workingAge":sum(18<=a<67 for a in ages),"retired":sum(a>=67 for a in ages),"averageAge":round(sum(ages)/max(1,len(ages)),1),"buildings":len(buildings),"olderBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"renewalNeeds":sum(n.get("districtId")==district_id and n.get("status")=="disponible" for n in state.get("urbanRenewalNeeds",[]))})
-    buildings=state.get("buildings",[]);conditions=[b.get("urbanCondition",100) for b in buildings if b.get("kind") in ("home","shop","hotel")]
-    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:]}
+    buildings=state.get("buildings",[]);conditions=[b.get("urbanCondition",100) for b in buildings if b.get("kind") in ("home","shop","hotel")];deceased=state.get("urbanEvolution",{}).get("deceased",[]);funeral=[];cemetery_capacity=cemetery_occupied=cremations=0
+    for b in buildings:
+        model=service_model(b) if b.get("kind")=="civic" else None
+        if not model or not model.get("funeralType"):continue
+        data=b.get("funeralService",{});connected=bool(route_between((b["x"],b["y"]),(4,10)))
+        if model["funeralType"]=="cemetery":
+            capacity=int(model.get("graveCapacity",120));occupied=len(data.get("burials",[]));cemetery_capacity+=capacity;cemetery_occupied+=occupied
+            funeral.append({"name":b.get("name",model["label"]),"kind":"Cementerio","x":b["x"],"y":b["y"],"capacity":capacity,"used":occupied,"available":max(0,capacity-occupied),"connected":connected,"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
+        else:
+            capacity=int(model.get("annualCapacity",24));used=int(data.get("cremationsThisYear",0));cremations+=int(data.get("totalCremations",0))
+            funeral.append({"name":b.get("name",model["label"]),"kind":"Crematorio","x":b["x"],"y":b["y"],"capacity":capacity,"used":used,"available":max(0,capacity-used),"connected":connected,"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
+    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:],"deaths":len(deceased),"deathsThisYear":sum(d.get("year")==year for d in deceased),"awaitingFuneral":sum(d.get("disposition")=="en espera" for d in deceased),"cemeteryCapacity":cemetery_capacity,"cemeteryOccupied":cemetery_occupied,"cremations":cremations,"funeralFacilities":funeral}
 
 def advance_urban_evolution():
     year=2026+(max(0,int(state.get("day",1))-1)//360);evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year-1,"history":[],"lastBirthYear":2026})
+    evolution.setdefault("deceased",[])
     previous=int(evolution.get("lastProcessedYear",year-1))
-    if year<=previous:return
+    if year<=previous:process_funeral_queue(year);return
     years=min(50,year-previous);adults=retired=births=0
     for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home"):
-        for person in home.setdefault("residents",[]):
+        for person in home.setdefault("residents",[])[:]:
             old=int(person.get("age",0));new=min(120,old+years);person["age"]=new
             if old<18<=new:
                 person.update({"workerEligible":True,"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1),"unemploymentReason":"alcanzó edad laboral"});person["lifeStage"]="vida laboral";adults+=1
@@ -747,6 +811,11 @@ def advance_urban_evolution():
                 person.update({"workerEligible":False,"status":"jubilado","unemployedSinceDay":None,"unemploymentReason":None,"lifeStage":"jubilación"});retired+=1
                 ev("Residente inicia su jubilación",f"Una persona de {home.get('name','un hogar')} dejó la vida laboral; la vacante queda disponible para el mercado de empleo.")
             else:person["lifeStage"]="infancia" if new<18 else "jubilación" if new>=67 else "vida laboral"
+            threshold=natural_death_threshold(new)
+            if threshold and (new>=115 or stable_skill(str(person.get("id",f"{home['x']}-{home['y']}")),f"mortalidad-{year}")%10000<threshold):
+                record={"residentId":str(person.get("id",f"{home['x']}-{home['y']}-{len(evolution['deceased'])}")),"name":person.get("name") or f"Residente #{str(person.get('id',''))[-5:]}","age":new,"year":year,"deathDay":state.get("day",1),"homeX":home["x"],"homeY":home["y"],"disposition":"en espera"}
+                home["residents"].remove(person);home["occupants"]=max(0,int(home.get("occupants",0))-1);state["population"]=max(0,int(state.get("population",0))-1);evolution["deceased"].append(record);evolution["deceased"]=evolution["deceased"][-2000:]
+                ev("Fallecimiento natural",f"{record['name']} falleció a los {new} años. La población y las plazas del hogar se actualizaron.")
     for building in (b for b in (state.get("buildings",[])) if b.get("kind") in ("home","shop","hotel")):
         age=max(0,year-int(building.get("yearBuilt",year)))
         if age<=20:continue
@@ -771,6 +840,7 @@ def advance_urban_evolution():
             ev("Nacimientos en hogares de la ciudad",f"Nacieron {births} residentes en hogares con adultos de 24–40 años, vacantes y fondos familiares para cuidados iniciales ($180 por hogar). La demanda de salud y educación crecerá con ellos.")
         evolution["lastBirthYear"]=year
     evolution["lastProcessedYear"]=year
+    process_funeral_queue(year)
     if year%10==0:
         report=urban_evolution_report();record={k:report[k] for k in ("year","population","children","workingAge","retired","averageAge","agingBuildings","averageCondition")};evolution.setdefault("history",[]).append(record);evolution["history"]=evolution["history"][-20:]
         ev("Balance de década urbana",f"Año {year}: población {record['population']} · edad media {record['averageAge']} · {record['children']} menores, {record['workingAge']} en edad laboral y {record['retired']} jubilados · {record['agingBuildings']} inmuebles con 30 años o más. Las obras y mudanzas siguen activas al cambiar de década.")
@@ -1709,6 +1779,8 @@ SERVICE_MODELS={
  "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
  "socialShelter":{"kind":"civic","label":"Centro de acogida temporal","cost":14800,"days":92,"radius":8,"jobs":12,"beds":30,"socialCare":True,"monthlyCost":1180},
  "elderCare":{"kind":"civic","label":"Centro de acompañamiento domiciliario","cost":12600,"days":78,"radius":10,"jobs":10,"careSlots":36,"elderCare":True,"monthlyCost":1450},
+ "cemetery":{"kind":"civic","label":"Cementerio municipal","cost":11800,"days":78,"radius":14,"jobs":8,"funeralType":"cemetery","graveCapacity":120,"monthlyCost":520},
+ "crematorium":{"kind":"civic","label":"Crematorio municipal","cost":16400,"days":92,"radius":16,"jobs":10,"funeralType":"crematorium","annualCapacity":24,"monthlyCost":760},
  "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
  "policeStation":{"kind":"civic","label":"Comisaría distrital","cost":16500,"days":90,"radius":11,"jobs":22,"police":2},
  "policeHQ":{"kind":"civic","label":"Central de seguridad","cost":28700,"days":124,"radius":16,"jobs":36,"police":3},
@@ -4680,6 +4752,9 @@ def tick_one_day():
                     building["elderCare"]={"careSlots":model["careSlots"],"openedDay":day}
                     building["monthlyCost"]=model["monthlyCost"]
                     operating_cost=building["monthlyCost"]
+                elif model.get("funeralType"):
+                    building["funeralService"]={"burials":[]} if model["funeralType"]=="cemetery" else {"year":2026+(max(0,day-1)//360),"cremationsThisYear":0,"totalCremations":0,"history":[]}
+                    building["monthlyCost"]=model["monthlyCost"];operating_cost=model["monthlyCost"]
                 elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
                 state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
                 ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.140",
+  "currentVersion": "0.141",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.141",
+      "date": "2026-11-02",
+      "roadmapPhase": 9,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La población envejece cada año y puede morir por una curva natural estable por edad. La persona sale del hogar y del padrón; se registra identidad, edad, fecha y lugar para no duplicar habitantes ni plazas.",
+        "Se agregan el cementerio municipal (120 sepulturas) y el crematorio municipal (24 servicios por año), con construcción por etapas, plantilla, gasto mensual, reporte de capacidad y requisito de ruta vial conectada.",
+        "El servicio funerario procesa la espera cada jornada: prioriza la sepultura disponible más cercana y deriva a cremación si los cementerios están llenos. Sin acceso o capacidad, la persona permanece en espera con un aviso; el contador de cremación se renueva al comenzar cada año.",
+        "El panel Ciudad → Evolución informa fallecimientos, espera, plazas usadas/libres, cremaciones, conexión vial y costos. Los edificios tienen siluetas 3D específicas para distinguir el parque funerario y el crematorio.",
+        "Regresiones específicas verifican mortalidad, plazas liberadas, cementerio lleno, derivación a cremación y capacidad anual Online/Offline; la prueba responsive revisa el panel funerario en 390×844 y 1440×900.",
+        "Verificado: 107 pruebas Python, 71 pruebas Node, estrés de 30 años × cuatro perfiles y Chromium responsive de catálogo/panel funerario a 390×844 y 1440×900; sintaxis, JSON y diff limpios."
+      ]
+    },
     {
       "version": "0.140",
       "date": "2026-11-01",
@@ -1615,12 +1630,12 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 70,
-      "summary": "Centros de salud, policía, bomberos, higiene urbana y educación por niveles; anexos escolares completan su ciclo de obra y recepción en Online/Offline.",
+      "progress": 75,
+      "summary": "Centros de salud, policía, bomberos, higiene urbana, educación por niveles, protección social, mortalidad natural y servicios funerarios con ruta/cupo.",
       "pending": [
         "Verificar plazas, contratación docente y cobertura por distrito en una partida poblada tras ampliar una escuela.",
-        "Educación técnica, formación docente y protección social con efectos presupuestarios en hogares.",
-        "Especialización profesional del personal y cobertura completa de los servicios."
+        "Educación técnica, formación docente y protección social con efectos presupuestarios completos en hogares.",
+        "Despacho físico de patrullas y respuesta completa a incidentes; ampliar la especialización y cobertura del personal."
       ]
     },
     {

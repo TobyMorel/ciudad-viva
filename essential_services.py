@@ -22,6 +22,7 @@ def _adjacent(b,tiles):
 
 def _required(b):
     kind=b.get("kind")
+    if kind=="railStation":return ("power",)
     if kind in ("home","hotel"):return ("power","water","gas","tv","wifi")
     if kind in ("powerPlant","waterPlant","gasPlant","wastewaterPlant"):return ("power","water")
     if kind=="civic" and b.get("serviceModel") in ("tvHeadend","wifiHub"):return ("power",)
@@ -40,7 +41,7 @@ def _demand(b,service):
 
 def evaluate_essential_services(city):
     u=city.setdefault("utilities",{})
-    buildings=[b for b in city.get("buildings",[]) if _live(b)]
+    buildings=[b for b in [*city.get("buildings",[]),*(s for s in city.get("railStations",[]) if s.get("status")=="active")] if _live(b)]
     roads=_connected({tuple(p) for p in city.get("roads",[])})
     nets={}
     for service,key in NETWORK.items():
@@ -109,7 +110,7 @@ def evaluate_essential_services(city):
 def advance_essential_service_day(city,notify=None):
     day=int(city.get("day") or 1);removed=[]
     for b in list(city.get("buildings",[])):
-        if b.get("kind")!="home" or not _live(b):continue
+        if b.get("kind")!="home" or not _live(b) or (not b.get("occupants") and not b.get("residents")):continue
         if b.get("lastServiceCheckDay")==day:continue
         days=max(1,min(30,day-int(b.get("lastServiceCheckDay",day-1))))
         b["lastServiceCheckDay"]=day

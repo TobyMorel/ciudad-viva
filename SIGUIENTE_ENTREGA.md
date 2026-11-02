@@ -1,3 +1,7 @@
+## Publicación Alfa 0.163 · historial completo y preventivo
+
+Se publicaron entradas específicas de Alfa 0.162 para el puente y de Alfa 0.163 para viajes de pasajeros de taxi en la pantalla «Cambios y novedades». Se sincronizan título de pestaña, metadato de versión, importaciones y recuperación de caché, paquetes de CI y prueba de arranque de Cambios. El pipeline exige en cada PR con código nuevo una versión superior y notas visibles. **Próximo hito de simulación:** personal y turnos de taxis, despacho, subte e intermodalidad.
+
 ## Fase 7 · pasajeros reales en circuitos de taxi
 
 Los taxis recogen demanda ya existente de desplazamientos en automóvil hacia comercios y equipamientos cívicos cuando origen y destino están a una cuadra de dos paradas diferentes y el circuito vial permanece conectado. Se limitan a ocho pasajeros diarios por vehículo; esos viajeros dejan de computar como autos particulares en el modelo de esos desplazamientos. Se añaden ocupación diaria, ingreso tarifario acumulado en cada mes y proyección orientativa, con flujo vial y emisiones del taxi. La facturación se asienta por día, sin duplicarse al consultar repetidamente el estado; el cierre municipal incorpora los ingresos. Equivalencia Online/Offline y regresiones nuevas.

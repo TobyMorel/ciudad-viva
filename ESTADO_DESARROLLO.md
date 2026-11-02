@@ -1,4 +1,8 @@
-## En revisión · puente vial de fase 7 (posterior a Alfa 0.161)
+## Fase 7 · desplazamientos de pasajeros en taxi (posterior a Alfa 0.161)
+
+Los circuitos de taxi con paradas conectadas atienden una fracción de los viajes reales en automóvil a comercios y servicios cívicos, sin crear habitantes ni sumar demanda ficticia. Se reasignan como máximo ocho ocupantes por vehículo al día, descontando autos de esos viajes y contabilizando el recorrido y emisiones del taxi. La tarifa actual de $0,45 por viaje se acumula por día, permite distintas lecturas del mismo día sin cobro duplicado y se reinicia cada mes. La liquidación municipal usa ese ingreso; el panel de taxis muestra los pasajeros y la recaudación. Se mantienen como pendientes los choferes, turnos, despacho individual y conexión con subte, cruceros y aeropuerto.
+
+## Puente vial de fase 7 (integrado en main)
 
 Propuesta: puente de dos tramos sobre el río, con contrato municipal, estudio de suelo, pilotes, estructura, tablero e inspección. El cruce necesita una calle en la ribera oeste y terreno habilitado; antes de terminar no existe como red vial. El contrato reserva presupuesto, utiliza cuadrillas y deja un activo con desgaste y mantenimiento ($80 por tramo y mes). Offline/LAN, catálogo y render 3D se actualizan juntos. Se agregaron regresiones de validación, habilitación tras la obra y continuación de calle al este. Pendiente de ejecutar y aprobar CI y de probar visualmente en una partida; sin modificar el porcentaje global ni declarar entrega publicada.
 

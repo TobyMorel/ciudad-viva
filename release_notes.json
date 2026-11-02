@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.142",
+  "currentVersion": "0.143",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.143",
+      "date": "2026-11-02",
+      "roadmapPhase": 9,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La preferencia funeraria de cada familia queda registrada al ocurrir una muerte: aproximadamente 70% solicita sepultura y 30% cremación. La familia no se deriva a un servicio distinto al solicitado.",
+        "Un coche fúnebre selecciona una instalación construida, operativa, conectada por calles y dentro de su alcance vial (14 cuadras para cementerio, 16 para crematorio). Recorre una ruta de ida para recoger a la persona fallecida y continúa al destino; el viaje es persistente y visible en el mapa 3D, con llegada estimada.",
+        "Las plazas de sepultura y la capacidad anual de cremación se reservan durante traslados simultáneos y se consumen al llegar. Si falta instalación de la clase solicitada, conexión, alcance o cupo, la familia queda en espera y aparece un aviso seleccionable sobre su hogar con el motivo concreto.",
+        "Ciudad → Evolución muestra instalaciones, alcance, disponibilidad, viajes de coches fúnebres y familias en espera. Online y Offline comparten la misma lógica; se conserva la capacidad de los cementerios y el reinicio anual de cremaciones.",
+        "Verificado en 6 pruebas Python específicas y 3 pruebas Offline; Chromium responsive del aviso, panel y vehículo funerario en 390×844 y 1440×900; sintaxis Python/JavaScript correcta. No se ejecutó una prueba LAN física. Fase 9 permanece en 75% porque patrullaje policial físico y otros criterios aún faltan; progreso global no estimable al no existir pesos comunes verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.142",
       "date": "2026-11-02",

@@ -1,4 +1,29 @@
-# Continuidad inmediata · Alfa 0.142
+# Continuidad inmediata · Alfa 0.143
+
+El cambio activo agrega transporte funerario real en el mapa. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. No vuelvas a empezar desde cero ni declares que todas las fases están hechas. El usuario prioriza sistemas jugables nuevos, entregas acumulativas, interfaz sin solapamientos y publicación de cada cambio a la rama `main`.
+
+## Sistemas de esta versión
+
+- `server.py`: preferencia familiar determinista, `process_funeral_queue`, búsqueda por distancia vial y alcance, reserva de cupo, viaje de ida y vuelta, ETA y llegada a cementerio/crematorio. El fallecimiento se conserva en historial; el traslado queda en `funeralTrip`.
+- `offline.js`: comportamiento paralelo para guardado local. Mantener paridad semántica y soportar registros de fallecidos antiguos sin preferencia.
+- `world3d.js`: coche fúnebre visible, animado y seleccionable durante `en traslado`. Usa la ruta registrada y presenta destino/servicio/ETA.
+- `cityGuide.js` y `game.js`: marcador ⚱️ sobre el hogar si la familia está en espera; al tocarlo se muestra la razón y acción municipal. `Ciudad → Evolución` lista las capacidades, los viajes y la espera.
+- Servicios: cementerio 120 plazas permanentes, radio vial 14; crematorio 24 cremaciones anuales, radio vial 16. Exigen construcción completada, estado operativo y conexión a calle. Familia mantiene su preferencia; no sustituir cementerio por crematorio ni viceversa. Reserva cupo durante el viaje para evitar sobreasignación concurrente.
+
+## Verificación de Alfa 0.143
+
+`python3 -m unittest discover -s tests -p 'test_funeral_services_online.py' -v` (6 pruebas); `node tests/test_funeral_services_offline.mjs` (3 pruebas); `node tests/test_funeral_ui.mjs` (Chromium móvil y escritorio). Compilación/sintaxis: `python3 -m py_compile server.py`, `node --check game.js`, `offline.js`, `world3d.js`, `cityGuide.js`. LAN física no probada. Fase 9 sigue en 75%; global `null` porque falta un sistema de ponderación común verificable de las 34 fases.
+
+## Próxima mecánica
+
+Implementar fase 9: incidentes de robo con escena/aviso visible y patrulla física asignada desde comisaría. La patrulla recorre calles y cierra el incidente al llegar; verificar recursos, alcance y asignación única. Luego revisar farolas garantizadas por tramo y evolución visible de demanda y zonificación. Evitar largas rondas de pulido visual.
+
+## Publicar
+
+Usa el autor Git exacto `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, push a `main`, confirma commit SHA y estado CI/Vercel, y genera ZIP completo desde la revisión publicada excluyendo `.git`, cachés y zips anteriores.
+
+
+## Continuidad histórica
 
 El usuario pidió retirar confirmaciones repetitivas al construir calles y edificios. En `game.js`, `placeQuick` invoca la acción autoritativa `place`/`rescue` con cuadrilla automática y encadena acciones en `placementQueue`; deja activa la herramienta para repetir clics. Las obras conservan animación y progreso por etapas. El diálogo de `bidBackdrop` se quitó del HTML y ya no hay llamadas a `openBid`. Errores de presupuesto, sitio o cuadrilla siguen apareciendo mediante `send`/aviso.
 

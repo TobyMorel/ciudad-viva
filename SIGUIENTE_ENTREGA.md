@@ -1,13 +1,7 @@
-# Siguiente entrega · después de Alfa 0.142
+# Siguiente entrega · después de Alfa 0.143
 
-Prioridad de mecánicas, con un corte corto por sistema para no dejar subsistemas en pulido indefinido:
+El ciclo de muerte, preferencia funeraria, búsqueda por alcance vial, reserva, traslado 3D seleccionable, llegada y espera por falta de servicio ya existe Online/Offline. Fase 9 sigue en 75%; no declarar completada. Global sin estimar hasta que existan pesos comunes verificables para las 34 fases.
 
-1. **Fase 9 · incidentes y patrullaje visible:** convertir robos registrados en escenas/avisos 3D estables; despachar una patrulla desde una comisaría con dotación y unidad disponible, recorrer calles y cerrar el incidente al llegar. Informar por qué no pudo responder y evitar dobles asignaciones.
-2. **Fase 1/5 · calles:** garantizar una farola de calzada por cada calle construida y que su iluminación dependa del ciclo día/noche sin una luz global fingida. Revisar guardados y colocación de tramos nuevos.
-3. **Fase 4 · crecimiento inicial:** partida vacía, acceso exterior conectado, demanda residencial en aumento y ocupación de parcelas verdes con obras privadas por etapas; después vincular población a demanda comercial y producción industrial. Hacer que el progreso sea visible con varias parcelas permitidas, no sólo contadores.
-4. **Fase 9 · capacidad funeraria:** validar la renovación de cremación por año, cupo persistente, red desconectada, baja de empleo y muerte en partidas largas. Añadir transporte funerario sólo si el resto del ciclo anual sigue estable.
-5. Verificar suites completas Python/Node, prueba responsive existente a 390×844/1440×900 y carga del panel de Ciudad. Publicar en `main`, revisar estado CI y entregar ZIP.
+Prioridad de sistemas nuevos: **fase 9, respuesta policial física a robos**. Al registrar un incidente, crear marcador/escena, asignar una patrulla disponible desde una comisaría operativa con agentes y calle, mostrar su ruta animada y cerrar el caso al llegar. Si falta recurso o cobertura, explicar la causa en el marcador. Prevenir asignar una patrulla a dos incidentes simultáneos. Después: comprobar farola de calzada en cada tramo nuevo (fase 1/5) y revisar el crecimiento inicial automático residencial-comercial-industrial (fase 4). Mantener bloques cortos por mecánica y paridad Online/Offline.
 
-La colocación directa de Alfa 0.142 ya fue comprobada en escritorio y móvil; seguir usando `placeQuick`/`placementQueue`, conservar la animación por etapas y no restaurar un modal por parcela.
-
-Estado actual: mortalidad natural determinista, retiro del hogar/padrón, cementerio (120 sepulturas), crematorio (24 anuales), colas por carretera/cupo, gastos y reportes funcionan en Online y Offline. Fase 9 orientativa: 75%; fase 4: 60% (sin evidencia nueva para cambiarla). Fase 9 está parcial. Global no estimable sin pesos comunes verificables para las 34 fases. No se ha probado la conexión LAN física entre dos computadoras.
+Cierre de Alfa 0.143: 6 pruebas Python funerarias y 3 pruebas Offline; UI responsive probada a 390×844 y 1440×900; no hubo prueba LAN física. Próxima publicación: `main`, verificar CI/Vercel, SHA y ZIP completo. Usar autor `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`.

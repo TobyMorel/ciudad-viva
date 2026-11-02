@@ -60,6 +60,12 @@ export function collectCityAlerts(state){
    (v.name||'Edificio')+'. '+(active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
    active?'Construí y equipá un cuartel de bomberos. Un vehículo no sale sin cuatro bomberos cualificados y ruta vial.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
  }
+ for(const d of state.urbanEvolution?.deceased||[]){
+  if(d?.disposition!=="en espera"||!site(d.homeX,d.homeY))continue;
+  const cremation=d.funeralPreference==="crematorium",need=cremation?"cremación":"sepultura",facility=cremation?"crematorio":"cementerio",reason=d.waitReason||`La familia solicita ${need}, pero todavía no hay un ${facility} operativo, conectado y dentro de alcance.`;
+  push(item('funeral','⚱️','Traslado funerario pendiente',`${d.name||'Residente fallecido'} · ${reason}`,
+   `Construí un ${facility} municipal, asegurá una ruta desde este hogar y mantenelo dentro de su alcance. El coche fúnebre saldrá cuando haya cupo.`,d.homeX,d.homeY,d.deathDay,`funeral-${d.residentId}`,0));
+ }
  for(const v of state.health?.ambulanceDispatches||[]){
   if(!site(v.x,v.y)||now-(v.day||0)>7||now<(v.day||0))continue;
   push(item('health','✚','Emergencia sanitaria atendida','Traslado de '+(v.patients||1)+' paciente(s). '+(v.station||'Centro hospitalario')+'.','Revisá Salud para ver camas, profesionales, ambulancias y atención pendiente.',v.x,v.y,v.day,v.id||`amb-${v.x}-${v.y}-${v.day}`,2));

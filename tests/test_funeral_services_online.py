@@ -8,7 +8,7 @@ class FuneralServicesOnline(unittest.TestCase):
     def setUp(self):
         server.state = server.initial_state()
         home = {"kind": "home", "name": "Hogar", "x": 4, "y": 11, "occupants": 1,
-                "capacity": 1, "quality": 90, "residents": [{"id": "residente-115", "name": "Elena",
+                "capacity": 1, "quality": 90, "residents": [{"id": "resident-115", "name": "Elena",
                 "age": 114, "workerEligible": False, "status": "jubilado"}]}
         server.state["buildings"] = [home]
         server.state["population"] = 1
@@ -16,7 +16,7 @@ class FuneralServicesOnline(unittest.TestCase):
         server.state["urbanEvolution"] = {"lastProcessedYear": 2026, "lastBirthYear": 2026, "history": [], "deceased": []}
         self.home = home
 
-    def test_mortality_reduces_population_and_waiting_death_is_serviced_same_year(self):
+    def test_mortality_dispatches_hearse_and_buries_after_road_journey(self):
         server.advance_urban_evolution()
         record = server.state["urbanEvolution"]["deceased"][0]
         self.assertEqual(record["age"], 115)
@@ -27,6 +27,12 @@ class FuneralServicesOnline(unittest.TestCase):
         server.state["buildings"].append(cemetery)
         with patch.object(server, "route_between", return_value=[[4, 10], [5, 10]]):
             server.advance_urban_evolution()  # Same year: queued remains process each day.
+        self.assertEqual(record["funeralPreference"], "cemetery")
+        self.assertEqual(record["disposition"], "en traslado")
+        self.assertEqual(record["funeralTrip"]["kind"], "cemetery")
+        self.assertGreaterEqual(len(record["funeralTrip"]["route"]), 3)
+        server.state["day"] += 1
+        server.process_funeral_queue(2027)
         self.assertEqual(record["disposition"], "sepultado")
         self.assertEqual(len(cemetery["funeralService"]["burials"]), 1)
         self.assertEqual(server.urban_evolution_report()["cemeteryOccupied"], 1)
@@ -42,9 +48,37 @@ class FuneralServicesOnline(unittest.TestCase):
         with patch.object(server, "route_between", return_value=[[4, 10], [5, 10]]):
             server.process_funeral_queue(2027)
         record = server.state["urbanEvolution"]["deceased"][0]
+        self.assertEqual(record["funeralPreference"], "crematorium")
+        self.assertEqual(record["disposition"], "en traslado")
+        server.state["day"] += 1
+        server.process_funeral_queue(2027)
         self.assertEqual(record["disposition"], "cremado")
         self.assertEqual(crematorium["funeralService"]["cremationsThisYear"], 1)
         self.assertEqual(server.urban_evolution_report()["awaitingFuneral"], 0)
+
+    def test_family_cremation_preference_does_not_fall_back_to_a_cemetery(self):
+        cemetery = {"kind": "civic", "name": "Cementerio", "serviceModel": "cemetery", "x": 5, "y": 10, "status": "habilitado"}
+        server.state["buildings"] = [cemetery]
+        server.state["urbanEvolution"]["deceased"] = [{"residentId": "family-choice", "name": "Ana", "age": 90,
+            "year": 2027, "homeX": 4, "homeY": 11, "disposition": "en espera", "funeralPreference": "crematorium"}]
+        with patch.object(server, "route_between", return_value=[[4, 10], [5, 10]]):
+            server.process_funeral_queue(2027)
+        record = server.state["urbanEvolution"]["deceased"][0]
+        self.assertEqual(record["disposition"], "en espera")
+        self.assertIn("no hay ninguno construido", record["waitReason"])
+        self.assertEqual(server.urban_evolution_report()["funeralTrips"], 0)
+
+    def test_facility_radius_uses_road_distance(self):
+        crematorium = {"kind": "civic", "name": "Crematorio distante", "serviceModel": "crematorium", "x": 20, "y": 10, "status": "habilitado"}
+        server.state["buildings"] = [crematorium]
+        server.state["urbanEvolution"]["deceased"] = [{"residentId": "family-crem", "name": "Ana", "age": 90,
+            "year": 2027, "homeX": 4, "homeY": 11, "disposition": "en espera", "funeralPreference": "crematorium"}]
+        route=[[x,10] for x in range(4,22)]
+        with patch.object(server, "route_between", return_value=route):
+            server.process_funeral_queue(2027)
+        record=server.state["urbanEvolution"]["deceased"][0]
+        self.assertEqual(record["disposition"], "en espera")
+        self.assertIn("alcance vial (16 cuadras)", record["waitReason"])
 
     def test_service_catalog_exposes_bounded_funeral_capacity(self):
         self.assertEqual(server.SERVICE_MODELS["cemetery"]["graveCapacity"], 120)

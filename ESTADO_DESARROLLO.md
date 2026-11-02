@@ -1,4 +1,18 @@
-# Estado de desarrollo · Alfa 0.142
+# Estado de desarrollo · Alfa 0.143
+
+## Ciclo funerario con traslado físico · fase 9
+
+Cada nuevo fallecimiento recibe una preferencia familiar persistente: sepultura (70%) o cremación (30%), determinada de forma estable por identidad. Esa preferencia define el destino; no se sustituye por el otro tipo de instalación. Una familia sin servicio adecuado permanece en espera.
+
+El despacho busca un cementerio o crematorio ya habilitado, con camino desde el hogar, conectado a la red y dentro del alcance propio del servicio (14 cuadras / 16 cuadras). El coche fúnebre recorre calles hasta el hogar y luego al destino; el registro del viaje, ETA y capacidad reservada se guardan para evitar despachos dobles. Al llegar se consume una sepultura permanente o una plaza de cremación anual. Si la instalación cierra, se llena o deja de ser alcanzable, el traslado vuelve a la espera con una causa.
+
+El coche fúnebre tiene modelo 3D seleccionable y muestra destino, servicio contratado, distancia y día de llegada. El panel Ciudad → Evolución muestra viajes activos, familias en espera, capacidad y alcance. Cada familia en espera crea un marcador sobre la vivienda; al seleccionarlo se explica si falta el tipo de instalación, una conexión/cobertura o cupo, y qué puede hacer el gobierno.
+
+Verificado: 6 pruebas unitarias Online (`unittest`), 3 pruebas Offline, Chromium responsive `tests/test_funeral_ui.mjs` a 390×844 y 1440×900, compilación Python y comprobaciones de sintaxis JavaScript. La prueba física entre dos equipos LAN no se ejecutó. No se cambió el porcentaje de fase: la fase 9 permanece en 75%, pues aún faltan patrullaje policial físico y otros criterios. El progreso global continúa sin estimar: no hay pesos comunes verificables para agregar las 34 fases.
+
+
+
+## Historial anterior
 
 ## Colocación directa de calles y edificios · fase 2
 

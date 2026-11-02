@@ -726,49 +726,75 @@ def ensure_urban_evolution_state():
             person["age"]=max(0,int(person["age"]))
             person.setdefault("lifeStage","infancia" if person["age"]<18 else "jubilación" if person["age"]>=67 else "vida laboral")
 
+def funeral_preference(resident_id):
+    return "cemetery" if stable_skill(str(resident_id), "funeral-preference") % 100 < 70 else "crematorium"
+
 def process_funeral_queue(year):
-    evolution=state.setdefault("urbanEvolution",{});deceased=evolution.setdefault("deceased",[])
-    cemeteries=[];crematoria=[]
+    evolution=state.setdefault("urbanEvolution",{});deceased=evolution.setdefault("deceased",[]);today=int(state.get("day",1))
+    facilities=[]
     for building in state.get("buildings",[]):
         if building.get("kind")!="civic" or building.get("status") not in ("habilitado","operativo"):continue
         model=service_model(building) or {};kind=model.get("funeralType")
-        if not kind:continue
+        if kind not in ("cemetery","crematorium"):continue
         service=building.setdefault("funeralService",{"burials":[]} if kind=="cemetery" else {"year":year,"cremationsThisYear":0,"totalCremations":0,"history":[]})
-        path=route_between((building["x"],building["y"]),(4,10))
-        if not path:continue
-        if kind=="cemetery":cemeteries.append((building,model,service))
-        else:
-            if service.get("year")!=year:service.update({"year":year,"cremationsThisYear":0})
-            crematoria.append((building,model,service))
-    cemeteries.sort(key=lambda x:(x[0]["x"],x[0]["y"]));crematoria.sort(key=lambda x:(x[0]["x"],x[0]["y"]))
+        if kind=="crematorium" and service.get("year")!=year:service.update({"year":year,"cremationsThisYear":0})
+        facilities.append((building,model,service,kind))
     for record in deceased:
-        if record.get("disposition")!="en espera":continue
-        origin=(record.get("homeX",4),record.get("homeY",10));choices=[]
-        for building,model,service in cemeteries:
-            graves=service.setdefault("burials",[]);capacity=max(0,int(model.get("graveCapacity",120)))
-            if len(graves)>=capacity:continue
-            route=route_between(origin,(building["x"],building["y"]))
-            if route:choices.append((len(route),building,service,route))
-        if choices:
-            _,building,service,route=min(choices,key=lambda x:(x[0],x[1]["x"],x[1]["y"]))
-            burial={"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"burialDay":state.get("day",1)}
-            service["burials"].append(burial);record.update({"disposition":"sepultado","facility":building.get("name"),"facilityX":building["x"],"facilityY":building["y"],"disposedDay":state.get("day",1),"route":route})
-            ev("Residente sepultado",f"{record['name']} fue trasladado al Cementerio municipal. Quedan {max(0,int(model.get('graveCapacity',120))-len(service['burials']))} parcelas funerarias.")
+        if record.get("disposition")=="en traslado":
+            trip=record.get("funeralTrip") or {}
+            if today<int(trip.get("arrivalDay",today+1)):continue
+            building=next((b for b,_,__,___ in facilities if (service_model(b) or {}).get("funeralType")==trip.get("kind") and b.get("x")==trip.get("facilityX") and b.get("y")==trip.get("facilityY") and b.get("status") in ("habilitado","operativo")),None)
+            if not building:
+                record.update({"disposition":"en espera","funeralTrip":None,"waitReason":"La instalación cerró antes de recibir el traslado."});continue
+            model=service_model(building) or {};service=building.setdefault("funeralService",{});kind=trip.get("kind")
+            if kind=="cemetery":
+                graves=service.setdefault("burials",[])
+                if len(graves)>=int(model.get("graveCapacity",120)):
+                    record.update({"disposition":"en espera","funeralTrip":None,"waitReason":"El cementerio se quedó sin parcelas disponibles."});continue
+                graves.append({"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"burialDay":today})
+                record["disposition"]="sepultado";ev("Residente sepultado",f"El coche fúnebre llegó al cementerio con {record['name']}. Quedan {max(0,int(model.get('graveCapacity',120))-len(graves))} parcelas funerarias.")
+            else:
+                capacity=int(model.get("annualCapacity",24))
+                if service.get("year")!=year:service.update({"year":year,"cremationsThisYear":0})
+                if int(service.get("cremationsThisYear",0))>=capacity:
+                    record.update({"disposition":"en espera","funeralTrip":None,"waitReason":"El crematorio agotó su capacidad anual."});continue
+                service["cremationsThisYear"]=int(service.get("cremationsThisYear",0))+1;service["totalCremations"]=int(service.get("totalCremations",0))+1
+                service.setdefault("history",[]).append({"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"cremationDay":today});service["history"]=service["history"][-120:]
+                record["disposition"]="cremado";ev("Residente cremado",f"El coche fúnebre llegó al crematorio con {record['name']}. Capacidad anual utilizada: {service['cremationsThisYear']}/{capacity}.")
+            record.update({"facility":building.get("name"),"facilityX":building["x"],"facilityY":building["y"],"disposedDay":today,"funeralRoute":trip.get("route",[]),"funeralTrip":None,"waitReason":None})
             continue
-        for building,model,service in crematoria:
-            capacity=max(0,int(model.get("annualCapacity",24)))
-            if service.get("cremationsThisYear",0)>=capacity:continue
-            route=route_between(origin,(building["x"],building["y"]))
-            if not route:continue
-            service["cremationsThisYear"]+=1;service["totalCremations"]=service.get("totalCremations",0)+1
-            service.setdefault("history",[]).append({"residentId":record["residentId"],"name":record["name"],"age":record["age"],"deathYear":record["year"],"cremationDay":state.get("day",1)})
-            service["history"]=service["history"][-120:]
-            record.update({"disposition":"cremado","facility":building.get("name"),"facilityX":building["x"],"facilityY":building["y"],"disposedDay":state.get("day",1),"route":route})
-            ev("Residente cremado",f"{record['name']} recibió sepultura por cremación en el crematorio municipal. Capacidad utilizada este año: {service['cremationsThisYear']}/{capacity}.")
-            break
-        if record.get("disposition")=="en espera" and not record.get("notifiedWaiting"):
-            record["notifiedWaiting"]=True
-            ev("Falta capacidad funeraria",f"{record['name']} falleció a los {record['age']} años. No hay una sepultura con acceso vial ni cupo anual de cremación; construí un cementerio o crematorio conectado.")
+        if record.get("disposition")!="en espera":continue
+        origin=(int(record.get("homeX",4)),int(record.get("homeY",10)));preference=record.setdefault("funeralPreference",funeral_preference(record.get("residentId","legacy")))
+        ordered_kinds=[preference] if preference in ("cemetery","crematorium") else ["cemetery","crematorium"]
+        candidates=[];has_built={kind:[] for kind in ("cemetery","crematorium")};has_reachable={kind:False for kind in ("cemetery","crematorium")}
+        for building,model,service,kind in facilities:
+            has_built[kind].append((building,model,service));route=route_between(origin,(building["x"],building["y"]))
+            if not route or len(route)-1>int(model.get("radius",0)):continue
+            has_reachable[kind]=True;reserved=sum(1 for d in deceased if d.get("disposition")=="en traslado" and (d.get("funeralTrip") or {}).get("facilityX")==building["x"] and (d.get("funeralTrip") or {}).get("facilityY")==building["y"])
+            if kind=="cemetery":
+                capacity=int(model.get("graveCapacity",120));used=len(service.setdefault("burials",[]))+reserved
+            else:
+                capacity=int(model.get("annualCapacity",24));used=int(service.get("cremationsThisYear",0))+reserved
+            if used>=capacity:continue
+            candidates.append((len(route)-1,building,model,service,kind,route))
+        chosen=None
+        for kind in ordered_kinds:
+            eligible=[c for c in candidates if c[4]==kind]
+            if eligible:chosen=min(eligible,key=lambda c:(c[0],c[1]["x"],c[1]["y"]));break
+        if chosen:
+            distance,building,model,service,kind,one_way=chosen;round_trip=list(reversed(one_way))+one_way[1:]
+            travel_days=max(1,(len(round_trip)+19)//20);arrival=today+travel_days
+            trip={"kind":kind,"facilityX":building["x"],"facilityY":building["y"],"facility":building.get("name",model.get("label")),"route":round_trip,"pickupRoute":list(reversed(one_way)),"departDay":today,"arrivalDay":arrival,"distance":distance,"radius":int(model.get("radius",0))}
+            record.update({"disposition":"en traslado","facility":trip["facility"],"facilityX":building["x"],"facilityY":building["y"],"funeralTrip":trip,"waitReason":None,"notifiedWaiting":False})
+            ev("Coche fúnebre en camino",f"La familia de {record['name']} contrató {'cremación' if kind=='crematorium' else 'sepultura'}. Un coche fúnebre va a recogerle y llevará sus restos a {trip['facility']} por una ruta de {distance} cuadras; llegada estimada en {travel_days} día(s).")
+            continue
+        built=has_built.get(preference,[]);accessible=has_reachable.get(preference,False)
+        if not built:reason=f"La familia solicita {'un crematorio' if preference=='crematorium' else 'un cementerio'}, pero no hay ninguno construido."
+        elif not accessible:reason=f"La familia solicita {'cremación' if preference=='crematorium' else 'sepultura'}, pero no hay un {'crematorio' if preference=='crematorium' else 'cementerio'} conectado dentro de su alcance vial ({max(int(row[1].get('radius',0)) for row in built)} cuadras)."
+        else:reason=f"La familia solicita {'cremación' if preference=='crematorium' else 'sepultura'}, pero el servicio cercano no tiene cupo disponible."
+        record["waitReason"]=reason
+        if not record.get("notifiedWaiting"):
+            record["notifiedWaiting"]=True;ev("Falta servicio funerario",f"{record['name']}: {reason} Construí y conectá el servicio que necesita la familia.")
 
 def natural_death_threshold(age):
     return 10000 if age>=115 else 3500 if age>=110 else 1800 if age>=105 else 900 if age>=100 else 500 if age>=95 else 250 if age>=90 else 100 if age>=85 else 40 if age>=80 else 10 if age>=75 else 0
@@ -788,11 +814,11 @@ def urban_evolution_report():
         data=b.get("funeralService",{});connected=bool(route_between((b["x"],b["y"]),(4,10)))
         if model["funeralType"]=="cemetery":
             capacity=int(model.get("graveCapacity",120));occupied=len(data.get("burials",[]));cemetery_capacity+=capacity;cemetery_occupied+=occupied
-            funeral.append({"name":b.get("name",model["label"]),"kind":"Cementerio","x":b["x"],"y":b["y"],"capacity":capacity,"used":occupied,"available":max(0,capacity-occupied),"connected":connected,"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
+            funeral.append({"name":b.get("name",model["label"]),"kind":"Cementerio","x":b["x"],"y":b["y"],"capacity":capacity,"used":occupied,"available":max(0,capacity-occupied),"connected":connected,"radius":int(model.get("radius",0)),"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
         else:
             capacity=int(model.get("annualCapacity",24));used=int(data.get("cremationsThisYear",0));cremations+=int(data.get("totalCremations",0))
-            funeral.append({"name":b.get("name",model["label"]),"kind":"Crematorio","x":b["x"],"y":b["y"],"capacity":capacity,"used":used,"available":max(0,capacity-used),"connected":connected,"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
-    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:],"deaths":len(deceased),"deathsThisYear":sum(d.get("year")==year for d in deceased),"awaitingFuneral":sum(d.get("disposition")=="en espera" for d in deceased),"cemeteryCapacity":cemetery_capacity,"cemeteryOccupied":cemetery_occupied,"cremations":cremations,"funeralFacilities":funeral}
+            funeral.append({"name":b.get("name",model["label"]),"kind":"Crematorio","x":b["x"],"y":b["y"],"capacity":capacity,"used":used,"available":max(0,capacity-used),"connected":connected,"radius":int(model.get("radius",0)),"monthlyCost":b.get("monthlyCost",model.get("monthlyCost",0))})
+    return {"year":year,"decade":year//10*10,"districts":districts,"population":sum(d["population"] for d in districts),"children":sum(d["children"] for d in districts),"workingAge":sum(d["workingAge"] for d in districts),"retired":sum(d["retired"] for d in districts),"averageAge":round(sum(p.get("age",0) for b in buildings if b.get("kind")=="home" for p in b.get("residents",[]))/max(1,sum(len(b.get("residents",[])) for b in buildings if b.get("kind")=="home")),1),"agingBuildings":sum(year-int(b.get("yearBuilt",year))>=30 for b in buildings),"averageCondition":round(sum(conditions)/max(1,len(conditions)),1),"renewalNeeds":[dict(n) for n in state.get("urbanRenewalNeeds",[]) if n.get("status")=="disponible"],"works":[dict(w) for w in state.get("urbanRenewalWorks",[])],"renewalHistory":[dict(w) for w in state.get("urbanRenewalHistory",[])[-8:]],"history":state.get("urbanEvolution",{}).get("history",[])[-5:],"deaths":len(deceased),"deathsThisYear":sum(d.get("year")==year for d in deceased),"awaitingFuneral":sum(d.get("disposition")=="en espera" for d in deceased),"funeralTrips":sum(d.get("disposition")=="en traslado" for d in deceased),"cemeteryCapacity":cemetery_capacity,"cemeteryOccupied":cemetery_occupied,"cremations":cremations,"funeralFacilities":funeral}
 
 def advance_urban_evolution():
     year=2026+(max(0,int(state.get("day",1))-1)//360);evolution=state.setdefault("urbanEvolution",{"lastProcessedYear":year-1,"history":[],"lastBirthYear":2026})
@@ -813,7 +839,7 @@ def advance_urban_evolution():
             else:person["lifeStage"]="infancia" if new<18 else "jubilación" if new>=67 else "vida laboral"
             threshold=natural_death_threshold(new)
             if threshold and (new>=115 or stable_skill(str(person.get("id",f"{home['x']}-{home['y']}")),f"mortalidad-{year}")%10000<threshold):
-                record={"residentId":str(person.get("id",f"{home['x']}-{home['y']}-{len(evolution['deceased'])}")),"name":person.get("name") or f"Residente #{str(person.get('id',''))[-5:]}","age":new,"year":year,"deathDay":state.get("day",1),"homeX":home["x"],"homeY":home["y"],"disposition":"en espera"}
+                record={"residentId":str(person.get("id",f"{home['x']}-{home['y']}-{len(evolution['deceased'])}")),"name":person.get("name") or f"Residente #{str(person.get('id',''))[-5:]}","age":new,"year":year,"deathDay":state.get("day",1),"homeX":home["x"],"homeY":home["y"],"disposition":"en espera","funeralPreference":funeral_preference(str(person.get("id",f"{home['x']}-{home['y']}")))}
                 home["residents"].remove(person);home["occupants"]=max(0,int(home.get("occupants",0))-1);state["population"]=max(0,int(state.get("population",0))-1);evolution["deceased"].append(record);evolution["deceased"]=evolution["deceased"][-2000:]
                 ev("Fallecimiento natural",f"{record['name']} falleció a los {new} años. La población y las plazas del hogar se actualizaron.")
     for building in (b for b in (state.get("buildings",[])) if b.get("kind") in ("home","shop","hotel")):

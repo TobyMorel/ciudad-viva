@@ -613,3 +613,10 @@ Un guardado anterior inicia el libro con el efectivo actual y sin entradas inven
 La acción de ubicar una calle/edificio reutiliza `/api/action` con el contratista elegido automáticamente y ya no abre una confirmación en cada parcela. `placeQuick` encadena los clics en `placementQueue` para que cada respuesta actualice el estado antes de elegir la siguiente cuadrilla. El servidor continúa siendo autoridad para costo, sitio y capacidad. No cambiar el avance por etapas ni la animación asociada a los proyectos.
 
 La ayuda del catálogo es no bloqueante y se activa con `pointerenter`, foco y toque. Muestra datos de descripción del botón y agrega costo/plazo/cuadrilla calculados con el mismo multiplicador de la cuadrilla disponible. La estimación puede cambiar al terminarse otra obra; la cifra definitiva siempre la valida el servidor. Zonificación y redes que tienen acciones propias describen su operación sin fingir que crean un proyecto por etapas.
+
+
+## Alfa 0.143 · traslado funerario por carretera
+
+La preferencia familiar se fija por identidad y persiste en el registro de fallecimiento (70% sepultura, 30% cremación); una familia no cambia de servicio para resolver falta de oferta. El despacho sólo considera equipamiento municipal funerario habilitado, accesible por ruta vial dentro del radio del modelo de servicio. Cementerio: radio 14, capacidad permanente 120. Crematorio: radio 16, capacidad 24 por año. La capacidad se reserva para cada viaje activo y se consume al arribo; esto serializa el último cupo ante muertes simultáneas.
+
+`funeralTrip` conserva clase de servicio, destino, ruta ida y vuelta, salida y llegada estimada; el actor de escena sigue esa ruta y es seleccionable. Si no existe destino válido, `waitReason` contiene causa y se representa con un aviso en el hogar. Online (`server.py`) y Offline (`offline.js`) deben conservar paridad. Los radios se miden en distancia vial más corta, no por distancia euclídea.

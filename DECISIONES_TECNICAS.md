@@ -1,3 +1,9 @@
+# Decisiones técnicas · Alfa 0.149
+
+## Líneas de colectivo elegidas por jugador
+
+Una línea manual queda identificada por `garageId` y conserva la secuencia exacta de calles, más la lista de paradas ordenada con `routeIndex`. Cada cochera solo alberga una línea manual; los nuevos vehículos y paradas se cobran juntos al publicar ($700 por bus, $350 por parada). Validar acceso vial y conectividad completa por la red antes de descontar dinero. La línea es bidireccional; el planificador toma los segmentos entre paradas en orden ascendente o inverso. Para hacer transbordo, dos líneas manuales deben compartir una parada puesta en esa misma ubicación. `world3d.js` dibuja marcador físico por parada. Cliente y servidor guardan la misma ruta. Las líneas automáticas viejas se conservan para compatibilidad, pero no se ofrecen como opción al crear desde la UI.
+
 ## Última decisión registrada · Alfa 0.148
 
 El buzón de vecinos deriva mensajes de `collectCityAlerts(S)`, filtrando avisos con prioridad 0/1 para mantener solicitudes accionables y no convertir resoluciones pasadas en emergencias actuales. El remitente se obtiene de los residentes con nombre en los hogares más cercanos; se usa una selección estable por ID del aviso para evitar que el nombre cambie con cada render. Si no hay padrón, el fallback es «Voz vecinal». El texto se presenta en la interfaz sin escribir un registro paralelo ni inventar incidentes.

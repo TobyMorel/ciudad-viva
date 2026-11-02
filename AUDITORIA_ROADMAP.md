@@ -1,3 +1,9 @@
+# Auditoría · Alfa 0.149 · líneas de colectivo diseñadas
+
+La movilidad existente ofrecía vehículos y líneas de corredor generadas automáticamente, pero no permitía elegir el camino y las paradas desde un depósito. Se agregó el flujo completo con ruta vial ordenada, 2–12 paradas, una sola línea manual por depósito, flota facturada y paso de pasajeros por la ruta directa y transbordos compartidos. La UI muestra paradas mientras se diseña y señales en el mundo. Los motores online/offline y pruebas de navegador cubren guardado y puesta en marcha.
+
+Fase 7 permanece en 95% por taxi, subte, accesibilidad/multimodalidad restante; cargueros existentes no equivalen a cruceros. Aeropuerto conserva simulaciones de vuelos básicas, con viajes y conexiones por completar. Fases 4 y 9 no cambian (60%, 75%); total no estimable sin pesos y criterios homogéneos verificables.
+
 # Auditoría · Alfa 0.148 · mensajería de incidencias existentes
 
 La nueva bandeja muestra en la pantalla principal los avisos accionables que ya produce la simulación; cada mensaje tiene remitente real cercano, solicitud y foco de cámara. Se validó en móvil y escritorio con Chromium, sin solapamiento ni popup. No se agregó ninguna fuente de incidentes ni se cambió la cobertura funcional de servicios; por eso se conservan fase 4 al 60% y fase 9 al 75%. El avance global permanece sin estimación: no hay pesos de aceptación comunes verificables para las 34 fases.

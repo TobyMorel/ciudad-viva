@@ -2848,11 +2848,16 @@ def advance_utility_repairs():
             ev("Red de servicios reparada",f"La cuadrilla restableció {failure['network']} en la calle {failure['x']+1},{failure['y']+1}. La conexión y el servicio se recalculan.")
 
 def bus_line_route(line):
+    # Las líneas trazadas por el jugador conservan su itinerario exacto y no
+    # incorporan por proximidad las paradas de otro servicio.
+    if line.get("manualRoute") and len(line.get("route", [])) > 1:
+        return [list(point) for point in line["route"]]
     base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
     if not base:return None
     stops=[]
     for building in state.get("buildings",[]):
         if building.get("kind")!="busStop" or building.get("status") not in ("operativo","habilitado"):continue
+        if building.get("busLineId") and building.get("busLineId")!=line.get("id"):continue
         access,index=min((abs(building["x"]-point[0])+abs(building["y"]-point[1]),i) for i,point in enumerate(base))
         if access<=1:stops.append((index,building["x"],building["y"]))
     route=[list(line["from"])]
@@ -2907,6 +2912,14 @@ def bus_service_schedule(line):
 def nearest_bus_node(point,path):
     return min((abs(point[0]-node[0])+abs(point[1]-node[1]),index) for index,node in enumerate(path))
 
+def nearest_manual_bus_stop(point,line):
+    path=line.get("route",[]);nodes=[]
+    for stop in line.get("stops",[]):
+        index=stop.get("routeIndex")
+        if isinstance(index,int) and 0<=index<len(path):
+            node=path[index];nodes.append((abs(point[0]-node[0])+abs(point[1]-node[1]),index))
+    return min(nodes,default=(10**6,0))
+
 def choose_bus_itinerary(emp):
     """Devuelve el trayecto más rápido con hasta un transbordo en parada construida."""
     home=(emp["home"]["x"],emp["home"]["y"]);site=(emp["site"]["x"],emp["site"]["y"])
@@ -2915,23 +2928,35 @@ def choose_bus_itinerary(emp):
     lines=[line for line in state.get("busRoutes",[]) if line.get("operational") and len(line.get("route",[]))>1 and line.get("ridersByWindow",{}).get(window,0)<line.get("capacityByWindow",{}).get(window,0)]
     offers=[]
     for line in lines:
-        access_from,start=nearest_bus_node(home,line["route"]);access_to,end=nearest_bus_node(site,line["route"])
-        if access_from+access_to>2 or start>=end:continue
-        ride=max(1,end-start)
+        if line.get("manualRoute"):
+            access_from,start=nearest_manual_bus_stop(home,line);access_to,end=nearest_manual_bus_stop(site,line)
+            if access_from+access_to>2 or start==end:continue
+            path=line["route"];travel=path[start:end+1] if start<end else list(reversed(path[end:start+1]));ride=abs(end-start)
+        else:
+            access_from,start=nearest_bus_node(home,line["route"]);access_to,end=nearest_bus_node(site,line["route"])
+            if access_from+access_to>2 or start>=end:continue
+            travel=line["route"][start:end+1];ride=max(1,end-start)
         headway=line.get("headwayByWindow",{}).get(window,line["headwayMinutes"])
         minutes=(access_from+access_to)*4+headway/2+ride*1.8+line.get("fare",BUS_FARE)*6
         if minutes<alternative:
-            offers.append({"lines":[line],"headways":[headway],"legFares":[line.get("fare",BUS_FARE)],"access":access_from+access_to,"ride":ride,"transferMinutes":0,"transferStop":None,"fare":line.get("fare",BUS_FARE),"travelRoute":line["route"][start:end+1],"minutes":minutes})
+            offers.append({"lines":[line],"headways":[headway],"legFares":[line.get("fare",BUS_FARE)],"access":access_from+access_to,"ride":ride,"transferMinutes":0,"transferStop":None,"fare":line.get("fare",BUS_FARE),"travelRoute":travel,"minutes":minutes})
     stops=[b for b in state["buildings"] if b.get("kind")=="busStop" and b.get("status") in ("habilitado","operativo")]
+    for line in lines:
+        for stop in line.get("stops",[]):
+            if stop.get("at") and len(stop["at"])==2:
+                stops.append({"x":stop["at"][0],"y":stop["at"][1],"name":stop.get("name","Parada de colectivo")})
     if stops and len(lines)>1:
         for first in lines:
-            access_from,start=nearest_bus_node(home,first["route"])
+            access_from,start=nearest_manual_bus_stop(home,first) if first.get("manualRoute") else nearest_bus_node(home,first["route"])
             if access_from>2:continue
             for second in lines:
                 if second is first:continue
-                access_to,end=nearest_bus_node(site,second["route"])
+                access_to,end=nearest_manual_bus_stop(site,second) if second.get("manualRoute") else nearest_bus_node(site,second["route"])
                 if access_from+access_to>2:continue
                 for stop in stops:
+                    stop_point=(stop["x"],stop["y"])
+                    if first.get("manualRoute") and not any(abs(s.get("at",[10**6,10**6])[0]-stop_point[0])+abs(s.get("at",[10**6,10**6])[1]-stop_point[1])<=1 for s in first.get("stops",[])):continue
+                    if second.get("manualRoute") and not any(abs(s.get("at",[10**6,10**6])[0]-stop_point[0])+abs(s.get("at",[10**6,10**6])[1]-stop_point[1])<=1 for s in second.get("stops",[])):continue
                     access_one,leave=nearest_bus_node((stop["x"],stop["y"]),first["route"])
                     access_two,board=nearest_bus_node((stop["x"],stop["y"]),second["route"])
                     if access_one>1 or access_two>1 or start>=leave or board>=end:continue
@@ -3206,8 +3231,16 @@ def commute_model():
     for line in sorted(state["busRoutes"],key=lambda b:str(b.get("id"))):
         line["garageAssignments"]=[]
         if line["operational"]:
-            reachable=[]
+            designated=line.get("garageId") if line.get("manualRoute") else None
+            if designated in free_bays:
+                assigned=min(free_bays[designated],line["effectiveBuses"])
+                if assigned>0:
+                    line["garageAssignments"].append({"garageId":designated,"buses":assigned})
+                    free_bays[designated]-=assigned
+                reachable=[]
+            else:reachable=[]
             for garage in garages:
+                if designated in free_bays:break
                 path=route_between((garage["x"],garage["y"]),tuple(line["from"]))
                 if path:reachable.append((len(path),garage["x"],garage["y"],garage))
             for _,_,_,garage in sorted(reachable):
@@ -3383,6 +3416,49 @@ def bus_route_catalog(commute=None):
         existing=next((b for b in state.get("busRoutes",[]) if b.get("from")==row["from"] and b.get("to")==row["to"] and b.get("status")!="cancelled"),None)
         result.append({**row,"id":line_id,"originName":origin,"destinationName":destination,"stops":bus_line_stops(row["route"]),"buses":1,"purchaseCost":BUS_PURCHASE_COST,"canStart":not existing and available>=BUS_PURCHASE_COST,"reason":"Ya existe una línea para este corredor" if existing else "Fondos municipales comprometidos" if available<BUS_PURCHASE_COST else ""})
     return result[:8]
+
+def create_manual_bus_route(garage_x,garage_y,raw_stops,buses=1):
+    """Crea un servicio de colectivos con un depósito y paradas ordenadas por el jugador."""
+    gx,gy=int(garage_x),int(garage_y)
+    if not isinstance(raw_stops,list) or not 2<=len(raw_stops)<=12:raise ValueError("Marcá entre dos y doce paradas sobre calles conectadas.")
+    garage=next((b for b in state.get("buildings",[]) if b.get("kind")=="busGarage" and b.get("x")==gx and b.get("y")==gy and b.get("status") in ("habilitado","operativo")),None)
+    if not garage:raise ValueError("El depósito debe estar terminado y operativo.")
+    garage_id=f"garage-{gx}-{gy}"
+    if any(line.get("garageId")==garage_id and line.get("status")!="cancelled" for line in state.setdefault("busRoutes",[])):
+        raise ValueError("Este depósito ya tiene una línea asignada. Cada depósito admite una sola línea.")
+    roads={tuple(point) for point in state.get("roads",[])}
+    access=sorted(point for point in roads if abs(point[0]-gx)+abs(point[1]-gy)==1)
+    if not access:raise ValueError("El depósito necesita acceso directo a una calle.")
+    start=access[0];stops=[];seen=set()
+    for raw in raw_stops:
+        if not isinstance(raw,(list,tuple)) or len(raw)!=2:raise ValueError("Cada parada debe señalar una calle.")
+        point=(int(raw[0]),int(raw[1]))
+        if point not in roads:raise ValueError(f"La parcela {point[0]+1},{point[1]+1} ya no tiene una calle.")
+        if point in seen:raise ValueError("La misma parada no puede repetirse en una línea.")
+        if not land_tile_unlocked(*point):raise ValueError("La línea no puede atravesar terrenos bloqueados.")
+        seen.add(point);stops.append(point)
+    if start in seen:raise ValueError("La primera parada debe quedar después de la salida del depósito.")
+    route=[list(start)];stop_rows=[]
+    for point in stops:
+        segment=route_between(tuple(route[-1]),point)
+        if not segment:raise ValueError("No existe una conexión vial continua entre las paradas.")
+        route.extend([list(node) for node in segment[1:]])
+        stop_rows.append({"at":list(point),"routeIndex":len(route)-1,"name":f"Parada {len(stop_rows)+1}"})
+    bus_count=max(1,min(3,int(buses)));cost=bus_count*BUS_PURCHASE_COST+len(stops)*350
+    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    available=max(0,state.get("money",0)-reserved)
+    if available<cost:raise ValueError(f"La línea cuesta $ {cost:,} (colectivos y paradas); quedan $ {available:,} libres.".replace(",","."))
+    line_id=uuid.uuid4().hex
+    line={"id":line_id,"garageId":garage_id,"manualRoute":True,"from":list(start),"to":list(stops[-1]),"route":route,
+          "stops":stop_rows,
+          "originName":garage.get("name",f"Depósito {gx+1},{gy+1}"),"destinationName":f"Circuito {gx+1}-{gy+1}",
+          "buses":bus_count,"capacity":bus_count*BUS_SEATS,"headwayMinutes":max(6,math.ceil(max(1,len(route)-1)*3.6/bus_count)),
+          "fare":BUS_FARE,"status":"active","operational":True,"dailyRiders":0,"monthlyFareRevenue":0,
+          "monthlyOperatingCost":bus_count*BUS_MONTHLY_OPERATING_COST,"purchaseCost":bus_count*BUS_PURCHASE_COST,
+          "stopInfrastructureCost":len(stops)*350,"createdDay":state["day"]}
+    state["money"]-=cost;state["busRoutes"].append(line)
+    ev("Línea de colectivo trazada",f"{line['originName']} · {len(stops)} paradas en {len(route)-1} tramos · inversión $ {cost:,}. Operación $ {line['monthlyOperatingCost']:,}/mes.".replace(",","."))
+    return line
 
 def signal_delay_minutes(route, roads):
     """Espera media de 30 s por cruce señalizado (tres o cuatro accesos)."""
@@ -5747,6 +5823,9 @@ class Handler(BaseHTTPRequestHandler):
                     state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
+                elif action=="createBusRouteFromGarage":
+                    try:create_manual_bus_route(data.get("garageX"),data.get("garageY"),data.get("stops",[]),data.get("buses",1))
+                    except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
                 elif action=="startBusRoute":
                     catalog={x["id"]:x for x in bus_route_catalog()};offer=catalog.get(str(data.get("routeId","")))
                     buses=max(1,min(3,int(data.get("buses",1))))

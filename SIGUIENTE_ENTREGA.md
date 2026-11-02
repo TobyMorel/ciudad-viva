@@ -1,4 +1,10 @@
-# Siguiente entrega · después de Alfa 0.148
+# Siguiente entrega · después de Alfa 0.149
+
+La Alfa 0.149 añade líneas de colectivos diseñadas por el jugador desde depósitos: paradas en orden, ruta visual y de pasajeros, flota propia y una sola línea por depósito. El recorrido se validó online, offline y en Chromium responsive. Esto no termina la movilidad del roadmap. Fase 7 sigue en 95%; global no estimable por falta de ponderación verificable común.
+
+Próximo alcance nuevo: depósito de taxis con paradas/rutas manuales y circulación de vehículos; luego líneas de subte con estaciones, conectividad y una cámara/capa que oculte la superficie. A continuación, barcos de crucero con pasajeros/turistas e integración práctica de viajes del aeropuerto. Antes de más detalle visual, hacer los flujos jugables de extremo a extremo y evitar limitar invitados LAN.
+
+# Entrega previa · después de Alfa 0.148
 
 La Alfa 0.148 añade un buzón ciudadano sobre el mapa con avisos urgentes ya producidos por la simulación. Cada mensaje identifica a un residente cercano y permite enfocar su ubicación; se probó en móvil y escritorio sin solapar la demanda. No cambia el progreso de los sistemas subyacentes: fase 4 permanece en 60%, fase 9 en 75%, progreso total no estimable sin pesos comparables.
 

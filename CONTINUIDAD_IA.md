@@ -1,4 +1,16 @@
-# Continuidad inmediata · Alfa 0.148
+# Continuidad inmediata · Alfa 0.149
+
+No empezar desde cero. Priorizar mecánicas conectadas, entregar sistemas nuevos en vez de encadenar pulido, ejecutar las verificaciones existentes y publicar cada versión en `main` con GitHub noreply. Leer también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`.
+
+## Alfa 0.149 · líneas diseñadas desde depósitos
+
+`game.js`: desde Movilidad, desplegar cochera, «Trazar línea desde este depósito», seleccionar 2–12 calles en orden con clics, deshacer/cancelar y confirmar flota. Paradas numeradas siguen al mapa y se convierten en señales del mundo. `server.py` y `offline.js`: validan conectividad entre paradas, terminación de depósito, una línea por depósito, fondos disponibles después de contratos; cobran $350/parada y $700/bus y conservan la línea exacta. El cálculo de viajes admite ambos sentidos y transbordos solo en paradas compartidas entre líneas manuales. Líneas automáticas existentes siguen funcionando en partidas viejas.
+
+Pruebas dedicadas: `tests/test_manual_bus_route.py`, `tests/test_bus_manual_route_offline.mjs`, `tests/test_bus_route_ui.mjs` (Chromium 390×844 y 1440×900). Revisar el workflow GitHub tras cada push. Fase 7 sigue 95% por taxis, metro y alcance multimodal aún incompletos; fase 4 60%, fase 9 75%; progreso total no estimable sin pesos verificables.
+
+Siguientes mecánicas: taxi depot y rutas/paradas; transporte subterráneo con capa de cámara; pasajeros/cruceros y turismo portuario; integrar vuelos con destinos y accesos locales. Ya existe comercio por barcos y se dibujan barcos de carga/aviones en condiciones existentes, pero no equivale a cruceros, pasajeros o red aeroportuaria completa.
+
+# Continuidad previa · Alfa 0.148
 
 No empezar desde cero. Priorizar mecánicas conectadas y evitar varias entregas de pulido. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. Publicar cada versión en `main` con el correo GitHub noreply configurado.
 

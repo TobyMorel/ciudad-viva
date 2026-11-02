@@ -1,4 +1,14 @@
-# Estado de desarrollo · Alfa 0.148
+# Estado de desarrollo · Alfa 0.149
+
+## Líneas de colectivo manuales desde depósito · fase 7
+
+Cada depósito de colectivos terminado puede albergar una línea elegida por el jugador. En Movilidad, desplegar el depósito y pulsar «Trazar línea»: seleccionar 2–12 tramos de calle terminados y conectados por un camino, en el orden deseado; deshacer o cancelar; asignar flota y poner en servicio. Se cobran $350 por parada y $700 por vehículo al confirmar. Un depósito solo admite una línea manual. Los colectivos toman la ruta en ambos sentidos, la usan para asignar viajes y transbordos y aparecen en el mapa junto a señales numeradas de parada. Las acciones Online y Offline persisten líneas y paradas. Se conservan las líneas automáticas de partidas anteriores; la interfaz ya no ofrece el corredor automático para nuevos depósitos.
+
+Verificado: `tests/test_manual_bus_route.py` (3 pruebas de validación, costo y fondos comprometidos), `tests/test_bus_manual_route_offline.mjs` y `tests/test_bus_route_ui.mjs` en Chromium móvil 390×844 y escritorio 1440×900, comprobando el diseño, orden, señalización, publicación y límites del panel. Sintaxis JavaScript/Python y `git diff --check` pasan. El trazado no completa la fase: siguen pendientes taxis, subte y pasajeros marítimos/aéreos. Fase 7 permanece en 95%; fases 4 y 9 en 60% y 75%; total no estimable por falta de pesos estables y criterios verificables comunes para las 34 fases.
+
+Hito actual: fase 7 · líneas de colectivos diseñadas desde depósitos. Próximo: taxis con depósito/paradas y primera red de subte con vista subterránea; después, turismo de cruceros e integración de viajes aéreos.
+
+# Historial de desarrollo · Alfa 0.148
 
 ## Mensajería ciudadana en la pantalla principal · fase 9
 

@@ -1,7 +1,27 @@
 {
-  "currentVersion": "0.148",
+  "currentVersion": "0.149",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.149",
+      "date": "2026-11-02",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Cada depósito de colectivos terminado puede crear una única línea manual: se eligen de 2 a 12 calles en orden, se asigna la flota y se inaugura sin licitación ni constructoras.",
+        "La línea descuenta $350 por parada y $700 por colectivo; exige calles conectadas, terreno disponible y fondos después de compromisos municipales.",
+        "Las paradas se muestran numeradas durante el trazado y como señal física en el mapa al operar. El motor usa la ruta exacta de ida y vuelta para los pasajeros; las transbordos requieren paradas compartidas entre líneas manuales.",
+        "Online y Offline guardan la línea y el depósito; el depósito queda limitado a una línea. Se conservan las líneas automáticas heredadas para partidas previas.",
+        "Probado en Chromium a 390×844 y 1440×900; los clics sobre intersecciones se reservan al trazado durante el diseño. Los tests dedicados de servidor, Offline y UI pasan."
+      ],
+      "pending": [
+        "Taxis con depósito y paradas",
+        "Vista/capa subterránea y red de subte",
+        "Barcos turísticos/cruceros; ampliar experiencia de pasajeros y logística portuaria",
+        "Integrar viajes aéreos con destinos y movilidad urbana"
+      ]
+    },
     {
       "version": "0.148",
       "date": "2026-11-02",

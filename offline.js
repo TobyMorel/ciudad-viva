@@ -1560,7 +1560,7 @@ export async function createOfflineAdapter(){
         state.monthlyExpenses=Math.max(0,(state.monthlyExpenses||0)-removed.reduce((n,a)=>n+(a.monthlyCost??15),0));
         for(const key of ['powerLines','waterPipes','sewerLines','drainLines','gasLines','telecomLines'])if(Array.isArray(state.utilities?.[key]))state.utilities[key]=state.utilities[key].filter(([rx,ry])=>!included(rx,ry));
         if(state.waste?.containers)state.waste.containers=state.waste.containers.filter(c=>!included(c.x,c.y));
-        for(const coord of tiles)delete(state.trafficSignalOverrides||{})[coord];
+        if(state.trafficSignalOverrides)for(const coord of tiles)delete state.trafficSignalOverrides[coord];
         for(const key of ['recoveryNeeds','recoveryContracts'])if(state[key])state[key]=state[key].filter(r=>r.targetType!=='road'||!included(r.x,r.y));
         for(const key of ['busRoutes','taxiRoutes'])for(const route of state[key]||[])if(route.status!=='cancelled'&&(route.route||[]).some(([rx,ry])=>included(rx,ry))){route.status='paused';route.operational=false}
         event('Calle demolida',`Se retiraron ${tiles.size} tramo(s) de la red vial en ${x+1},${y+1} sin reintegro.`);return;

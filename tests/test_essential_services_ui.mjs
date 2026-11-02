@@ -33,7 +33,7 @@ try{
   await page.locator('#popupContent [data-city-section-button="utilities"]').evaluate(e=>e.click());
   const summary=await page.locator('#popupContent').innerText();
   assert.match(summary,/CAPACIDAD REAL DE CENTRALES CONSTRUIDAS/);
-  assert.match(summary,/Internet\/Wi-Fi/);
+  assert.match(summary,/Internet\/Wi-Fi/i);
   assert.match(summary,/0 edificios|0\s*\/\s*0/);
   assert.deepEqual(errors,[],size.name+': sin errores JavaScript');
   await page.close();

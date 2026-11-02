@@ -11,7 +11,7 @@ try{
  await broken.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
  await broken.locator('#offlineMode').click();
- await broken.waitForURL(/cv-refresh=0\.161/,{timeout:10000});
+ await broken.waitForURL(/cv-refresh=0\.163/,{waitUntil:'domcontentloaded',timeout:15000});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
  await freshPage.locator('.game-dock [data-popup="changes"]').evaluate(e=>e.click());
  await freshPage.waitForFunction(()=>document.querySelectorAll('#releaseNotes .release-card').length>=2,{timeout:10000});

@@ -1,3 +1,7 @@
+## Alfa 0.165 · viajes persistentes en el mapa 3D
+
+Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.
+
 ## Alfa 0.164 · Separar interés migratorio, vacantes y presión de construcción
 
 `housingDemand.unmet` permanece como registro persistente de personas interesadas para admisión gradual, **no** como porcentaje de demanda de construir viviendas. `growth_demand.py` y `growth_demand.js` calculan `housing.vacancies` (plazas habitables disponibles, sin hogares cerrados o temporalmente inhabilitados) y `housing.shortage` = espera solo cuando `vacancies` es 0. Ambos motores usan esta presión para habilitar nuevas obras de vivienda; la interfaz muestra plazas libres antes que personas en espera. Comercio mide cantidad de locales operativos y en obra, y considera oferta sin utilizar a locales cuyas últimas ventas satisfacen la demanda reportada; solo inicia obra si hay escasez de locales y esa oferta está agotada. No se infieren oficinas inexistentes. Las pruebas verifican paridad, no sobreconstrucción, y presentación en UI. Obligatorio registrar Alfa y Cambios en cada entrega.

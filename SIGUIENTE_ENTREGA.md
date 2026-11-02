@@ -1,3 +1,7 @@
+## Alfa 0.165 · viajes persistentes en el mapa 3D
+
+Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.
+
 ## Alfa 0.164 · Demanda basada en plazas y locales disponibles
 
 Se separa interés por migrar de déficit habitacional: si queda capacidad habitable la presión residencial es 0%, se siguen ocupando viviendas en los siguientes días y el promotor no inicia más casas; con todas las plazas completas vuelve la presión acumulada. Comercio: locales con ventas cubiertas son oferta todavía disponible y frenan obra nueva, independientemente del umbral de población; se mantiene la construcción cuando falta capacidad y existe demanda insatisfecha. El juego incluye un test visual equivalente al escenario 0/28 y pruebas de ambos motores.

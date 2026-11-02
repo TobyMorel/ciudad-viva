@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.164",
+  "currentVersion": "0.165",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.165",
+      "date": "2026-11-02",
+      "title": "Viajes 3D estables al construir calles",
+      "roadmapPhase": 7,
+      "overallProgress": null,
+      "changes": [
+        "Los actores existentes conservan ruta, posición y avance cuando se modifica el mapa 3D.",
+        "Se retiran los peatones representativos y camiones de basura que circulaban por una ruta genérica sin viaje asignado. Los viajes de trabajo, compras y servicios siguen usando trayectos de ciudadanos reales."
+      ],
+      "verification": "142 pruebas Python; pruebas Offline y navegador pendientes."
+    },
     {
       "version": "0.164",
       "date": "2026-11-02",

@@ -1,3 +1,7 @@
+## Alfa 0.165 · viajes persistentes en el mapa 3D
+
+Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.
+
 ## Continuidad más reciente · Alfa 0.159
 
 El botón Construir envía `place` sin contratista para `clinic`, `medicalCenter`, `generalHospital`, `policePost`, `policeStation`, `policeHQ`, `firePost`, `fireStationPlus` y `fireCommand`. `server.py` y `offline.js` cobran el precio de modelo completo y agregan `building` inmediatamente; no agregan `project` ni comprometen cuadrillas. Mantener validación de terreno, ruta y caja; no activar servicio efectivo sin personal/redes. Los proyectos anteriores en guardados terminan por la vía previa. Regresiones: `test_instant_public_services.py`, `_offline.mjs` y `_ui.mjs`; el test antiguo de modelos se actualizó. Fases 4/7/9=60/95/75%; global sin ponderación.

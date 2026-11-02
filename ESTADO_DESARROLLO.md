@@ -1,3 +1,7 @@
+## Alfa 0.165 · viajes persistentes en el mapa 3D
+
+Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.
+
 ## Alfa 0.164 · Corrección de oferta y demanda urbanas
 
 La demanda de nuevas viviendas en la interfaz y la construcción automática depende de agotamiento de plazas habitables, no del contador de interesados. Con casas vacías o con cupo libre, la presión es 0% y se priorizan nuevos residentes en esas plazas. Los comercios abiertos que cubren sus ventas cuentan como capacidad libre y se priorizan antes de construir más locales. El contador de migrantes pendientes se conserva por separado para la mudanza diaria. Online/Offline, pruebas y Cambios y novedades actualizados. Oficinas como tipo constructivo separado continúan pendientes.

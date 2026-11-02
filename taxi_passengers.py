@@ -19,7 +19,7 @@ def assign_taxi_passengers(state, trips):
         trip.pop("taxiRiders", None)
         trip.pop("taxiRouteIds", None)
         if trip.get('mode') == 'auto' and trip.get('reason') in ('compras', 'servicios'):
-            trip['vehicles'] = math.ceil(max(0, trip.get('workers', 0)) / 1.4)
+            trip['vehicles'] = math.ceil(max(0, trip.get('workers', 0)-trip.get('busRiders', 0)) / 1.4)
             trip['dailyEmissionsKg'] = round(trip['vehicles'] * trip.get('distance', 0) * .18 * 2, 2)
     active_vehicles = 0
     vehicle_emissions = 0
@@ -47,7 +47,7 @@ def assign_taxi_passengers(state, trips):
                     break
                 if trip.get("reason") not in ("compras", "servicios") or trip.get("mode") != "auto":
                     continue
-                if trip.get("distance", 0) < 4 or trip.get("workers", 0) <= trip.get("taxiRiders", 0):
+                if trip.get("distance", 0) < 4 or trip.get("workers", 0)-trip.get("busRiders", 0) <= trip.get("taxiRiders", 0):
                     continue
                 origin, destination = trip.get("from", []), trip.get("to", [])
                 matches = [(i, j) for i, a in enumerate(stops) for j, b in enumerate(stops)
@@ -55,13 +55,13 @@ def assign_taxi_passengers(state, trips):
                            and abs(b[0]-destination[0])+abs(b[1]-destination[1]) <= 1]
                 if not matches:
                     continue
-                count = min(TAXI_DAILY_CAPACITY-riders, trip["workers"]-trip.get("taxiRiders", 0))
+                count = min(TAXI_DAILY_CAPACITY-riders, trip["workers"]-trip.get("busRiders", 0)-trip.get("taxiRiders", 0))
                 if count <= 0:
                     continue
                 riders += count
                 trip["taxiRiders"] = trip.get("taxiRiders", 0) + count
                 trip.setdefault("taxiRouteIds", []).append(taxi.get("id"))
-                other = max(0, trip["workers"] - trip["taxiRiders"])
+                other = max(0, trip["workers"] - trip.get("busRiders", 0) - trip["taxiRiders"])
                 trip["vehicles"] = math.ceil(other / 1.4)
                 trip["dailyEmissionsKg"] = round(trip["vehicles"] * trip["distance"] * .18 * 2, 2)
         history[str(day)] = riders

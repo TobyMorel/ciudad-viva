@@ -214,7 +214,9 @@ try{
       // prueba de movimiento conectamos instalaciones y calles físicamente.
       const lines=[[4,10],[5,10],[6,10],[7,10],[8,10],[9,10],[10,10],[10,11],[11,11],[12,11]];
       city.utilities=city.utilities||{};
-      for(const network of ['powerLines','waterPipes','sewerLines'])city.utilities[network]=lines;
+      city.roads=lines.map(tile=>[...tile]);
+       for(const network of ['powerLines','waterPipes','sewerLines'])city.utilities[network]=lines.map(tile=>[...tile]);
+       city.buildings.push({kind:'powerPlant',name:'Central de prueba 3D',x:9,y:11,status:'habilitado',quality:90,generationKw:900,jobSlots:0},{kind:'waterPlant',name:'Potabilizadora de prueba 3D',x:8,y:11,status:'habilitado',quality:90,treatmentM3Day:220,jobSlots:0});
       city.utilities.failures=[{id:'repair-3d',network:'telecom',x:8,y:10,day:31,repairCost:500,affectedBuildings:4,status:'en reparación',remainingDays:1,responseKind:'emergencia',responseStartedDay:31,responseDurationDays:1,responseProgress:.5,responseRoute:[[4,10],[5,10],[6,10],[7,10],[8,10]]}];
       city.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Comisaría visual de prueba',x:10,y:11,status:'operativo',
         policeUnit:{vehicles:1,priority:'mixto'},jobSlots:22,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});

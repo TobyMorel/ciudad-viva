@@ -1,3 +1,9 @@
+## Alfa 0.169 · Primer tren elevado urbano con pasajeros (fase 22)
+
+Se incorpora una modalidad ferroviaria diferente del subte: viaductos sobre corredores de calles conectadas, contratos por etapas con inversión pagada y cuadrillas disponibles, material rodante, frecuencia y aforo, energía, presupuesto, tarifas y recaudación. Las formaciones 3D se desplazan por vías elevadas; no circulan por el tráfico rodado ni obedecen semáforos. La demanda nace de visitas de compras y servicios existentes y compite con otros modos sin duplicar pasajeros. Los motores LAN y Offline aplican las mismas reglas y exponen conteos separados para subte y tren elevado.
+
+Pruebas específicas: `tests/test_elevated_rail.py` y `tests/test_elevated_rail_offline.mjs`. Pendientes: estaciones intermedias y transbordos subte-tren-colectivo, cruces ferroviarios, personal, materiales de obra, carga ferroviaria y prueba LAN física. El progreso global sigue sin poder estimarse sin pesos homogéneos de las 34 fases.
+
 ## Alfa 0.168 · Proyección 3D del subte (fase 22)
 
 La fase 22 incorpora accesos 3D de estaciones habilitadas, señalización de estaciones en obra y una proyección translúcida de túneles a medida que avanza la excavación e instalación de vías. Las formaciones aparecen animadas y seleccionables solo cuando la línea está activa y el motor declara servicio operativo; son marcadores visuales de viajes subterráneos y no vehículos de calle. Se excluyen rutas corruptas y cortes no contiguos. No se modifican pasajeros, capacidad, economía ni rutas del motor LAN/Offline.

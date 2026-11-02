@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="ciudad-viva-version" content="0.174"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#17313c">
-<title>Ciudad Viva · ALFA 0.174</title><link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="design.css?v=0.174"><link rel="stylesheet" href="reference.css">
+<title>Ciudad Viva · ALFA 0.174</title><link rel="icon" type="image/svg+xml" href="favicon.svg"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="design.css?v=0.174"><link rel="stylesheet" href="reference.css?v=0.174-treasury-fix">
 </head>
 <body>
 <div id="app">
   <header class="topbar"><div class="brand"><span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><div><b>CIUDAD VIVA</b><small>SIMULADOR MUNICIPAL</small></div></div><div class="city-title"><span class="city-pin" aria-hidden="true">⌖</span><div><strong id="cityName">Puerto Claro</strong><span id="dateLabel">Año 1 · Enero</span></div></div><div class="network"><i></i><span id="netLabel">Partida local</span><button id="copyInvite" title="Copiar dirección de invitación" aria-label="Copiar dirección de invitación">⇧</button></div><div class="header-tools"><button id="headerSave" title="Guardar partida" aria-label="Guardar partida">☁︎</button><button id="headerSettings" title="Cambiar tema" aria-label="Cambiar tema">⚙︎</button><button id="headerMenu" title="Abrir menú de ciudad" aria-label="Abrir menú de ciudad">☰</button></div></header>
   <section class="metrics">
-    <div class="metric"><i class="metric-icon" aria-hidden="true">▤</i><span>TESORERÍA</span><b id="money">$ 0</b><small id="budgetFlow">Balance mensual</small><div id="treasuryExtra" class="treasury-extra"></div></div>
+    <div class="metric"><i class="metric-icon" aria-hidden="true">▤</i><span>TESORERÍA</span><b id="money">$ 0</b><small id="budgetFlow">Balance mensual</small></div>
     <div class="metric"><i class="metric-icon" aria-hidden="true">♧</i><span>POBLACIÓN</span><b id="population">0</b><small id="jobs">Puestos cubiertos 0 / 0</small></div>
     <div class="metric"><i class="metric-icon" aria-hidden="true">▣</i><span>EMPLEO EFECTIVO</span><b id="employment">0%</b><small id="employmentNote">Acceso y asistencia laboral</small></div>
     <div class="metric"><i class="metric-icon" aria-hidden="true">▱</i><span>SERVICIOS</span><b id="services">0%</b><small id="serviceNote">Agua · energía · residuos</small></div>
@@ -134,4 +134,4 @@
     setTimeout(explain,6000);
   },{once:true});
 })();
-</script><script type="module" src="game.js?v=0.174"></script></body></html>
+</script><script type="module" src="game.js?v=0.174-treasury-fix"></script></body></html>

@@ -42,9 +42,6 @@ body[data-theme=dark] #app,body[data-theme=dark] .metrics{background:#172931}bod
 .mode-backdrop:before{display:none!important}
 .city-title{flex-direction:row!important;align-self:center;height:100%;align-items:center!important}
 .city-title>div{display:grid;align-content:center;gap:4px;height:100%}
-.metric:first-child{grid-template-columns:52px minmax(0,1fr) 95px}.metric:first-child .treasury-extra{grid-column:3;grid-row:1/4;display:grid;align-content:center;gap:7px;padding-left:10px;border-left:1px solid #d5ded5;color:#31535a;font-size:10px}.treasury-extra span{display:block!important;color:#31535a!important;font-size:10px!important;white-space:nowrap}.treasury-extra b{display:inline!important;color:#143e47!important;font-size:10px!important;font-weight:780!important}
-@media(max-width:1200px){.metric:first-child{grid-template-columns:40px minmax(0,1fr)}.metric:first-child .treasury-extra{display:none}}
-@media(max-width:650px){.metric:first-child{grid-template-columns:27px minmax(0,1fr)}}
 /* Distribución específica de las pantallas de avisos, ayuda, registro y materiales. */
 .ref-alert-columns{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(245px,.8fr);gap:14px;align-items:start}.ref-alert-columns .ref-source .city-alert-list{display:grid;grid-template-columns:1fr;gap:8px}.ref-alert-columns .ref-source .alert-list-card[hidden]{display:none}.ref-alert-columns .ref-source .city-alert-list>p{margin:0 0 8px;padding:8px 0;font-size:11px}.ref-alert-columns .ref-source .alert-list-card{min-height:62px;padding:9px 11px}.ref-alert-aside{background:#ecf7ef;border-color:#b9ddca}.ref-alert-aside strong,.ref-big-number{display:block;color:#07434d;font-size:30px;line-height:1.1;font-weight:900}.ref-alert-aside strong small,.ref-big-number small{font-size:12px;font-weight:700}.ref-alert-aside p{margin:4px 0 16px;color:#6e8984;font-size:11px}
 .ref-help-grid .ref-card{min-height:220px}.ref-control-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:42px;margin-bottom:6px;padding:8px 10px;border:1px solid #e1e8e0;border-radius:10px;color:#234650;font-size:12px}.ref-control-row kbd{padding:5px 9px;border:1px solid #d7e3d9;border-radius:7px;background:#eef3ed;color:#286b5b;font-size:11px;font-weight:760}.ref-help-grid details,.ref-changes-grid details{margin-bottom:6px;border:1px solid #e1e8e0;border-radius:10px;background:#fffefa;color:#1f434b}.ref-help-grid summary,.ref-changes-grid summary{padding:10px 12px;cursor:pointer;font-size:12px;font-weight:770;list-style:none}.ref-help-grid summary:after,.ref-changes-grid summary:after{content:'⌄';float:right;color:#315b55}.ref-help-grid details p,.ref-changes-grid details p{margin:0;padding:0 12px 12px;color:#6c8983;font-size:11px;line-height:1.5}
@@ -58,8 +55,6 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
 .popup-header .modal-close,.bid-modal .modal-close{border:0;box-shadow:none}
 .popup-header .modal-close:focus-visible,.bid-modal .modal-close:focus-visible{outline:2px solid #e08e58;outline-offset:2px}
 /* La tarjeta de Tesorería reserva el detalle lateral solo cuando hay ancho real. */
-@media(max-width:1850px){.metric:first-child{grid-template-columns:54px minmax(0,1fr)}.metric:first-child .treasury-extra{display:none}}
-@media(max-width:650px){.metric:first-child{grid-template-columns:27px minmax(0,1fr)}}
 .toast{bottom:106px;max-width:min(420px,calc(100vw - 24px));text-align:center;line-height:1.35;white-space:normal}
 @media(max-width:650px){.toast{bottom:76px;left:50%;width:max-content;max-width:calc(100vw - 20px)}}
 @media(max-width:650px){.toast{bottom:110px}}
@@ -104,3 +99,10 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
  .metric>small{grid-row:3}
  .world-toolbar .map-city span{display:none}
 }
+
+/* Tesorería no usa tercera columna: el desglose está en Economía y al pasar por la cifra. */
+.metric:first-child{grid-template-columns:54px minmax(0,1fr)}
+@media(max-width:1050px){.metric:first-child{grid-template-columns:40px minmax(0,1fr)}}
+@media(min-width:651px) and (max-width:1000px){.metric:first-child{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:650px){.metric:first-child{grid-template-columns:23px minmax(0,1fr)}}
+@media(max-width:380px){.metric:first-child{grid-template-columns:minmax(0,1fr)}}

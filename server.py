@@ -3149,8 +3149,9 @@ def commute_model():
     key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
          tuple((b.get("x"),b.get("y"),b.get("kind"),b.get("occupants",0),b.get("status"),b.get("business",{}).get("status"),b.get("business",{}).get("jobSlots"),b.get("business",{}).get("wage"),tuple((r.get("id"),r.get("workerEligible"),r.get("status"),tuple(sorted(r.get("skills",{}).items())),r.get("expectedMonthlyWage")) for r in b.get("residents",[]))) for b in homes+sites),
          tuple((o.get("id"),o.get("status"),round(o.get("travelledDistance",0),1)) for o in state.get("supply",{}).get("orders",[]) if o.get("status")=="en tránsito"),
-         tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])))
-    if key==_commute_cache_key and not state["busRoutes"] and not state.get("taxiRoutes"):
+         tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])),
+         tuple((t.get("id"),t.get("status"),t.get("operational"),tuple(map(tuple,t.get("route",[]))),tuple(tuple(s.get("at",[])) for s in t.get("stops",[]))) for t in state.get("taxiRoutes",[])))
+    if key==_commute_cache_key and not state["busRoutes"]:
         for line in state.get("busRoutes",[]):
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})

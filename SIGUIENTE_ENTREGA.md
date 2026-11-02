@@ -1,3 +1,9 @@
+## Fase 7 · cruce vial del río (propuesta en revisión)
+
+Se incorporó una primera obra contractual de puente sobre las dos celdas del cauce (x=24–25): requiere calle conectada en x=23 y suelo habilitado, compara constructoras con sus precios/plazos y no habilita los tramos hasta la inspección. Al finalizar, permite prolongar la red con una calle en x=26. Offline y LAN conservan el mismo contrato, gasto y mantenimiento; el render 3D muestra tablero, barandas y pilotes. Las pruebas cubren contratación, validaciones y cruce terminado.
+
+**Próximo:** revisar la obra en partida larga y navegador real, verificar navegación de vehículos y expansión al este, medir balance y condición de puente; continuar viajes de pasajeros/transbordos y conexión intermodal de fase 7. La prueba LAN física entre dos equipos sigue pendiente. No calcular avance global sin pesos para las 34 fases.
+
 ## Después de Alfa 0.159
 
 Retomar puentes para cruzar el río y movimiento de pasajeros en fase 7. Verificar en partida prolongada que los nuevos hospitales, comisarías y cuarteles atraigan personal y sus recursos entren en servicio; conservar la prueba de colocación inmediata en CI. Probar LAN física entre dos equipos. Global aún sin estimar hasta definir pesos comunes para las 34 fases.

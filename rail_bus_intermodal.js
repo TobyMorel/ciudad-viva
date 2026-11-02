@@ -69,10 +69,10 @@ export function assignRailBusTransfers(state,trips,day){
    const count=Math.min(remaining,busFree,railFree);
    if(!count)continue;
    remaining-=count;transfers+=count;l.dailyRiders+=count;
-   b.ridersByWindow.midday+=count;
+   const window=b.ridersByWindow||(b.ridersByWindow={});window.midday=(window.midday||0)+count;
    b.nonworkRiders=(b.nonworkRiders||0)+count;
    b.dailyRiders=(b.dailyRiders||0)+count;
-   const busCents=option.direction==='bus-rail'?option.fares[0]:option.fares[0];
+   const busCents=option.fares[0];
    const railCents=option.fares[1];
    const home=trip.from.join(','),dayKey=String(day);
    const busLedger=(b.nonworkFaresByDay||(b.nonworkFaresByDay={}))[dayKey]||(b.nonworkFaresByDay[dayKey]={});

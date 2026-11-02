@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.163",
+  "currentVersion": "0.164",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.164",
+      "date": "2026-11-02",
+      "title": "Demanda urbana según viviendas y locales disponibles",
+      "roadmapPhase": 4,
+      "overallProgress": null,
+      "changes": [
+        "El indicador de viviendas deja de mostrar 100% de demanda cuando quedan plazas libres en casas habitables. Ahora señala cuántas plazas están disponibles y calcula la presión residencial solo cuando se agota esa capacidad, incluso si hay personas interesadas esperando.",
+        "Los promotores privados no inician nuevas viviendas mientras exista capacidad habitacional libre. La cola de personas interesadas continúa generando nuevas mudanzas y no se pierde al poner el indicador en 0%.",
+        "La demanda comercial prioriza locales existentes con capacidad sin usar: si los comercios atienden las ventas locales y regionales, se evita promover nuevos locales solo por el tamaño de la población; si no quedan locales ni proyectos suficientes y hay compras insatisfechas, vuelve la presión comercial.",
+        "Mismo criterio de oferta en LAN (Python), Offline (JavaScript), panel del mapa y Ciudad > Suelo. Pruebas de viviendas 0/28 y 27/28, saturación 28/28, comercios con capacidad, obras automáticas y regresión visual."
+      ],
+      "verification": "Pruebas automatizadas de oferta residencial/comercial en Python y JavaScript, integración Offline, visualización Chromium y estrés económico en CI. LAN entre dos computadoras reales pendiente.",
+      "pending": [
+        "Las oficinas no son aún una categoría independiente de edificios: la oferta comercial se mide con los locales existentes. Quedan pendientes oficinas especializadas y zonificación de uso mixto."
+      ]
+    },
     {
       "version": "0.163",
       "date": "2026-11-02",

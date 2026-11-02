@@ -4,6 +4,7 @@ import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from taxi_passengers import assign_taxi_passengers
+from growth_demand import growth_demand
 
 ROOT = Path(__file__).resolve().parent
 SAVE = ROOT / "ciudad_guardada.json"
@@ -4360,13 +4361,11 @@ def commit_private_construction_deliveries(project,quotes):
 def advance_zoned_development():
     """Promoters spend real capital and buy the materials for approved projects."""
     demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
+    supply=growth_demand(state)
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
     for kind,threshold in (("home",12),("shop",0),("factory",0)):
-        if kind=="home" and int(demand.get("unmet",0))<threshold:continue
-        if kind=="shop":
-            existing_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("status") not in ("cerrado","abandonado"))+sum(1 for p in state.get("projects",[]) if p.get("kind")=="shop" and p.get("status") not in ("cancelada","finalizada"))
-            needed_shops=max(1,int(state.get("population",0))//90)
-            if int(state.get("population",0))<24 or existing_shops>=needed_shops:continue
+        if kind=="home" and supply["housing"]["shortage"]<threshold:continue
+        if kind=="shop" and not supply["commercial"]["shortage"]:continue
         if kind=="factory":
             active_demand_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0))
             target_factories=min(6,math.ceil(active_demand_shops/2))
@@ -5684,6 +5683,7 @@ def public_state(player_id=None):
     for building in state.get("buildings",[]):
         connected=building_road_access(building)
         view["buildings"].append({**building,"roadAccessConnected":connected,"roadAccessReason":None if connected else "Sin una ruta vial continua hasta el acceso exterior."})
+    view["growthDemand"]=growth_demand(state)
     view["stateRevision"]=STATE_REVISION
     view["landClaims"]={**state["landClaims"],"frontierChunks":land_frontier(state)}
     view["governmentReport"]=government_report()

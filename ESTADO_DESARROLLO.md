@@ -1,3 +1,7 @@
+## Alfa 0.164 · Corrección de oferta y demanda urbanas
+
+La demanda de nuevas viviendas en la interfaz y la construcción automática depende de agotamiento de plazas habitables, no del contador de interesados. Con casas vacías o con cupo libre, la presión es 0% y se priorizan nuevos residentes en esas plazas. Los comercios abiertos que cubren sus ventas cuentan como capacidad libre y se priorizan antes de construir más locales. El contador de migrantes pendientes se conserva por separado para la mudanza diaria. Online/Offline, pruebas y Cambios y novedades actualizados. Oficinas como tipo constructivo separado continúan pendientes.
+
 ## Fase 7 · desplazamientos de pasajeros en taxi (posterior a Alfa 0.161)
 
 Los circuitos de taxi con paradas conectadas atienden una fracción de los viajes reales en automóvil a comercios y servicios cívicos, sin crear habitantes ni sumar demanda ficticia. Se reasignan como máximo ocho ocupantes por vehículo al día, descontando autos de esos viajes y contabilizando el recorrido y emisiones del taxi. La tarifa actual de $0,45 por viaje se acumula por día, permite distintas lecturas del mismo día sin cobro duplicado y se reinicia cada mes. La liquidación municipal usa ese ingreso; el panel de taxis muestra los pasajeros y la recaudación. Se mantienen como pendientes los choferes, turnos, despacho individual y conexión con subte, cruceros y aeropuerto.

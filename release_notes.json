@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.169",
+  "currentVersion": "0.170",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.170",
+      "date": "2026-11-02",
+      "title": "Transbordos colectivos-subte-tren con tarifas y cupos reales",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los vecinos que viajan a comercios y servicios pueden combinar un colectivo operativo con un subte o tren elevado: colectivo → ferrocarril y ferrocarril → colectivo, desde estaciones y paradas cercanas.",
+        "El transbordo verifica recorrido y calles habilitadas, plazas disponibles en ambos vehículos, estado del servicio ferroviario y tiempo total de espera, viaje y caminata. Una persona ocupa dos asientos sucesivos pero se contabiliza una sola vez.",
+        "La segunda etapa tiene un descuento del 25%. Los dos boletos se registran por hogar en los libros existentes de colectivos y ferrocarril, y se cobran al cierre de mes contra fondos reales sin recargo por consultar de nuevo.",
+        "El panel Movilidad muestra transferencias reales junto con pasajeros de colectivos, subtes y trenes elevados. Los motores LAN y Offline aplican la misma regla y los autos se recalculan sin duplicar pasajeros.",
+        "Pruebas específicas en Python y JavaScript para ambos sentidos, vías cortadas, ausencia de energía, pausa, cupo de colectivo, tarifas, autos y separación entre pasajeros de metro y tren elevado."
+      ],
+      "verification": "Pruebas de lógica JavaScript aisladas de intermodalidad verificadas. Regresiones Python/JavaScript añadidas a CI; ejecución integral de navegador, publicación Vercel y LAN física sin confirmar.",
+      "pending": [
+        "Estaciones intermedias, transbordos metro↔tren, pasajeros laborales intermodales, personal ferroviario, logística de carga por rieles y transferencia portuaria."
+      ]
+    },
     {
       "version": "0.169",
       "date": "2026-11-02",

@@ -8,6 +8,7 @@ def fixture():
             "buildings":[{"kind":"home","name":"Barrio Norte","x":5,"y":9,"status":"operativo","householdCash":10},
                          {"kind":"shop","name":"Centro comercial","x":11,"y":9,"status":"habilitado"},
                          {"kind":"powerPlant","name":"Central","x":9,"y":9,"status":"habilitado","quality":82,"generationKw":900}],
+            "railStations":[{"mode":"metro","status":"active","x":6,"y":9,"name":"Estación Norte"},{"mode":"metro","status":"active","x":12,"y":9,"name":"Estación Centro"}],
             "utilities":{},"finance":{"programBudgets":{"mobilityFundingFactor":1}},"metroLines":[],"taxiRoutes":[]}
 def trip():
     return {"reason":"compras","from":[5,9],"to":[11,9],"distance":7,"mode":"auto","workers":3,"vehicles":3,"dailyEmissionsKg":7.56}
@@ -16,7 +17,7 @@ class MetroTests(unittest.TestCase):
     def test_construction_requires_time_and_crew_and_cannot_cross_river(self):
         city=fixture()
         self.assertEqual(len(metro_station_catalog(city)),2)
-        line=plan_metro(city,[5,9],[11,9],1)
+        line=plan_metro(city,[6,9],[12,9],1)
         self.assertEqual(city["money"],90000-line["purchaseCost"])
         self.assertEqual(line["status"],"building")
         metro_refresh(city);self.assertFalse(line["operational"])
@@ -30,10 +31,10 @@ class MetroTests(unittest.TestCase):
         self.assertEqual(line["stage"],"Habilitada")
         metro_refresh(city);self.assertTrue(line["operational"])
         self.assertEqual(line["dailyCapacity"],240)
-        with self.assertRaises(ValueError):plan_metro(city,[5,9],[11,9],1)
+        with self.assertRaises(ValueError):plan_metro(city,[6,9],[12,9],1)
 
     def test_energy_or_fleet_or_budget_stop_trains_without_fictitious_riders(self):
-        city=fixture();line=plan_metro(city,[5,9],[11,9]);line["status"]="active"
+        city=fixture();line=plan_metro(city,[6,9],[12,9]);line["status"]="active"
         city["buildings"]=[b for b in city["buildings"] if b["kind"]!="powerPlant"]
         metro_refresh(city);self.assertFalse(line["operational"])
         self.assertEqual(metro_assign_passengers(city,[trip()])["metroRiders"],0)
@@ -45,7 +46,7 @@ class MetroTests(unittest.TestCase):
         metro_refresh(city);self.assertFalse(line["operational"])
 
     def test_real_trips_reduce_car_count_and_fares_leave_household(self):
-        city=fixture();line=plan_metro(city,[5,9],[11,9]);line["status"]="active"
+        city=fixture();line=plan_metro(city,[6,9],[12,9]);line["status"]="active"
         people=[trip()]
         r=metro_assign_passengers(city,people)
         self.assertEqual(r["metroRiders"],3)
@@ -64,8 +65,8 @@ class MetroTests(unittest.TestCase):
 
     def test_no_station_without_road_or_funds(self):
         city=fixture();city["money"]=1
-        with self.assertRaises(ValueError):plan_metro(city,[5,9],[11,9])
+        with self.assertRaises(ValueError):plan_metro(city,[6,9],[12,9])
         city["money"]=90000;city["roads"]=[]
-        with self.assertRaises(ValueError):plan_metro(city,[5,9],[11,9])
+        with self.assertRaises(ValueError):plan_metro(city,[6,9],[12,9])
 
 if __name__=="__main__":unittest.main()

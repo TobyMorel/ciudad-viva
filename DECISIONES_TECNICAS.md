@@ -1,3 +1,7 @@
+## Fase 7 · decisión de diseño: puente por contrato (propuesta en revisión)
+
+El cauce permanece en x=24–25; la nueva herramienta `bridge` se ancla en (24,y) y reserva ambas celdas. El acceso debe venir de la calle (23,y) con ruta hasta el acceso regional. El cruce se abre solo cuando la constructora termina sus etapas: dos entradas a `roads`, cada una con `roadAssets.bridge=true`, calidad y $80/mes de mantenimiento. La calle (26,y) queda a cargo del jugador para extenderse por el este; nunca se construye automáticamente en terreno privado. Se reutilizan las validaciones de parcela, contrato, cuadrillas, anticipos, inspección y garantía, en LAN y Offline. Las calles normales siguen prohibidas sobre el agua. El primer puente no incorpora todavía simulación de cargas máximas, geotecnia local comparada ni derrumbe: documentar esa profundidad pendiente para fase 16/28.
+
 ## Alfa 0.159 · equipamientos públicos inmediatos
 
 Solo los modelos de salud, policía y bomberos declarados en `INSTANT_PUBLIC_MODELS` se colocan al instante. Se valida parcela, conexión vial y caja libre antes de cobrar. La misma regla se aplica a `offline.js` y el servidor; `game.js` omite la selección automática de constructora para estos modelos. Los proyectos antiguos en curso no se migran ni cancelan para evitar cobrar dos veces. Escuelas y otros equipamientos conservan su flujo actual.

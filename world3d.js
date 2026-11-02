@@ -499,6 +499,7 @@ export function createWorld(canvas){
       (state.urbanEvolution?.deceased||[]).filter(d=>d.disposition==='en traslado').map(d=>[d.residentId,d.funeralTrip?.route,d.funeralTrip?.departDay,d.funeralTrip?.arrivalDay,d.funeralTrip?.facilityX,d.funeralTrip?.facilityY]),
       (state.busRoutes||[]).map(b=>[b.id,b.status,b.operational,b.effectiveBuses,b.buses,b.route,b.driverIds,b.originName,b.destinationName,b.ridersThisPass,b.capacity,b.headwayMinutes,b.stops,b.monthlyFareRevenue]),
       (state.taxiRoutes||[]).map(t=>[t.id,t.status,t.operational,t.route,t.stops,t.depotX,t.depotY,t.monthlyOperatingCost]),
+      (state.railStations||[]).map(site=>[site.id,site.x,site.y,site.mode,site.status,site.stage,Math.floor((site.elapsed||0)/Math.max(1,site.duration||1)*10)]),
       (state.metroLines||[]).map(m=>[m.id,m.mode,m.status,m.operational,m.trainCount,m.elapsed,m.duration,m.stations,m.route]),
       state.utilities?.powerLines,state.utilities?.waterPipes,state.utilities?.sewerLines,state.utilities?.drainLines,state.utilities?.gasLines,state.utilities?.telecomLines,
       (state.utilities?.report?.failures||[]).map(f=>[f.id,f.network,f.x,f.y,f.status,f.responseRoute,f.completedDay]),state.utilities?.report?.drainage?.floodedTiles,

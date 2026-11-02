@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.168",
+  "currentVersion": "0.169",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.169",
+      "date": "2026-11-02",
+      "title": "Trenes elevados 3D: viaductos, obras y pasajeros",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Nueva línea de tren elevado en Ciudad → Movilidad: elegí dos estaciones junto a una vía conectada, contratá hasta dos formaciones iniciales y seguí estudios, pilotes, vías/andenes e inspección.",
+        "El trayecto ferroviario se construye sobre un viaducto siguiendo un corredor de calles conectado de 4 a 45 tramos, sin cruzar el río ni reutilizar un viaducto ocupado. La obra requiere cuadrillas y una inversión pagada por estaciones, infraestructura y trenes.",
+        "Los trenes tienen representación 3D propia, circulan por la vía elevada solo cuando el servicio está habilitado, y no ocupan carriles de autos ni obedecen semáforos. Durante la obra se muestran pilares y vía según el avance real.",
+        "Cada línea exige electricidad y financiación de movilidad. Flota, frecuencia, plazas, viajeros de compras y servicios, tarifas familiares y gasto mensual están vinculados a los motores LAN y Offline sin crear pasajeros duplicados.",
+        "Pruebas añadidas para construcción, conexión, caja reservada, energía, pausas, aforo y recaudación en Python/JavaScript; la prueba visual de movilidad comprueba que no aparezcan trenes antes de habilitar la obra."
+      ],
+      "verification": "Verificación de lógica de la modalidad ferroviaria en JavaScript, análisis sintáctico JS y pruebas de integración Python/Offline/Chromium incorporadas a CI; resultados completos de CI y prueba LAN física aún por confirmar.",
+      "pending": [
+        "Estaciones intermedias y transbordos con colectivos/subte, expansión ferroviaria interurbana, separación de suelo y mantenimiento de vías, conductores ferroviarios especializados, carga industrial por tren y conexiones portuarias."
+      ]
+    },
     {
       "version": "0.168",
       "date": "2026-11-02",

@@ -1234,3 +1234,6 @@ El fallo reportado provenía de campos de colección ausentes en guardados antig
 La prueba `tests/test_offline_boot_recovery.mjs` ahora comprueba una partida sin guardado previo y una partida heredada sin `buildings`/`projects`, además de Play/Pausa, panel Ciudad, construcción local, escena/túnel y una respuesta LAN tardía. El workflow de GitHub ejecuta esta regresión en cada push.
 
 No cambia el progreso de mecánicas: fase 7=95%, fase 4=60%, fase 9=75%; progreso global no estimable sin pesos verificables comunes para 34 fases.
+## Revalidación de Alfa 0.165
+
+Se actualizaron pruebas desfasadas de incendios y arranque para verificar campos/estados actuales y la versión Alfa 0.165. Sin cambios al comportamiento de juego. Verificado: 146 pruebas Python; 94 pruebas Node/Offline; Chromium confirmó inicio Offline, render 3D, túnel, construcción local y que una respuesta LAN tardía no cambia el modo. El progreso y fases registrados se mantienen; la matriz global ponderada no existe, por lo que no se estima porcentaje total. Próximo sistema: fase 7, ampliar transporte público desde viajes laborales a viajes cotidianos de pasajeros con capacidad y transbordo.

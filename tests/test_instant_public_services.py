@@ -61,12 +61,3 @@ class InstantPublicServices(unittest.TestCase):
         status,_=self.action(kind="fireStation",serviceModel="firePost",x=7,y=10)
         self.assertEqual(status,409)
         self.assertEqual(server.state["money"],100000)
-
-    def test_error_explains_cash_reserved_for_other_projects(self):
-        server.state["money"]=10780
-        server.state["projects"].append({"x":7,"y":10,"kind":"school","cost":10000,"paid":296,"privatePaid":False})
-        status,body=self.action(kind="civic",serviceModel="clinic",x=5,y=10)
-        self.assertEqual(status,409)
-        for amount in ("10.780","9.704","1.076","8.000"):
-            self.assertIn(amount,body["error"])
-        self.assertEqual(server.state["money"],10780)

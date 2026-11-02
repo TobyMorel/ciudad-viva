@@ -51,3 +51,6 @@ Retomar mecánicas de fase 7: pasajeros/transbordos y conexiones de subte, puert
 ## Alfa 0.155 · regresión detectada y resuelta
 
 Se normalizan listas ausentes en guardados offline antiguos y el render 3D no asume `buildings`/`projects`. La prueba dedicada de Chromium para partida fresca y guardado heredado quedó agregada al workflow de cada push. Próximo: seguir fase 7 con una mecánica nueva (pasajeros/transbordos o subte), manteniendo la prueba de arranque.
+## Continuación después de Alfa 0.165
+
+Prioridad de mecánica: fase 7, transportar pasajeros no laborales (compras/servicios) en colectivos, respetando paradas, capacidad por franja, transbordos, colas viales e ingresos sin duplicación. Implementar la misma regla Online/Offline y probar trayecto y costo en una ciudad con calles cortadas como control. Después avanzar movilidad intermodal. No invertir otra entrega en detalles visuales mientras las mecánicas principales estén incompletas. Mantener prueba Chromium de arranque offline. Global sigue sin estimarse: faltan pesos homogéneos verificables para las 34 fases.

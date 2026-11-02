@@ -1,3 +1,7 @@
+## Continuación · verificación Alfa 0.165
+
+Se alinearon las regresiones de incendios con el contrato vigente (`deaths`, ruinas de `fireService` y llegada del despacho por `responseRoute`) y el recorrido Chromium con la versión publicada 0.165. Se retiró una comprobación duplicada obsoleta; el comportamiento equivalente sigue cubierto por `test_realistic_city_services_offline.mjs` y `test_fire_destruction.py`. Verificación local: 146 pruebas Python, 94 Node y `test_offline_boot_recovery.mjs` en Chromium pasaron. No cambia el alcance funcional ni el porcentaje orientativo de fases. Próxima mecánica: fase 7, transporte de pasajeros no laborales y transbordos accesibles; probar el efecto en viajes reales y costo operativo, Online/Offline. LAN física pendiente.
+
 ## Alfa 0.165 · viajes persistentes en el mapa 3D
 
 Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.

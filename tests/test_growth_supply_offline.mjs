@@ -25,7 +25,7 @@ test('Offline usa oferta real y no adjudica vivienda privada mientras haya plaza
  globalThis.localStorage={getItem:()=>saved,setItem:(_,value)=>{saved=value}};Date.now=()=>clock;
  try{
    const first=await createOfflineAdapter();await first.request('/api/state');const city=JSON.parse(saved);
-   city.buildings=[{kind:'home',x:5,y:9,capacity:120,occupants:0,residents:[],quality:80}];
+   city.buildings=[{kind:'home',x:5,y:9,capacity:500,occupants:0,residents:[],quality:80}];
    city.housingDemand.unmet=500;city.roads=[[4,10],[5,10]];
    city.zones=[{x:5,y:10,kind:'home',status:'disponible'}];city.paused=false;city.money=250000;city.privateCapital=250000;
    saved=JSON.stringify(city);

@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.147
+# Estado de desarrollo · Alfa 0.148
+
+## Mensajería ciudadana en la pantalla principal · fase 9
+
+El buzón muestra hasta dos avisos urgentes/accionables, priorizados desde `collectCityAlerts`: fuego, patrulla pendiente, basura, fallas de servicios, edificios sin acceso vial, calle deteriorada, obras detenidas y traslado funerario sin servicio. Cada tarjeta usa el nombre de un residente del hogar más cercano, describe la necesidad y ofrece «Ver»; el foco selecciona y centra la parcela en el mapa sin abrir otro popup. El enlace inferior abre el panel completo de avisos. La fuente sigue siendo la simulación existente, no se generan eventos ficticios.
+
+Verificado en Chromium móvil 390×844 y escritorio 1440×900: mensajero real del hogar, texto, ubicación enfocada, panel dentro de pantalla y sin solapamiento con demanda ni popup adicional. Pasaron `tests/test_citizen_inbox_ui.mjs`, siete pruebas de `tests/test_city_guide.mjs`, sintaxis JavaScript y `git diff --check`. Esta mejora de avisos no completa por sí sola fases: fase 4 permanece en 60%, fase 9 en 75%; total no estimable sin pesos comunes verificables para las 34 fases.
+
+Hito actual: facilitar la detección de necesidades urbanas mediante avisos causales. Próximo: patrullas policiales que recorren físicamente las calles, llegan al incidente y explican por qué no pueden responder.
 
 ## Calles instantáneas por tramo · fase 4
 

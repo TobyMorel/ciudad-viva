@@ -104,7 +104,7 @@ export function gettingStarted(state){
  const activeOrders=state?.supply?.orders||[];
  return [
   {title:'Reconocé tu ciudad',done:true,description:'Tocá una parcela para saber qué hay y qué necesita. Abrí Avisos para ver emergencias reales.'},
-  {title:'Conectá calles',done:roads.length>0,description:'Usá Construir → Proyectar calle. Las obras y los servicios necesitan caminos terminados conectados al resto de la ciudad.'},
+  {title:'Conectá calles',done:roads.length>0,description:'Usá Construir → Construir calle. Cada tramo cuesta $1.200 y queda habilitado al instante; las obras y los servicios necesitan caminos conectados.'},
   {title:'Prepará suelo industrial',done:zones.some(z=>z?.kind==='factory'),description:'Elegí Zona industrial y pintá una parcela libre junto a una calle. El suelo amarillo solo es un permiso, no una fábrica.'},
   {title:'Licitá la fábrica correcta',done:projects.some(p=>p?.kind==='factory')||buildings.some(b=>b?.kind==='factory'),description:'En Construir elegí Cantera para producir áridos o Hormigonera para producir hormigón. Seleccioná constructora y verificá el capital.'},
   {title:'Pedí materiales para una obra',done:activeOrders.length>0,description:'En Obras, elegí un contrato → Pedir materiales. Revisá stock del proveedor, caja, espacio de destino y conexión vial.'},

@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.147",
+  "currentVersion": "0.148",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.148",
+      "date": "2026-11-02",
+      "roadmapPhase": 9,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La pantalla principal muestra un buzón compacto de vecinos para avisos urgentes y accionables ya registrados por la ciudad: incendios, falta de patrullas, basura, cortes de servicios, edificios aislados, calles dañadas, obras detenidas y traslados funerarios pendientes.",
+        "Cada mensaje toma el nombre de una persona real del hogar más cercano, resume la necesidad y ofrece «Ver». Ese botón centra la cámara en la parcela y la selecciona sin abrir una ventana adicional. «Ver avisos» conserva el acceso al panel completo.",
+        "Verificado con Chromium a 390×844 y 1440×900: nombre, mensaje, foco de cámara, ausencia de solapamiento con las barras de demanda y sin popup adicional. También pasaron siete pruebas de la guía y comprobaciones de sintaxis. No se modifica el alcance de las simulaciones; fases 4 y 9 permanecen en 60% y 75%, y el progreso global no es estimable sin pesos comunes verificables."
+      ]
+    },
     {
       "version": "0.147",
       "date": "2026-11-02",

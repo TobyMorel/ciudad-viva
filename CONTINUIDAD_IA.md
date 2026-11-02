@@ -1,6 +1,12 @@
-# Continuidad inmediata · Alfa 0.147
+# Continuidad inmediata · Alfa 0.148
 
 No empezar desde cero. Priorizar mecánicas conectadas y evitar varias entregas de pulido. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. Publicar cada versión en `main` con el correo GitHub noreply configurado.
+
+## Alfa 0.148 · mensajes de vecinos
+
+`game.js` muestra los avisos accionables de `collectCityAlerts` en `#citizenInbox`. La persona que escribe se elige de forma estable entre residentes del hogar más cercano; el texto describe la necesidad registrada. Hay dos tarjetas visibles con enlace «Ver avisos» al panel completo. «Ver» centra/selecciona la ubicación con `world.focusTile` sin modal adicional. La fuente solo usa sistemas/eventos existentes. CSS responsive y tema oscuro en `design.css`; markup en `index.html`.
+
+Prueba `tests/test_citizen_inbox_ui.mjs`: Chromium 390×844 y 1440×900, nombre, mensaje, foco de cámara, solapamiento y popup. `tests/test_city_guide.mjs`: 7 pasan. Fase 9 sigue en 75%, fase 4 en 60%; progreso global no estimable.
 
 ## Alfa 0.147 · calles instantáneas
 

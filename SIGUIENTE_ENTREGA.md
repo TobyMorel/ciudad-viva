@@ -1,4 +1,6 @@
-# Siguiente entrega · después de Alfa 0.147
+# Siguiente entrega · después de Alfa 0.148
+
+La Alfa 0.148 añade un buzón ciudadano sobre el mapa con avisos urgentes ya producidos por la simulación. Cada mensaje identifica a un residente cercano y permite enfocar su ubicación; se probó en móvil y escritorio sin solapar la demanda. No cambia el progreso de los sistemas subyacentes: fase 4 permanece en 60%, fase 9 en 75%, progreso total no estimable sin pesos comparables.
 
 La Alfa 0.147 hace instantánea la colocación de calles: $1.200 por tramo, sin animación de obra, materiales, constructora o cuadrilla; varios clics seguidos mantienen activa la herramienta. Online/Offline están cubiertos por pruebas. Fase 4 permanece en 60%, y el avance total sigue no estimable porque las 34 fases no tienen pesos de aceptación comparables.
 

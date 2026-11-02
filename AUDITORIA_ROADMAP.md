@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.148 · mensajería de incidencias existentes
+
+La nueva bandeja muestra en la pantalla principal los avisos accionables que ya produce la simulación; cada mensaje tiene remitente real cercano, solicitud y foco de cámara. Se validó en móvil y escritorio con Chromium, sin solapamiento ni popup. No se agregó ninguna fuente de incidentes ni se cambió la cobertura funcional de servicios; por eso se conservan fase 4 al 60% y fase 9 al 75%. El avance global permanece sin estimación: no hay pesos de aceptación comunes verificables para las 34 fases.
+
 # Auditoría · Alfa 0.141 · servicios funerarios (fase 9)
 
 La fase 9 aumenta de 70% a 75%: las edades avanzan anualmente, la mortalidad natural es estable por identidad/edad, los fallecidos dejan el hogar y se registra su disposición. Cementerio limita a 120 tumbas, crematorio a 24 cremaciones por año; ambas instalaciones cuestan, emplean, requieren acceso por calle y declaran capacidad/espera en la UI. Pruebas de ambos motores verifican fallecimiento, plaza liberada, cementerio agotado y fallback a cremación. `test_funeral_ui.mjs` verifica el panel a 390×844/1440×900, y `test_ui_layout.mjs` actualiza los conteos y categorías del catálogo.

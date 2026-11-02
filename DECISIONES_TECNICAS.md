@@ -1,4 +1,10 @@
-## Última decisión registrada · Alfa 0.147
+## Última decisión registrada · Alfa 0.148
+
+El buzón de vecinos deriva mensajes de `collectCityAlerts(S)`, filtrando avisos con prioridad 0/1 para mantener solicitudes accionables y no convertir resoluciones pasadas en emergencias actuales. El remitente se obtiene de los residentes con nombre en los hogares más cercanos; se usa una selección estable por ID del aviso para evitar que el nombre cambie con cada render. Si no hay padrón, el fallback es «Voz vecinal». El texto se presenta en la interfaz sin escribir un registro paralelo ni inventar incidentes.
+
+«Ver» centra la parcela con `world.focusTile(x,y,viewParams())`, conservando la rotación y ampliando el zoom móvil hasta 1,45 cuando sea necesario. El panel no bloquea la vista y su enlace abre el listado actual de avisos. El foco solo mueve cámara y selección; no altera economía ni simulación.
+
+## Decisión anterior · Alfa 0.147
 
 La calle municipal deja de ser una obra contractual. `placeRoad` coloca y cobra un tramo de inmediato en Online y Offline, con precio base $1.200, sin `project`, constructora, materiales ni mano de obra. `place` con `kind=road` conserva compatibilidad redirigiendo a la misma acción. La adyacencia ortogonal a la red, terreno habilitado, agua, ocupación y fondos comprometidos siguen validados. Cada tramo añade el activo de mantenimiento actual ($15/mes). El cliente mantiene la herramienta de calles activa y serializa clics sucesivos para no competir por el mismo saldo.
 

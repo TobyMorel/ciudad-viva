@@ -1,3 +1,9 @@
+## Alfa 0.166 · colectivos intermodales para compras y servicios
+
+El viaje no laboral conserva visitantes reales de comercios y equipamientos. Los colectivos de turno mediodía llevan solo pasajeros con plazas y paradas accesibles. Los viajes se pueden transbordar entre dos líneas con descuento y reserva de capacidad en cada tramo; el remanente utiliza el modo de origen. Una misma persona no puede subir a un taxi y colectivo a la vez. Se cobra a cada hogar el boleto efectivamente consumido al cierre municipal y se registra el dinero recibido. Movilidad expone pasajeros por línea y total de transbordos.
+
+**Próximo hito principal del roadmap:** fase 22, sistema de metro con estaciones, proyecto de obra civil, trenes/energía, demanda real, capacidad, costos y transbordos entre medios; continuar fases 23–25 en paralelo según factibilidad geográfica. Pruebas de LAN física pendientes.
+
 ## Alfa 0.165 · viajes persistentes en el mapa 3D
 
 Al construir una calle se conservan la posición y ruta de actores ya existentes. Se retiraron peatones y camiones decorativos sin itinerario causal. Los viajes de trabajo, compras y servicios permanecen ligados a personas de la simulación. 142 pruebas Python pasaron. Progreso global no estimable sin pesos verificables de las 34 fases.

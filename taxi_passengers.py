@@ -18,6 +18,9 @@ def assign_taxi_passengers(state, trips):
     for trip in trips:
         trip.pop("taxiRiders", None)
         trip.pop("taxiRouteIds", None)
+        if trip.get('mode') == 'auto' and trip.get('reason') in ('compras', 'servicios'):
+            trip['vehicles'] = math.ceil(max(0, trip.get('workers', 0)) / 1.4)
+            trip['dailyEmissionsKg'] = round(trip['vehicles'] * trip.get('distance', 0) * .18 * 2, 2)
     active_vehicles = 0
     vehicle_emissions = 0
     active_routes = []

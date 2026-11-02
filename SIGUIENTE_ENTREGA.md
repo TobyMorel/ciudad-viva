@@ -1,3 +1,9 @@
+## Después de Alfa 0.168 · Prioridad: movilidad intermodal (fase 22)
+
+La red de subte ya tiene accesos, obras y formaciones proyectados en 3D. **Siguiente entrega jugable:** transbordo comprobable entre subte y colectivos para viajes de compras y servicios. Exigir paradas/estaciones accesibles, cupos de ambos modos y tiempo puerta a puerta; una persona no puede contarse en dos modos ni pagar dos veces por error. Implementar igual en LAN y Offline con pruebas de aforo, tarifas, energía, pausa y recorridos cortados. Después priorizar estaciones multiacceso, personal ferroviario y ferrocarril/carga industrial.
+
+Antes de integrar Alfa 0.168, verificar CI y render real en 390/1440 px. Mantener pendiente la prueba LAN entre dos equipos físicos y no estimar avance global sin pesos verificables del roadmap.
+
 ## Alfa 0.167 · Primera línea de subte operativa (fase 22)
 
 Una línea municipal de subte se proyecta entre dos edificios conectados por calles, con túnel subterráneo y dos estaciones. Contratarla descuenta la inversión por trazado y compra de trenes; el contrato pasa por estudios, excavación, instalaciones e inspección durante varios días y se detiene si faltan cuadrillas. Tras habilitarse, requiere energía, formaciones y presupuesto. Frecuencia, aforo y gastos dependen de la flota; utiliza visitas reales a comercios y servicios y reemplaza autos particulares cuando el tiempo de viaje lo justifica. Se cobran boletos de hogares al cierre sin inventar ingresos. LAN/Offline, pruebas y panel responsive.

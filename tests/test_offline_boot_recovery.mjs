@@ -13,6 +13,13 @@ try{
  await broken.locator('#offlineMode').click();
  await broken.waitForURL(/cv-refresh=0\.161/,{timeout:10000});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
+ await freshPage.locator('.game-dock [data-popup="changes"]').evaluate(e=>e.click());
+ await freshPage.waitForFunction(()=>document.querySelectorAll('#releaseNotes .release-card').length>=2,{timeout:10000});
+ assert.match(await freshPage.locator('.ref-version-banner').first().innerText(),/Alfa 0\.163/,'Cambios y novedades muestra la versión actual desde la primera apertura');
+ const releaseTitles=await freshPage.locator('#releaseNotes .release-card .release-head b').allTextContents();
+ assert.deepEqual(releaseTitles.slice(0,2),['Alfa 0.163','Alfa 0.162'],'el historial muestra pasajeros y puentes antes de notas anteriores');
+ assert.match(await freshPage.locator('#releaseNotes').innerText(),/pasajeros|taxis/i,'los viajes de taxi se describen en Cambios');
+ await freshPage.locator('#popupClose').evaluate(e=>e.click());
  await broken.close();
  const legacyPage=await browser.newPage({viewport:{width:390,height:844}}),legacyErrors=[];legacyPage.on('pageerror',e=>legacyErrors.push(e.stack||e.message));await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});await legacyPage.evaluate(async()=>{const state=await fetch('/offline_seed.json').then(r=>r.json());delete state.buildings;delete state.projects;localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(state))});await legacyPage.locator('#offlineMode').click();await legacyPage.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});await legacyPage.waitForTimeout(250);assert.deepEqual(legacyErrors,[],'un guardado anterior sin edificios/obras debe poder cargarse');assert.ok((await legacyPage.evaluate(()=>window.__ciudadVivaScene())).drawCalls>0,'el guardado anterior renderiza su escena');await legacyPage.close();
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],actionFetches=[];page.on('pageerror',e=>errors.push(e.message));

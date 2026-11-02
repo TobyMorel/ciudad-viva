@@ -1,4 +1,4 @@
-# Decisiones añadidas · Alfa 0.154
+# Decisiones añadidas · Alfa 0.155
 
 - No ocultar el selector Offline antes de completar el primer `/api/state`; ante fallo, no dejar controles que parezcan jugables sin sesión válida. El adaptador local es prioritario en `api()`.
 - Mantener previews 3D suficientemente grandes (120px desktop/100px móvil) y acercar cámara/escala, pero vigilar visibilidad y scroll en pantallas cortas.
@@ -692,3 +692,7 @@ La preferencia familiar se fija por identidad y persiste en el registro de falle
 - Los guardados sin `landClaims` se migran conservando terreno ocupado por calles, edificios, obras, parcelas y ruinas. No se fuerza un reinicio de ciudades existentes.
 - El suelo 3D amplio se desplaza por segmentos bajo la cámara para no presentar un borde visual al navegar. Es una escena plana con costa local, no una generación de biomas ni un terreno topográfico sin límite. La expansión jugable no tiene borde artificial de coordenadas; precisión/renderizado y rendimiento limitan en la práctica ciudades extremadamente extensas.
 - Hito actual: fase 1, extensión territorial. Próximo foco: completar catastro y derechos de propiedad y probar rutas/guardados en mapas grandes; luego retomar nuevas mecánicas de fases con menor cobertura.
+
+## Decisión Alfa 0.155 · migrar colecciones offline ausentes
+
+Las partidas locales sobreviven a cambios de versión; una colección de estado que no existía en el esquema guardado se inicializa como `[]` al migrar, antes de que simulación/UI/3D la consulten. El render 3D conserva también fallbacks locales para `buildings` y `projects`. La prueba de arranque cubre save nuevo y save heredado incompleto y corre en CI en cada push.

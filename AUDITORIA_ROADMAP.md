@@ -645,3 +645,7 @@ Los cruces de 3+ calles tienen semáforos modelados en 3D y guardan instalación
 Sirenas sintetizadas acompañan intervenciones recientes de policía/bomberos, incendios activos aportan crepitación y la congestión real de colas/demoras puede producir bocinas espaciadas. El control de audio común, la pausa y la pestaña oculta limitan la emisión. Los sonidos son generados localmente, sin dependencias remotas.
 
 Pruebas: regresión Online de semáforo instalado/retirado/restaurado y cruce inválido; regresión Offline equivalente; Chromium de interacción/lectura responsive en 390×844 y 1440×900; sintaxis. Se añaden al workflow. Fase 7 continúa en 95% (pendiente alivio/fiabilidad del sistema en ciudades densas); fase 9 continúa en 75% (pendientes patrullaje físico, docentes/cobertura y otros criterios). No se infiere el progreso global por cantidad de funciones.
+
+# Auditoría · Alfa 0.155 · guardados offline
+
+La regresión `.map` del arranque offline quedó cubierta por inicialización/migración de colecciones ausentes y fallback en render 3D. Chromium verificó partida limpia, guardado heredado sin edificios/obras, escena visible, acciones locales y respuesta LAN tardía. CI repetirá la prueba en cada push. No cambia la estimación: fase 7=95%, fase 4=60%, fase 9=75%; total sin estimar por falta de pesos comparables verificables para las 34 fases.

@@ -1,4 +1,4 @@
-# Estado de desarrollo · Alfa 0.154
+# Estado de desarrollo · Alfa 0.155
 
 ## Controles de sesión, panel Ciudad, miniaturas 3D y túnel
 
@@ -1194,3 +1194,11 @@ La partida nueva arranca con cuatro sectores contiguos de 8×8 parcelas (16×16 
 Online y Offline aplican validación y pago en una única acción serial, persisten los sectores y prohíben colocar calles, zonas o activos en suelo cerrado. El universo de coordenadas ya no tiene el límite 28×20; la superficie visual reutiliza suelo procedimental alrededor de la cámara. Guardados anteriores migran habilitando las zonas que ya contienen caminos, parcelas o construcciones. El borde desbloqueable crece a partir del terreno comprado, por lo que no hay un límite artificial fijo de expansión; la escala final depende de rendimiento, precisión numérica y almacenamiento del equipo.
 
 Verificación: 8 pruebas Python de asentamiento/expansión; 3 pruebas Node Offline; prueba Chromium del candado, precio, desbloqueo y ficha en 390×844 y 1440×900; sintaxis de Python/JavaScript y diff limpios. Fase 1 sube de 70% a 75%. Pendiente: catastro y derechos de propiedad; además falta prueba de estrés de navegación/guardado en una ciudad extensa. Progreso global continúa sin estimar: no hay pesos comunes verificables para integrar las 34 fases.
+
+## Alfa 0.155 · recuperación de guardados offline
+
+El fallo reportado provenía de campos de colección ausentes en guardados antiguos: la ficha Obras llamaba `.map()` sobre `projectGuide().remaining`, ausente cuando el proyecto no guarda lista de materiales; un segundo supuesto del render 3D afectaba guardados sin listas `buildings`/`projects`. La ficha usa una lista vacía por defecto, el render usa listas seguras y la migración inicial completa colecciones ausentes del esquema como vacías.
+
+La prueba `tests/test_offline_boot_recovery.mjs` ahora comprueba una partida sin guardado previo y una partida heredada sin `buildings`/`projects`, además de Play/Pausa, panel Ciudad, construcción local, escena/túnel y una respuesta LAN tardía. El workflow de GitHub ejecuta esta regresión en cada push.
+
+No cambia el progreso de mecánicas: fase 7=95%, fase 4=60%, fase 9=75%; progreso global no estimable sin pesos verificables comunes para 34 fases.

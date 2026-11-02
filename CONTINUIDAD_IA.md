@@ -752,3 +752,9 @@ Pruebas de esta build: `tests/test_new_settlement.py`, `tests/test_new_settlemen
 Siguiente tarea inmediata: desarrollar catastro/propiedad ligado a parcelas y expandir pruebas de guardado y cámara más allá del viejo borde 28×20. Después cambiar a otra mecánica incompleta del roadmap. No prolongar el trabajo en pulido menor.
 
 Publicación obligatoria: commit directo en `main`, autor Git `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, revisar SHA/CI y crear ZIP completo sin `.git`, cachés ni ZIP de versiones anteriores.
+
+## Continuidad más reciente · Alfa 0.155
+
+Bug de inicio offline corregido: guardados viejos pueden no incluir nuevas colecciones; `offline.js` completa con arrays vacíos las colecciones que el seed define como arrays y `world3d.js` protege buildings/projects al construir la escena. Regresión permanente: `tests/test_offline_boot_recovery.mjs` cubre localStorage limpio y un guardado sin esas dos propiedades; el job responsive ejecuta el caso primero en cada push. Reproducir/validar con `node tests/test_offline_boot_recovery.mjs`. La prueba de LAN entre dos computadoras aún requiere hardware; no se afirma validada.
+
+Mantener identidad Git noreply: `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`. Publicar en main y adjuntar ZIP íntegro por entrega. Global no estimable; fases 7=95%, 4=60%, 9=75%.

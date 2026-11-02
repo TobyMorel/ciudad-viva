@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.154",
+  "currentVersion": "0.155",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.155",
+      "date": "2026-11-02",
+      "title": "Recuperación de guardados offline y prueba de arranque",
+      "changes": [
+        "La ficha de Obras tolera proyectos sin datos legados de materiales (`remaining`) y el render 3D tolera listas de edificios/obras ausentes en guardados anteriores.",
+        "La migración offline completa las colecciones ausentes de versiones anteriores como listas vacías antes de procesar la ciudad.",
+        "La prueba de Chromium ahora abre una partida limpia y recupera un guardado anterior incompleto; CI ejecuta esta regresión en cada push."
+      ],
+      "verification": "Verificado con Chromium: arranque offline limpio, carga de guardado antiguo incompleto, render 3D y colocación de dos consultorios sin aviso .map, vistas 3D/filtros de Construir, Play/Pausa, Ciudad, calle instantánea y carrera de conexión LAN tardía. Sintaxis JS/JSON y diff limpios. El workflow repite el arranque offline en cada push. Global no estimable; fases 7=95%, 4=60%, 9=75%."
+    },
     {
       "version": "0.154",
       "date": "2026-11-02",

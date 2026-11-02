@@ -4,8 +4,13 @@ const token = process.env.VERCEL_TOKEN;
 const ids = (process.env.VERCEL_PROJECT_IDS || '').split(',').map(x => x.trim()).filter(Boolean);
 const teamId = process.env.VERCEL_TEAM_ID || '';
 const live = process.env.ENABLE_DELETION === 'true';
-if (!token || ids.length !== 1 || new Set(ids).size !== 1) {
-  throw new Error('Configure VERCEL_TOKEN and exactly one VERCEL_PROJECT_IDS before running.');
+if (!token) {
+  if (live) throw new Error('ENABLE_DELETION=true requires the VERCEL_TOKEN secret.');
+  console.warn('Skipping cleanup: VERCEL_TOKEN is not configured. Add it as a repository secret to inspect deployments.');
+  process.exit(0);
+}
+if (ids.length !== 1 || new Set(ids).size !== 1) {
+  throw new Error('Configure exactly one VERCEL_PROJECT_IDS before running.');
 }
 
 const base = 'https://api.vercel.com';

@@ -423,7 +423,86 @@ export async function createOfflineAdapter(){
     }
     const active=events.filter(i=>i.closed&&['en_respuesta','sin_respuesta'].includes(i.status));return {day,activeIncidents:active.map(i=>({...i})),recentIncidents:events.slice(-8).reverse().map(i=>({...i})),generated:report.generated||0,responded:report.responded||0,unanswered:report.unanswered||0,closureChanged};
   }
-  function calculateOfflineFireReport(advance=false){const fire=state.fireService=state.fireService||{incidents:[],lastGeneratedMonth:-1,dispatches:0,resolved:0,unanswered:0},incidents=fire.incidents=fire.incidents||[],day=state.day||1,workplaces=state.workplaces||[];if(advance){const month=Math.floor((day-1)/30);if(day%30===10&&month>(fire.lastGeneratedMonth??-1)){fire.lastGeneratedMonth=month;const eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status)),heat=Boolean(state.climate?.heatForecast?.active),drought=state.climate?.droughtForecast?.status==='activa',threshold=Math.min(82,12+eligible.length*2+(heat?10:0)+(drought?8:0)),roll=stableSkill(`${month}:${state.population||0}`,'incendio')%100;if(eligible.length&&roll<threshold&&!incidents.some(i=>i.status==='ardiendo')){const target=eligible[stableSkill(String(month),'parcela')%eligible.length],incident={id:`fire-${month}-${target.x}-${target.y}`,x:target.x,y:target.y,buildingKind:target.kind,name:target.name||target.kind,startDay:day,status:'ardiendo',damage:0};incidents.push(incident);event('Incendio urbano detectado',`Se inició un incendio en ${incident.name}. El personal cualificado, las dotaciones disponibles y las calles determinan la respuesta.`)}}const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(building=>({building,staff:workplaces.find(w=>w.kind==='fireStation'&&w.x===building.x&&w.y===building.y)?.staffedJobs||0,ready:building.dispatchReadyDay||day}));for(const incident of incidents.filter(i=>i.status==='ardiendo')){const choices=[];for(const station of stations){if(station.staff<4||station.ready>day)continue;const route=offlineServiceRoad(station.building,{x:incident.x,y:incident.y});if(route)choices.push({minutes:5+Math.max(0,route.length-1)*2.5,station})}choices.sort((a,b)=>a.minutes-b.minutes||a.station.building.x-b.station.building.x||a.station.building.y-b.station.building.y);if(choices.length){const {minutes,station}=choices[0],target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y),damage=Math.max(1,Math.min(18,Math.round(minutes/5)));if(target){target.quality=Math.max(20,(target.quality||75)-damage);if(target.kind==='home'){target.householdCash=Math.max(0,(target.householdCash||0)-damage*25);if(target.quality<=35)displaceOfflineHomeResidents(target,'incendio',7)}else if(target.business)target.business.cash=Math.max(0,(target.business.cash||0)-damage*45)}station.building.dispatchReadyDay=day+2;Object.assign(incident,{status:'controlado',responseMinutes:Math.round(minutes),station:station.building.name||'Cuartel municipal',stationX:station.building.x,stationY:station.building.y,route:offlineRoadRoute(station.building,{x:incident.x,y:incident.y}),damage,resolvedDay:day});fire.dispatches=(fire.dispatches||0)+1;fire.resolved=(fire.resolved||0)+1;if(damage>=10)state.services=Math.max(0,state.services-1);event('Incendio controlado',`${incident.station} llegó en ${Math.round(minutes)} min con cuatro bomberos. Daño: ${damage} puntos; la dotación queda ocupada dos días.`)}else{incident.burningDays=(incident.burningDays||0)+1;const target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y);if(target){target.quality=Math.max(20,(target.quality||75)-2);if(target.kind==='home'&&target.quality<=35)displaceOfflineHomeResidents(target,'incendio',7)}if(incident.burningDays>=5){Object.assign(incident,{status:'extinguido sin dotación',resolvedDay:day,damage:10});fire.unanswered=(fire.unanswered||0)+1;state.services=Math.max(0,state.services-2);state.approval=Math.max(0,state.approval-1);event('Incendio sin respuesta',`${incident.name} ardió cinco días sin dotación cualificada o ruta operativa; bajan la condición y la confianza pública.`)}}}}const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(b=>{const workers=workplaces.find(w=>w.kind==='fireStation'&&w.x===b.x&&w.y===b.y)?.staffedJobs||0;return{name:b.name||'Cuartel de bomberos',x:b.x,y:b.y,firefighters:workers,crews:Math.min(b.fireEngineCapacity||1,Math.floor(workers/4)),readyDay:b.dispatchReadyDay||day}}),eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind));let covered=0;for(const target of eligible)if(stations.some(s=>{const building=state.buildings.find(b=>b.kind==='fireStation'&&b.x===s.x&&b.y===s.y),path=building&&s.firefighters>=4&&offlineServiceRoad(building,target);return Boolean(path)}))covered++;return{day,stations,coveragePct:Math.round(covered/Math.max(1,eligible.length)*100),coveredBuildings:covered,eligibleBuildings:eligible.length,dispatches:fire.dispatches||0,resolved:fire.resolved||0,unanswered:fire.unanswered||0,activeIncidents:incidents.filter(i=>i.status==='ardiendo').map(i=>({...i})),recentIncidents:incidents.slice(-8).reverse().map(i=>({...i})),monthlyOperatingCost:stations.length*950}}
+  function destroyOfflineFireBuilding(incident){
+    const b=state.buildings.find(x=>x.x===incident.x&&x.y===incident.y);if(!b)return;
+    let dead=0,displaced=0;
+    if(b.kind==='home'){
+      const social=state.socialServices||(state.socialServices={shelterResidents:[],shelterReport:{}}),queue=social.shelterResidents||(social.shelterResidents=[]),year=2026+Math.floor(((state.day||1)-1)/360),deceased=state.urbanEvolution?.deceased||(state.urbanEvolution.deceased=[]),minute=Number(state.timeOfDayMinutes??720);
+      const people=b.residents||[];
+      for(let j=0;j<Math.max(0,b.occupants||0);j++){
+        const p=people[j]||{id:'fire-'+incident.id+'-'+j,age:0,status:'inactivo'},id=String(p.id);
+        const away=Boolean(p.workerEligible&&p.employerId&&minute>=480&&minute<1080)||(minute>=540&&minute<1140&&stableSkill(id,'salida-incendio')%100<12);
+        if(away){Object.assign(p,{status:'buscando vivienda',displacedBy:'incendio total',originHomeX:b.x,originHomeY:b.y,displacedDay:state.day,plannedReturnDay:null,admittedDay:state.day,shelterId:null});queue.push(p);displaced++}
+        else {deceased.push({residentId:id,name:p.name||('Residente #'+id.slice(-5)),age:p.age||0,year,deathDay:state.day,homeX:b.x,homeY:b.y,cause:'incendio',disposition:'en espera',funeralPreference:offlineFuneralPreference(id)});dead++}
+      }
+      state.urbanEvolution.deceased=deceased.slice(-2000);state.population=Math.max(0,(state.population||0)-dead);
+    }
+    if(b.jobSlots)state.jobs=Math.max(0,(state.jobs||0)-b.jobSlots);
+    if(b.monthlyCost)state.monthlyExpenses=Math.max(0,(state.monthlyExpenses||0)-b.monthlyCost);
+    state.buildings=state.buildings.filter(x=>x!==b);
+    state.fireService.ruins=state.fireService.ruins||[];
+    state.fireService.ruins.push({x:incident.x,y:incident.y,name:incident.name,kind:incident.buildingKind,destroyedDay:state.day});
+    Object.assign(incident,{status:'destruido',damage:100,deaths:dead,displaced,resolvedDay:state.day});
+    event('Edificio reducido a cenizas',incident.name+' se perdió por completo: '+dead+' fallecidos en el interior y '+displaced+' supervivientes buscando vivienda.');
+    updateOfflineSocialShelters();
+  }
+  function calculateOfflineFireReport(advance=false){
+    const fire=state.fireService||(state.fireService={incidents:[],lastGeneratedMonth:-1,dispatches:0,resolved:0,unanswered:0,ruins:[]}),incidents=fire.incidents||(fire.incidents=[]),day=state.day||1,workplaces=state.workplaces||[];
+    if(advance){
+      const month=Math.floor((day-1)/30);
+      if(day%30===10&&month>(fire.lastGeneratedMonth??-1)){
+        fire.lastGeneratedMonth=month;
+        const eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status));
+        const heat=Boolean(state.climate?.heatForecast?.active),drought=state.climate?.droughtForecast?.status==='activa',threshold=Math.min(82,12+eligible.length*2+(heat?10:0)+(drought?8:0));
+        if(eligible.length&&stableSkill(month+':'+(state.population||0),'incendio')%100<threshold&&!incidents.some(i=>i.status==='ardiendo')){
+          const b=eligible[stableSkill(String(month),'parcela')%eligible.length];
+          incidents.push({id:'fire-'+month+'-'+b.x+'-'+b.y,x:b.x,y:b.y,buildingKind:b.kind,name:b.name||b.kind,startDay:day,status:'ardiendo',damage:0});
+          event('Incendio urbano detectado','Arde '+(b.name||b.kind)+'. Se necesita una autobomba con ruta vial y personal.');
+        }
+      }
+      const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(building=>({building,staff:workplaces.find(w=>w.kind==='fireStation'&&w.x===building.x&&w.y===building.y)?.staffedJobs||0,ready:building.dispatchReadyDay||day}));
+      for(const incident of incidents){
+        if(incident.status!=='ardiendo')continue;
+        const target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y);
+        if(!target){Object.assign(incident,{status:'destruido',resolvedDay:day});continue}
+        if(incident.responseRoute?.length){
+          if(day>=(incident.arrivalDay||day+1)){
+            const damage=Math.max(1,Math.min(24,Math.round((incident.responseMinutes||15)/4)+(incident.burningDays||0)*2));
+            target.quality=Math.max(20,(target.quality||75)-damage);
+            if(target.kind==='home')target.householdCash=Math.max(0,(target.householdCash||0)-damage*25);
+            else if(target.business)target.business.cash=Math.max(0,(target.business.cash||0)-damage*45);
+            Object.assign(incident,{status:'controlado',route:incident.responseRoute,damage,resolvedDay:day});
+            fire.resolved=(fire.resolved||0)+1;
+            event('Incendio controlado',(incident.station||'Bomberos')+' llegó a '+incident.name+' y sofocó las llamas. Daño: '+damage+' puntos.');
+          }else incident.burningDays=(incident.burningDays||0)+1;
+          continue;
+        }
+        const choices=[];
+        for(const station of stations){
+          if(station.staff<4||station.ready>day)continue;
+          const path=offlineServiceRoad(station.building,incident);
+          if(path)choices.push({minutes:5+Math.max(0,path.length-1)*2.5,station,path});
+        }
+        choices.sort((a,b)=>a.minutes-b.minutes||a.station.building.x-b.station.building.x||a.station.building.y-b.station.building.y);
+        if(choices.length){
+          const {minutes,station,path}=choices[0];station.building.dispatchReadyDay=day+2;
+          Object.assign(incident,{station:station.building.name||'Cuartel municipal',stationX:station.building.x,stationY:station.building.y,responseRoute:path,route:path,responseMinutes:Math.round(minutes),dispatchDay:day,arrivalDay:day+1,responseStatus:'en camino'});
+          fire.dispatches=(fire.dispatches||0)+1;
+          event('Autobomba despachada',incident.station+' viaja hacia '+incident.name+' por '+Math.max(0,path.length-1)+' cuadras.');
+        }else{
+          incident.burningDays=(incident.burningDays||0)+1;target.quality=Math.max(20,(target.quality||75)-2);
+          if(incident.burningDays>=5){
+            destroyOfflineFireBuilding(incident);fire.unanswered=(fire.unanswered||0)+1;
+            state.services=Math.max(0,(state.services||0)-2);state.approval=Math.max(0,(state.approval||0)-1);
+          }
+        }
+      }
+    }
+    const stations=state.buildings.filter(b=>b.kind==='fireStation'&&!['cerrado','abandonado'].includes(b.status)).map(b=>{const workers=workplaces.find(w=>w.kind==='fireStation'&&w.x===b.x&&w.y===b.y)?.staffedJobs||0;return{name:b.name||'Cuartel de bomberos',x:b.x,y:b.y,firefighters:workers,crews:Math.min(b.fireEngineCapacity||1,Math.floor(workers/4)),readyDay:b.dispatchReadyDay||day}});
+    const eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind));
+    let covered=0;for(const target of eligible)if(stations.some(s=>{const building=state.buildings.find(b=>b.kind==='fireStation'&&b.x===s.x&&b.y===s.y);return Boolean(building&&s.firefighters>=4&&offlineServiceRoad(building,target))}))covered++;
+    return {day,stations,coveragePct:Math.round(covered/Math.max(1,eligible.length)*100),coveredBuildings:covered,eligibleBuildings:eligible.length,dispatches:fire.dispatches||0,resolved:fire.resolved||0,unanswered:fire.unanswered||0,activeIncidents:incidents.filter(i=>i.status==='ardiendo').map(i=>({...i})),recentIncidents:incidents.slice(-8).reverse().map(i=>({...i})),monthlyOperatingCost:stations.length*950};
+  }
     // Fase 28: camas de internación, ambulancias y ampliaciones en centros existentes.
   const HOSPITAL_COSTS={openHospitalWard:7200,expandHospitalWard:4600,addAmbulance:2800};
   function investOfflineHospitalCare(action,x,y){

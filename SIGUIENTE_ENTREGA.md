@@ -1,3 +1,7 @@
+## Próxima iteración después de Alfa 0.169
+
+Priorizar la red ferroviaria de fase 22 con conexiones verificables entre tren elevado, subte y colectivo, estaciones intermedias, material ferroviario especializado y carga industrial por rieles hasta el puerto. Las vías nuevas deben reservar suelo, y el gasto de mantenimiento, dotación y carga no debe simularse sin recursos. Conservar equivalencia Offline/LAN; probar entre dos computadoras cuando haya acceso físico.
+
 ## Después de Alfa 0.168 · Prioridad: movilidad intermodal (fase 22)
 
 La red de subte ya tiene accesos, obras y formaciones proyectados en 3D. **Siguiente entrega jugable:** transbordo comprobable entre subte y colectivos para viajes de compras y servicios. Exigir paradas/estaciones accesibles, cupos de ambos modos y tiempo puerta a puerta; una persona no puede contarse en dos modos ni pagar dos veces por error. Implementar igual en LAN y Offline con pruebas de aforo, tarifas, energía, pausa y recorridos cortados. Después priorizar estaciones multiacceso, personal ferroviario y ferrocarril/carga industrial.

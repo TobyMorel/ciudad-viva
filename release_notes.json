@@ -1,7 +1,26 @@
 {
-  "currentVersion": "0.172",
+  "currentVersion": "0.173",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.173",
+      "date": "2026-11-02",
+      "title": "Avisos por edificio, respuesta de emergencias y caja diaria",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Cada edificio usa un solo pin del sistema de avisos existente. Si tiene varias necesidades, el icono cambia cada 3,5 segundos y al tocarlo se abre un panel con todos los servicios y problemas pendientes de esa parcela. Los avisos desaparecen cuando se resuelven.",
+        "Se eliminó la etiqueta 3D que mostraba cinco iconos juntos sobre cada vivienda.",
+        "Las comisarías y los cuarteles recién habilitados pueden responder a incidentes pendientes dentro de su alcance. Patrulleros y autobombas aparecen durante el despacho, viajan por las calles y regresan a su estación.",
+        "Al seleccionar un edificio terminado se puede mover a una parcela libre y conectada o demolerlo sin devolución de fondos.",
+        "Los ingresos y gastos municipales recurrentes se acreditan y pagan al cierre de cada día; el cierre mensual concilia los importes variables. Economía muestra el último movimiento diario.",
+        "Se actualizaron las pruebas de servicios, avisos, respuesta policial y caja para motores Offline y LAN, y se comprobó el panel de avisos en móvil y escritorio."
+      ],
+      "verification": "Pruebas unitarias de motores y avisos aprobadas; panel e iconos comprobados en Chromium móvil y escritorio.",
+      "pending": [
+        "Seguir ampliando la simulación diaria de ingresos variables y probar la partida LAN en dos equipos físicos."
+      ]
+    },
     {
       "version": "0.172",
       "date": "2026-11-02",

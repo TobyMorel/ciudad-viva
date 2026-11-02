@@ -104,6 +104,11 @@ def evaluate_essential_services(city):
         if "wifi" in _required(building):access["telecomServedPct"]=access["wifiServedPct"]
         building["missingServices"]=missing
         building["missingServiceReasons"]=reasons
+        if isinstance(building.get("business"),dict):
+            fields={"power":"powerServedPct","water":"waterServedPct","gas":"gasServedPct","tv":"tvServedPct","wifi":"wifiServedPct"}
+            pct=min([access.get(fields[s],0) for s in _required(building)]+[access.get("wastewaterTreatedPct",100)])
+            restriction=max(0,min(1,building["business"].get("waterRestrictionFactor",1)))
+            building["business"]["utilityFactor"]=round(pct/100*restriction,3)
     u["essentialServices"]=summary
     return summary
 

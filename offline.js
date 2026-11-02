@@ -447,11 +447,11 @@ export async function createOfflineAdapter(){
     event('Edificio reducido a cenizas',incident.name+' se perdió por completo: '+dead+' fallecidos en el interior y '+displaced+' supervivientes buscando vivienda.');
     updateOfflineSocialShelters();
   }
-  function calculateOfflineFireReport(advance=false){
+  function calculateOfflineFireReport(advance=false,dispatchOnly=false){
     const fire=state.fireService||(state.fireService={incidents:[],lastGeneratedMonth:-1,dispatches:0,resolved:0,unanswered:0,ruins:[]}),incidents=fire.incidents||(fire.incidents=[]),day=state.day||1,workplaces=state.workplaces||[];
-    if(advance){
+    if(advance||dispatchOnly){
       const month=Math.floor((day-1)/30);
-      if(day%30===10&&month>(fire.lastGeneratedMonth??-1)){
+      if(advance&&day%30===10&&month>(fire.lastGeneratedMonth??-1)){
         fire.lastGeneratedMonth=month;
         const eligible=state.buildings.filter(b=>['home','shop','hotel','airport','port','school'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status));
         const heat=Boolean(state.climate?.heatForecast?.active),drought=state.climate?.droughtForecast?.status==='activa',threshold=Math.min(82,12+eligible.length*2+(heat?10:0)+(drought?8:0));
@@ -467,6 +467,8 @@ export async function createOfflineAdapter(){
         const target=state.buildings.find(b=>b.x===incident.x&&b.y===incident.y);
         if(!target){Object.assign(incident,{status:'destruido',resolvedDay:day});continue}
         if(incident.responseRoute?.length){
+          if(dispatchOnly)continue;
+          if(day-(incident.startDay||day)>=5){destroyOfflineFireBuilding(incident);fire.unanswered=(fire.unanswered||0)+1;continue}
           if(day>=(incident.arrivalDay||day+1)){
             const damage=Math.max(1,Math.min(24,Math.round((incident.responseMinutes||15)/4)+(incident.burningDays||0)*2));
             target.quality=Math.max(20,(target.quality||75)-damage);
@@ -490,7 +492,7 @@ export async function createOfflineAdapter(){
           Object.assign(incident,{station:station.building.name||'Cuartel municipal',stationX:station.building.x,stationY:station.building.y,responseRoute:path,route:path,responseMinutes:Math.round(minutes),dispatchDay:day,arrivalDay:day+1,responseStatus:'en camino'});
           fire.dispatches=(fire.dispatches||0)+1;
           event('Autobomba despachada',incident.station+' viaja hacia '+incident.name+' por '+Math.max(0,path.length-1)+' cuadras.');
-        }else{
+        }else if(advance){
           incident.burningDays=(incident.burningDays||0)+1;target.quality=Math.max(20,(target.quality||75)-2);
           if(incident.burningDays>=5){
             destroyOfflineFireBuilding(incident);fire.unanswered=(fire.unanswered||0)+1;
@@ -1558,6 +1560,7 @@ export async function createOfflineAdapter(){
         if(model.beds)building.hospitalWard={beds:model.beds,ambulances:model.ambulances||0,equippedDay:state.day};
         if(d.kind==='fireStation'){building.fireEngineCapacity=model.engines;building.dispatchReadyDay=state.day}
         state.buildings.push(building);state.jobs+=model.jobs;state.monthlyExpenses+=monthly;
+        if(d.kind==='fireStation'&&(state.fireService?.incidents||[]).some(i=>i.status==='ardiendo')){updateOfflineLabor();calculateOfflineFireReport(false,true)}
         event('Servicio público habilitado',`${model.label} abrió al colocarse por $${model.cost.toLocaleString('es-AR')}. Operación $${monthly.toLocaleString('es-AR')}/mes; su respuesta requiere personal, redes y acceso vial.`);return;
       }
       const active=state.projects.filter(q=>q.contractor===d.contractor&&q.status!=='pausada'),repairs=offlineWarrantyAssignments(d.contractor),rehabs=state.buildings.filter(b=>b.industrialRecovery?.status==='en obra'&&b.industrialRecovery.contractor===d.contractor),used=active.reduce((n,q)=>n+q.workersAssigned,0)+repairs.reduce((n,g)=>n+(g.workersAssigned||3),0)+rehabs.reduce((n,b)=>n+b.industrialRecovery.workersAssigned,0);if(active.length+repairs.length+rehabs.length>=c.capacity||used+NEEDS[d.kind]>c.workers)throw Error('La constructora no tiene cuadrilla libre para esta obra.');

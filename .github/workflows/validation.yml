@@ -28,6 +28,7 @@ jobs:
           node --check taxi_passengers.js
           node --check bus_nonwork.js
           node --check metro.js
+          node --check metro_visuals.js
           node --check growth_demand.js
           node --check offline_client.js
           node --check offline_worker.js
@@ -42,13 +43,13 @@ jobs:
       - name: Regresión Online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs
+        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
       - name: Stress económico 30 años (cuatro perfiles)
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.167
+          name: ciudad-viva-alfa-0.168
           path: |
             .
             !.git/**
@@ -82,7 +83,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.167-responsive
+          name: ciudad-viva-alfa-0.168-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

@@ -39,6 +39,14 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     business:{id:'quarry-test',name:'Cantera de prueba',industryType:'quarry',status:'abierto',cash:30000,jobSlots:20,wage:12,quarryReserve:100,aggregateStock:0}};
   const plant={x:6,y:9,kind:'factory',name:'Hormigonera de prueba',status:'habilitado',utilityAccess:{...access},monthlyOperatingCost:450,
     business:{id:'concrete-test',name:'Hormigonera de prueba',industryType:'concrete',status:'abierto',cash:30000,jobSlots:20,wage:12,rawMaterialInventory:0,concreteStock:0}};
+  // La industria de prueba dispone de plantas físicas conectadas, no de red gratuita.
+  for(const source of s.buildings){
+    if(source.kind==='powerPlant')source.generationKw=10000;
+    if(source.kind==='waterPlant')source.treatmentM3Day=10000;
+    if(source.kind==='gasPlant')source.gasCapacityM3Day=10000;
+  }
+  s.buildings.push({x:20,y:9,kind:'civic',name:'Central Wi-Fi industrial',
+    serviceModel:'wifiHub',status:'habilitado',quality:82,jobSlots:12,wifiConnections:160});
   s.buildings.push(quarry,plant);s.jobs+=40;
   let assigned=0;
   for(const home of s.buildings.filter(b=>b.kind==='home'))for(const person of home.residents||[]){

@@ -1,3 +1,4 @@
+import {assignRailBusTransfers} from './rail_bus_intermodal.js';
 // Metro municipal: paridad con metro.py, estaciones en edificios existentes.
 export const METRO_TRAIN_COST=2400, METRO_SEATS=80, METRO_FARE_CENTS=60;
 const STAGES=['Estudios y permisos','Excavación y sostenimiento','Vías y estaciones','Inspección y habilitación'];
@@ -117,10 +118,12 @@ export function metroAction(s,action,data){
 export function metroAssignPassengers(s,trips){
  metroRefresh(s);const day=Math.max(1,Math.trunc(s.day||1)),month=Math.floor((day-1)/30);
  for(const line of s.metroLines||[]){if(line.fareMonth!==month){line.fareMonth=month;line.fareByDay={}}line.dailyRiders=0;(line.fareByDay||(line.fareByDay={}))[String(day)]={}}
- let total=0,railTotal=0;
+ for(const trip of trips){delete trip.metroRiders;delete trip.metroLineId;delete trip.railRiders;delete trip.railLineId;delete trip.intermodalRiders;delete trip.intermodalJourneys}
+ const intermodal=assignRailBusTransfers(s,trips,day);
+ let total=intermodal.metroRiders+intermodal.railRiders,railTotal=intermodal.railRiders;
  for(const trip of trips){
   if(!['compras','servicios'].includes(trip.reason)||!['auto','walk'].includes(trip.mode)||!Array.isArray(trip.from)||!Array.isArray(trip.to))continue;
-  let remaining=Math.max(0,(trip.workers||0)-(trip.busRiders||0));
+  let remaining=Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.intermodalRiders||0));
   for(const line of s.metroLines||[]){
    if(!remaining||!line.operational)continue;const [a,b]=line.stations;
    const accessible=(distance(a,trip.from)<=2&&distance(b,trip.to)<=2)||(distance(b,trip.from)<=2&&distance(a,trip.to)<=2);
@@ -139,7 +142,7 @@ export function metroAssignPassengers(s,trips){
   }
  }
  for(const line of s.metroLines||[])line.fareDue=Math.round(Object.values(line.fareByDay).reduce((n,d)=>n+Object.values(d).reduce((a,b)=>a+b,0),0))/100;
- return{metroRiders:total-railTotal,railRiders:railTotal,metroLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode!=='elevated').length,railLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode==='elevated').length};
+ return{metroRiders:total-railTotal,railRiders:railTotal,metroLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode!=='elevated').length,railLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode==='elevated').length,intermodalTransfers:intermodal.transfers};
 }
 export function settleMetroMonth(s){
  const homes=new Map((s.buildings||[]).filter(b=>b.kind==='home').map(b=>[[b.x,b.y].join(','),b]));metroRefresh(s);

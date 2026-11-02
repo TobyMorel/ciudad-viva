@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.169';
+import {createWorld} from './world3d.js?v=0.170';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,projectGuide,INDUSTRIES,gettingStarted} from './cityGuide.js';
@@ -291,6 +291,7 @@ function metroPanel(){
  return `<section class="metro-panel" aria-label="Red de subte"><div class="bus-head"><div><span class="eyebrow">MOVILIDAD · FASE 22</span><b>Subte municipal</b></div><span>${lines.filter(l=>l.operational).length} líneas en servicio</span></div>
  <p>Proyectá dos estaciones en edificios con calle adyacente. La obra requiere inversión y cuadrillas, y pasa por estudios, excavación, vías e inspección. El tren solo circula con electricidad y presupuesto de movilidad.</p>
  <div class="detail-grid"><div><span>Pasajeros cotidianos hoy</span><b>${nfmt(S.traffic?.metroRiders||0)}</b></div><div><span>Trenes en servicio</span><b>${lines.filter(l=>l.operational).reduce((n,l)=>n+(l.trainCount||0),0)}</b></div></div>
+ <small>Viajes intermodales hoy: ${nfmt(S.traffic?.intermodalTransfers||0)} pasajeros que combinaron colectivo y transporte ferroviario. Cada asiento se reserva en ambos vehículos.</small>
  <div class="metro-build"><label>Estación de origen<select data-metro-from aria-label="Origen de la línea de subte">${option(origin)}</select></label>
  <label>Estación de destino<select data-metro-to aria-label="Destino de la línea de subte">${option(destination)}</select></label>
  <label>Formaciones iniciales<select data-metro-trains aria-label="Trenes iniciales">${[1,2,3].map(n=>`<option value="${n}" ${metroDraft.trains===n?'selected':''}>${n} tren${n===1?'':'es'} · $ ${nfmt(n*2400)}</option>`).join('')}</select></label>

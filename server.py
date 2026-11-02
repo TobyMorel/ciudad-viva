@@ -3409,6 +3409,8 @@ def commute_model():
     model['taxiVehicles']=taxi_service['activeVehicles']
     model.update(bus_nonwork)
     model.update(metro_service)
+    model['busNonworkPassengers']+=metro_service['intermodalTransfers']
+    model['busNonworkFareRevenue']=round(sum(l.get('nonworkFareToday',0) for l in state.get('busRoutes',[])),2)
     for trip in shopping+services:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
@@ -5725,6 +5727,7 @@ def public_state(player_id=None):
     view["traffic"]["metroLinesOperational"]=commute.get("metroLinesOperational",0)
     view["traffic"]["railRiders"]=commute.get("railRiders",0)
     view["traffic"]["railLinesOperational"]=commute.get("railLinesOperational",0)
+    view["traffic"]["intermodalTransfers"]=commute.get("intermodalTransfers",0)
     for key in ("busNonworkPassengers","busNonworkTransfers","busNonworkFareRevenue"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)

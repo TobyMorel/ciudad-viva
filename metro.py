@@ -4,6 +4,7 @@ Las estaciones subterráneas se vinculan a edificios ya conectados a la calle.
 No ocupan una segunda parcela en superficie: los accesos usan suelo edificado.
 """
 import math
+from rail_bus_intermodal import assign_rail_bus_transfers
 
 METRO_TRAIN_COST=2400
 METRO_SEATS=80
@@ -192,11 +193,14 @@ def metro_assign_passengers(state,trips):
             line["fareMonth"]=month;line["fareByDay"]={}
         line["dailyRiders"]=0
         line["fareByDay"][str(day)]={}
-    total=0;rail_total=0
+    for trip in trips:
+        for key in ("metroRiders","metroLineId","railRiders","railLineId","intermodalRiders","intermodalJourneys"):trip.pop(key,None)
+    intermodal=assign_rail_bus_transfers(state,trips,day)
+    total=intermodal["metroRiders"]+intermodal["railRiders"];rail_total=intermodal["railRiders"]
     for trip in trips:
         if trip.get("reason") not in ("compras","servicios") or trip.get("mode") not in ("auto","walk"):continue
         if not isinstance(trip.get("from"),list) or not isinstance(trip.get("to"),list):continue
-        remaining=max(0,int(trip.get("workers",0))-int(trip.get("busRiders",0)))
+        remaining=max(0,int(trip.get("workers",0))-int(trip.get("busRiders",0))-int(trip.get("intermodalRiders",0)))
         for line in state.get("metroLines",[]):
             if not remaining or not line.get("operational"):continue
             a,b=line["stations"]
@@ -225,7 +229,8 @@ def metro_assign_passengers(state,trips):
         line["fareDue"]=round(sum(sum(v.values()) for v in line["fareByDay"].values())/100,2)
     return {"metroRiders":total-rail_total,"railRiders":rail_total,
             "metroLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")!="elevated"),
-            "railLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")=="elevated")}
+            "railLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")=="elevated"),
+            "intermodalTransfers":intermodal["transfers"]}
 
 def settle_metro_month(state):
     homes={(b.get("x"),b.get("y")):b for b in state.get("buildings",[]) if b.get("kind")=="home"}

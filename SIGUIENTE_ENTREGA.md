@@ -1,3 +1,7 @@
+## Después de Alfa 0.170 · Próxima etapa fase 22
+
+La combinación colectivo↔subte y colectivo↔tren elevado ya reasigna pasajeros existentes, cobra tarifas por tramo y exige capacidad real. Próxima iteración: añadir estaciones intermedias sobre trazados ya contratados y transbordo entre líneas ferroviarias, manteniendo dosificar andenes y rutas causales. Luego desarrollar trenes de carga con clientes industriales reales, carga física, vías portuarias, inventarios y costes; evitar únicamente trenes decorativos. Mantener equivalencia LAN/Offline, tests responsive y la validación LAN entre dos equipos físicos.
+
 ## Próxima iteración después de Alfa 0.169
 
 Priorizar la red ferroviaria de fase 22 con conexiones verificables entre tren elevado, subte y colectivo, estaciones intermedias, material ferroviario especializado y carga industrial por rieles hasta el puerto. Las vías nuevas deben reservar suelo, y el gasto de mantenimiento, dotación y carga no debe simularse sin recursos. Conservar equivalencia Offline/LAN; probar entre dos computadoras cuando haya acceso físico.

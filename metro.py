@@ -1,32 +1,30 @@
 """Líneas de metro con obra civil, material rodante, energía y viajeros verificables.
 
-Las estaciones subterráneas se vinculan a edificios ya conectados a la calle.
-No ocupan una segunda parcela en superficie: los accesos usan suelo edificado.
+Las estaciones exigen una construcción física terminada en una parcela libre.
 """
 import math
 from rail_bus_intermodal import assign_rail_bus_transfers
+from rail_sites import place_rail_station,advance_rail_stations
 
 METRO_TRAIN_COST=2400
 METRO_SEATS=80
 METRO_FARE_CENTS=60
 STAGES=("Estudios y permisos","Excavación y sostenimiento","Vías y estaciones","Inspección y habilitación")
 
-def _station(state,point):
-    if not isinstance(point,(list,tuple)) or len(point)!=2:return None
-    if not all(type(n)==int for n in point):return None
-    b=next((b for b in state.get("buildings",[]) if b.get("x")==point[0] and b.get("y")==point[1]
-            and b.get("kind") in ("home","shop","civic","school","hotel","airport","port","depot","factory")
-            and b.get("status","operativo") in ("operativo","habilitado")),None)
+def _station(state,point,mode=None):
+    if not isinstance(point,(list,tuple)) or len(point)!=2 or not all(type(n)==int for n in point):return None
+    site=next((site for site in state.get("railStations",[]) if site.get("x")==point[0] and site.get("y")==point[1]
+               and site.get("status")=="active" and (mode is None or site.get("mode")==mode)),None)
     roads={tuple(p) for p in state.get("roads",[])}
-    if not b or not any((point[0]+dx,point[1]+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):return None
-    return b
+    if not site or not any((point[0]+dx,point[1]+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):return None
+    return site
 
-def metro_station_catalog(state):
+def metro_station_catalog(state,mode=None):
     result=[]
-    for b in state.get("buildings",[]):
-        p=[b.get("x"),b.get("y")]
-        if _station(state,p) is b:
-            result.append({"point":p,"name":b.get("name",b["kind"]),"label":f"{b.get('name',b['kind'])} · {p[0]+1},{p[1]+1}"})
+    for site in state.get("railStations",[]):
+        p=[site.get("x"),site.get("y")]
+        if (mode is None or site.get("mode")==mode) and _station(state,p,mode) is site:
+            result.append({"point":p,"name":site["name"],"mode":site["mode"],"label":f'{site["name"]} · {p[0]+1},{p[1]+1}'})
     return sorted(result,key=lambda e:(e["point"][0],e["point"][1]))[:80]
 
 def _path(a,b):
@@ -62,8 +60,8 @@ def elevated_road_route(state,a,b):
     return list(reversed(path))
 
 def plan_elevated_rail(state,from_point,to_point,trains=1):
-    a=_station(state,from_point);b=_station(state,to_point)
-    if not a or not b or a is b:raise ValueError("Elegí dos edificios distintos conectados por calles.")
+    a=_station(state,from_point,"elevated");b=_station(state,to_point,"elevated")
+    if not a or not b or a is b:raise ValueError("Construí primero dos estaciones elevadas terminadas y conectadas a calles.")
     route=elevated_road_route(state,from_point,to_point)
     d=len(route)-1 if route else -1
     if d<4 or d>45:raise ValueError("El tren elevado necesita entre 4 y 45 tramos viales conectados sin cruzar el río.")
@@ -91,8 +89,8 @@ def plan_elevated_rail(state,from_point,to_point,trains=1):
     lines.append(line);return line
 
 def plan_metro(state,from_point,to_point,trains=1):
-    a=_station(state,from_point);b=_station(state,to_point)
-    if not a or not b or a is b:raise ValueError("Elegí dos edificios distintos con acceso vial para las estaciones.")
+    a=_station(state,from_point,"metro");b=_station(state,to_point,"metro")
+    if not a or not b or a is b:raise ValueError("Construí primero dos estaciones de subte terminadas y conectadas a calles.")
     route=_path(from_point,to_point);distance=len(route)-1
     if distance<3 or distance>26:raise ValueError("Las estaciones deben separarse de 3 a 26 tramos.")
     if any(p[0] in (24,25) for p in route):raise ValueError("La primera línea no puede atravesar el cauce del río.")
@@ -117,6 +115,7 @@ def plan_metro(state,from_point,to_point,trains=1):
     return line
 
 def advance_metro_day(state):
+    advance_rail_stations(state)
     for line in state.get("metroLines",[]):
         if line.get("status")!="building":continue
         # El avance requiere obreros y caja ya contratada; la obra se detiene si la ciudad queda sin capacidad laboral.
@@ -160,6 +159,8 @@ def metro_refresh(state):
         line["energyKw"]=line.get("powerRequiredKw",0) if ready else 0
 
 def metro_action(state,action,data):
+    if action in ("placeMetroStation","placeRailStation"):
+        return place_rail_station(state,"elevated" if action=="placeRailStation" else "metro",data.get("x"),data.get("y"))
     if action=="planMetroLine":
         a=data.get("from");b=data.get("to")
         return plan_metro(state,a,b,data.get("trains",1))

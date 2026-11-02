@@ -88,7 +88,7 @@ export function metroRefresh(s){
   line.pauseReason=line.status==='building'?'Obra todavía en curso':line.status==='paused'?'Servicio pausado':activeLine&&!line.trainCount?'Sin trenes':activeLine&&!energy?'Electricidad insuficiente':activeLine&&funding<.5?'Presupuesto de movilidad insuficiente':null;
   const d=Math.max(1,(line.route?.length||2)-1),n=line.trainCount||0;
   const rail=line.mode==='elevated';
-  line.headwayMinutes=Math.max(5,Math.ceil(d*(rail?5:4)/Math.max(1,n)));
+  line.headwayMinutes=Math.max(5,Math.ceil(d*(rail?3:4)/Math.max(1,n)));
   line.dailyCapacity=ready?n*(rail?RAIL_SEATS:METRO_SEATS)*3:0;
   line.monthlyOperatingCost=ready?Math.round((rail?390:230)+(rail?110:85)*d+(rail?260:140)*n+(line.powerRequiredKw||0)*.7):0;
   line.energyKw=ready?line.powerRequiredKw||0:0;
@@ -124,7 +124,7 @@ export function metroAssignPassengers(s,trips){
    if(!remaining||!line.operational)continue;const [a,b]=line.stations;
    const accessible=(distance(a,trip.from)<=2&&distance(b,trip.to)<=2)||(distance(b,trip.from)<=2&&distance(a,trip.to)<=2);
    if(!accessible)continue;
-   const minutes=8+line.headwayMinutes/2+(line.route.length-1)*1.25,carMinutes=7+(trip.distance||0)*2.5;
+   const minutes=(line.mode==='elevated'?4:8)+line.headwayMinutes/2+(line.route.length-1)*(line.mode==='elevated'?1:1.25),carMinutes=7+(trip.distance||0)*2.5;
    if(minutes>carMinutes*1.3)continue;
    const count=Math.min(remaining,Math.max(0,line.dailyCapacity-line.dailyRiders));if(!count)continue;
    line.dailyRiders+=count;remaining-=count;total+=count;

@@ -2,7 +2,7 @@ import unittest
 from metro import plan_elevated_rail,metro_refresh,advance_metro_day,metro_action,metro_assign_passengers,settle_metro_month
 
 def city():
-    return dict(day=1,money=100000,jobs=8,projects=[],metroLines=[],
+    return dict(day=1,money=100000,jobs=8,projects=[],metroLines=[],railStations=[dict(mode='elevated',status='active',x=6,y=9,name='Estación viviendas'),dict(mode='elevated',status='active',x=13,y=9,name='Estación mercado')],
       roads=[[x,10] for x in range(4,15)],
       buildings=[
         dict(kind='home',name='Viviendas',x=5,y=9,status='habilitado',householdCash=80),
@@ -12,7 +12,7 @@ def city():
 
 class ElevatedRailTest(unittest.TestCase):
     def test_contract_and_inspection(self):
-        s=city();initial=s['money'];line=plan_elevated_rail(s,[5,9],[12,9],1)
+        s=city();initial=s['money'];line=plan_elevated_rail(s,[6,9],[13,9],1)
         self.assertEqual(line['mode'],'elevated')
         self.assertEqual(len(line['route']),8)
         self.assertEqual(s['money'],initial-line['purchaseCost'])
@@ -22,9 +22,9 @@ class ElevatedRailTest(unittest.TestCase):
         self.assertEqual(line['status'],'active')
         metro_refresh(s);self.assertTrue(line['operational'])
         self.assertEqual(line['dailyCapacity'],420)
-        with self.assertRaises(ValueError):plan_elevated_rail(s,[5,9],[12,9])
+        with self.assertRaises(ValueError):plan_elevated_rail(s,[6,9],[13,9])
     def test_capacity_energy_fares(self):
-        s=city();line=plan_elevated_rail(s,[5,9],[12,9])
+        s=city();line=plan_elevated_rail(s,[6,9],[13,9])
         line['status']='active';metro_refresh(s)
         t=dict(reason='compras',mode='auto',**{'from':[5,9],'to':[12,9]},distance=9,workers=7,busRiders=2,vehicles=5,dailyEmissionsKg=2.5)
         report=metro_assign_passengers(s,[t])
@@ -46,8 +46,8 @@ class ElevatedRailTest(unittest.TestCase):
         metro_refresh(s);self.assertFalse(line['operational'])
     def test_missing_route_or_funds(self):
         s=city();s['roads']=[p for p in s['roads'] if p[0]!=8]
-        with self.assertRaises(ValueError):plan_elevated_rail(s,[5,9],[12,9])
+        with self.assertRaises(ValueError):plan_elevated_rail(s,[6,9],[13,9])
         s=city();s['projects']=[dict(cost=99000,paid=0,privatePaid=False)]
-        with self.assertRaises(ValueError):plan_elevated_rail(s,[5,9],[12,9])
+        with self.assertRaises(ValueError):plan_elevated_rail(s,[6,9],[13,9])
 
 if __name__=='__main__':unittest.main()

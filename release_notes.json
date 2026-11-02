@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.174",
+  "currentVersion": "0.175",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.175",
+      "date": "2026-11-02",
+      "title": "Construcción inmediata y tesorería continua",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los edificios contratados por el jugador se habilitan al confirmar la construcción, sin etapas animadas.",
+        "La tesorería acredita ingresos y paga gastos municipales recurrentes de forma prorrateada mientras avanza el reloj.",
+        "Se retiró la hora del encabezado del mapa para dejar el calendario diario, mensual y anual como referencia.",
+        "Se rediseñó Hacienda con controles claros para ajustar las tasas, explicar su base y mostrar cobros y mora.",
+        "Los sectores bloqueados se oscurecen en el mapa; los sectores disponibles conservan su aspecto habitual y la barra inferior usa iconos a color."
+      ],
+      "verification": "JavaScript y el historial de versiones comprobados.",
+      "pending": []
+    },
     {
       "version": "0.174",
       "date": "2026-11-02",

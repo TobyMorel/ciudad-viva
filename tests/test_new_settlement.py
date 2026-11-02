@@ -72,6 +72,16 @@ class NewSettlement(unittest.TestCase):
         self.assertFalse(server.land_tile_unlocked(48,3))
         self.assertEqual(server.land_chunk_info(40,3)["cost"],12_300)
 
+    def test_river_continues_beyond_the_initial_view_and_has_two_banks(self):
+        for y in (-100,0,20,100):
+            self.assertFalse(server.is_water(23,y))
+            self.assertTrue(server.is_water(24,y))
+            self.assertTrue(server.is_water(25,y))
+            self.assertFalse(server.is_water(26,y))
+        self.assertFalse(server.is_water(20,1))
+        server.unlock_land_chunk(2,1)
+        self.assertTrue(server.land_chunk_info(24,10)["unlockable"])
+
     def test_housing_demand_grows_without_jobs(self):
         server.state["day"]=2
         server.move_households()

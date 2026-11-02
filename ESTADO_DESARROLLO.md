@@ -1,4 +1,8 @@
-# Estado de desarrollo · Alfa 0.157
+# Estado de desarrollo · Alfa 0.158
+
+## Alfa 0.158 · cauce continuo y riberas
+
+El río inicial cruza el mapa de norte a sur sin corte visible; un cauce curvo, dos orillas, rocas y pequeñas ondas reemplazan la antigua franja en L. Se quitaron los montículos circulares que parecían objetos aislados sobre el césped. Agua/terreno coinciden en render, selección, motor Offline y servidor LAN. El terreno al este sigue disponible mediante desbloqueo; cruzar el río con vehículos requiere futuros puentes. Pruebas de continuidad en ambas simulaciones, expansión conservada, arranque Chromium y captura visual; 126 pruebas Python y 83 Offline pasaron. Se actualizaron pruebas antiguas de capital, refugio y reloj para la inmigración continua y la duración actual del día. Fases 4=60%, 7=95%, 9=75%; total no estimable por falta de pesos comunes verificables.
 
 ## Alfa 0.157 · población y mensajes
 

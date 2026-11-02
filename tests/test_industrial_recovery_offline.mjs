@@ -34,7 +34,7 @@ test('Offline: la demanda industrial real activa una rehabilitación de cantera'
     assert.equal(work.cost,5300);
     assert.equal(work.workersAssigned,5);
     assert.equal(work.operatingReserve,4200);
-    assert.equal(city.privateCapital,24700);
+    assert.equal(city.privateCapital-(city.housingDemand?.lastFilled||0)*280,24700);
     assert.equal(work.readyDay,city.day+7);
     assert.equal(industry.business.status,'cerrado','No se abre instantáneamente');
     let reopened=false;
@@ -62,6 +62,6 @@ test('Offline: una fábrica quebrada sin demanda no se abre ni recibe inversión
     const city=await tick();
     const plant=city.buildings.find(b=>b.business?.id==='old-quarry');
     assert.equal(plant.industrialRecovery,undefined);
-    assert.equal(city.privateCapital,30000);
+    assert.equal(city.privateCapital-(city.housingDemand?.lastFilled||0)*280,30000);
   });
 });

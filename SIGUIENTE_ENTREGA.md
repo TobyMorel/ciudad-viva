@@ -1,3 +1,7 @@
+## Después de Alfa 0.158
+
+Avanzar la mecánica de puentes para cruzar el río sin bloquear la expansión al este; luego retomar pasajeros/transbordos y conexión intermodal de la fase 7. Vigilar rendimiento de la malla del río en dispositivos móviles. Probar LAN física entre dos equipos y mantener las regresiones de arranque y construcción. Global aún sin porcentaje por falta de pesos homogéneos para las 34 fases.
+
 ## Después de Alfa 0.157
 
 Medir crecimiento sostenido de hogares y capital privado en una partida larga; luego avanzar fase 7 con pasajeros/transbordos y conectividad portuaria/aérea. Revisar que el mínimo de demanda no produzca congestión irreal en ciudades grandes y balancear sin detener el flujo de interesados.

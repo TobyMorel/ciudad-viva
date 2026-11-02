@@ -1,3 +1,7 @@
+## Alfa 0.158 · río y mapa
+
+El cauce ocupa las celdas x=24 y x=25 en toda coordenada y; la regla se comparte entre los motores Online/Offline y la selección del mapa. No cerrar el este con un océano porque debe conservarse la expansión pagada allí. El agua y las dos orillas usan mallas continuas de bandas con curvas deterministas, sin geometría por cada celda. Los puentes aún no están implementados; no permitir calles sobre el cauce hasta disponer de esa mecánica.
+
 ## Alfa 0.157 · demanda sin techo inicial
 
 El interés migratorio diario tiene mínimo de 2 personas, y crece de forma acotada con población, puestos y aprobación. La falta de vivienda acumula demanda; la falta de empleo modera el atractivo pero no prohíbe mudarse. Cada residente nuevo aporta 280 de capital privado externo, separado de la caja municipal. Se quita el límite temporal de 120 personas y el techo de espera pasa a 100.000. Las incidencias se conservan al descartar mensajes del buzón; el descarte es local a la sesión.

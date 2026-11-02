@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.157",
+  "currentVersion": "0.158",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.158",
+      "date": "2026-11-02",
+      "title": "Río continuo y mapa inicial más natural",
+      "changes": [
+        "El cauce del río atraviesa el mapa de norte a sur con curvas suaves y dos riberas; ya no termina abruptamente junto a la ciudad inicial.",
+        "Se añaden orillas de arena, rocas y pequeñas líneas de agua; se retiran los montículos esféricos que desentonaban con el terreno.",
+        "La misma regla de agua se usa en la vista 3D, la selección, Offline y LAN. Las zonas al otro lado del río siguen pudiendo desbloquearse."
+      ],
+      "verification": "126 pruebas Python y 83 Offline, incluida continuidad del río y expansión; arranque y render Chromium, captura de escritorio. El cruce vial sobre el río requiere puentes, todavía pendientes. Progreso global no estimable; fases 4=60%, 7=95%, 9=75%."
+    },
     {
       "version": "0.157",
       "date": "2026-11-02",

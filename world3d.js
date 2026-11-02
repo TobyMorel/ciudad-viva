@@ -5,7 +5,7 @@ import {daylightIntensity} from './simulation_time.js';
 const TILE=2, LAND_CHUNK_SIZE=8;
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
 const key=(x,y)=>`${x},${y}`;
-const waterTile=(x,y)=>(x===24&&y>=0&&y<20)||(y<3&&x>18&&x<24);
+const waterTile=(x,y)=>x===24||x===25;
 const tilePos=(x,y)=>[(x+.5)*TILE,(y+.5)*TILE];
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 function seeded(n){let x=Math.sin(n*127.1+78.233)*43758.5453;return x-Math.floor(x)}
@@ -41,12 +41,6 @@ export function createWorld(canvas){
   for(let i=0;i<2600;i++){const x=seeded(i+302)*768,y=seeded(i+777)*768;tc.fillStyle=i%7===0?'#e7dba579':'#c0d6a95c';tc.fillRect(x,y,.8+seeded(i)*1.7,.8+seeded(i+1)*1.5)}
   const grassTex=new THREE.CanvasTexture(texCanvas);grassTex.colorSpace=THREE.SRGBColorSpace;grassTex.wrapS=grassTex.wrapT=THREE.RepeatWrapping;grassTex.repeat.set(2000,2000);grassTex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
   let infiniteGroundOffset={x:0,z:0};const infiniteGround=[plane(staticRoot,40000,40000,mat('#8dbb7b'),0,-.24,0),plane(staticRoot,40000,40000,new THREE.MeshStandardMaterial({map:grassTex,roughness:1}),0,-.16,0)];
-  box(staticRoot,2.1,.12,35.8,COLORS.sand,47,-.08,23);
-  box(staticRoot,9.8,.12,2.1,COLORS.sand,43,-.08,7);
-  box(staticRoot,.84,.06,31,'#ab805c',46.74,.025,23);
-  for(let z=8;z<39;z+=.85)box(staticRoot,.86,.014,.035,'#e0b784',46.74,.065,z,{cast:false});
-  for(let z=9;z<39;z+=2.5)box(staticRoot,.05,.48,.05,'#e3c498',47.17,.27,z);
-  box(staticRoot,.05,.055,30.5,'#dcc09b',47.17,.49,23.5);
   const gatewayTunnel=new THREE.Group();gatewayTunnel.position.set(4*TILE,0,10.5*TILE);staticRoot.add(gatewayTunnel);
   // La boca cubre los cuatro tramos de carretera exterior (x=0..3) y llega a la entrada urbana.
   const tunnelLength=4.4,tunnelCenter=-1.9,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
@@ -56,18 +50,14 @@ export function createWorld(canvas){
   const archPts=[];for(let i=0;i<=16;i++){const a=Math.PI-i*Math.PI/16;archPts.push(new THREE.Vector3(.12,1.12+Math.sin(a)*1.08,Math.cos(a)*1.08))}const tunnelArch=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPts),48,.16,12,false),mat('#c2b69a'));tunnelArch.castShadow=true;tunnelArch.receiveShadow=true;gatewayTunnel.add(tunnelArch);
   for(const z of [-.84,.84]){box(gatewayTunnel,.26,1.1,.28,'#c2b69a',.12,.55,z,{cast:true});box(gatewayTunnel,.35,.15,.35,'#d0c3a6',.12,1.12,z,{cast:false})}
   for(const x of [-3.85,-2.95,-2.05,-1.15,-.45])for(const z of [-1.16,1.16])box(gatewayTunnel,.32,.16,.36,'#b3a990',x,1.91,z,{cast:false});
+  // Río continuo de norte a sur: cauce sinuoso y dos riberas sobre terreno jugable.
   const waterMat=mat(COLORS.water,{metalness:.08,roughness:.28,transparent:true,opacity:.97});
-  plane(staticRoot,2,40,waterMat,49,-.09,23);
-  plane(staticRoot,10,6,waterMat,43,-.08,3);
+  function riverEdges(z){const center=49+.45*Math.sin(z*.055)+.18*Math.sin(z*.13+1),half=2.25+.12*Math.sin(z*.083+2);return[center-half,center+half]}
+  function riverStrip(kind){const vertices=[],indices=[];for(let i=0;i<=5000;i++){const z=-20000+i*8,[west,east]=riverEdges(z);let left,right,height;if(kind==='water'){left=west;right=east;height=-.095}else if(kind==='west'){left=west-.56;right=west+.07;height=-.065}else{left=east-.07;right=east+.56;height=-.065}vertices.push(left,height,z,right,height,z);if(i<5000){const k=i*2;indices.push(k,k+2,k+1,k+1,k+2,k+3)}}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,kind==='water'?waterMat:mat('#d9c9a3',{side:THREE.DoubleSide}));mesh.receiveShadow=true;staticRoot.add(mesh)}
+  riverStrip('water');riverStrip('west');riverStrip('east');
   const waves=[];
-  for(let i=0;i<12;i++){const x=48.2+seeded(i+130)*1.6,z=4+seeded(i+145)*36;const w=.45+seeded(i+132)*1.1;const wave=line(staticRoot,[[x-w/2,-.045,z],[x+w/2,-.045,z]],i%4?'#d8f0e6':'#a2d9d8',.38);waves.push(wave)}
-  for(let i=0;i<18;i++){const x=38.7+seeded(i+217)*8.2,z=.6+seeded(i+369)*4.7,w=.23+seeded(i+411)*.56;waves.push(line(staticRoot,[[x-w/2,-.038,z],[x+w/2,-.038,z]],'#dbf1e7',.34))}
-  for(let i=0;i<11;i++){const x=38.6+i*.82;const stone=sphere(staticRoot,.12+seeded(i+783)*.08,i%2?'#d7cbaa':'#bcb6a0',x,-.025,6.1+seeded(i+44)*.35,1);stone.scale.y=.42}
-  for(let z=8;z<40;z+=1.6){box(staticRoot,.65,.045,1.48,'#e8dfca',45.68,.02,z,{cast:false});box(staticRoot,.16,.35,1.48,'#a19b89',47.48,-.04,z,{cast:false});for(let j=0;j<2;j++)box(staticRoot,.045,.12,.37,'#f0e2ce',47.51,.12,z-.3+j*.53,{cast:false})}
-  for(let z=10;z<38;z+=5){for(const offset of [-.33,.33])box(staticRoot,.13,.07,.1,'#9b7654',46.15+offset,.16,z,{cast:false});box(staticRoot,.82,.09,.27,'#c78f5d',46.15,.24,z);box(staticRoot,.055,.36,.055,'#475b55',46.5,.34,z+1.4);sphere(staticRoot,.12,'#ffdfad',46.5,.57,z+1.4,1)}
-  for(let i=0;i<20;i++){const z=8+seeded(i+70)*31;const rock=sphere(staticRoot,.11+seeded(i+18)*.12,i%3?'#b9ad91':'#d7c9a8',47.65+seeded(i+210)*.35,-.015,z,1);rock.scale.y=.5}
-  // Lomas y arboledas en el borde externo suavizan el horizonte del mapa.
-  for(let i=0;i<24;i++){const x=-21+seeded(i+450)*100,z=-15+seeded(i+653)*77;if(x>-7&&x<63&&z>-7&&z<49||x>49)continue;const r=2+seeded(i+9)*4;const hill=sphere(staticRoot,r,i%2?'#77a56d':'#739d73',x,-.05,z,2);hill.scale.y=.27+seeded(i+770)*.13;hill.rotation.y=seeded(i+91)*Math.PI}
+  for(let i=0;i<100;i++){const z=-100+seeded(i+145)*200,[west,east]=riverEdges(z),x=west+.6+seeded(i+130)*(east-west-1.2),w=.25+seeded(i+132)*.6;waves.push(line(staticRoot,[[x-w/2,-.044,z],[x+w/2,-.044,z]],i%4?'#d8f0e6':'#a2d9d8',.32))}
+  for(let i=0;i<110;i++){const z=-110+seeded(i+70)*220,[west,east]=riverEdges(z),x=(i%2?west-.32:east+.32)+(seeded(i+210)-.5)*.22,r=.09+seeded(i+18)*.17;const rock=sphere(staticRoot,r,i%3?'#b9ad91':'#d7c9a8',x,-.035,z,1);rock.scale.y=.5}
   function tree(x,z,seed,parent=vegetationRoot){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=seeded(seed+92)*Math.PI*2;const species=Math.floor(seeded(seed+8)*5),s=(.65+seeded(seed+55)*.55)*(species===2?.76:1),blossom=species===4&&seeded(seed+11)>.48,olive=species===3;groundShadow(g,0,0,.59*s,.19);const trunk=cylinder(g,.075*s,.12*s,.87*s,olive?'#716e52':'#775c45',0,.42*s,0,12);trunk.castShadow=!smallScreen&&seeded(seed+333)>.65;const palette=blossom?['#d58da9','#e5a9bb','#f1c3c8']:olive?['#719466','#94a36b','#8daa77']:species===1?['#3d8060','#568f5f','#79aa68']:['#4d8957','#67a45d','#8bb664'];const lobes=smallScreen?4:species===1?6:5;for(let i=0;i<lobes;i++){const a=i*Math.PI*2/lobes,spread=species===1?.31:.23,px=Math.cos(a)*spread*s,pz=Math.sin(a)*spread*s,y=(species===2?1.0:1.12)*s+(i%2)*.1*s;sphere(g,(species===1?.32:.27)*s,palette[i%3],px,y,pz,2)}const crown=sphere(g,(species===2?.39:.36)*s,palette[1],0,(species===2?1.15:1.3)*s,0,2);crown.castShadow=!smallScreen&&seeded(seed+333)>.65;if(!smallScreen&&species!==2)for(let i=0;i<3;i++){const a=i*2.4;sphere(g,.065*s,blossom?'#f4d5d2':'#b4c978',Math.cos(a)*.26*s,1.15*s+Math.sin(i*5)*.12*s,Math.sin(a)*.26*s,1)}parent.add(g);return g}
   const vegetationObstacles=new Set();let vegetationKey='';
   function updateVegetation(){const w=canvas.clientWidth,h=canvas.clientHeight,unit=(58/clamp(view.zoom,.55,4))/Math.max(1,h),chunkX=Math.floor((view.panX*unit+cameraAnchor.x*TILE)/16),chunkY=Math.floor((view.panY*unit+cameraAnchor.y*TILE)/16),signature=`${chunkX}:${chunkY}:${view.rotation}:${Math.round(view.zoom*4)}:${w}:${h}`;if(signature===vegetationKey)return;vegetationKey=signature;const corners=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>screenToTile(x,y)),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]),minX=Math.min(...xs)-3,maxX=Math.max(...xs)+3,minY=Math.min(...ys)-3,maxY=Math.max(...ys)+3,span=Math.max(maxX-minX,maxY-minY);clear(vegetationRoot);const density=smallScreen?.17:span>58?.10:.23;for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){const id=(x+50000)*7919+(y+50000)*104729;if(vegetationObstacles.has(key(x,y))||waterTile(x,y)||seeded(id)>density)continue;const [cx,cz]=tilePos(x,y),dx=(seeded(id+1)-.5)*1.05,dz=(seeded(id+2)-.5)*1.05;if(seeded(id+3)<.84)tree(cx+dx,cz+dz,id);else{const g=new THREE.Group();g.position.set(cx+dx,0,cz+dz);const r=.16+seeded(id+4)*.18;sphere(g,r,seeded(id+5)>.5?'#a99a7b':'#729a65',0,r*.64,0,1).scale.y=.6;if(seeded(id+6)>.58)sphere(g,r*.7,'#93ad6c',r*.72,r*.56,.04,1);vegetationRoot.add(g)}}}

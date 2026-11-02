@@ -14,5 +14,5 @@ class GeologicalExploration(unittest.TestCase):
         self.assertEqual(s["supply"]["unexploredSteelOre"],0)
         self.assertEqual(s["supply"]["geologicalExplorationSpend"],4500)
         self.assertGreaterEqual(s["supply"]["regionalSteelReserve"],300)
-        self.assertLessEqual(s["privateCapital"],500)
+        self.assertLessEqual(s["privateCapital"]-s["housingDemand"]["lastFilled"]*280,500)
 if __name__=="__main__":unittest.main()

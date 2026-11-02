@@ -2147,8 +2147,8 @@ def begin_unloading(order):
     return True
 
 def is_water(x,y):
-    # Costa acotada del mapa original; el resto del terreno es extensible.
-    return (x==24 and 0<=y<20) or (y<3 and 18<x<24)
+    # Río continuo: ambas orillas siguen siendo terreno disponible.
+    return x in (24,25)
 
 def route_between(start_coord, destination_coord):
     condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}

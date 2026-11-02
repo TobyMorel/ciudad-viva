@@ -39,7 +39,7 @@ test('Offline: viviendas zonificadas usan inversión privada y no esperan entreg
     assert.equal(project.privateMaterialsIncluded,true);
     assert.ok(Object.values(project.materialsRequired).every(n=>n===0));
     assert.equal(s.supply.orders.filter(o=>o.projectId===project.id).length,0);
-    assert.ok(s.privateCapital<before,'El promotor aporta el costo de la obra desde su capital');
+    assert.ok(s.privateCapital-(s.housingDemand?.lastFilled||0)*280<before,'El promotor aporta el costo de la obra desde su capital');
     assert.equal(project.status,'contratada','La casa igualmente pasa por construcción y lleva plazos');
   });
 });
@@ -54,6 +54,6 @@ test('Offline: la vivienda zonificada construye sin depender de inventarios',asy
     const s=await tick();
     assert.equal(s.projects.filter(p=>p.zonedDevelopment&&p.kind==='home').length,1);
     assert.equal(s.supply.orders.filter(o=>o.privateContract).length,0);
-    assert.ok(s.privateCapital<cash);
+    assert.ok(s.privateCapital-(s.housingDemand?.lastFilled||0)*280<cash);
   });
 });

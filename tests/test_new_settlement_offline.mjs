@@ -25,6 +25,21 @@ test('Offline: los candados desbloquean sectores contiguos pagando y la coordena
  }finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
 });
 
+test('Offline: el río continúa y deja terreno desbloqueable en la otra orilla',async()=>{
+ const fetch0=globalThis.fetch,storage0=globalThis.localStorage;
+ globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});
+ globalThis.localStorage={getItem:()=>null,setItem:()=>{}};
+ try{
+  const adapter=await createOfflineAdapter();
+  await adapter.request('/api/action',{action:'unlockLand',chunkX:2,chunkY:1});
+  const city=await adapter.request('/api/action',{action:'unlockLand',chunkX:3,chunkY:1});
+  assert.ok(city.landClaims.unlockedChunks.includes('3,1'));
+  await assert.rejects(adapter.request('/api/action',{action:'placeRoad',x:24,y:10}),/agua/);
+  await assert.rejects(adapter.request('/api/action',{action:'placeRoad',x:25,y:10}),/agua/);
+  await assert.rejects(adapter.request('/api/action',{action:'placeRoad',x:26,y:10}),/conectar/);
+ }finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
+});
+
 test('Offline: pintar vivienda activa promotor privado sin esperar pedidos de materiales',async()=>{
  const fetch0=globalThis.fetch,storage0=globalThis.localStorage,now0=Date.now;let stored=null,clock=1000;
  globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});

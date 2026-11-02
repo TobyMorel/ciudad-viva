@@ -1,4 +1,11 @@
-# Decisiones añadidas · Alfa 0.152
+# Decisiones añadidas · Alfa 0.153
+
+- Inicio de modos secuenciado con `modeGeneration`: la última elección del jugador prevalece sobre respuestas de red tardías. En offline, `api()` exige el adaptador y nunca recurre al fetch HTTP.
+- La primera escena y las escenas pausadas deben renderizarse de forma explícita; una pausa detiene el tiempo simulado, no el dibujo WebGL.
+- El panel de construcción es dueño de sus filtros y grid; no debe recibir la segunda navegación de `reference-ui.js`. Reservar altura flexible al grid y generar miniaturas luego del layout. Un modelo defectuoso no debe interrumpir la galería.
+- El acceso regional cubre los cuatro tramos iniciales con techo y laterales continuos.
+
+# Decisiones anteriores · Alfa 0.152
 
 - Las vistas previas del catálogo se renderizan con una escena WebGL pequeña usando un solo renderer reutilizable para la galería y se copian a los canvas de tarjeta. Evitar múltiples contextos WebGL por pieza; los modelos usan primitivas/funciones de construcción del mundo, no ilustraciones externas.
 - El panel Construir es un drawer inferior responsive; las categorías filtran herramientas y la búsqueda consulta sus títulos/descripciones. Los tool buttons existentes conservan sus event handlers al pasar a la cuadrícula.

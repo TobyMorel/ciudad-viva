@@ -50,6 +50,8 @@ export function decorateReferencePopup(kind,body,state,options={}){
  popup.dataset.panel=kind;document.getElementById('popupTitle').textContent=meta[0];document.getElementById('popupSubtitle').textContent=meta[1];document.getElementById('popupIcon').textContent=meta[2];
  document.querySelector('.popup-header .eyebrow').textContent=kind==='changes'?'CIUDAD VIVA · EL MANUAL':'CIUDAD VIVA · PANEL MUNICIPAL';
  document.querySelectorAll('.game-dock [data-popup]').forEach(button=>button.classList.toggle('ref-active',button.dataset.popup===kind));
+ // Construir tiene su propia galería con filtros; no envolverla en la navegación anterior, que duplicaba categorías y rompía el alto de la cuadrícula.
+ if(kind==='build')return;
  const original=[...body.children],source=document.createElement('div');source.className='ref-source';for(const node of original)source.append(node);
  let overview='';if(kind==='city')overview=cityOverview(state,options.ui);else if(kind==='supply')overview=economyOverview(state);else if(kind==='projects')overview=projectsOverview(state);else if(kind==='alerts')overview=alertsOverview(state,options.alerts||[]);else if(kind==='guide')overview=guideOverview();else if(kind==='events')overview=eventsOverview(state);else if(kind==='changes')overview=changesOverview(options.version||'0.109',options.phases||34);else if(kind==='build')overview=buildTabs();
  const shell=document.createElement('div');shell.className=`ref-panel ref-panel-${kind}`;shell.innerHTML=overview;if(kind==='alerts'){const columns=document.createElement('div');columns.className='ref-alert-columns';columns.append(source);columns.insertAdjacentHTML('beforeend',alertsAside(options.alerts||[]));shell.append(columns)}else shell.append(source);body.append(shell);

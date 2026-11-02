@@ -1,4 +1,10 @@
-# Continuidad inmediata · Alfa 0.152
+# Continuidad inmediata · Alfa 0.153
+
+La partida offline debe quedar como modo autoritativo antes de iniciar y usar un contador `modeGeneration` para invalidar solicitudes LAN antiguas. `startOffline()` espera a que el layout del mapa esté listo, obtiene estado local, invalida `visualSignature` y fuerza `draw()`. `world3d.sync()` construye una escena vacía aunque haya un panel abierto; el bucle animado mantiene `renderer.render()` activo incluso en pausa. Para el túnel `gatewayTunnel`, techo y laterales cubren 8,4 unidades (cuatro tramos exteriores). El panel Construir omite la capa antigua de pestañas de `reference-ui.js`: no volver a envolver `.tool-list`, porque cambia su jerarquía y deja sin altura el grid. Las previews usan un renderer compartido, manejo de error por pieza y geometrías Three válidas.
+
+Pruebas de Alfa 0.153: `tests/test_offline_boot_recovery.mjs` cubre escena/offline, construir sin `/api/action`, túnel y carrera de respuesta LAN; `tests/test_build_catalog_ui.mjs` cubre catálogo, tarjetas 3D y tamaño móvil/escritorio. No declarar probado LAN físico. Taxi UI conserva un timeout pendiente al seleccionar el actor.
+
+# Continuidad anterior · Alfa 0.152
 
 El catálogo del botón Construir se compone en `setupBuildCatalog()` en `game.js`: conserva los listeners de cada herramienta, mueve tarjetas con canvas a una bandeja inferior, filtra por `data-build-category` y llama a `world.renderBuildPreviews()`. Ese método usa un único WebGL renderer reutilizable y una escena de miniaturas generadas con la geometría del juego; no crear un renderer/contexto por tarjeta. Para ampliar los modelos revisar `makeBuildPreview`. En teléfonos: 3 columnas, en escritorio: 6.
 

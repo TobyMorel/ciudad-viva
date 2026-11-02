@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.153 · reparación de render y construcción
+
+Esta entrega corrige regresiones de presentación/flujo y conserva el progreso por fase: fase 7=95%, fase 4=60%, fase 9=75%. No se atribuye avance porcentual por reparar visualización. Tests Chromium cubren render local, construir local, carreras de modo, catálogo con previews y el túnel de 8,4 unidades. LAN física sigue pendiente; la UI heredada de inspección de taxi conserva un timeout. El progreso total sigue sin estimar por falta de pesos verificables comunes para 34 fases.
+
 # Auditoría · Alfa 0.152 · catálogo 3D y transporte
 
 La fase 7 se mantiene en 95% (estimación anterior; esta entrega mejora la interfaz de las acciones ya existentes, no agrega por sí sola cobertura completa de pasajeros). La bandeja agrupa y filtra el catálogo, usa miniaturas de modelos 3D generados en WebGL y lista costos/características del objeto seleccionado. Los accesos de paradas seleccionan una cochera o depósito y pasan al diseñador vial existente; las tarifas por parada siguen siendo $350 para colectivo y $220 para taxi. La entidad de pasajeros en taxi y el abordaje continúan pendientes.

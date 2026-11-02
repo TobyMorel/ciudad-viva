@@ -1,0 +1,23 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {startUiTestServer} from './ui_test_server.mjs';
+
+const port=18791,server=await startUiTestServer(port),browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
+try{
+ const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],actionFetches=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route(`http://127.0.0.1:${port}/api/action`,async route=>{actionFetches.push(route.request().postData());await route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><title>Vercel</title>'})});
+ await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
+ await page.evaluate(async()=>{const state=await fetch('/offline_seed.json').then(r=>r.json());state.money=200000;state.paused=true;state.newSettlement=true;state.buildings=[];state.projects=[];state.roads=[[4,10]];state.zones=[];state.taxiRoutes=[];state.busRoutes=[];localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(state))});
+ await page.locator('#offlineMode').click();await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+ await page.waitForTimeout(300);
+ const first=await page.evaluate(()=>window.__ciudadVivaScene());assert.ok(first.drawCalls>0&&first.canvasWidth>0&&first.canvasHeight>0&&!first.contextLost,`3D inicial: ${JSON.stringify(first)}`);assert.ok(first.dynamicObjects>0,`la escena debe contener la ruta inicial: ${JSON.stringify({first,popup:await page.locator('#panelPopup').getAttribute('class')})}`);assert.deepEqual(first.tunnel,{visible:true,roofVisible:true,length:8.4},'el acceso exterior tiene túnel techado a lo largo de cuatro tramos');
+ assert.match(await page.locator('#netLabel').innerText(),/Partida offline/);
+ await page.locator('.game-dock [data-popup="traffic"]').evaluate(e=>e.click());await page.waitForSelector('#trafficPanel:not(.hidden)');await page.locator('#trafficPanel [data-close-traffic]').evaluate(e=>e.click());await page.waitForTimeout(40);const afterTraffic=await page.evaluate(()=>window.__ciudadVivaScene());assert.ok(afterTraffic.drawCalls>0&&afterTraffic.dynamicObjects>0,`la ciudad se mantiene visible al abrir/cerrar Tráfico: ${JSON.stringify(afterTraffic)}`);
+ await page.locator('.game-dock [data-popup="build"]').evaluate(e=>e.click());await page.locator('[data-build-filter="terrain"]').click();const road=page.locator('.build-catalog-item[data-tool="road"]');await road.evaluate(e=>e.click());
+ const point=await page.evaluate(()=>{const p=window.__ciudadVivaProjectTile(5,10,0),r=document.querySelector('#city').getBoundingClientRect();return{x:r.left+p.x,y:r.top+p.y,visible:p.visible}});assert.ok(point.visible,'la parcela vial de prueba debe estar visible');await page.mouse.click(point.x,point.y);
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).roads.some(([x,y])=>x===5&&y===10),{timeout:12000});assert.equal(actionFetches.length,0,'las órdenes offline nunca deben consultar /api/action de una sala');assert.match(await page.locator('#netLabel').innerText(),/Partida offline/);assert.doesNotMatch(await page.locator('#toast').innerText(),/no responde como una sala/i);assert.deepEqual(errors,[]);
+ await page.close();
+ const racePage=await browser.newPage({viewport:{width:390,height:844}});await racePage.route(`http://127.0.0.1:${port}/api/room/join`,async route=>{await new Promise(resolve=>setTimeout(resolve,900));await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({roomCode:'TEST'})})});
+ await racePage.goto(`http://127.0.0.1:${port}/?join=1`,{waitUntil:'domcontentloaded'});await racePage.waitForFunction(()=>document.querySelector('#modeError')?.textContent.includes('Conectando'));await racePage.locator('#offlineMode').evaluate(e=>e.click());await racePage.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});await racePage.waitForTimeout(1200);assert.equal(await racePage.evaluate(()=>window.__ciudadVivaMode()),'offline','una respuesta LAN tardía no puede convertir la partida local en online');assert.match(await racePage.locator('#netLabel').innerText(),/Partida offline/);await racePage.close();
+ console.log('Inicio offline, render inicial, cobertura del túnel, construcción local y carrera LAN verificadas en Chromium.');
+}finally{await browser.close();server.kill('SIGTERM')}

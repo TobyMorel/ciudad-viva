@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.152",
+  "currentVersion": "0.153",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.153",
+      "date": "2026-11-02",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "La partida offline fuerza un render completo tras iniciar el Worker y volver a mostrar el mapa. Las escenas pausadas siguen dibujándose después de redimensionar el canvas; las respuestas de sala LAN que llegan tarde ya no cambian el modo offline.",
+        "Construir conserva el catálogo y su cuadrícula al abrir desde los paneles: se quitó la navegación de referencia duplicada. Se corrigieron previews 3D de fábricas y ahora un objeto con geometría inválida no cancela el resto de la galería.",
+        "El túnel de entrada ahora cubre los cuatro tramos de conexión regional con techo continuo, paredes y marcos de entrada."
+      ],
+      "pending": [
+        "La prueba LAN entre dos computadoras físicas sigue pendiente; Vercel se verifica con el estado CI tras el push.",
+        "La prueba de UI heredada para inspeccionar el taxi mantiene pendiente su timeout; la asignación Offline y el flujo de colectivos siguen cubiertos por sus regresiones."
+      ]
+    },
     {
       "version": "0.152",
       "date": "2026-11-02",

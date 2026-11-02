@@ -1,12 +1,18 @@
-# Estado de desarrollo · Alfa 0.152
+# Estado de desarrollo · Alfa 0.153
 
-## Catálogo 3D y colocación de transporte · fase 7
+## Reparación de render inicial, construcción offline y acceso regional
 
-Construir abre una bandeja inferior con búsqueda y filtros. Las tarjetas renderizan miniaturas desde geometría 3D propia del juego, no recursos de imagen. El cursor de ayuda organiza la información en un párrafo y después atributos. El catálogo ofrece explícitamente Depósito de colectivos, Depósito de taxis, Paradas de colectivo y Paradas de taxi; las dos opciones de paradas abren el editor de ruta que cobra y numera las paradas sobre la vía. Aclaración: son posiciones de ruta; el embarque físico/pasajeros de taxi aún queda pendiente.
+Se invalida la firma de la escena al cargar una partida y se espera el primer layout del mapa antes del render; si hay una escena inicial vacía, abrir un panel ya no puede posponer su construcción. El bucle de render también dibuja cada cuadro en pausa después de actualizar tamaño/vegetación. Las transiciones offline/LAN usan un contador de sesión, para ignorar una respuesta de sala que llegue después de que se haya elegido offline. Las acciones offline sin Worker listo muestran un estado local claro y nunca intentan pedir `/api/action` a un servidor web.
 
-La previsualización de alcance ahora cubre la baldosa completa de cada tramo vial. El movimiento del cursor actualiza solo esa capa y deja estables los actores 3D para evitar que los vehículos reinicien su giro al reconstruirse la escena.
+Construir vuelve a mostrar las herramientas y miniaturas: la navegación de referencia duplicada se omite en este panel y la cuadrícula tiene una región flexible de scroll. Las miniaturas se renderizan tras el layout, las fábricas usan subdivisiones válidas de geometría, y un error individual ya no deja el resto de tarjetas sin renderizar.
 
-Verificado en Chromium a 390×844 y 1440×900: la bandeja permanece en pantalla, las miniaturas presentan variación de píxeles desde la geometría 3D, funcionan los filtros, la ficha ordena párrafo e ítems, y Transporte contiene ambos depósitos y los dos accesos de paradas. La cobertura abarca seis segmentos contiguos de la ruta de prueba. Colectivos: flujo UI y Offline pasan; taxis: Offline pasa y la prueba UI heredada de selección/inspección agotó el timeout al abrir información del actor, queda pendiente de diagnóstico (el catálogo y selección de depósito sí pasan). También pasan cinco pruebas Python manuales de rutas, sintaxis JS, JSON y `git diff --check`. El progreso de la fase 7 permanece en 95%; el global sigue sin estimarse porque las 34 fases no tienen ponderación de criterios verificables compartida. Fases 4 y 9: 60% y 75%.
+El túnel regional está techado a lo largo de 8,4 unidades, cubriendo los cuatro tramos exteriores, con laterales y marcos. La prueba de Chromium valida el techo y la longitud declarada.
+
+Verificado: `tests/test_offline_boot_recovery.mjs` confirma escena 3D inicial no vacía, túnel, construcción pagada local sin llamadas de sala y protección frente a una respuesta LAN tardía. `tests/test_build_catalog_ui.mjs` pasa en 390×844 y 1440×900: galerías con miniaturas 3D visibles, filtros, tooltip, depósitos, paradas y cobertura completa. La prueba de colectivo UI/Offline y rutas Offline de colectivo/taxi pasan; cinco pruebas Python de rutas pasan. Taxi UI continúa con el timeout heredado al inspeccionar el actor, anotado para diagnóstico.
+
+Fase 7 · 95%; fase 4 · 60%; fase 9 · 75%. Progreso global sin estimar: el roadmap de 34 fases no cuenta con ponderaciones homogéneas de criterios verificables. La prueba física de LAN sigue pendiente.
+
+## Estado anterior · Alfa 0.152
 
 ## Crecimiento, vías de entrada, exportación y escena ambiental
 

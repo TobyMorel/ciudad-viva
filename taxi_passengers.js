@@ -2,7 +2,7 @@
 export const TAXI_DAILY_CAPACITY = 8;
 export function assignTaxiPassengers(state,trips){
   const roads=new Set((state.roads||[]).map(p=>p.join(','))),depots=new Set((state.buildings||[]).filter(b=>b.kind==='depot'&&b.serviceModel==='taxiYard'&&['habilitado','operativo'].includes(b.status)).map(b=>[b.x,b.y].join(','))),day=Math.max(1,Math.trunc(state.day||1)),month=Math.floor((day-1)/30);
-  for(const trip of trips){delete trip.taxiRiders;delete trip.taxiRouteIds}
+  for(const trip of trips){delete trip.taxiRiders;delete trip.taxiRouteIds;if(trip.mode==='auto'&&['compras','servicios'].includes(trip.reason)){trip.vehicles=Math.ceil(Math.max(0,trip.workers||0)/1.4);trip.dailyEmissionsKg=Math.round(trip.vehicles*(trip.distance||0)*.18*2*100)/100}}
   let activeVehicles=0,vehicleEmissionsKg=0,dailyRiders=0;const activeRoutes=[];
   for(const taxi of [...(state.taxiRoutes||[])].sort((a,b)=>String(a.id||'').localeCompare(String(b.id||'')))){
     if(taxi.fareMonth!==month){taxi.fareMonth=month;taxi.fareByDay={}}

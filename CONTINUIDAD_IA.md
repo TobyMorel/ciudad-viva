@@ -1,3 +1,7 @@
+## Continuidad más reciente · Alfa 0.157
+
+`move_households` (server.py) y `advanceOfflineHouseholdMigration` (offline.js) se ejecutan cada día; generan interesados sin techo inicial de 120 y llenan viviendas disponibles. Cada migrante añade 280 de capital privado, la demanda pendiente conserva un mínimo de 4 y se acumula sin parcelas o vacantes. `game.js` mantiene mensajes vecinales descartados en un Set de sesión y una bandeja plegable; CSS móvil la sitúa debajo de las barras de demanda. Tests: `test_new_settlement.py`, `test_new_settlement_offline.mjs`, `test_citizen_inbox_ui.mjs`. Fase 4=60%, global aún no estimable.
+
 ## Continuidad más reciente · Alfa 0.156
 
 El reloj compartido pasa a 4 segundos reales por hora del juego en x1: días de 96/48/24 segundos en x1/x2/x4. `simulation_time.js` define el factor JS; `offline.js` lo usa en tiempo real y `server.py` replica la tasa. El render coloca farolas en `(x+y)%2===0`. Las pruebas dedicadas están en `tests/test_simulation_time.mjs` y `tests/test_simulation_clock.py`. Siguiente mecánica: fase 7, pasajeros/transbordos.

@@ -1,3 +1,7 @@
+## Alfa 0.157 · demanda sin techo inicial
+
+El interés migratorio diario tiene mínimo de 2 personas, y crece de forma acotada con población, puestos y aprobación. La falta de vivienda acumula demanda; la falta de empleo modera el atractivo pero no prohíbe mudarse. Cada residente nuevo aporta 280 de capital privado externo, separado de la caja municipal. Se quita el límite temporal de 120 personas y el techo de espera pasa a 100.000. Las incidencias se conservan al descartar mensajes del buzón; el descarte es local a la sesión.
+
 ## Alfa 0.156 · escala temporal común
 
 Cuatro segundos reales equivalen a una hora del juego en x1. x2 y x4 multiplican esa tasa, dando días de 48 y 24 segundos. El servidor y el Worker offline aplican la misma conversión. La iluminación consulta la hora del estado, sin un reloj paralelo. Farolas: paridad de coordenadas `(x+y)%2===0`, que alterna cada tramo recto y mantiene cobertura en los ejes horizontal y vertical.

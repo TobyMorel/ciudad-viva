@@ -1,4 +1,8 @@
-# Estado de desarrollo · Alfa 0.156
+# Estado de desarrollo · Alfa 0.157
+
+## Alfa 0.157 · población y mensajes
+
+La demanda de vivienda crece todos los días, incluso sin empleos; el número de interesados aumenta con población, puestos y aprobación y se acumula cuando faltan casas o parcelas habilitadas. La mudanza ocupa vacantes cada día y aporta capital privado por residente; el cupo inicial de 120 deja de frenar el crecimiento. Cada mensaje vecinal se puede descartar y la bandeja ocultar/mostrar; las alertas de ciudad permanecen. Probados crecimiento por encima de 44 en Python y Offline y UI móvil/escritorio. Fase 4 continúa en 60% hasta validar crecimiento privado sostenido, empleo y capacidad a largo plazo; global sin estimar.
 
 ## Alfa 0.156 · ritmo diario e iluminación vial
 

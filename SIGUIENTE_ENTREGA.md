@@ -1,3 +1,7 @@
+## Después de Alfa 0.157
+
+Medir crecimiento sostenido de hogares y capital privado en una partida larga; luego avanzar fase 7 con pasajeros/transbordos y conectividad portuaria/aérea. Revisar que el mínimo de demanda no produzca congestión irreal en ciudades grandes y balancear sin detener el flujo de interesados.
+
 ## Después de Alfa 0.156
 
 Retomar mecánicas de fase 7: pasajeros/transbordos y conexiones de subte, puerto y aeropuerto. Comprobar en partida real que el nuevo ritmo permite observar ciclos completos a x1/x2/x4. Mantener regresión de arranque offline y pruebas del reloj en cada publicación.

@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.157 · crecimiento de población
+
+Se elimina el tope inicial de migración por puestos y se acumula demanda residencial a diario. Con vacantes, un caso probado supera 44 personas tanto Online como Offline. El capital privado recibe aportes de migrantes; aún falta estrés de ciudad extensa y balance económico de décadas para subir la fase 4. El buzón permite descartar/ocultar sin cerrar la incidencia. Global no estimable; fases 4=60%, 7=95%, 9=75%.
+
 # Auditoría · Alfa 0.156 · duración del día y farolas
 
 Se amplió cuatro veces la duración del día sin cambiar reglas económicas ni los horarios de noche y tráfico. El reloj Offline y LAN usan la misma tasa. La escena reduce farolas a tramos alternos. Los porcentajes de fase no cambian; el total continúa sin estimarse por falta de pesos verificables de las 34 fases.

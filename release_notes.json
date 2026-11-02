@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.156",
+  "currentVersion": "0.157",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.157",
+      "date": "2026-11-02",
+      "title": "Demanda residencial continua y control de mensajes vecinales",
+      "changes": [
+        "Cada día llegan interesados al asentamiento; la demanda se acumula si faltan viviendas o parcelas verdes y nunca queda bloqueada por el cupo inicial de empleos.",
+        "Los residentes pueden ocupar plazas disponibles a diario y aportan capital privado a la ciudad, permitiendo nuevos proyectos de vivienda.",
+        "Cada mensaje vecinal se puede quitar y la bandeja se puede ocultar o mostrar; las incidencias siguen disponibles en Avisos y en el mapa."
+      ],
+      "verification": "Tests Python y Offline verifican crecimiento de demanda sin empleo y población superior a 44. Chromium comprobó descarte y ocultación de mensajes en móvil y escritorio sin solapar las barras de demanda. Progreso global no estimable; fases 4=60%, 7=95%, 9=75%."
+    },
     {
       "version": "0.156",
       "date": "2026-11-02",

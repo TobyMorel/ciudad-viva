@@ -4352,9 +4352,7 @@ def advance_zoned_development():
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
     tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
-    desired=tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)
-    if state.get("newSettlement"):
-        desired=max(4,desired)
+    desired=max(2,min(24,4+state.get("population",0)//80+state.get("jobs",0)//20+tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)))
     demand_state=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     social=state.setdefault("socialServices",new_social_services());temporary=social.setdefault("shelterResidents",[])
     rehoused=0
@@ -4383,14 +4381,14 @@ def move_households():
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
         if state.get("newSettlement"):jobs_room=max(jobs_room,max(0,120-int(state.get("population",0))))
-        generated=min(desired,jobs_room)
-        demand_state["unmet"]=min(600,max(0,int(demand_state.get("unmet",0)))+generated)
+        generated=desired
+        demand_state["unmet"]=min(100000,max(0,int(demand_state.get("unmet",0)))+generated)
         demand_state["lastGenerated"]=generated;demand_state["lastFilled"]=0
         vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes if b.get("emergencyReturnDay",0)<=state.get("day",1))
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
         if state.get("newSettlement"):jobs_room=max(jobs_room,max(0,120-int(state.get("population",0))))
         awaiting_home=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
-        admission_room=max(jobs_room,max(0,120-int(state.get("population",0))) if state.get("newSettlement") else 0)
+        admission_room=max(desired,jobs_room)
         arrivals=min(awaiting_home,vacancies,admission_room);placed=0
         for index in range(arrivals):
             available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0) and b.get("emergencyReturnDay",0)<=state.get("day",1)]
@@ -4406,12 +4404,12 @@ def move_households():
             age=(18+stable_skill(identifier,"migration-age")%49) if eligible else ((age_seed%18) if age_seed%100<80 else 67+age_seed%18)
             person={"id":identifier,"age":age,"birthYear":2026+(max(0,state.get("day",1)-1)//360),"lifeStage":"vida laboral" if 18<=age<67 else "infancia" if age<18 else "jubilación","workerEligible":eligible,"status":"buscando" if eligible else "inactivo" if age<18 else "jubilado","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1) if eligible else None,"unemploymentReason":"primer empleo" if eligible else None}
             ensure_person_work_profile(person);members.append(person);placed+=1
-        demand_state["unmet"]=max(0,int(demand_state.get("unmet",0))-placed);demand_state["lastFilled"]=placed
+        demand_state["unmet"]=max(4,int(demand_state.get("unmet",0))-placed);demand_state["lastFilled"]=placed
         if placed:
-            state["population"]=state.get("population",0)+placed;state["monthlyIncome"]=state.get("monthlyIncome",0)+placed*3
+            state["population"]=state.get("population",0)+placed;state["monthlyIncome"]=state.get("monthlyIncome",0)+placed*3;state["privateCapital"]=state.get("privateCapital",0)+placed*280
             ev("Nuevos hogares",f"{placed} residentes llegaron a viviendas vacantes. Cada persona tiene edad, perfil laboral y elegibilidad propios; solo quienes encuentran un puesto viable se incorporan al empleo. Ingreso tributario futuro +$ {placed*3}/mes.")
-        elif not vacancies:ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
-        elif not jobs_room:ev("Migración frenada por empleo","Hay viviendas disponibles, pero faltan empleos para atraer nuevos hogares.")
+        elif not vacancies and state.get("day",1)%30==0:ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
+
     elif desired<0:
         departures=min(-desired,sum(max(0,b.get("occupants",0)) for b in homes));left=0
         for _ in range(departures):
@@ -4878,13 +4876,13 @@ def tick_one_day():
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
-        move_households()
         consider_industrial_reopenings()
         update_government_cycle()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
     process_government_election()
     # El promotor reacciona a las parcelas y a la demanda todos los días, no
     # solamente al cierre mensual. Las obras conservan sus etapas y duración.
+    move_households()
     if state.get("zones"):
         advance_zoned_development()
     process_market_orders()

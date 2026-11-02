@@ -25,6 +25,22 @@ class NewSettlement(unittest.TestCase):
         self.assertEqual(server.state["housingDemand"]["unmet"],36)
         self.assertTrue(server.state["newSettlement"])
 
+    def test_housing_interest_and_population_keep_growing_without_jobs(self):
+        city=server.state
+        initial=city["housingDemand"]["unmet"]
+        for day in range(2,12):
+            city["day"]=day
+            server.move_households()
+        self.assertGreater(city["housingDemand"]["unmet"],initial)
+        city["buildings"]=[{"kind":"home","name":"Barrio nuevo","x":5,"y":10,"capacity":120,"occupants":0,"residents":[],"quality":80}]
+        capital=city["privateCapital"]
+        for day in range(12,32):
+            city["day"]=day
+            server.move_households()
+        self.assertGreater(city["population"],44)
+        self.assertGreaterEqual(city["housingDemand"]["unmet"],4)
+        self.assertGreater(city["privateCapital"],capital)
+
     def test_new_map_has_small_start_and_paid_unbounded_adjacent_expansion(self):
         claims=server.state["landClaims"]
         self.assertEqual(claims["chunkSize"],8)
@@ -56,10 +72,10 @@ class NewSettlement(unittest.TestCase):
         self.assertFalse(server.land_tile_unlocked(48,3))
         self.assertEqual(server.land_chunk_info(40,3)["cost"],12_300)
 
-    def test_housing_demand_grows_without_jobs_until_startup_resident_pool_is_full(self):
+    def test_housing_demand_grows_without_jobs(self):
         server.state["day"]=2
         server.move_households()
-        self.assertEqual(server.state["housingDemand"]["unmet"],40)
+        self.assertGreater(server.state["housingDemand"]["unmet"],36)
         self.assertEqual(server.state["population"],0)
 
     def test_building_loses_and_recovers_external_road_access_when_route_is_cut(self):

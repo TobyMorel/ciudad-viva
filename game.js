@@ -148,7 +148,7 @@ function showTrafficSignalSelection(x,y){const k=`${x},${y}`,enabled=(S.trafficS
 function terrain(x,y){const v=(Math.sin(x*.47+y*.19)+Math.cos(y*.42-x*.17)+Math.sin((x+y)*.31))/3;return v>.48?1:v<-.48?2:0}
 
 const markerLayer=document.getElementById('cityAlertMarkers'),markerSummary=document.getElementById('alertCounter');
-const citizenInbox=document.getElementById('citizenInbox');let citizenInboxSignature='';
+const citizenInbox=document.getElementById('citizenInbox');let citizenInboxSignature='',citizenInboxCollapsed=false;const dismissedCitizenAlerts=new Set();
 const busRouteComposer=document.getElementById('busRouteComposer'),busRouteMarkers=document.getElementById('busRouteMarkers');
 function renderBusRouteMarkers(){if(!busRouteMarkers)return;busRouteMarkers.replaceChildren();busRouteMarkers.hidden=!busRouteDraft;if(!busRouteDraft||!S)return;const canvasRect=canvas.getBoundingClientRect(),wrapRect=document.querySelector('.world-wrap').getBoundingClientRect();busRouteDraft.stops.forEach(([x,y],index)=>{const point=world.projectTile(x,y,.35);if(!point.visible)return;const pin=document.createElement('span');pin.className=`bus-route-marker${busRouteDraft.kind==='taxi'?' taxi-route-marker':''}`;pin.textContent=String(index+1);pin.style.left=`${canvasRect.left-wrapRect.left+point.x}px`;pin.style.top=`${canvasRect.top-wrapRect.top+point.y}px`;busRouteMarkers.append(pin)})}
 
@@ -181,10 +181,13 @@ function citizenMessage(alert){
  return `${alert.title}: ${place}.`;
 }
 function renderCitizenInbox(){
- if(!citizenInbox||!S)return;const all=cityAlertCards(),actionable=all.filter(alert=>alert.priority<=1),messages=actionable.slice(0,2),signature=messages.map(alert=>[alert.id,citizenSender(alert),citizenMessage(alert)].join('|')).join('::')+`/${actionable.length}/${all.length}`;
+ if(!citizenInbox||!S)return;
+ const all=cityAlertCards(),actionable=all.filter(alert=>alert.priority<=1),available=actionable.filter(alert=>!dismissedCitizenAlerts.has(String(alert.id))),messages=available.slice(0,2);
+ const signature=messages.map(alert=>[alert.id,citizenSender(alert),citizenMessage(alert)].join('|')).join('::')+`/${actionable.length}/${all.length}/${citizenInboxCollapsed}`;
  if(signature===citizenInboxSignature)return;citizenInboxSignature=signature;
- if(!messages.length){citizenInbox.hidden=true;citizenInbox.replaceChildren();return}
- citizenInbox.hidden=false;citizenInbox.innerHTML=`<header class="citizen-inbox-head"><span><i aria-hidden="true">💬</i> MENSAJES DE VECINOS</span><b>${actionable.length}</b></header><div class="citizen-message-list">${messages.map(alert=>`<article class="citizen-message"><div class="citizen-message-by"><b>${escHtml(citizenSender(alert))}</b><small>Parcela ${alert.x+1}, ${alert.y+1}</small></div><p>${escHtml(citizenMessage(alert))}</p><button type="button" data-citizen-focus="${escHtml(alert.id)}" aria-label="Ver ${escHtml(alert.title)} en el mapa">⌖ Ver</button></article>`).join('')}</div><button class="citizen-inbox-all" type="button" data-citizen-open>Ver avisos de la ciudad · ${actionable.length}</button>`;
+ if(!messages.length&&!citizenInboxCollapsed){citizenInbox.hidden=true;citizenInbox.replaceChildren();return}
+ citizenInbox.hidden=false;citizenInbox.classList.toggle('collapsed',citizenInboxCollapsed);
+ citizenInbox.innerHTML=`<header class="citizen-inbox-head"><span><i aria-hidden="true">💬</i> MENSAJES DE VECINOS</span><b>${available.length}</b><button type="button" class="citizen-inbox-toggle" data-citizen-toggle aria-label="${citizenInboxCollapsed?'Mostrar':'Ocultar'} mensajes de vecinos">${citizenInboxCollapsed?'Mostrar':'Ocultar'}</button></header>${citizenInboxCollapsed?'':`<div class="citizen-message-list">${messages.map(alert=>`<article class="citizen-message"><div class="citizen-message-by"><b>${escHtml(citizenSender(alert))}</b><small>Parcela ${alert.x+1}, ${alert.y+1}</small></div><p>${escHtml(citizenMessage(alert))}</p><div class="citizen-message-actions"><button type="button" data-citizen-focus="${escHtml(alert.id)}" aria-label="Ver ${escHtml(alert.title)} en el mapa">⌖ Ver</button><button type="button" data-citizen-dismiss="${escHtml(alert.id)}" aria-label="Quitar mensaje de ${escHtml(citizenSender(alert))}">×</button></div></article>`).join('')}</div><button class="citizen-inbox-all" type="button" data-citizen-open>Ver avisos de la ciudad · ${actionable.length}</button>`}`;
 }
 function renderAlertMarkers(){
  if(!S||!markerLayer)return;
@@ -230,6 +233,8 @@ function showCityAlert(alert){playSound('alert');
 }
 function focusCitizenAlert(alert){if(!alert)return;selected={x:alert.x,y:alert.y};selectedActor=null;zoom=Math.max(zoom,1.45);const focused=world.focusTile(alert.x,alert.y,viewParams());panX=focused.panX;panY=focused.panY;closePopup();renderUI();setCameraView();draw();playSound('zoom')}
 document.addEventListener('click',e=>{
+ const dismissButton=e.target.closest('[data-citizen-dismiss]');if(dismissButton){dismissedCitizenAlerts.add(String(dismissButton.dataset.citizenDismiss));citizenInboxSignature='';renderCitizenInbox();return}
+ if(e.target.closest('[data-citizen-toggle]')){citizenInboxCollapsed=!citizenInboxCollapsed;citizenInboxSignature='';renderCitizenInbox();return}
  const focusButton=e.target.closest('[data-citizen-focus]');if(focusButton){focusCitizenAlert(cityAlertCards().find(alert=>alert.id===focusButton.dataset.citizenFocus));return}
  if(e.target.closest('[data-citizen-open]')){document.querySelector('.game-dock [data-popup="alerts"]')?.click();return}
  const alertButton=e.target.closest('[data-city-alert]');

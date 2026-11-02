@@ -1,4 +1,10 @@
-## Fase 7 · cruce vial del río (propuesta en revisión)
+## Fase 7 · pasajeros reales en circuitos de taxi
+
+Los taxis recogen demanda ya existente de desplazamientos en automóvil hacia comercios y equipamientos cívicos cuando origen y destino están a una cuadra de dos paradas diferentes y el circuito vial permanece conectado. Se limitan a ocho pasajeros diarios por vehículo; esos viajeros dejan de computar como autos particulares en el modelo de esos desplazamientos. Se añaden ocupación diaria, ingreso tarifario acumulado en cada mes y proyección orientativa, con flujo vial y emisiones del taxi. La facturación se asienta por día, sin duplicarse al consultar repetidamente el estado; el cierre municipal incorpora los ingresos. Equivalencia Online/Offline y regresiones nuevas.
+
+**Próximo:** integrar choferes habilitados, horarios, espera y despacho puerta a puerta; luego red de subte y transbordos de fase 7. Las tarifas siguen fijas, sin transporte de turistas o pasajeros aéreos. Probar LAN física y viaje por el puente en dispositivos reales. Sin porcentajes globales no ponderados.
+
+## Fase 7 · cruce vial del río (integrado en main)
 
 Se incorporó una primera obra contractual de puente sobre las dos celdas del cauce (x=24–25): requiere calle conectada en x=23 y suelo habilitado, compara constructoras con sus precios/plazos y no habilita los tramos hasta la inspección. Al finalizar, permite prolongar la red con una calle en x=26. Offline y LAN conservan el mismo contrato, gasto y mantenimiento; el render 3D muestra tablero, barandas y pilotes. Las pruebas cubren contratación, validaciones y cruce terminado.
 

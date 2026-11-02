@@ -6,6 +6,7 @@ from pathlib import Path
 from taxi_passengers import assign_taxi_passengers
 from bus_nonwork import assign_bus_nonwork_passengers, collect_bus_nonwork_fares
 from growth_demand import growth_demand
+from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro_day,metro_assign_passengers,settle_metro_month
 
 ROOT = Path(__file__).resolve().parent
 SAVE = ROOT / "ciudad_guardada.json"
@@ -1673,7 +1674,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":5820,"population":620,"jobs":326,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0,"ruins":[]},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":0,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":5820,"population":620,"jobs":326,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0,"ruins":[]},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"metroLines":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":0,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 def new_settlement_state():
     """Empty playable map: the only road is the westbound regional gate."""
@@ -1999,6 +2000,7 @@ def ensure_supply_state():
     state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
     state.setdefault("busRoutes",[])
     state.setdefault("taxiRoutes",[])
+    state.setdefault("metroLines",[])
     state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     state.setdefault("localIndustry",{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]})
     ensure_heritage_state()
@@ -3395,6 +3397,7 @@ def commute_model():
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
     services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
     bus_nonwork=assign_bus_nonwork_passengers(state,shopping+services)
+    metro_service=metro_assign_passengers(state,shopping+services)
     taxi_service=assign_taxi_passengers(state,shopping+services)
     for route in taxi_service['activeRoutes']:
         for aa,bb in zip(route,route[1:]):
@@ -3405,6 +3408,7 @@ def commute_model():
     model['taxiRiders']=taxi_service['dailyRiders']
     model['taxiVehicles']=taxi_service['activeVehicles']
     model.update(bus_nonwork)
+    model.update(metro_service)
     for trip in shopping+services:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
@@ -4786,6 +4790,9 @@ def tick_one_day():
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    advance_metro_day(state)
+    if (day-1)//30>state.get("lastMonth",0):
+        state["metroMonthSettlement"]=settle_metro_month(state)
     advance_maritime_steel_shipments()
     advance_contract_guarantees()
     advance_industrial_reopenings()
@@ -4875,11 +4882,12 @@ def tick_one_day():
         economic=commute_model()
         collect_bus_fares(economic)
         collect_bus_nonwork_fares(state)
+        metro_balance=state.pop("metroMonthSettlement",{"income":0,"cost":0})
         business_income=round(economic["privateStaffedJobs"]*2)
         taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
         taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
-        transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_income
-        transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost
+        transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_income+metro_balance["income"]
+        transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+metro_balance["cost"]
         airport_income=state.get("airportMonthlyIncome",0)
         monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
@@ -5713,6 +5721,8 @@ def public_state(player_id=None):
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
+    view["traffic"]["metroRiders"]=commute.get("metroRiders",0)
+    view["traffic"]["metroLinesOperational"]=commute.get("metroLinesOperational",0)
     for key in ("busNonworkPassengers","busNonworkTransfers","busNonworkFareRevenue"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
@@ -5722,6 +5732,9 @@ def public_state(player_id=None):
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
     view["busRoutes"]=state.get("busRoutes",[])
+    metro_refresh(state)
+    view["metroLines"]=state.get("metroLines",[])
+    view["metroStationCatalog"]=metro_station_catalog(state)
     view["taxiRoutes"]=state.get("taxiRoutes",[])
     view["taxiDepots"]=[{"id":f"taxidepot-{b['x']}-{b['y']}","x":b["x"],"y":b["y"],"name":b.get("name","Depósito de taxis"),"capacity":b.get("taxiCapacity",4),"occupied":sum(1 for t in state.get("taxiRoutes",[]) if t.get("depotId")==f"taxidepot-{b['x']}-{b['y']}" and t.get("status")!="cancelled")} for b in state.get("buildings",[]) if b.get("serviceModel")=="taxiYard" and b.get("status") in ("habilitado","operativo")]
     view["busGarages"]=[{"id":f"garage-{g['x']}-{g['y']}","x":g["x"],"y":g["y"],"name":g.get("name","Cochera municipal"),"capacity":g.get("busBayCapacity",4),"occupied":sum(a["buses"] for line in state["busRoutes"] for a in line.get("garageAssignments",[]) if a["garageId"]==f"garage-{g['x']}-{g['y']}")} for g in state["buildings"] if g.get("kind")=="busGarage" and g.get("status") in ("habilitado","operativo")]
@@ -5736,8 +5749,8 @@ def public_state(player_id=None):
     view["householdWageIncome"]=sum(h.get("monthlyWageIncome",0) for h in state["buildings"] if h.get("kind")=="home")
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant"))
     taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
-    transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost
-    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
+    transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+sum(l.get("monthlyOperatingCost",0) for l in state.get("metroLines",[]) if l.get("operational"))
+    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))+sum(l.get("monthlyFareRevenue",0) for l in state.get("metroLines",[]))
     view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
@@ -6031,6 +6044,11 @@ class Handler(BaseHTTPRequestHandler):
                 elif action=="createTaxiRouteFromDepot":
                     try:create_taxi_route_from_depot(data.get("depotX"),data.get("depotY"),data.get("stops",[]))
                     except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
+                elif action in ("planMetroLine","buyMetroTrain","pauseMetroLine","resumeMetroLine"):
+                    try:
+                        line=metro_action(state,action,data)
+                        ev("Subte municipal",f"{line['name']}: {line['stage']} · {line['trainCount']} formaciones.")
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action in ("pauseTaxiRoute","resumeTaxiRoute","cancelTaxiRoute"):
                     taxi=next((t for t in state.setdefault("taxiRoutes",[]) if t.get("id")==str(data.get("id"))),None)
                     if not taxi:self._send(404,{"error":"El taxi ya no existe."});return

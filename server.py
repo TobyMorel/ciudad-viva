@@ -4871,6 +4871,7 @@ def tick_one_day():
         ev("Producción regional", "Canteras, acerías y talleres repusieron parte de las existencias de proveedores.")
         process_training_programs()
         calculate_utility_balance(apply_effects=True)
+        evaluate_essential_services(state)
         economic=commute_model()
         public_payroll=pay_public_wages(economic)
         simulate_airport_month(economic)

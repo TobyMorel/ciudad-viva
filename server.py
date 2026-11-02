@@ -1664,7 +1664,7 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":4700,"population":620,"jobs":286,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0,"ruins":[]},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":1200,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 def new_settlement_state():
     """Empty playable map: the only road is the westbound regional gate."""
@@ -5509,6 +5509,39 @@ def road_incident_report(traffic=None,advance=False):
     return {"day":day,"activeIncidents":[dict(i) for i in events if i.get("status") in ("en_respuesta","sin_respuesta")],"recentIncidents":[dict(i) for i in events[-8:][::-1]],"generated":report.get("generated",0),"responded":report.get("responded",0),"unanswered":report.get("unanswered",0)}
 
 
+def destroy_burning_building(incident):
+    """Final loss: occupants inside die, those outside join the permanent housing queue."""
+    target=next((b for b in state.get("buildings",[]) if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
+    if target is None:return
+    dead=0;displaced=0
+    if target.get("kind")=="home":
+        ensure_resident_roster()
+        shelter=state.setdefault("socialServices",new_social_services()).setdefault("shelterResidents",[])
+        minute=float(state.get("timeOfDayMinutes",720))
+        year=2026+(max(0,int(state.get("day",1))-1)//360)
+        deceased=state.setdefault("urbanEvolution",{}).setdefault("deceased",[])
+        for person in list(target.get("residents",[]))[:max(0,int(target.get("occupants",0)))]:
+            identity=str(person.get("id") or f"fire-{incident['id']}-{dead+displaced}")
+            working=bool(person.get("workerEligible") and person.get("employerId"))
+            outdoors=(working and 480<=minute<1080) or (540<=minute<1140 and stable_skill(identity,"salida-incendio")%100<12)
+            if outdoors:
+                person.update({"status":"buscando vivienda","displacedBy":"incendio total","originHomeX":target["x"],"originHomeY":target["y"],"displacedDay":state["day"],"plannedReturnDay":None,"admittedDay":state["day"],"shelterId":None})
+                shelter.append(person);displaced+=1
+            else:
+                deceased.append({"residentId":identity,"name":person.get("name") or f"Residente #{identity[-5:]}","age":int(person.get("age") or 0),"year":year,"deathDay":state["day"],"homeX":target["x"],"homeY":target["y"],"cause":"incendio","disposition":"en espera","funeralPreference":funeral_preference(identity)})
+                dead+=1
+        deceased[:]=deceased[-2000:]
+        state["population"]=max(0,int(state.get("population",0))-dead)
+    if target.get("jobSlots"):
+        state["jobs"]=max(0,int(state.get("jobs",0))-int(target["jobSlots"]))
+    if target.get("monthlyCost"):
+        state["monthlyExpenses"]=max(0,int(state.get("monthlyExpenses",0))-int(target["monthlyCost"]))
+    state["buildings"].remove(target)
+    state.setdefault("fireService",{}).setdefault("ruins",[]).append({"x":incident["x"],"y":incident["y"],"name":incident["name"],"destroyedDay":state["day"],"kind":incident["buildingKind"]})
+    incident.update({"status":"destruido","resolvedDay":state["day"],"deaths":dead,"displaced":displaced,"damage":100})
+    ev("Edificio reducido a cenizas",f"{incident['name']} se perdió por completo. Fallecieron {dead} habitantes dentro y {displaced} que estaban fuera deben buscar otra vivienda.")
+    update_social_shelters()
+
 def fire_service_report(workplaces=None,advance=False):
     """Incendios urbanos deterministas: cobertura, despacho y daño dependen de personal y calles."""
     fire=state.setdefault("fireService",{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0})
@@ -5533,35 +5566,40 @@ def fire_service_report(workplaces=None,advance=False):
             stations.append({"building":b,"staff":max(0,work.get("staffedJobs",0)),"ready":b.get("dispatchReadyDay",day)})
         for incident in incidents:
             if incident.get("status")!="ardiendo":continue
+            target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
+            if target is None:
+                incident.update({"status":"destruido","resolvedDay":day});continue
+            if incident.get("responseRoute"):
+                if day>=incident.get("arrivalDay",day+1):
+                    damage=max(1,min(24,round(incident.get("responseMinutes",15)/4)+incident.get("burningDays",0)*2))
+                    target["quality"]=max(20,target.get("quality",75)-damage)
+                    if target.get("kind")=="home":target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
+                    elif target.get("business"):target["business"]["cash"]=max(0,target["business"].get("cash",0)-damage*45)
+                    incident.update({"status":"controlado","route":incident["responseRoute"],"damage":damage,"resolvedDay":day})
+                    fire["resolved"]+=1
+                    ev("Incendio controlado",f"{incident['station']} llegó a {incident['name']} y sofocó las llamas; daño {damage} puntos.")
+                else:
+                    incident["burningDays"]=incident.get("burningDays",0)+1
+                continue
             choices=[]
             for station in stations:
                 if station["staff"]<4 or station["ready"]>day:continue
                 path=service_route_within(station["building"],incident)
-                if path:choices.append((5+max(0,len(path)-1)*2.5,station))
+                if path:choices.append((5+max(0,len(path)-1)*2.5,station,path))
             if choices:
-                minutes,station=min(choices,key=lambda row:(row[0],row[1]["building"]["x"],row[1]["building"]["y"]))
-                target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
-                damage=max(1,min(18,round(minutes/5)))
-                if target:
-                    target["quality"]=max(20,target.get("quality",75)-damage)
-                    if target.get("kind")=="home":
-                        target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
-                        if target["quality"]<=35:displace_home_residents(target,"incendio",7)
-                    elif target.get("business"):target["business"]["cash"]=max(0,target["business"].get("cash",0)-damage*45)
-                station["building"]["dispatchReadyDay"]=day+2;incident.update({"status":"controlado","responseMinutes":round(minutes),"station":station["building"].get("name","Cuartel municipal"),"stationX":station["building"]["x"],"stationY":station["building"]["y"],"route":path,"damage":damage,"resolvedDay":day})
-                fire["dispatches"]+=1;fire["resolved"]+=1
-                if damage>=10:state["services"]=max(0,state.get("services",0)-1)
-                ev("Incendio controlado",f"{station['building'].get('name','Cuartel municipal')} llegó en {round(minutes)} min con cuatro bomberos. Daño de condición: {damage} puntos; la dotación queda ocupada dos días.")
+                minutes,station,path=min(choices,key=lambda row:(row[0],row[1]["building"]["x"],row[1]["building"]["y"]))
+                station["building"]["dispatchReadyDay"]=day+2
+                incident.update({"station":station["building"].get("name","Cuartel municipal"),"stationX":station["building"]["x"],"stationY":station["building"]["y"],"responseRoute":path,"route":path,"responseMinutes":round(minutes),"dispatchDay":day,"arrivalDay":day+1,"responseStatus":"en camino"})
+                fire["dispatches"]+=1
+                ev("Autobomba despachada",f"{incident['station']} envió su camión hacia {incident['name']} por {max(0,len(path)-1)} cuadras; la intervención se realiza al llegar.")
             else:
                 incident["burningDays"]=incident.get("burningDays",0)+1
-                target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
-                if target:
-                    target["quality"]=max(20,target.get("quality",75)-2)
-                    if target.get("kind")=="home" and target["quality"]<=35:displace_home_residents(target,"incendio",7)
+                target["quality"]=max(20,target.get("quality",75)-2)
                 if incident["burningDays"]>=5:
-                    incident.update({"status":"extinguido sin dotación","resolvedDay":day,"damage":10});fire["unanswered"]+=1
-                    state["services"]=max(0,state.get("services",0)-2);state["approval"]=max(0,state.get("approval",0)-1)
-                    ev("Incendio sin respuesta",f"{incident['name']} ardió durante cinco días sin una dotación cualificada o una ruta operativa. La condición del inmueble y la confianza pública empeoraron.")
+                    destroy_burning_building(incident)
+                    fire["unanswered"]+=1
+                    state["services"]=max(0,state.get("services",0)-2)
+                    state["approval"]=max(0,state.get("approval",0)-1)
     stations=[]
     for b in state.get("buildings",[]):
         if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue

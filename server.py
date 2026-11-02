@@ -4,7 +4,7 @@ import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from taxi_passengers import assign_taxi_passengers
-from bus_nonwork import assign_bus_nonwork_passengers
+from bus_nonwork import assign_bus_nonwork_passengers, collect_bus_nonwork_fares
 from growth_demand import growth_demand
 
 ROOT = Path(__file__).resolve().parent
@@ -4874,6 +4874,7 @@ def tick_one_day():
         tax_report=collect_municipal_taxes()
         economic=commute_model()
         collect_bus_fares(economic)
+        collect_bus_nonwork_fares(state)
         business_income=round(economic["privateStaffedJobs"]*2)
         taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
         taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
@@ -5712,6 +5713,7 @@ def public_state(player_id=None):
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
+    for key in ("busNonworkPassengers","busNonworkTransfers","busNonworkFareRevenue"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
     view["traffic"]["taxiRiders"]=commute.get("taxiRiders",0)

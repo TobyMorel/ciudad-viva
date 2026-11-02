@@ -30,19 +30,20 @@ test('Municipalidad no brinda salud seguridad bomberos o basureros sin edificios
  });
 });
 
-test('Hospital y central de higiene conservan su modelo y se construyen sin materiales',async()=>{
+test('Hospital general se habilita en el acto y conserva su modelo sin materiales',async()=>{
  const city=seed();city.money=200000;city.paused=true;
  await scenario(city,async({view,action})=>{
   const start=await view();
   const contractor='Constructora Delta';
   const tender={action:'place',contractor,kind:'civic',serviceModel:'generalHospital',x:10,y:11};
   const s=await action(tender);
-  const project=s.projects.find(p=>p.x===10&&p.y===11);
-  assert.equal(project.serviceModel,'generalHospital');
-  assert.equal(project.label,'Hospital general');
-  assert.ok(project.cost>8000);
-  assert.equal(Object.values(project.materialsRequired).reduce((a,n)=>a+n,0),0);
-  assert.ok(s.money<start.money);
+  const building=s.buildings.find(b=>b.x===10&&b.y===11);
+  assert.equal(building.serviceModel,'generalHospital');
+  assert.equal(building.name,'Hospital general');
+  assert.equal(building.status,'habilitado');
+  assert.equal(building.hospitalWard.beds,36);
+  assert.equal(s.projects.some(p=>p.x===10&&p.y===11),false);
+  assert.equal(s.money,start.money-25500);
   await assert.rejects(action({...tender,serviceModel:'wasteComplex',x:11,y:11}),/incompatible/);
  });
 });

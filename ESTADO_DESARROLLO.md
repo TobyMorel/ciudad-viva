@@ -1,4 +1,8 @@
-# Estado de desarrollo · Alfa 0.158
+# Estado de desarrollo · Alfa 0.159
+
+## Alfa 0.159 · servicios públicos inmediatos
+
+Consultorios, policlínicos, hospitales, policía y bomberos se colocan y habilitan en un clic, sin constructoras, materiales ni proyectos pendientes. Se cobra el precio de catálogo completo al instante, respetando caja libre, parcela vacía y acceso vial; se crean capacidad, vehículos, puestos y gasto mensual. El personal y las redes siguen siendo necesarios para responder. Los proyectos guardados que ya estaban en obra conservan su curso para no duplicar pagos. Probado en LAN mediante el endpoint HTTP, en Offline y en Chromium móvil/escritorio. Fases 4=60%, 7=95%, 9=75%; porcentaje total no estimable por falta de pesos comunes verificables.
 
 ## Alfa 0.158 · cauce continuo y riberas
 

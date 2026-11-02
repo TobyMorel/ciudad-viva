@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.158",
+  "currentVersion": "0.159",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.159",
+      "date": "2026-11-02",
+      "title": "Hospitales, policía y bomberos al instante",
+      "changes": [
+        "Los consultorios, policlínicos, hospitales, puestos de vigilancia, comisarías, centrales de seguridad y las tres bases de bomberos se habilitan en el mismo clic.",
+        "La tesorería paga el costo completo de colocación; no se crea proyecto pendiente ni se requiere constructora o materiales.",
+        "El edificio conserva sus puestos, capacidad, vehículos y gasto mensual; la cobertura efectiva sigue dependiendo de personal, redes y acceso vial. El catálogo informa que la colocación es inmediata."
+      ],
+      "verification": "128 pruebas Python y 84 Offline; prueba Chromium móvil/escritorio del catálogo y colocación de hospital. Los proyectos antiguos ya iniciados se conservan hasta terminar. Fases 4=60%, 7=95%, 9=75%; global sin estimar."
+    },
     {
       "version": "0.158",
       "date": "2026-11-02",

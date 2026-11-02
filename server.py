@@ -2150,6 +2150,24 @@ def is_water(x,y):
     # Río continuo: ambas orillas siguen siendo terreno disponible.
     return x in (24,25)
 
+INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand"}
+
+def place_instant_public_service(kind,x,y,service_id):
+    model=SERVICE_MODELS[service_id]
+    if model["kind"]!=kind or service_id not in INSTANT_PUBLIC_MODELS:raise ValueError("Servicio público inmediato inválido.")
+    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
+    available=max(0,state["money"]-reserved)
+    if available<model["cost"]:raise ValueError(f"Fondos disponibles insuficientes. Cuesta $ {model['cost']:,}; disponible $ {available:,}.".replace(",","."))
+    state["money"]-=model["cost"]
+    monthly=round(model["cost"]*.065) if kind=="fireStation" else round(320+model["jobs"]*23)
+    building={"x":x,"y":y,"kind":kind,"name":model["label"],"serviceModel":service_id,"level":1,"occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":monthly,"quality":82}
+    if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":state["day"]}
+    if model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":state["day"]}
+    if kind=="fireStation":building.update({"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"]})
+    state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
+    ev("Servicio público habilitado",f"{model['label']} abrió al colocarse por $ {model['cost']:,}. Costo operativo $ {monthly:,}/mes; su respuesta requiere personal, redes y acceso vial.".replace(",","."))
+    return building
+
 def route_between(start_coord, destination_coord):
     condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}
     accident_closures={(i.get("x"),i.get("y")) for i in state.get("roadIncidents",{}).get("events",[]) if i.get("closed") and i.get("status") in ("en_respuesta","sin_respuesta")}
@@ -5980,6 +5998,8 @@ class Handler(BaseHTTPRequestHandler):
                         refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
                 elif action=="place":
                     kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
+                    service_id=data.get("serviceModel") or SERVICE_DEFAULT.get(kind)
+                    instant_public=service_id in INSTANT_PUBLIC_MODELS and (SERVICE_MODELS.get(service_id) or {}).get("kind")==kind
                     if kind not in PROJECTS: self._send(400,{"error":"Proyecto o parcela inválidos"}); return
                     if kind=="road":
                         try:place_road_instantly(x,y)
@@ -5994,13 +6014,13 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="port" and any(b.get("kind")=="port" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene una terminal portuaria."}); return
                     if kind=="airport" and any(b.get("kind")=="airport" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene un aeropuerto regional."}); return
                     contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    if not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles. Elegí otra empresa o esperá la entrega de una obra."}); return
-                    if contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} necesita {LABOR_NEEDS[kind]} trabajadores para esta obra y solo tiene {contractor_free_workers(contractor)} libres."}); return
+                    if not instant_public and not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles. Elegí otra empresa o esperá la entrega de una obra."}); return
+                    if not instant_public and contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} necesita {LABOR_NEEDS[kind]} trabajadores para esta obra y solo tiene {contractor_free_workers(contractor)} libres."}); return
                     if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])): self._send(409,{"error":"La parcela ya está ocupada"}); return
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
-                    if kind in ("airport","hotel","school","fireStation","powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant") and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
+                    if (instant_public or kind in ("airport","hotel","school","fireStation","powerPlant","waterPlant","wastewaterPlant","landfill","recyclingPlant")) and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
                     bus_line=None
                     if kind=="busStop":
                         bus_line=next((line for line in state.get("busRoutes",[]) if line.get("id")==str(data.get("busLineId")) and line.get("status")=="active"),None)
@@ -6030,6 +6050,10 @@ class Handler(BaseHTTPRequestHandler):
                     if data.get("serviceModel") and (model is None or model["kind"]!=kind):
                         self._send(400,{"error":"Categoría de servicio inválida para esta obra"});return
                     spec=({**PROJECTS[kind],"cost":model["cost"],"days":model["days"],"label":model["label"]} if model else PROJECTS[kind])
+                    if instant_public:
+                        try:place_instant_public_service(kind,x,y,service_id)
+                        except ValueError as error:self._send(409,{"error":str(error)});return
+                        self._send(200,public_state(pid));return
                     c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=max(3,round(spec["days"]*c["days"]/240))
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}

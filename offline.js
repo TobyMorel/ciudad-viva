@@ -1456,17 +1456,29 @@ export async function createOfflineAdapter(){
       const industryChoice=d.kind==='factory'?d.industryType:null;
       if(industryChoice!=null&&!Object.prototype.hasOwnProperty.call(OFFLINE_FACTORY_LABELS,industryChoice))
         throw Error('Industria desconocida: elegí cantera, hormigonera, aserradero, metalúrgica o alimentos.');
+      const instantPublic=['clinic','medicalCenter','generalHospital','policePost','policeStation','policeHQ','firePost','fireStationPlus','fireCommand'].includes(modelId)&&model?.kind===d.kind;
       const originalSpec=SPECS[d.kind],spec=model?{...originalSpec,cost:model.cost,days:model.days,label:model.label}:originalSpec,c=state.contractors[d.contractor];
-      if(!spec||!c)throw Error('Proyecto o constructora inválidos.');const {x,y}=d;
+      if(!spec||(!instantPublic&&!c))throw Error('Proyecto o constructora inválidos.');const {x,y}=d;
       if(!Number.isInteger(x)||!Number.isInteger(y))throw Error('Parcela inválida.');if(landWater(x,y))throw Error('El terreno elegido está cubierto por agua.');if(!offlineLandInfo(x,y).unlocked)throw Error('La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir.');
       if(d.kind==='port'&&!state.roads.some(r=>Math.abs(r[0]-x)+Math.abs(r[1]-y)===1))throw Error('La terminal portuaria necesita una calle terminada al lado.');
       if(d.kind==='port'&&state.buildings.some(b=>b.kind==='port'))throw Error('La ciudad ya tiene una terminal portuaria.');
       if(d.kind==='airport'&&state.buildings.some(b=>b.kind==='airport'))throw Error('La ciudad ya tiene un aeropuerto regional.');
-      if(['airport','hotel','school','fireStation','powerPlant','waterPlant','wastewaterPlant','landfill','recyclingPlant'].includes(d.kind)&&!offlineRoadRoute({x:4,y:10},{x,y}))throw Error('La obra necesita una calle conectada a la ciudad.');
+      if((instantPublic||['airport','hotel','school','fireStation','powerPlant','waterPlant','wastewaterPlant','landfill','recyclingPlant'].includes(d.kind))&&!offlineRoadRoute({x:4,y:10},{x,y}))throw Error('La obra necesita una calle conectada a la ciudad.');
       if(state.buildings.some(b=>b.x===x&&b.y===y)||state.projects.some(p=>p.x===x&&p.y===y)||state.roads.some(r=>r[0]===x&&r[1]===y))throw Error('La parcela está ocupada.');
       if(!state.roads.some(r=>Math.abs(r[0]-x)+Math.abs(r[1]-y)===1))throw Error('La parcela necesita acceso a una calle terminada.');
       const busLine=d.kind==='busStop'?state.busRoutes.find(line=>line.id===String(d.busLineId)&&line.status==='active'):null;if(d.kind==='busStop'&&(!busLine||!offlineBusStopSites(busLine).some(site=>site.x===x&&site.y===y)))throw Error('Elegí una parcela libre junto a una línea activa.');
       if(['home','shop','factory'].includes(d.kind)&&!state.zones.some(z=>z.x===x&&z.y===y&&z.kind===d.kind))throw Error('Primero asigná el uso de suelo compatible.');
+      if(instantPublic){
+        const reserved=state.projects.filter(p=>!p.privatePaid).reduce((n,p)=>n+Math.max(0,p.cost-(p.paid||0)),0),available=Math.max(0,state.money-reserved);
+        if(available<model.cost)throw Error(`Fondos disponibles insuficientes. Cuesta $${model.cost.toLocaleString('es-AR')}; disponible $${available.toLocaleString('es-AR')}.`);
+        state.money-=model.cost;const monthly=d.kind==='fireStation'?Math.round(model.cost*.065):Math.round(320+model.jobs*23);
+        const building={x,y,kind:d.kind,name:model.label,serviceModel:modelId,level:1,occupants:0,jobSlots:model.jobs,status:'habilitado',monthlyCost:monthly,quality:82};
+        if(model.police)building.policeUnit={vehicles:model.police,priority:'mixto',equippedDay:state.day};
+        if(model.beds)building.hospitalWard={beds:model.beds,ambulances:model.ambulances||0,equippedDay:state.day};
+        if(d.kind==='fireStation'){building.fireEngineCapacity=model.engines;building.dispatchReadyDay=state.day}
+        state.buildings.push(building);state.jobs+=model.jobs;state.monthlyExpenses+=monthly;
+        event('Servicio público habilitado',`${model.label} abrió al colocarse por $${model.cost.toLocaleString('es-AR')}. Operación $${monthly.toLocaleString('es-AR')}/mes; su respuesta requiere personal, redes y acceso vial.`);return;
+      }
       const active=state.projects.filter(q=>q.contractor===d.contractor&&q.status!=='pausada'),repairs=offlineWarrantyAssignments(d.contractor),rehabs=state.buildings.filter(b=>b.industrialRecovery?.status==='en obra'&&b.industrialRecovery.contractor===d.contractor),used=active.reduce((n,q)=>n+q.workersAssigned,0)+repairs.reduce((n,g)=>n+(g.workersAssigned||3),0)+rehabs.reduce((n,b)=>n+b.industrialRecovery.workersAssigned,0);if(active.length+repairs.length+rehabs.length>=c.capacity||used+NEEDS[d.kind]>c.workers)throw Error('La constructora no tiene cuadrilla libre para esta obra.');
       const total=Math.round(spec.cost*c.price),privatePaid=['home','shop','hotel','factory'].includes(d.kind),permit=privatePaid?Math.max(50,Math.round(spec.cost*.12)):0,cost=total-permit,operatingReserve=d.kind==='factory'?4200:0;
       if(state.money<permit+(privatePaid?0:total*.2))throw Error('No alcanza la tesorería para permisos y anticipo.');

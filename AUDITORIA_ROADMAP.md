@@ -1,3 +1,7 @@
+# Auditoría · Alfa 0.159 · servicios públicos inmediatos
+
+Cambio de flujo solicitado: salud, policía y bomberos se colocan con pago inmediato en lugar de entrar en una obra. Mantienen dependencias de plantilla, redes y calles para servir realmente. No se atribuye aumento de progreso de fase porque son servicios existentes cuyo flujo se simplifica; fase 4=60%, fase 7=95%, fase 9=75%. Progreso global no estimable por falta de pesos verificables de las 34 fases.
+
 # Auditoría · Alfa 0.158 · río continuo
 
 Se corrige la geografía visual y lógica del cauce, sin completar una fase nueva. El río deja terreno en ambas orillas y sigue hacia norte/sur; falta construir puentes para conectar la red vial de la ribera oriental. Se mantienen fase 4=60%, fase 7=95%, fase 9=75%. Progreso global no estimable por falta de pesos comunes y criterios de aceptación verificables para las 34 fases.

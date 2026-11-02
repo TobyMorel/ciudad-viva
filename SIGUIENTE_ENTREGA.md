@@ -1,3 +1,7 @@
+## Después de Alfa 0.159
+
+Retomar puentes para cruzar el río y movimiento de pasajeros en fase 7. Verificar en partida prolongada que los nuevos hospitales, comisarías y cuarteles atraigan personal y sus recursos entren en servicio; conservar la prueba de colocación inmediata en CI. Probar LAN física entre dos equipos. Global aún sin estimar hasta definir pesos comunes para las 34 fases.
+
 ## Después de Alfa 0.158
 
 Avanzar la mecánica de puentes para cruzar el río sin bloquear la expansión al este; luego retomar pasajeros/transbordos y conexión intermodal de la fase 7. Vigilar rendimiento de la malla del río en dispositivos móviles. Probar LAN física entre dos equipos y mantener las regresiones de arranque y construcción. Global aún sin porcentaje por falta de pesos homogéneos para las 34 fases.

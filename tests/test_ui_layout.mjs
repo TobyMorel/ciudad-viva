@@ -90,11 +90,11 @@ try{
     await page.locator('[data-popup="build"]').evaluate(button=>button.click());
     const catalog=await page.evaluate(()=>{
       const pane=document.querySelector('#panelPopup:not(.hidden)'),buttons=[...pane.querySelectorAll('[data-model]')];
-      return {count:buttons.length,factoryCount:pane.querySelectorAll('[data-industry]').length,categories:[...pane.querySelectorAll('.tool-category')].map(x=>x.textContent.trim()),
+      return {count:buttons.length,factoryCount:pane.querySelectorAll('[data-industry]').length,categories:[...pane.querySelectorAll('.build-category-filters [data-build-filter]')].map(x=>x.textContent.trim()),
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===21&&catalog.factoryCount===5&&catalog.categories.length===8&&catalog.categories.some(x=>x.includes('SERVICIOS FUNERARIOS'))&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===21&&catalog.factoryCount===5&&catalog.categories.length===7&&catalog.categories.includes('Servicios')&&catalog.categories.includes('Industria')&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').evaluate(button=>button.click());
 

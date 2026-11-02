@@ -1,3 +1,7 @@
+## Alfa 0.159 · equipamientos públicos inmediatos
+
+Solo los modelos de salud, policía y bomberos declarados en `INSTANT_PUBLIC_MODELS` se colocan al instante. Se valida parcela, conexión vial y caja libre antes de cobrar. La misma regla se aplica a `offline.js` y el servidor; `game.js` omite la selección automática de constructora para estos modelos. Los proyectos antiguos en curso no se migran ni cancelan para evitar cobrar dos veces. Escuelas y otros equipamientos conservan su flujo actual.
+
 ## Alfa 0.158 · río y mapa
 
 El cauce ocupa las celdas x=24 y x=25 en toda coordenada y; la regla se comparte entre los motores Online/Offline y la selección del mapa. No cerrar el este con un océano porque debe conservarse la expansión pagada allí. El agua y las dos orillas usan mallas continuas de bandas con curvas deterministas, sin geometría por cada celda. Los puentes aún no están implementados; no permitir calles sobre el cauce hasta disponer de esa mecánica.

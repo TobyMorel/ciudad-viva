@@ -1,6 +1,16 @@
-# Continuidad inmediata · Alfa 0.145
+# Continuidad inmediata · Alfa 0.146
 
 No empezar desde cero. Priorizar mecánicas conectadas y evitar varias entregas de pulido. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. Publicar cada versión en `main` con el correo GitHub noreply configurado.
+
+## Alfa 0.146 · sirenas, fuego, bocinas y semáforos
+
+`game.js` genera sirenas cortas ligadas a intervenciones policiales recientes y respuestas de bomberos, crepitación mientras hay incendios activos, y bocinas ocasionales cuando la cola/demora de tráfico supera los umbrales. Se usa Web Audio procedural para mantener el juego sin paquetes externos; respetar mute, pausa y visibilidad de la pestaña.
+
+En `world3d.js` todos los cruces con tres o más accesos tienen semáforos tridimensionales rojo/ámbar/verde por defecto. La ficha táctil del cruce se implementa en `game.js`; la acción `toggleTrafficSignal` guarda `trafficSignalOverrides` en `server.py`/`offline.js`, por coordenada. `false` es retiro; `true` reinstala. La señal modifica tanto el modelo visual como la espera de vehículos y la espera incorporada al tiempo del viaje. El servidor procesa la acción bajo el lock común para todos los jugadores.
+
+Pruebas añadidas: `tests/test_signal_delay.py` y `tests/test_traffic_signal_offline.mjs`; UI táctil responsive: `tests/test_traffic_signal_ui.mjs` (390×844/1440×900). Antes de cerrar, comprobar la ejecución del workflow `Validación Ciudad Viva` para el SHA publicado. No subir fase 7 (95%) ni fase 9 (75%): permanecen pendientes alivio/confiabilidad del transporte y, en fase 9, patrullaje policial físico, docentes/cobertura y otros bloques listados en `release_notes.json`.
+
+## Estado previo · Alfa 0.145
 
 ## Estado de la expansión territorial
 

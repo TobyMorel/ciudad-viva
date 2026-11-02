@@ -1,3 +1,16 @@
+# Estado de desarrollo · Alfa 0.146
+
+## Respuesta audiovisual y semáforos configurables · fases 7 y 9
+
+Las intersecciones con tres o cuatro accesos presentan semáforos 3D de tres luces. Al tocar el cruce se abre una ficha para retirar o reponer el equipo; el override se guarda por coordenada, funciona en Offline y Online, se comparte con la sala y modifica tanto la espera de los vehículos como el tiempo de viaje del modelo. Los cruces existentes reciben semáforos por defecto.
+
+Se añadieron señales acústicas sintetizadas localmente con Web Audio: sirenas breves para respuestas recientes de policía y bomberos, crepitación mientras arde un incendio y bocinas espaciadas cuando las colas o los trayectos están congestionados. El botón de audio las silencia; también se detienen en pausa o con la pestaña oculta. Son tonos procedurales, no grabaciones de vehículos.
+
+Verificado: prueba Online de lógica de semáforos, prueba Offline de persistencia/toggle/validación, Chromium de la ficha en 390×844 y 1440×900, sintaxis JavaScript/Python. CI se comprobará tras publicar. Fase 7 permanece en 95% y fase 9 en 75%: el semáforo configurable y el audio no satisfacen por sí solos los pendientes de fiabilidad de transporte, patrullas físicas, contratación docente y cobertura educativa. Global no estimable: faltan pesos comunes verificables para combinar las 34 fases.
+
+Hito actual: respuesta urbana y movilidad (fases 7/9). Próximo: patrullas policiales que se desplacen y atiendan el incidente en el mapa; seguir con vacantes docentes/cobertura tras ampliación escolar.
+
+
 # Estado de desarrollo · Alfa 0.145
 
 ## Flujo de partida nueva, acceso vial y demanda visible · fase 4

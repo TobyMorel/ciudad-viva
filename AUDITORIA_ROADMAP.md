@@ -604,3 +604,10 @@ Pendiente en esta solicitud: mortalidad natural/edades, cementerios y crematorio
 ## Alfa 0.145 · expansión pagada del terreno (fase 1)
 
 La fase 1 sube de 70% a 75% por la compra de sectores contiguos de 8×8, precio por distancia, persistencia, acceso infinito por coordenadas y encuadre responsive del flujo de compra. En la partida nueva se habilita una región 16×16 junto al acceso regional. Verificación local: 114 pruebas Python, 74 pruebas Node/Offline, cuatro perfiles de estrés por 30 años, y Chromium de marcadores, layout general y expansión en 390×844/1440×900. Las pruebas se corrieron nuevamente de forma aislada para evitar competencia de navegador. Pendiente para fase 1: catastro y derechos de propiedad; falta estrés de mapa/cámara muy grande. No asignar porcentaje global sin pesos comunes verificables.
+## Alfa 0.146 · respuesta audible y control de semáforos · fases 7 y 9
+
+Los cruces de 3+ calles tienen semáforos modelados en 3D y guardan instalación/retiro por intersección. El override de estado es compartido en Online y persiste Offline; los cruces sin excepción nacen señalizados. La acción valida que la parcela sea vía y que el grado del cruce sea 3 o 4; la respuesta del viaje respeta la excepción.
+
+Sirenas sintetizadas acompañan intervenciones recientes de policía/bomberos, incendios activos aportan crepitación y la congestión real de colas/demoras puede producir bocinas espaciadas. El control de audio común, la pausa y la pestaña oculta limitan la emisión. Los sonidos son generados localmente, sin dependencias remotas.
+
+Pruebas: regresión Online de semáforo instalado/retirado/restaurado y cruce inválido; regresión Offline equivalente; Chromium de interacción/lectura responsive en 390×844 y 1440×900; sintaxis. Se añaden al workflow. Fase 7 continúa en 95% (pendiente alivio/fiabilidad del sistema en ciudades densas); fase 9 continúa en 75% (pendientes patrullaje físico, docentes/cobertura y otros criterios). No se infiere el progreso global por cantidad de funciones.

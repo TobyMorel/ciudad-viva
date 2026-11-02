@@ -3386,11 +3386,21 @@ def bus_route_catalog(commute=None):
 
 def signal_delay_minutes(route, roads):
     """Espera media de 30 s por cruce señalizado (tres o cuatro accesos)."""
-    delay=0
+    delay=0;overrides=state.get("trafficSignalOverrides",{})
     for x,y in (route or [])[1:-1]:
         degree=sum((x+dx,y+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
-        if degree>=3:delay+=.5
+        if degree>=3 and overrides.get(f"{x},{y}",True):delay+=.5
     return delay
+
+def toggle_traffic_signal(x,y):
+    """Cruces de tres o más accesos tienen semáforo por defecto; guarda la excepción del jugador."""
+    x=int(x);y=int(y);roads={tuple(r) for r in state.get("roads",[])}
+    if (x,y) not in roads:raise ValueError("Elegí una intersección vial.")
+    degree=sum((x+dx,y+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
+    if degree<3:raise ValueError("El semáforo solo se puede cambiar en un cruce de tres o más calles.")
+    overrides=state.setdefault("trafficSignalOverrides",{});key=f"{x},{y}";enabled=not bool(overrides.get(key,True));overrides[key]=enabled
+    ev("Semáforo actualizado",f"Intersección {x+1},{y+1}: {'semáforo instalado' if enabled else 'semáforo retirado'}.")
+    return enabled
 
 
 def traffic_factor(route, exclude_order=None):
@@ -5369,6 +5379,7 @@ def building_road_access(building):
 
 def public_state(player_id=None):
     ensure_land_claims()
+    state.setdefault("trafficSignalOverrides",{})
     ensure_supply_state()
     ensure_finance_state()
     record_municipal_cash_movement()
@@ -5522,6 +5533,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
                 if action=="unlockLand":
                     try:unlock_land_chunk(data.get("chunkX"),data.get("chunkY"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
+                if action=="toggleTrafficSignal":
+                    try:toggle_traffic_signal(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
                 if action in POLICE_COSTS or action=="setPolicePriority":

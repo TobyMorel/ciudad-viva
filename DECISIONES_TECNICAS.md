@@ -1,6 +1,10 @@
-## Última decisión registrada · Alfa 0.145
+## Última decisión registrada · Alfa 0.146
 
-El mapa comienza con cuatro sectores de 8×8, candados seleccionables y compra de sectores adyacentes. Ver decisión técnica completa y límites prácticos en la sección Alfa 0.145 al final de este archivo.
+Los semáforos se modelan con `trafficSignalOverrides`: ausencia de una clave significa instalado en cruces con al menos tres accesos; `false`/`true` guarda la preferencia al retirar/instalar. La misma coordenada y el mismo override alimentan Three.js, la espera visual y el cálculo de viaje Online/Offline. El servidor ejecuta la mutación bajo su lock compartido.
+
+Los efectos se generan con Web Audio, sin archivos externos ni llamadas de red. Sirenas cortas dependen de respuestas registradas, crepitación de incendios activos y bocinas de congestión de colas/trayectos. Se priorizan volúmenes bajos y límites entre repeticiones; audio desactivado, pestaña oculta o simulación pausada no emiten nuevos efectos.
+
+La decisión anterior sobre expansión del mapa sigue documentada en la sección Alfa 0.145 al final de este archivo.
 
 ## Alfa 0.141 · mortalidad y servicios funerarios
 

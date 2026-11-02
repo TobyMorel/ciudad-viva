@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.145",
+  "currentVersion": "0.146",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.146",
+      "date": "2026-11-02",
+      "roadmapPhase": 9,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "Los cruces de tres o más calles muestran semáforos 3D de tres luces. Al tocar un cruce se puede retirar o instalar su semáforo; la decisión persiste y sincroniza en LAN/Online, y cambia la espera visual y vial del tránsito.",
+        "Las respuestas recientes de patrullas y autobombas reproducen sirenas cortas; un incendio activo agrega crepitación ambiental y las colas de tráfico generan bocinas espaciadas. Los sonidos respetan el botón general, el silencio de la pestaña y la pausa.",
+        "La ficha de control del cruce se comprobó en Chromium a 390×844 y 1440×900. Se añadieron pruebas de acción Online/Offline para apagar, restaurar y validar semáforos. Se mantiene fase 9 en 75%: aún falta el patrullaje policial físico y los bloques pendientes de salud/educación."
+      ]
+    },
     {
       "version": "0.145",
       "date": "2026-11-02",

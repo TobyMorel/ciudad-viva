@@ -1,10 +1,10 @@
-# Siguiente entrega · después de Alfa 0.145
+# Siguiente entrega · después de Alfa 0.146
 
-La fase 1 avanzó a 75%: la nueva partida comienza con cuatro sectores pequeños, candados visibles en el borde, selección con precio y compra de sectores contiguos. Los motores Online/Offline guardan la expansión, descuentan presupuesto disponible y aceptan coordenadas fuera del antiguo límite. Pruebas de lógica/sintaxis y UI en Chromium pasan, incluida la ficha en 390×844 y 1440×900. El global no se estima por falta de pesos verificables comunes para las 34 fases.
+La Alfa 0.146 añadió semáforos 3D configurables y efectos acústicos contextuales. Las fases 7 y 9 mantienen 95% y 75%: quedan criterios de movilidad y servicios sin terminar. El global sigue no estimable porque el roadmap no aporta pesos comunes verificables para agregar las 34 fases.
 
-Próximo sistema: catastro de parcelas y derechos de propiedad, sincronizado en Online/Offline y guardado en partidas. Luego realizar estrés de navegación, construcción, persistencia y marcadores en terreno lejano; tras validar el bloque, pasar a una fase con menor cobertura (por ejemplo, ampliar respuesta policial física) en vez de refinar esta mecánica durante varias entregas.
+Próximo sistema: completar patrullas policiales físicas que recorren la red vial y llegan al incidente con unidad/personas/ruta disponibles; impedir despachos dobles y mostrar causa cuando no haya respuesta. Después verificar contratación docente y cobertura tras ampliar una escuela. A continuación retomar catastro/derechos de propiedad y pruebas de ciudades extensas. Mantener las entregas centradas en mecánicas y en paridad Online/Offline.
 
-La expansión almacena sectores adquiridos de 8×8, cuesta $3.500 más $2.200 por anillo adicional y solo compra sectores contiguos. La superficie del mundo visual se mantiene bajo la cámara; no representa biomas procedurales ni generación de relieve.
+La expansión almacena sectores adquiridos de 8×8, cuesta $3.500 más $2.200 por anillo adicional y solo compra sectores contiguos. El terreno visual sigue siendo una planicie sin límite fijo de coordenadas, pero mapas extremos están limitados en la práctica por rendimiento y precisión.
 
 Publicar los cambios completos en `main`, comprobar SHA y CI, preservar `66056611+TobyMorel@users.noreply.github.com`, y generar el ZIP completo excluyendo `.git`, caches y otros ZIP.
 

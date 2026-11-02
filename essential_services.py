@@ -51,7 +51,7 @@ def evaluate_essential_services(city):
     live=lambda b:_live(b) and _adjacent(b,roads)
     def available(b,network):return live(b) and _adjacent(b,nets[network])
     def quality(b):return max(0,min(1,float(b.get("quality",82))/82))
-    capacity={"power":sum(float(b.get("generationKw",900))*quality(b) for b in buildings if b.get("kind")=="powerPlant" and available(b,"power")),"water":0,"gas":0,"tv":0,"wifi":0}
+    capacity={"power":sum(float(b.get("generationKw",900))*quality(b) for b in buildings if b.get("kind")=="powerPlant" and live(b)),"water":0,"gas":0,"tv":0,"wifi":0}
     assigned={s:set() for s in NETWORK}
     served={s:0 for s in NETWORK}
     def priority(b):
@@ -62,22 +62,24 @@ def evaluate_essential_services(city):
     consumers=sorted(buildings,key=lambda b:(priority(b),b["y"],b["x"]))
     for service in NETWORK:
         if service=="water":
-            capacity["water"]=sum(float(b.get("treatmentM3Day",220))*quality(b) for b in buildings if b.get("kind")=="waterPlant" and available(b,"water") and id(b) in assigned["power"])
+            capacity["water"]=sum(float(b.get("treatmentM3Day",220))*quality(b) for b in buildings if b.get("kind")=="waterPlant" and live(b) and id(b) in assigned["power"])
         if service=="gas":
-            capacity["gas"]=sum(float(b.get("gasCapacityM3Day",160))*quality(b) for b in buildings if b.get("kind")=="gasPlant" and available(b,"gas") and id(b) in assigned["power"])
+            capacity["gas"]=sum(float(b.get("gasCapacityM3Day",160))*quality(b) for b in buildings if b.get("kind")=="gasPlant" and live(b) and id(b) in assigned["power"])
         if service in ("tv","wifi"):
             model="tvHeadend" if service=="tv" else "wifiHub"
             field="tvConnections" if service=="tv" else "wifiConnections"
             fallback=180 if service=="tv" else 160
-            capacity[service]=sum(float(b.get(field,fallback))*quality(b) for b in buildings if b.get("kind")=="civic" and b.get("serviceModel")==model and available(b,service) and id(b) in assigned["power"])
+            capacity[service]=sum(float(b.get(field,fallback))*quality(b) for b in buildings if b.get("kind")=="civic" and b.get("serviceModel")==model and live(b) and id(b) in assigned["power"])
         remaining=capacity[service]
-        for building in consumers:
+        prior=sorted(consumers,key=lambda b:0 if b.get("serviceConnectionHistory",{}).get(service) else 1)
+        for building in prior:
             if service not in _required(building):continue
             requested=_demand(building,service)
             if available(building,service) and remaining+1e-9>=requested:
                 remaining-=requested
                 served[service]+=requested
                 assigned[service].add(id(building))
+                building.setdefault('serviceConnectionHistory',{})[service]=True
         capacity[service]=round(capacity[service],2)
     summary={s:{"capacity":capacity[s],"used":round(served[s],2),"free":round(max(0,capacity[s]-served[s]),2),"connectedRoadSegments":len(nets[s]),"buildingsServed":len(assigned[s])} for s in NETWORK}
     remaining=max(0,capacity["power"]-served["power"])

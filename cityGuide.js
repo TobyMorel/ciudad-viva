@@ -37,26 +37,25 @@ export function collectCityAlerts(state){
    working?'Seguí la reparación en Ciudad → Servicios.':'Abrí Ciudad → Servicios para elegir cuadrilla normal o respuesta urgente y comprobar ruta y presupuesto.',f.x,f.y,f.day,f.id||`utility-${f.network}-${f.x}-${f.y}`,working?1:0));
  }
  for(const v of [...(state.roadIncidentReport?.activeIncidents||[]),...(state.roadIncidentReport?.recentIncidents||[])]){
-  if(!v||!site(v.x,v.y)||now-(v.day||0)>7)continue;
-  const active=v.closed===true,title=active?'Choque vial: calle cerrada':'Accidente vial despejado';
+  if(!v||!site(v.x,v.y)||v.closed!==true||now-(v.day||0)>7)continue;
+  const active=true,title='Choque vial: calle cerrada';
   push(item('road','🚧',title,`Causa: ${v.cause||'tránsito'}. Condición de la calzada ${Math.round(v.roadQuality??82)}%. ${active?`${v.station?'Responde '+v.station:'Sin unidad disponible'}; cierre estimado ${v.remainingDays||0} día(s).`:`Se despejó el día ${v.clearedDay||'reciente'}; la unidad y limpieza costaron $${v.cleanupCost||0}.`}`,active?'La calle queda fuera de las rutas hasta terminar la respuesta municipal. Revisá Tráfico para ver los desvíos.':'Revisá Ciudad → Mantenimiento; una calzada dañada eleva el riesgo de nuevos choques.',v.x,v.y,v.day,v.id||`road-crash-${v.x}-${v.y}-${v.day}`,active?0:2));
  }
  const police=state.policeReport?.recentIncidents||[];
  for(const v of police){
-  if(!site(v.x,v.y)||now-(v.day||0)>35||now<(v.day||0))continue;
-  const answered=v.status==='atendido';
-  push(item('police','🚨',answered?'Incidente atendido':'Se necesita una patrulla aquí',
-   (v.location||'Barrio')+'. '+(answered?'Respondió '+(v.station||'una patrulla')+' en '+(v.responseMinutes||'?')+' minutos.':'No se pudo enviar patrulla: verificá comisaría, tres agentes por vehículo, energía, agua y calles.'),
-   answered?'La intervención quedó registrada. Revisá la cobertura de seguridad para evitar nuevos incidentes.':'Construí un puesto o comisaría, asegurá personal y conexiones y revisá el panel Seguridad.',v.x,v.y,v.day,v.id||`pol-${v.x}-${v.y}-${v.day}`,answered?2:1));
+  if(!site(v.x,v.y)||!['sin respuesta','en respuesta'].includes(v.status)||now<(v.day||0))continue;
+  const dispatched=v.status==='en respuesta';
+  push(item('police','🚨',dispatched?'Patrulla en camino':'Se necesita una patrulla aquí',
+   (v.location||'Barrio')+'. '+(dispatched?`Respondió ${v.station||'una patrulla'}; llegará el día ${v.arrivalDay}.`:'No se pudo enviar patrulla: verificá la comisaría, sus vehículos y las calles.'),
+   dispatched?'Seguí el patrullero en el mapa 3D.':'Construí un puesto o comisaría conectado y revisá el panel Seguridad.',v.x,v.y,v.day,v.id||`pol-${v.x}-${v.y}-${v.day}`,1));
  }
  const fires=[...(state.fireReport?.activeIncidents||[]),...(state.fireReport?.recentIncidents||[])];
  for(const v of fires){
-  if(!site(v.x,v.y))continue;
-  const active=['ardiendo','despachado'].includes(v.status);
-  if(!active&&now-(v.resolvedDay??v.startDay??0)>14)continue;
-  push(item('fire','🔥',v.status==='despachado'?'Bomberos en camino':active?'Se necesita una dotación de bomberos':'Incendio registrado',
-   (v.name||'Edificio')+'. '+(v.status==='despachado'?`La autobomba de ${v.station||'un cuartel'} viene por las calles y llegará el día ${v.arrivalDay}.`:active?'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.':'Estado: '+(v.status||'resuelto')+'. '+(v.station||'Sin cuartel asignado')+'. Daños: '+(v.damage||0)+'.'),
-   v.status==='despachado'?'Seguí la autobomba en el mapa 3D hasta el edificio.':active?'Construí un cuartel conectado; su guardia inicial puede despachar una autobomba.':'Inspeccioná el inmueble y revisá su calidad después del incendio.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,active?0:2));
+  if(!site(v.x,v.y)||!['ardiendo','despachado'].includes(v.status))continue;
+  const dispatched=v.status==='despachado'||Boolean(v.responseRoute?.length);
+  push(item('fire','🔥',dispatched?'Bomberos en camino':'Se necesita una dotación de bomberos',
+   (v.name||'Edificio')+'. '+(dispatched?`La autobomba de ${v.station||'un cuartel'} viene por las calles y llegará el día ${v.arrivalDay}.`:'Sigue ardiendo: necesita una dotación de bomberos disponible y calles conectadas.'),
+   dispatched?'Seguí la autobomba en el mapa 3D hasta el edificio.':'Construí un cuartel conectado; su guardia inicial puede despachar una autobomba.',v.x,v.y,v.startDay??v.resolvedDay,v.id||`fire-${v.x}-${v.y}`,0));
  }
  for(const b of state.buildings||[]){
   if(!b||b.roadAccessConnected!==false||!site(b.x,b.y))continue;
@@ -67,10 +66,6 @@ export function collectCityAlerts(state){
   const cremation=d.funeralPreference==="crematorium",need=cremation?"cremación":"sepultura",facility=cremation?"crematorio":"cementerio",reason=d.waitReason||`La familia solicita ${need}, pero todavía no hay un ${facility} operativo, conectado y dentro de alcance.`;
   push(item('funeral','⚱️','Traslado funerario pendiente',`${d.name||'Residente fallecido'} · ${reason}`,
    `Construí un ${facility} municipal, asegurá una ruta desde este hogar y mantenelo dentro de su alcance. El coche fúnebre saldrá cuando haya cupo.`,d.homeX,d.homeY,d.deathDay,`funeral-${d.residentId}`,0));
- }
- for(const v of state.health?.ambulanceDispatches||[]){
-  if(!site(v.x,v.y)||now-(v.day||0)>7||now<(v.day||0))continue;
-  push(item('health','✚','Emergencia sanitaria atendida','Traslado de '+(v.patients||1)+' paciente(s). '+(v.station||'Centro hospitalario')+'.','Revisá Salud para ver camas, profesionales, ambulancias y atención pendiente.',v.x,v.y,v.day,v.id||`amb-${v.x}-${v.y}-${v.day}`,2));
  }
  for(const raw of state.waste?.report?.litterTiles||[]){
   if(!raw)continue;

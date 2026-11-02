@@ -70,3 +70,14 @@ test('Offline: el corte vial impide respuesta y obras comprometidas impiden equi
   assert.equal((await view()).policeReport.coveredSites,0);
  });
 });
+
+test('Offline: la tesorería acredita y paga al cierre de cada día',async()=>{
+ const s=seed();s.day=1;s.lastMonth=0;s.paused=false;s.speed=1;
+ await scenario(s,async({next})=>{
+  const city=await next();
+  assert.equal(city.day,2);
+  assert.equal(city.dailyCashFlow.lastDay,2);
+  assert.ok(city.dailyCashFlow.lastIncome>0);
+  assert.ok(city.dailyCashFlow.lastPaid.services>0);
+ });
+});

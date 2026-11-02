@@ -4792,6 +4792,39 @@ def advance_maritime_steel_shipments():
         supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+qty
         ev("Acero desembarcado",f"{qty} unidades descargadas; {shipment['quantity']-shipment['deliveredUnits']} pendientes.")
 
+def settle_daily_municipal_cash(economic):
+    """Anticipa cada día los flujos mensuales; el cierre concilia solo diferencias."""
+    period=(state["day"]-2)//30
+    ledger=state.setdefault("dailyCashFlow",{"period":period,"raw":{},"scheduled":{},"paid":{},"income":0})
+    if ledger.get("period")!=period:
+        ledger={"period":period,"raw":{},"scheduled":{},"paid":{},"income":0}
+        state["dailyCashFlow"]=ledger
+    if ledger.get("lastDay")==state["day"]:return ledger
+    utility=state.get("utilities",{}).get("report",{})
+    waste=state.get("waste",{}).get("report",{})
+    workplaces=economic.get("workplaces",[])
+    monthly={
+        "income":max(0,state.get("monthlyIncome",0)+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
+        "services":max(0,state.get("monthlyExpenses",0)+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)),
+        "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))),
+        "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
+        "debt":max(0,sum(loan.get("payment",0) for loan in state.get("finance",{}).get("municipalLoans",[]) if loan.get("status")=="active")),
+    }
+    ledger["lastPaid"]={}
+    for key,amount in monthly.items():
+        ledger["raw"][key]=ledger["raw"].get(key,0)+amount/30
+        target=round(ledger["raw"][key])
+        due=max(0,target-ledger["scheduled"].get(key,0))
+        ledger["scheduled"][key]=target
+        if key=="income":
+            state["money"]+=due;ledger["income"]+=due;ledger["lastIncome"]=due
+        else:
+            paid=min(max(0,state["money"]),due)
+            state["money"]-=paid;ledger["paid"][key]=ledger["paid"].get(key,0)+paid
+            ledger["lastPaid"][key]=paid
+    ledger["lastDay"]=state["day"]
+    return ledger
+
 def tick_one_day():
     if state["paused"]: return
     ensure_supply_state()
@@ -4810,6 +4843,7 @@ def tick_one_day():
     advance_utility_repairs()
     calculate_utility_balance();evaluate_essential_services(state);advance_essential_service_day(state,ev);advance_utility_backup_fuel();apply_climate_impacts();apply_drainage_impacts();advance_recovery_contracts();calculate_waste_balance(advance=True,apply_effects=True);health_service_report(advance=True);education_service_report(advance=True)
     daily_economy=commute_model();fire_service_report(daily_economy["workplaces"],advance=True);police_service_report(daily_economy["workplaces"],advance=True);road_incident_report(daily_economy,advance=True)
+    settle_daily_municipal_cash(daily_economy)
     month=(day-1)//30
     if month>state["lastMonth"]:
         police_service_report(advance=True)
@@ -4911,7 +4945,13 @@ def tick_one_day():
         operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost,include_scenarios=False)["monthlyDebtService"]
-        available=state["money"]+monthly_income
+        daily=state.get("dailyCashFlow",{})
+        available=state["money"]+monthly_income-daily.get("income",0)
+        for category in operating_costs:
+            advanced=daily.get("paid",{}).get(category,0)
+            if advanced>operating_costs[category]:available+=advanced-operating_costs[category]
+            operating_costs[category]=max(0,operating_costs[category]-advanced)
+        available=max(0,available)
         budget_report=settle_municipal_program_budgets(operating_costs,available);available=budget_report["cashRemaining"]
         settle_housing_aid(aid_allocations,budget_report["programs"]["services"]["fundingPct"])
         road_maintenance_report(budget_report["programs"]["networks"]["fundingPct"]/100,advance=True)
@@ -4922,20 +4962,22 @@ def tick_one_day():
             state["services"]=max(5,state["services"]-1);ev("Calles con mantenimiento diferido",f"Calles deterioradas: {poor}/{total}; edificios públicos bajo 60%: {worn}/{facilities}. El nivel de servicios municipales baja hasta financiar reparaciones.")
         due=full_operating_cost+debt_due
         net=monthly_income-due
-        if available>=debt_due:
-            state["money"]=available-debt_due
+        debt_cash_due=max(0,debt_due-daily.get("paid",{}).get("debt",0))
+        if daily.get("paid",{}).get("debt",0)>debt_due:available+=daily["paid"]["debt"]-debt_due
+        if available>=debt_cash_due:
+            state["money"]=available-debt_cash_due
             if debt_due:municipal_debt_payment()
         else:
             # El fondo de deuda cubre faltantes de servicio; no cuenta como caja de libre disposición.
             finance=state.setdefault("finance",new_finance());reserve=max(0,int(finance.get("debtReserve",0)))
-            reserve_used=min(debt_due,max(0,debt_due-available),reserve)
-            if reserve_used and available+reserve_used>=debt_due:
-                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-debt_due+reserve_used
+            reserve_used=min(debt_cash_due,max(0,debt_cash_due-available),reserve)
+            if reserve_used and available+reserve_used>=debt_cash_due:
+                finance["debtReserve"]=reserve-reserve_used;state["money"]=available-debt_cash_due+reserve_used
                 municipal_debt_payment();finance.setdefault("debtReserveHistory",[]).append({"day":day,"amount":-reserve_used,"reason":"Servicio mensual de deuda"});del finance["debtReserveHistory"][:-24]
                 ev("Reserva de deuda aplicada",f"El fondo de deuda aportó $ {reserve_used:,} para completar las cuotas municipales. Saldo protegido: $ {finance['debtReserve']:,}.".replace(",","."))
             else:
                 # No sobregiro implícito: se agota la caja y cae la capacidad de servicio financiada.
-                shortfall=debt_due-available
+                shortfall=debt_cash_due-available
                 state["money"]=0
                 loss=max(1,min(8,round(shortfall/900)))
                 state["services"]=max(5,state["services"]-loss)
@@ -5283,11 +5325,10 @@ def police_staff_reserved(building,workplaces):
     if not unit or building.get("status") not in ("operativo","habilitado"):return 0
     job=next((w for w in workplaces if w.get("kind")=="civic" and w.get("x")==building["x"] and w.get("y")==building["y"]),{})
     assigned=max(0,int(job.get("staffedJobs",0)))
-    u=building.get("utilityAccess",{})
-    factor=min(u.get("powerServedPct",0),u.get("waterServedPct",0))/100
     funding=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
-    if factor*funding<.5:return 0
-    return 3*min(max(0,int(unit.get("vehicles",0))),max(0,(assigned-4)//3))
+    if funding<.5:return 0
+    # El puesto abre con una guardia mínima; las contrataciones amplían las patrullas.
+    return 3*min(max(0,int(unit.get("vehicles",0))),max(1,(assigned-4)//3))
 
 def invest_police_unit(action,x,y,priority=None):
     building=next((b for b in state.get("buildings",[]) if b.get("kind")=="civic" and b.get("x")==x and b.get("y")==y and b.get("status") in ("operativo","habilitado")),None)
@@ -5339,6 +5380,14 @@ def police_service_report(workplaces=None,advance=False):
             if mission.get("status")=="en respuesta" and state.get("day",1)>=mission.get("arrivalDay",state.get("day",1)+1):
                 mission["status"]="atendido";mission["resolvedDay"]=state["day"]
                 ev("Patrulla llegó al incidente",f"{mission.get('station','La policía')} intervino en {mission.get('location','el barrio')} después de recorrer su ruta vial.")
+            elif mission.get("status")=="sin respuesta":
+                row=next((r for r in rows if r["building"]["x"]==mission.get("x") and r["building"]["y"]==mission.get("y")),None)
+                choices=[(minutes,unit,path) for minutes,unit,path in (row["choices"] if row else []) if unit["remaining"]>0 and unit["active"]>0]
+                if choices:
+                    minutes,unit,path=min(choices,key=lambda it:(it[0],it[1]["name"]))
+                    unit["remaining"]-=1;unit["responded"]+=1
+                    mission.update({"status":"en respuesta","dispatchDay":state["day"],"arrivalDay":state["day"]+1,"station":unit["name"],"stationX":unit["building"]["x"],"stationY":unit["building"]["y"],"responseMinutes":minutes,"route":path})
+                    ev("Patrulla despachada",f"{unit['name']} salió hacia {mission.get('location','el barrio')}.")
     if advance and month>police.get("lastProcessedMonth",state.get("lastMonth",0)):
         police["lastProcessedMonth"]=month
         incidents=[];unanswered=responded=damage=0
@@ -5368,7 +5417,8 @@ def police_service_report(workplaces=None,advance=False):
                 "responseMinutes":response["minutes"] if response else None,
                 "station":response["station"] if response else None,"stationX":response["stationX"] if response else None,
                 "stationY":response["stationY"] if response else None,"route":response["route"] if response else None})
-        police["recentIncidents"]=(police.get("recentIncidents",[])+incidents)[-24:]
+        history=police.get("recentIncidents",[])+incidents
+        police["recentIncidents"]=[i for i in history if i.get("status") in ("sin respuesta","en respuesta")]+[i for i in history if i.get("status")=="atendido"][-16:]
         police["lastIncidents"]=len(incidents);police["lastResponded"]=responded;police["lastUnanswered"]=unanswered;police["lastInventoryLoss"]=damage
         police["totalResponded"]=police.get("totalResponded",0)+responded
         police["totalUnanswered"]=police.get("totalUnanswered",0)+unanswered
@@ -5386,7 +5436,7 @@ def police_service_report(workplaces=None,advance=False):
         "units":[{"name":u["name"],"x":u["building"]["x"],"y":u["building"]["y"],
             "vehicles":u["vehicles"],"activeVehicles":u["active"],"staff":u["staff"],
             "priority":u["priority"],"responded":u["responded"]} for u in units],
-        "recentIncidents":police.get("recentIncidents",[])[-8:]}
+        "recentIncidents":[i for i in police.get("recentIncidents",[]) if i.get("status") in ("sin respuesta","en respuesta")]+[i for i in police.get("recentIncidents",[]) if i.get("status")=="atendido"][-8:]}
 
 def health_service_report(workplaces=None,advance=False):
     health=state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})
@@ -5632,7 +5682,7 @@ def fire_service_report(workplaces=None,advance=False,dispatch_only=False):
         for b in state.get("buildings",[]):
             if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue
             work=next((w for w in workplaces if w.get("kind")=="fireStation" and w.get("x")==b.get("x") and w.get("y")==b.get("y")),{})
-            stations.append({"building":b,"staff":max(0,work.get("staffedJobs",0)),"ready":b.get("dispatchReadyDay",day)})
+            stations.append({"building":b,"staff":max(4,work.get("staffedJobs",0)),"ready":b.get("dispatchReadyDay",day)})
         for incident in incidents:
             if incident.get("status")!="ardiendo":continue
             target=next((b for b in state["buildings"] if b.get("x")==incident["x"] and b.get("y")==incident["y"]),None)
@@ -5676,7 +5726,8 @@ def fire_service_report(workplaces=None,advance=False,dispatch_only=False):
     for b in state.get("buildings",[]):
         if b.get("kind")!="fireStation" or b.get("status") in ("cerrado","abandonado"):continue
         work=next((w for w in workplaces if w.get("kind")=="fireStation" and w.get("x")==b.get("x") and w.get("y")==b.get("y")),{})
-        stations.append({"name":b.get("name","Cuartel de bomberos"),"x":b["x"],"y":b["y"],"firefighters":max(0,work.get("staffedJobs",0)),"crews":min(int(b.get("fireEngineCapacity",1)),max(0,work.get("staffedJobs",0)//4)),"readyDay":b.get("dispatchReadyDay",day)})
+        staff=max(4,work.get("staffedJobs",0))
+        stations.append({"name":b.get("name","Cuartel de bomberos"),"x":b["x"],"y":b["y"],"firefighters":staff,"crews":min(int(b.get("fireEngineCapacity",1)),staff//4),"readyDay":b.get("dispatchReadyDay",day)})
     eligible=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","hotel","airport","port","school")]
     covered=0
     for target in eligible:
@@ -5687,6 +5738,47 @@ def building_road_access(building):
     """Un edificio tiene acceso cuando una calle continua lo une con la entrada regional."""
     if not isinstance(building,dict) or not isinstance(building.get("x"),int) or not isinstance(building.get("y"),int):return False
     return bool(route_between((4,10),(building["x"],building["y"])))
+
+def change_building_site(action,x,y,to_x=None,to_y=None):
+    """Demolición sin reintegro o traslado a una parcela libre con acceso vial."""
+    if not all(type(v) is int for v in ((x,y) if action=="demolishBuilding" else (x,y,to_x,to_y))):raise ValueError("Seleccioná coordenadas válidas.")
+    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)
+    if not building:raise ValueError("El edificio ya no existe.")
+    if any(p.get("targetX",p.get("x"))==x and p.get("targetY",p.get("y"))==y for p in state.get("projects",[])):raise ValueError("Terminá o cancelá la obra vinculada antes de mover o demoler este edificio.")
+    if any(i.get("status")=="ardiendo" and i.get("x")==x and i.get("y")==y for i in state.get("fireService",{}).get("incidents",[])):raise ValueError("Primero resolvé el incendio del edificio.")
+    if any(i.get("status")=="en respuesta" and ((i.get("stationX"),i.get("stationY"))==(x,y) or (i.get("x"),i.get("y"))==(x,y)) for i in state.get("police",{}).get("recentIncidents",[])):raise ValueError("Esperá a que termine la intervención policial vinculada a este edificio.")
+    if any(i.get("status")=="ardiendo" and (i.get("stationX"),i.get("stationY"))==(x,y) for i in state.get("fireService",{}).get("incidents",[])):raise ValueError("Esperá a que termine la salida de bomberos de este cuartel.")
+    if action=="relocateBuilding":
+        if (x,y)==(to_x,to_y) or is_water(to_x,to_y) or not land_tile_unlocked(to_x,to_y):raise ValueError("Elegí otra parcela desbloqueada y edificable.")
+        if any((b.get("x"),b.get("y"))==(to_x,to_y) for b in state.get("buildings",[])) or any((p.get("x"),p.get("y"))==(to_x,to_y) for p in state.get("projects",[])) or any((a.get("x"),a.get("y"))==(to_x,to_y) for a in state.get("abandoned",[])) or any((r.get("x"),r.get("y"))==(to_x,to_y) for r in state.get("railStations",[])) or any(tuple(r)==(to_x,to_y) for r in state.get("roads",[])):raise ValueError("La parcela de destino está ocupada.")
+        if not route_between((4,10),(to_x,to_y)):raise ValueError("El destino necesita una calle conectada a la ciudad.")
+        if building.get("kind") in ("depot","busGarage","port","airport") and (state.get("busRoutes") or state.get("taxiRoutes") or state.get("supply",{}).get("orders")):raise ValueError("Cancelá las rutas y entregas vinculadas antes de mover esta instalación.")
+        building["x"]=to_x;building["y"]=to_y
+        for workplace in state.get("workplaces",[]):
+            if (workplace.get("x"),workplace.get("y"))==(x,y):workplace.update({"x":to_x,"y":to_y})
+        for depot in state.get("supply",{}).get("depots",[]):
+            if (depot.get("x"),depot.get("y"))==(x,y):depot.update({"x":to_x,"y":to_y})
+        old_employer=f"public-{building.get('kind')}-{x}-{y}"
+        new_employer=f"public-{building.get('kind')}-{to_x}-{to_y}"
+        for home in state.get("buildings",[]):
+            for resident in home.get("residents",[]):
+                if resident.get("employerId")==old_employer:resident["employerId"]=new_employer
+        ev("Edificio trasladado",f"{building.get('name','Edificio')} pasó a la parcela {to_x+1},{to_y+1}.")
+        return building
+    if action!="demolishBuilding":raise ValueError("Acción de edificio inválida.")
+    state["buildings"].remove(building)
+    occupants=max(0,int(building.get("occupants",0))) if building.get("kind")=="home" else 0
+    state["population"]=max(0,state.get("population",0)-occupants)
+    state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-occupants*3)
+    state.setdefault("housingDemand",{}).setdefault("unmet",0)
+    state["housingDemand"]["unmet"]+=occupants
+    state["jobs"]=max(0,state.get("jobs",0)-max(0,int(building.get("jobSlots",(building.get("business") or {}).get("jobSlots",0)))))
+    monthly=building.get("monthlyCost",180 if building.get("kind")=="depot" else 0)
+    state["monthlyExpenses"]=max(0,state.get("monthlyExpenses",0)-monthly)
+    state["workplaces"]=[w for w in state.get("workplaces",[]) if (w.get("x"),w.get("y"))!=(x,y)]
+    state.get("supply",{}).get("depots",[])[:]=[d for d in state.get("supply",{}).get("depots",[]) if (d.get("x"),d.get("y"))!=(x,y)]
+    ev("Edificio demolido",f"{building.get('name','Edificio')} fue demolido sin devolución de fondos.")
+    return building
 
 def public_state(player_id=None):
     ensure_land_claims()
@@ -6052,6 +6144,9 @@ class Handler(BaseHTTPRequestHandler):
                     state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
+                elif action in ("demolishBuilding","relocateBuilding"):
+                    try:change_building_site(action,data.get("x"),data.get("y"),data.get("toX"),data.get("toY"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
                 elif action=="createTaxiRouteFromDepot":
                     try:create_taxi_route_from_depot(data.get("depotX"),data.get("depotY"),data.get("stops",[]))
                     except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
@@ -6192,6 +6287,8 @@ class Handler(BaseHTTPRequestHandler):
                         except ValueError as error:self._send(409,{"error":str(error)});return
                         if kind=="fireStation" and any(i.get("status")=="ardiendo" for i in state.get("fireService",{}).get("incidents",[])):
                             fire_service_report(commute_model().get("workplaces",[]),dispatch_only=True)
+                        if service_id in ("policePost","policeStation","policeHQ"):
+                            police_service_report(commute_model().get("workplaces",[]),advance=True)
                         self._send(200,public_state(pid));return
                     c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=max(3,round(spec["days"]*c["days"]/240))
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.

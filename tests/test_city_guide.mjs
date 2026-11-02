@@ -14,14 +14,14 @@ test('Incidentes físicos muestran marcador 2D con acción y sin inventar evento
  assert.ok(alerts.every(a=>a.title&&a.detail&&a.action&&Number.isFinite(a.x)&&Number.isFinite(a.y)));
  assert.equal(alerts.find(a=>a.kind==='fire').priority,0);
  assert.ok(alerts.find(a=>a.kind==='police').detail.includes('patrulla'));
- assert.equal(collectCityAlerts({...city,day:150}).filter(a=>a.kind==='police').length,0);
+ assert.equal(collectCityAlerts({...city,day:150}).filter(a=>a.kind==='police').length,1,'El aviso continúa mientras el incidente siga sin respuesta.');
 });
 
 test('Las alertas siguen disponibles en sectores lejanos y coordenadas negativas',()=>{
  const city={day:200,policeReport:{recentIncidents:[
   {id:'far-east',day:200,x:128,y:64,status:'sin respuesta',location:'Extremo oriental'},
   {id:'far-west',day:200,x:-40,y:-24,status:'atendido',location:'Extremo occidental'}]},projects:[],roadAssets:[]};
- assert.deepEqual(collectCityAlerts(city).map(a=>[a.id,a.x,a.y]),[['far-east',128,64],['far-west',-40,-24]]);
+ assert.deepEqual(collectCityAlerts(city).map(a=>[a.id,a.x,a.y]),[['far-east',128,64]]);
 });
 
 test('Calle deteriorada no interpreta ausencia de calidad como desperfecto',()=>{

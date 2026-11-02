@@ -69,5 +69,18 @@ class PoliceUrbanOnline(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"conexión vial"):
                 server.invest_police_unit("openPoliceUnit",self.center["x"],self.center["y"])
 
+    def test_existing_unanswered_incident_is_dispatched_after_station_opens(self):
+        home=next(b for b in self.s["buildings"] if b["kind"]=="home")
+        mission={"id":"pending-police-test","x":home["x"],"y":home["y"],"day":self.s["day"],"status":"sin respuesta","location":"Barrio de prueba"}
+        self.s.setdefault("police",{})["recentIncidents"]=[mission]
+        with patch.object(server,"route_between",return_value=[(4,10),(5,10),(6,10)]):
+            server.invest_police_unit("openPoliceUnit",self.center["x"],self.center["y"])
+            server.police_service_report(self.staff,advance=True)
+            self.assertEqual(mission["status"],"en respuesta")
+            self.assertEqual(mission["stationX"],self.center["x"])
+            self.s["day"]+=1
+            server.police_service_report(self.staff,advance=True)
+            self.assertEqual(mission["status"],"atendido")
+
 if __name__=="__main__":
     unittest.main()

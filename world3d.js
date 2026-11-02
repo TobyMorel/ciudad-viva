@@ -411,40 +411,27 @@ export function createWorld(canvas){
         selection:{type:role,title:description.title,description:description.description,
         metrics:description.metrics||[]}});
     };
-    const recentPolice=(state.policeReport?.recentIncidents||[]).filter(x=>['atendido','en respuesta'].includes(x.status)
-      &&Number.isInteger(x.day)&&state.day-x.day>=0&&state.day-x.day<=2&&x.route?.length>1);
-    for(const unit of state.policeReport?.units||[]){
-      const origin=[unit.x,unit.y],dispatched=recentPolice.filter(x=>x.stationX===unit.x&&x.stationY===unit.y);
-      for(let i=0;i<Math.min(3,unit.vehicles||0);i++){
-        const incident=i<unit.activeVehicles?dispatched[i]:null;
-        const trip=incident?serviceRoadPath(origin,[incident.x,incident.y],openRoads):null;
-        const path=trip||(i<unit.activeVehicles?patrolPath(origin,unit.priority,openRoads,state):null);
-        const idle=!path||i>=unit.activeVehicles;
-        const title=incident&&trip?`Patrulla · intervención en ${incident.location}`:`Patrulla ${i+1} · ${unit.name}`;
-        add('Policía',makePoliceCar(),path,{title,description:incident&&trip?
-          'Recorrido de un incidente registrado, reproducido en 3D por las calles de la ciudad.':'Patrullaje de prevención con móvil equipado, personal y calles habilitadas.',
-          metrics:[['Dotación',unit.staff+' trabajadores'],['Prioridad',unit.priority],
-            ['Estado',idle?'Estacionado':incident&&trip?'Intervención reciente':'Patrullando']]},
-          `pol-${unit.x}-${unit.y}-${i}`,{idle,side:(i-1)*.16,...(incident&&trip?{deliveryStartDay:incident.day,deliveryEndDay:(incident.arrivalDay||incident.day+1)}:{})});
-        if(idle){const a=serviceRoadPath(origin,[4,10],openRoads);const p=a?.[0]||tilePos(unit.x,unit.y);const m=trafficRoot.children.at(-1);m.position.set(p[0]+(i-1)*.42,0,p[1]+.18)}
-      }
+    const day=Number(state.day)||1;
+    const missions=(state.policeReport?.recentIncidents||[]).filter(i=>i.route?.length>1&&i.stationX!=null&&(
+      i.status==='en respuesta'||i.status==='atendido'&&day<=(i.resolvedDay||0)+1));
+    for(const incident of missions){
+      const outward=incident.route.map(([x,y])=>tilePos(x,y));
+      const roundTrip=[...outward,...outward.slice(0,-1).reverse()];
+      add('Policía',makePoliceCar(),roundTrip,{title:`Patrulla · ${incident.location||'incidente'}`,
+        description:incident.status==='atendido'?'La patrulla resolvió el incidente y vuelve a su comisaría.':'La patrulla viaja al incidente por calles conectadas.',
+        metrics:[['Estado',incident.status],['Origen',incident.station||'Comisaría']]},`pol-${incident.id}`,
+        {side:-.18,deliveryStartDay:incident.dispatchDay??incident.day,deliveryEndDay:(incident.arrivalDay??day)+1});
     }
-    const activeFire=(state.fireReport?.activeIncidents||[]).filter(x=>x.status==='ardiendo'&&x.responseRoute?.length>1);
-    const recentFire=(state.fireReport?.recentIncidents||[]).filter(x=>x.status==='controlado'
-      &&Number.isInteger(x.resolvedDay)&&state.day-x.resolvedDay>=0&&state.day-x.resolvedDay<=2&&x.route?.length>1);
-    for(const unit of state.fireReport?.stations||[]){
-      const incident=activeFire.find(x=>x.stationX===unit.x&&x.stationY===unit.y)||recentFire.find(x=>x.stationX===unit.x&&x.stationY===unit.y);
-      const trip=incident?(incident.responseRoute?.length>1?incident.responseRoute.map(([x,y])=>tilePos(x,y)):serviceRoadPath([unit.x,unit.y],[incident.x,incident.y],openRoads)):null;
-      const active=unit.firefighters>=4&&unit.readyDay<=state.day;
-      const path=trip||(!active?null:patrolPath([unit.x,unit.y],'mixto',openRoads,state));
-      const idle=!path||(!trip&&!active);
-      const m=makeFireEngine();
-      add('Bomberos',m,path,{title:incident&&trip?`Bomberos · ${incident.name}`:`Autobomba · ${unit.name}`,
-        description:incident&&trip?'Recorrido de una respuesta real registrada; el cuartel vuelve a estar disponible al cumplir su turno.':
-          'Vehículo del cuartel sujeto a personal, calles y disponibilidad de dotación.',
-        metrics:[['Bomberos',unit.firefighters],['Estado',idle?'En cuartel':incident&&trip?'Respuesta reciente':'Disponible']]},
-        `fire-${unit.x}-${unit.y}`,{idle,side:-.2,...(incident&&trip?{deliveryStartDay:incident.dispatchDay??incident.resolvedDay??state.day,deliveryEndDay:incident.arrivalDay??(incident.resolvedDay??state.day)+1}:{})});
-      if(idle){const road=serviceRoadPath([unit.x,unit.y],[4,10],openRoads);const p=road?.[0]||tilePos(unit.x,unit.y);m.position.set(p[0]-.2,0,p[1]+.13)}
+    const fireHistory=[...(state.fireReport?.activeIncidents||[]),...(state.fireReport?.recentIncidents||[])];
+    const fireMissions=fireHistory.filter((i,index)=>fireHistory.findIndex(other=>other.id===i.id)===index&&i.responseRoute?.length>1&&i.stationX!=null&&(
+      i.status==='ardiendo'||i.status==='controlado'&&day<=(i.resolvedDay||0)+1));
+    for(const incident of fireMissions){
+      const outward=incident.responseRoute.map(([x,y])=>tilePos(x,y));
+      const roundTrip=[...outward,...outward.slice(0,-1).reverse()];
+      add('Bomberos',makeFireEngine(),roundTrip,{title:`Autobomba · ${incident.name||'incendio'}`,
+        description:incident.status==='controlado'?'El incendio está controlado; la dotación regresa al cuartel.':'La dotación viaja al incendio.',
+        metrics:[['Estado',incident.status],['Cuartel',incident.station||'Bomberos']]},`fire-${incident.id}`,
+        {side:-.2,deliveryStartDay:incident.dispatchDay??incident.startDay,deliveryEndDay:(incident.arrivalDay??day)+1});
     }
     for(const incident of state.roadIncidentReport?.activeIncidents||[]){if(incident.status!=='en_respuesta'||!incident.responseRoute?.length)continue;const route=incident.responseRoute.map(([x,y])=>tilePos(x,y));add('Rescate vial',makeFireEngine(),route,{title:`Rescate vial · ${incident.x+1},${incident.y+1}`,description:`Unidad municipal responde a un choque por ${incident.cause}. La calle está cerrada mientras se limpia el tramo.`,metrics:[['Causa',incident.cause],['Estado',incident.status],['Respuesta',incident.station||'Cuartel municipal'],['Cierre estimado',`${incident.remainingDays} día(s)`]]},incident.id,{side:.24})}
     const recentMedical=(state.healthReport?.hospital?.ambulanceDispatches||[]).filter(x=>x.status==='traslado'

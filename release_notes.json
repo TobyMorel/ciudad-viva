@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.144",
+  "currentVersion": "0.145",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.145",
+      "date": "2026-11-02",
+      "roadmapPhase": 1,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La ciudad nueva empieza con cuatro sectores de 8 × 8 parcelas (16 × 16 en total) y el acceso exterior. El borde construible inicial queda marcado con candados visibles en el mapa.",
+        "Al seleccionar un candado, la ficha indica coordenadas, tamaño, costo, conexión necesaria y fondos libres; permite comprar un sector contiguo. El precio sube por anillos de expansión. Los dos motores validan y descuentan el dinero una sola vez, respetando compromisos municipales.",
+        "Las zonas desbloqueadas habilitan calles, permisos y edificios. La coordenada ya no tiene un límite de cuadrícula en las reglas del juego; el terreno visual se mantiene bajo la cámara sin borde fijo, para seguir expandiendo según el equipo pueda procesar la ciudad.",
+        "Las partidas anteriores conservan sus construcciones: al cargarlas, se habilitan automáticamente los sectores que ya ocupaban. Se guardan los nuevos sectores comprados.",
+        "Verificado: 8 pruebas Python de asentamiento/expansión, 3 pruebas Offline, Chromium para candado, precio y compra a 390×844 y 1440×900; sintaxis Python/JavaScript y diff limpios. La fase 1 sube de 70% a 75%; siguen pendientes el catastro/derechos de propiedad y validación de ciudades muy grandes. Progreso global no estimable sin pesos comparables verificables para las 34 fases."
+      ]
+    },
     {
       "version": "0.144",
       "date": "2026-11-02",
@@ -1563,16 +1577,16 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 23 · terminal portuaria de carga más completa",
-      "detail": "Ampliar la cadena a otras mercancías y depósitos con capacidad, turnos de grúa, cola de atraque y acceso vial; después avanzar en sistemas de otras fases pendientes, manteniendo causas y cantidades reales."
+      "title": "Fase 1 · catastro y propiedad de parcelas",
+      "detail": "Completar titularidad/uso de parcelas y guardado, y probar navegación y construcción en sectores muy alejados; luego rotar a mecánicas con baja cobertura, como patrulla física de fase 9."
     },
     {
-      "title": "Fase 29 · libro contable clasificado",
-      "detail": "Desglosar los movimientos netos existentes por concepto y origen/destino; conciliar transferencias, compromisos y caja sin duplicar operaciones."
+      "title": "Fase 9 · respuesta policial visible",
+      "detail": "Asignar una patrulla física disponible a un robo, recorrer una ruta vial única, registrar llegada y resolución; avisar qué cobertura falta si no hay unidad accesible."
     },
     {
-      "title": "Verificación integral y red local",
-      "detail": "Mantener pruebas de motores, stress de décadas y UI responsive; probar LAN entre dos equipos físicos cuando haya entorno disponible."
+      "title": "Crecimiento urbano y expansión extensa",
+      "detail": "Comprobar durante varios años casas automáticas, demanda comercial e industrial, carretera exterior, costos de servicios y rendimiento de cámara/guardado al comprar sectores."
     }
   ],
   "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
@@ -1590,10 +1604,11 @@
     {
       "phase": 1,
       "title": "Terreno, parcelas, calles y urbanización",
-      "progress": 70,
-      "summary": "Parcelas, zonificación por color y pintura continua desde herramientas.",
+      "progress": 75,
+      "summary": "Parcelas, zonificación por color, pintura continua y expansión por sectores contiguos pagados, sin borde artificial de coordenadas.",
       "pending": [
-        "Catastro completo, derechos de propiedad y expansión extensible del mapa."
+        "Catastro completo y derechos de propiedad.",
+        "Validar rendimiento, guardado/carga y herramientas en ciudades de gran escala."
       ]
     },
     {

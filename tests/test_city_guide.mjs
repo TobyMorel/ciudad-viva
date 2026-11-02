@@ -17,6 +17,13 @@ test('Incidentes físicos muestran marcador 2D con acción y sin inventar evento
  assert.equal(collectCityAlerts({...city,day:150}).filter(a=>a.kind==='police').length,0);
 });
 
+test('Las alertas siguen disponibles en sectores lejanos y coordenadas negativas',()=>{
+ const city={day:200,policeReport:{recentIncidents:[
+  {id:'far-east',day:200,x:128,y:64,status:'sin respuesta',location:'Extremo oriental'},
+  {id:'far-west',day:200,x:-40,y:-24,status:'atendido',location:'Extremo occidental'}]},projects:[],roadAssets:[]};
+ assert.deepEqual(collectCityAlerts(city).map(a=>[a.id,a.x,a.y]),[['far-east',128,64],['far-west',-40,-24]]);
+});
+
 test('Calle deteriorada no interpreta ausencia de calidad como desperfecto',()=>{
  const a=collectCityAlerts({day:2,roadAssets:[{x:5,y:5},{x:6,y:5,quality:18},{x:7,y:5,quality:60}]});
  assert.equal(a.filter(x=>x.kind==='road').length,1);

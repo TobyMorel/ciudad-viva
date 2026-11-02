@@ -599,3 +599,8 @@ Promoción privada por parcela: viviendas, comercios y fábricas zonificados ini
 El fuego activo produce 11 llamas y 18 partículas de humo 3D por incidente. Las alertas ya existentes de seguridad y bomberos usan texto directo y abren detalles al tocarlas. Esto no cambia frecuencia de incidentes ni capacidad de despacho. Verificado: 103 pruebas Python, 68 Node Offline/compartidos, stress de 30 años × 4 perfiles y Chromium a 390×844/1440×900 para incendio/puerto; `git diff --check`, sintaxis y JSON.
 
 Pendiente en esta solicitud: mortalidad natural/edades, cementerios y crematorios con cupo; escena del robo y desplazamiento visual de patrullas; farolas ligadas individualmente a cada calle; validar crecimiento sostenido más rápido. La fase 4 conserva 60%, la fase 5 70%, fase 9 70%. Progreso global no estimable por falta de pesos comunes verificables para 34 fases. LAN física aún pendiente.
+
+
+## Alfa 0.145 · expansión pagada del terreno (fase 1)
+
+La fase 1 sube de 70% a 75% por la compra de sectores contiguos de 8×8, precio por distancia, persistencia, acceso infinito por coordenadas y encuadre responsive del flujo de compra. En la partida nueva se habilita una región 16×16 junto al acceso regional. Verificación local: 114 pruebas Python, 74 pruebas Node/Offline, cuatro perfiles de estrés por 30 años, y Chromium de marcadores, layout general y expansión en 390×844/1440×900. Las pruebas se corrieron nuevamente de forma aislada para evitar competencia de navegador. Pendiente para fase 1: catastro y derechos de propiedad; falta estrés de mapa/cámara muy grande. No asignar porcentaje global sin pesos comunes verificables.

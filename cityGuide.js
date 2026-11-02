@@ -1,6 +1,5 @@
 // Datos de eventos existentes: ninguna alerta inventa un robo, incendio o despacho.
-const integer=n=>Number.isInteger(Number(n))&&Number.isFinite(Number(n));
-const site=(x,y)=>integer(x)&&integer(y)&&Number(x)>=0&&Number(y)>=0&&Number(x)<28&&Number(y)<20;
+const site=(x,y)=>Number.isSafeInteger(Number(x))&&Number.isSafeInteger(Number(y));
 const item=(kind,icon,title,detail,action,x,y,day,id,priority=2)=>({kind,icon,title,detail,action,x:Number(x),y:Number(y),day,id:String(id),priority});
 export const INDUSTRIES={
   food:{label:'Procesadora de alimentos',produces:'Alimentos para comercios'},

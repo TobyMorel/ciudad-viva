@@ -1,3 +1,7 @@
+## Última decisión registrada · Alfa 0.145
+
+El mapa comienza con cuatro sectores de 8×8, candados seleccionables y compra de sectores adyacentes. Ver decisión técnica completa y límites prácticos en la sección Alfa 0.145 al final de este archivo.
+
 ## Alfa 0.141 · mortalidad y servicios funerarios
 
 `urbanEvolution.deceased` conserva hasta 2.000 fallecimientos recientes con ID de residente, edad, año/día, hogar y disposición funeraria. La edad avanza al cambiar el año de simulación; la curva anual determinista por ID evita resultados arbitrarios y reproducibilidad rota al recargar. Los umbrales por edad están implementados en `natural_death_threshold()` y `offlineNaturalDeathThreshold()`. Al morir, la identidad se retira del hogar y del padrón en la misma transición. La vacante puede recibir migración en el cierre mensual normal.
@@ -626,3 +630,12 @@ La preferencia familiar se fija por identidad y persiste en el registro de falle
 `growthDemandState()` en `game.js` refleja las reglas actuales de `advance_zoned_development`: vivienda normalizada a la demanda inicial de 36; comercios requeridos desde 24 residentes y a razón de un local cada 90 habitantes; fábricas según locales activos que registran ventas/insumos y una por cada dos comercios (tope actual de seis unidades requeridas). El motor construye hasta cubrir ese objetivo y cuenta edificios y obras privadas ya iniciadas. Son indicadores del sistema existente y no crean demanda ni construcciones por sí solos. Los medidores son verticales y permanecen sobre el mapa.
 
 `building_road_access()` en Online y `offlineRoadRoute()` en Offline definen el camino continuo entre edificio y entrada regional. El resultado se agrega sólo a la vista como `roadAccessConnected`/`roadAccessReason`; no altera guardados antiguos ni el estado de construcción. Una alerta seleccionable identifica un corte. Colocación requiere calle adyacente ya terminada; el desarrollo automático zonificado requiere también ruta a la entrada exterior. Sistemas de movimiento, comercio y cobertura ya usan el grafo vial.
+
+# Decisiones técnicas · Alfa 0.145
+
+- El terreno construible se guarda en `landClaims`: `chunkSize=8`, lista de sectores `cx,cy` y contador de expansiones. La nueva ciudad recibe cuatro sectores iniciales que ocupan una cuadrícula 16×16; el acceso vial exterior queda en `(4,10)`. Las coordenadas negativas usan división de piso coherente Online/Offline.
+- Se habilita solo un sector ortogonalmente contiguo a otro ya adquirido. El precio depende del anillo de coordenadas respecto al origen (mínimo $3.500 y suma $2.200 por anillo); la tesorería disponible descuenta compromisos de contratos antes de permitir el pago. Todos los jugadores comparten la misma acción y tesorería.
+- La respuesta pública del estado calcula el frente bloqueado actual; al comprar una zona se recalcula. No se persiste una lista infinita de terreno: el guardado almacena sectores adquiridos, por lo que el tamaño de la partida crece con lo realmente comprado.
+- Los guardados sin `landClaims` se migran conservando terreno ocupado por calles, edificios, obras, parcelas y ruinas. No se fuerza un reinicio de ciudades existentes.
+- El suelo 3D amplio se desplaza por segmentos bajo la cámara para no presentar un borde visual al navegar. Es una escena plana con costa local, no una generación de biomas ni un terreno topográfico sin límite. La expansión jugable no tiene borde artificial de coordenadas; precisión/renderizado y rendimiento limitan en la práctica ciudades extremadamente extensas.
+- Hito actual: fase 1, extensión territorial. Próximo foco: completar catastro y derechos de propiedad y probar rutas/guardados en mapas grandes; luego retomar nuevas mecánicas de fases con menor cobertura.

@@ -1,36 +1,26 @@
-# Continuidad inmediata · Alfa 0.144
+# Continuidad inmediata · Alfa 0.145
 
-## Flujo de partida nueva, acceso vial y demanda visible · fase 4
+No empezar desde cero. Priorizar mecánicas conectadas y evitar varias entregas de pulido. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. Publicar cada versión en `main` con el correo GitHub noreply configurado.
 
-La nueva partida inicia vacía con sólo la conexión de acceso exterior, sin viviendas ni habitantes, y una demanda inicial de 36 personas. Las calles municipales se trazan desde una calle existente; cualquier edificio requiere una calle terminada junto a su parcela. El desarrollo zonificado sigue siendo privado: las viviendas inician por etapas automáticamente cuando hay demanda y terreno verde conectado, con materiales privados incluidos y sin pedidos al inventario municipal. La llegada de habitantes impulsa la necesidad de comercios; las ventas comerciales impulsan fábricas.
+## Estado de la expansión territorial
 
-El HUD del mapa presenta tres barras verticales siempre visibles: vivienda (personas que esperan / 36), comercio (locales que requiere la población según la regla actual) e industria (fábricas locales aún requeridas por la actividad comercial). Se recalculan con cada actualización Online/Offline y no exigen abrir Ciudad. Cada edificio expone `roadAccessConnected`, calculado por camino real a la salida regional; si se corta, un marcador sobre el edificio y su inspección explican la interrupción. Al reconstruir una ruta continua el indicador se restablece. Los desplazamientos, abastecimientos y coberturas que ya dependen de rutas se recalculan con la red.
+La partida nueva arranca con cuatro sectores construibles de 8×8 (16×16 parcelas) y el acceso regional en `(4,10)`. Los sectores contiguos del frente muestran candados 3D. Al seleccionar uno aparece su tamaño, coordenadas, precio y un botón para comprarlo. La compra exige adyacencia y fondos municipales libres tras reservar contratos; cada compra queda persistida y habilita calles, zonas y obras. El precio del sector depende del anillo: `$3.500 + $2.200 × (anillo−1)`, mínimo $3.500.
 
-Verificado: `tests/test_new_settlement.py` (5), `tests/test_new_settlement_offline.mjs` (2), `tests/test_ui_layout.mjs` en Chromium a 390×844 y 1440×900; sintaxis y diff limpios. La fase 4 queda en 60%; no se sube el porcentaje hasta comprobar expansión sostenida y su economía derivada. El progreso total no es estimable hasta definir pesos verificables comunes para las 34 fases.
+Lógica Online en `server.py`: `ensure_land_claims`, `land_chunk_info`, `land_frontier`, `unlock_land_chunk`; `place`/`zone` validan que el sector esté comprado. La acción `/api/action` corre bajo el lock global. Lógica Offline paralela en `offline.js`: `ensureOfflineLandClaims`, `offlineLandInfo`, `offlineLandFrontier`, acción `unlockLand`. Interfaz y selección en `game.js`; iconos en `world3d.js`; ficha en `design.css`. El estado guarda solo la lista de sectores adquiridos y calcula el frente al leer, para no persistir una lista infinita. Coordenadas negativas usan floor en ambos motores. Guardados anteriores abren automáticamente el terreno ocupado.
 
+El mapa jugable no tiene límite fijo de coordenadas; el suelo visual se desplaza alrededor de la cámara. No se han implementado aún biomas ni relieve procedural, y la escala práctica sigue limitada por memoria, precisión y rendimiento del equipo. Fase 1 pasa de 70% a 75%; siguen pendientes catastro/derechos de propiedad y pruebas de ciudades grandes.
 
-El cambio activo agrega transporte funerario real en el mapa. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. No vuelvas a empezar desde cero ni declares que todas las fases están hechas. El usuario prioriza sistemas jugables nuevos, entregas acumulativas, interfaz sin solapamientos y publicación de cada cambio a la rama `main`.
+## Verificación de Alfa 0.145
 
-## Sistemas de esta versión
+114 pruebas Python; 74 pruebas Node Offline/modelo; cuatro escenarios de estrés con 30 años cada uno; Chromium de cámara/alertas, UI general y compra de terreno en 390×844 y 1440×900; sintaxis y JSON válidos. Prueba de LAN física entre dos computadoras no realizada. Global no estimable: no existen pesos de aceptación comunes verificables para las 34 fases.
 
-- `server.py`: preferencia familiar determinista, `process_funeral_queue`, búsqueda por distancia vial y alcance, reserva de cupo, viaje de ida y vuelta, ETA y llegada a cementerio/crematorio. El fallecimiento se conserva en historial; el traslado queda en `funeralTrip`.
-- `offline.js`: comportamiento paralelo para guardado local. Mantener paridad semántica y soportar registros de fallecidos antiguos sin preferencia.
-- `world3d.js`: coche fúnebre visible, animado y seleccionable durante `en traslado`. Usa la ruta registrada y presenta destino/servicio/ETA.
-- `cityGuide.js` y `game.js`: marcador ⚱️ sobre el hogar si la familia está en espera; al tocarlo se muestra la razón y acción municipal. `Ciudad → Evolución` lista las capacidades, los viajes y la espera.
-- Servicios: cementerio 120 plazas permanentes, radio vial 14; crematorio 24 cremaciones anuales, radio vial 16. Exigen construcción completada, estado operativo y conexión a calle. Familia mantiene su preferencia; no sustituir cementerio por crematorio ni viceversa. Reserva cupo durante el viaje para evitar sobreasignación concurrente.
+## Próximo trabajo
 
-## Verificación de Alfa 0.143
+Completar catastro y derechos de propiedad de parcelas en Online/Offline, persistir dueños/usos y conectarlos con expansión; añadir pruebas de guardado/carga y cámara en sectores muy alejados. Luego rotar hacia mecánicas de menor cobertura (fase 9, patrulla física que recorre calles y responde incidentes). Evitar profundizar la presentación de candados por varias versiones.
 
-`python3 -m unittest discover -s tests -p 'test_funeral_services_online.py' -v` (6 pruebas); `node tests/test_funeral_services_offline.mjs` (3 pruebas); `node tests/test_funeral_ui.mjs` (Chromium móvil y escritorio). Compilación/sintaxis: `python3 -m py_compile server.py`, `node --check game.js`, `offline.js`, `world3d.js`, `cityGuide.js`. LAN física no probada. Fase 9 sigue en 75%; global `null` porque falta un sistema de ponderación común verificable de las 34 fases.
+## Reglas de publicación
 
-## Próxima mecánica
-
-Implementar fase 9: incidentes de robo con escena/aviso visible y patrulla física asignada desde comisaría. La patrulla recorre calles y cierra el incidente al llegar; verificar recursos, alcance y asignación única. Luego revisar farolas garantizadas por tramo y evolución visible de demanda y zonificación. Evitar largas rondas de pulido visual.
-
-## Publicar
-
-Usa el autor Git exacto `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, push a `main`, confirma commit SHA y estado CI/Vercel, y genera ZIP completo desde la revisión publicada excluyendo `.git`, cachés y zips anteriores.
-
+Configurar autor exacto `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, hacer push directo a rama `main`, confirmar SHA y estado de CI y entregar ZIP completo excluyendo `.git`, cachés y ZIP anteriores. No declarar una prueba LAN o porcentaje global sin evidencia.
 
 ## Continuidad histórica
 
@@ -680,3 +670,15 @@ La fase 29 permanece en 40%, sin alterar criterio: cinco bloques de 20 puntos, r
 Nuevo sistema parcial de fase 29: `scenarios12` Online en `municipal_finance_scenarios` (`server.py`) y Offline en `offlineMunicipalScenarios` (`offline.js`); UI `municipalScenarioPanel`/`.municipal-scenarios` en Economía. Casos base 0/0, favorable +10% ingreso/−5% gastos y adverso −15% ingreso/+10% gastos, horizonte de 12 meses. Usa forecast real de proyectos, hitos, prioridades, reservas, deuda y mora, en copias sin alterar estado guardado. Incluye una clave de caché ligada a entradas financieras para que los sondeos no recalculen continuamente.
 
 Tests: `test_municipal_forecast_online.py`, `test_municipal_forecast_offline.mjs` y `test_municipal_forecast_ui.mjs`. Fase 29: 50% con pesos fijos 20 puntos/bloque y valores 100/50/50/0/50. Próximo: extender a 1/4/10/20 años con población, salarios, inflación ficticia, impuestos y demanda; después calcular ciclo de vida de infraestructura con componentes conectados al mantenimiento/operación existentes. No llamar completo al comparador hasta cubrir horizonte y supuestos trazables.
+
+# Continuidad inmediata · Alfa 0.145
+
+La última entrega agrega expansión territorial pagada en fase 1. Lee los bloques Alfa 0.145 en `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md` y `SIGUIENTE_ENTREGA.md` antes de continuar. Lógica de servidor Online: `server.py`, `new_settlement_state`, `ensure_land_claims`, `land_chunk_info`, `land_frontier`, `unlock_land_chunk`, además de validaciones en acciones `place` y `zone`. Offline equivalente en `offline.js` (`ensureOfflineLandClaims`, `offlineLandInfo`, `offlineLandFrontier`, `unlockLand`). Cliente/interfaz 3D: `game.js` y `world3d.js`; estilo de ficha en `design.css`.
+
+Cada sector mide 8×8; la nueva partida abre `0,0`, `1,0`, `0,1`, `1,1`, con salida regional `(4,10)`. La interfaz dibuja candados sobre el frente ortogonal calculado. Seleccionar una parcela bloqueada muestra su costo y un botón; la compra requiere vecino desbloqueado y caja libre tras compromisos. Precio por anillo: 3.500 + 2.200 por cada anillo adicional, con anillo mínimo 1. Las coordenadas negativas y las partidas anteriores están contempladas; migrar guardados abre los sectores ocupados existentes. Para mantener paridad, aplicar cualquier cambio de reglas en ambos motores.
+
+Pruebas de esta build: `tests/test_new_settlement.py`, `tests/test_new_settlement_offline.mjs`, `tests/test_land_expansion_ui.mjs`. Esta última revisa candado, precio, compra y encuadre en 390×844 / 1440×900. Fase 1 pasa a 75% (antes 70%); faltan catastro/derechos de propiedad y estrés con ciudades extensas. No declarar el juego completo ni inventar progreso global: `overallProgress` sigue `null` por falta de ponderación común verificable para 34 fases.
+
+Siguiente tarea inmediata: desarrollar catastro/propiedad ligado a parcelas y expandir pruebas de guardado y cámara más allá del viejo borde 28×20. Después cambiar a otra mecánica incompleta del roadmap. No prolongar el trabajo en pulido menor.
+
+Publicación obligatoria: commit directo en `main`, autor Git `Tobias Morel <66056611+TobyMorel@users.noreply.github.com>`, revisar SHA/CI y crear ZIP completo sin `.git`, cachés ni ZIP de versiones anteriores.

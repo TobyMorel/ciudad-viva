@@ -10,6 +10,21 @@ test('Offline nueva partida: empieza en terreno vacío, con acceso regional y de
  try{const adapter=await createOfflineAdapter(),state=await adapter.request('/api/state');assert.deepEqual(state.buildings,[]);assert.deepEqual(state.roads,[[4,10]]);assert.equal(state.population,0);assert.equal(state.housingDemand.unmet,36);assert.equal(state.newSettlement,true);assert.equal(state.buildings.length,0)}finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
 });
 
+test('Offline: los candados desbloquean sectores contiguos pagando y la coordenada no tiene borde',async()=>{
+ const fetch0=globalThis.fetch,storage0=globalThis.localStorage;
+ globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});
+ globalThis.localStorage={getItem:()=>null,setItem:()=>{}};
+ try{
+  const adapter=await createOfflineAdapter();let state=await adapter.request('/api/state');
+  assert.equal(state.landClaims.unlockedChunks.length,4);assert.equal(state.landClaims.chunkSize,8);
+  const before=state.money;
+  await assert.rejects(adapter.request('/api/action',{action:'unlockLand',chunkX:8,chunkY:8}),/zona vecina/);
+  state=await adapter.request('/api/action',{action:'unlockLand',chunkX:-1,chunkY:0});
+  assert.equal(state.money,before-3500);assert.ok(state.landClaims.unlockedChunks.includes('-1,0'));
+  await assert.rejects(adapter.request('/api/action',{action:'place',kind:'road',x:-1,y:10,contractor:'Sur Obras'}),/zona bloqueada/);
+ }finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
+});
+
 test('Offline: pintar vivienda activa promotor privado sin esperar pedidos de materiales',async()=>{
  const fetch0=globalThis.fetch,storage0=globalThis.localStorage,now0=Date.now;let stored=null,clock=1000;
  globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});

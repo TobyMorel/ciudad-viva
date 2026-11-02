@@ -10,11 +10,12 @@ try{
   await page.goto('http://127.0.0.1:18766/',{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{
    const city=await fetch('/offline_seed.json').then(r=>r.json());
-   city.paused=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'atendido',station:'Comisaría',route:[[10,10],[10,9]]}]};
+   city.paused=true;city.newSettlement=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'atendido',station:'Comisaría',route:[[10,10],[10,9]]}]};
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
   await page.locator('#offlineMode').click();
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'));
+  await page.waitForFunction(()=>document.getElementById('netLabel')?.textContent.includes('Partida offline'));
   const pin=page.locator('[data-city-alert="camera-pin-test"]');
   await pin.waitFor({state:'visible',timeout:10000});
   const initial=await pin.evaluate(e=>({left:e.style.left,top:e.style.top}));

@@ -1,4 +1,4 @@
-# Estado de desarrollo · Alfa 0.144
+# Estado de desarrollo · Alfa 0.145
 
 ## Flujo de partida nueva, acceso vial y demanda visible · fase 4
 
@@ -1099,3 +1099,11 @@ Fase 15 sube de 60% a 65% por coherencia visual y legibilidad comprobables. Prog
 - Al cambiar ventanas, los nodos de controles regresan a sus contenedores originales. La lista LAN consulta `/api/rooms` si existe un iniciador y muestra sesiones anunciadas. En Vercel no es posible descubrir máquinas LAN desde un sitio estático bajo HTTPS; se ofrece estado vacío y unión manual, sin simular salas.
 - Verificación: sintaxis JS, pruebas Python 52/52, inspección visual móvil y escritorio de Construir, Ciudad, Economía y Tráfico. La prueba completa de Playwright terminó correctamente en 390 y 1440 px tras evitar el render 3D detrás de ventanas; también pasó la prueba visual de respuesta de servicios. Se verificaron por navegador la lista vacía LAN, el panel flotante de tráfico y el tema oscuro. Pasó también el stress económico de 30 años con cuatro perfiles y 360 cierres mensuales por perfil. La prueba entre dos computadoras físicas sigue pendiente.
 - Progreso global: no cuantificable todavía. El método por fase usa incrementos de 5 puntos con evidencia, pero no hay pesos estables y verificables para agregar las 34 fases. Fases 7 y 15: 70% cada una, ambas parciales. Hito actual F; próximo: completar simulación vial con tiempos autoritativos, accidentes y otros sistemas pendientes de F.
+
+## Alfa 0.145 · expansión territorial pagada (fase 1)
+
+La partida nueva arranca con cuatro sectores contiguos de 8×8 parcelas (16×16 parcelas construibles) y una única conexión vial exterior. El frente visible de sectores bloqueados lleva candados 3D seleccionables; su ficha informa coordenadas, cantidad de parcelas, conexión vecina, costo y estado de fondos. Desbloquear un sector contiguo descuenta la tesorería municipal disponible después de reservar contratos, registra el evento y habilita calles, zonificación y obras. El costo aumenta por anillos: `$3.500 + $2.200 × (anillo−1)`, con un mínimo de $3.500.
+
+Online y Offline aplican validación y pago en una única acción serial, persisten los sectores y prohíben colocar calles, zonas o activos en suelo cerrado. El universo de coordenadas ya no tiene el límite 28×20; la superficie visual reutiliza suelo procedimental alrededor de la cámara. Guardados anteriores migran habilitando las zonas que ya contienen caminos, parcelas o construcciones. El borde desbloqueable crece a partir del terreno comprado, por lo que no hay un límite artificial fijo de expansión; la escala final depende de rendimiento, precisión numérica y almacenamiento del equipo.
+
+Verificación: 8 pruebas Python de asentamiento/expansión; 3 pruebas Node Offline; prueba Chromium del candado, precio, desbloqueo y ficha en 390×844 y 1440×900; sintaxis de Python/JavaScript y diff limpios. Fase 1 sube de 70% a 75%. Pendiente: catastro y derechos de propiedad; además falta prueba de estrés de navegación/guardado en una ciudad extensa. Progreso global continúa sin estimar: no hay pesos comunes verificables para integrar las 34 fases.

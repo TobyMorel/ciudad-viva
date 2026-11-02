@@ -1674,7 +1674,51 @@ def new_settlement_state():
     fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
     fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}
     fresh["waste"]={"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0}
+    fresh["landClaims"]={"chunkSize":8,"unlockedChunks":["0,0","1,0","0,1","1,1"],"expansionCount":0}
     return fresh
+
+LAND_CHUNK_SIZE=8
+def ensure_land_claims(target=None):
+    target=state if target is None else target
+    claims=target.get("landClaims")
+    if isinstance(claims,dict) and isinstance(claims.get("unlockedChunks"),list):
+        claims.setdefault("chunkSize",LAND_CHUNK_SIZE)
+        claims.setdefault("expansionCount",max(0,len(claims["unlockedChunks"])-(4 if target.get("newSettlement") else 0)))
+        return claims
+    unlocked={"0,0","1,0","0,1","1,1"} if target.get("newSettlement") else set()
+    for item in [*target.get("roads",[]),*target.get("buildings",[]),*target.get("projects",[]),*target.get("zones",[]),*target.get("abandoned",[])]:
+        try:
+            x,y=(item[0],item[1]) if isinstance(item,(list,tuple)) else (item.get("x"),item.get("y"))
+            if isinstance(x,int) and isinstance(y,int):unlocked.add(f"{x//LAND_CHUNK_SIZE},{y//LAND_CHUNK_SIZE}")
+        except (TypeError,ValueError,IndexError):pass
+    target["landClaims"]={"chunkSize":LAND_CHUNK_SIZE,"unlockedChunks":sorted(unlocked),"expansionCount":max(0,len(unlocked)-(4 if target.get("newSettlement") else 0))}
+    return target["landClaims"]
+
+def land_chunk_info(x,y,target=None):
+    target=state if target is None else target;claims=ensure_land_claims(target);size=int(claims.get("chunkSize",LAND_CHUNK_SIZE));cx,cy=x//size,y//size;chunk=f"{cx},{cy}";opened=set(claims.get("unlockedChunks",[]));neighbors=[f"{cx+dx},{cy+dy}" for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))];tier=max(1,max(abs(cx),abs(cy)))
+    return {"chunk":chunk,"chunkX":cx,"chunkY":cy,"chunkSize":size,"unlocked":chunk in opened,"unlockable":chunk not in opened and any(n in opened for n in neighbors),"cost":3500+2200*(tier-1)}
+
+def land_tile_unlocked(x,y,target=None):return bool(land_chunk_info(int(x),int(y),target)["unlocked"])
+
+def land_frontier(target=None):
+    target=state if target is None else target;claims=ensure_land_claims(target);size=int(claims.get("chunkSize",LAND_CHUNK_SIZE));opened=set(claims.get("unlockedChunks",[]));frontier=set()
+    for value in opened:
+        try:cx,cy=map(int,value.split(",",1))
+        except (ValueError,AttributeError):continue
+        for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
+            candidate=f"{cx+dx},{cy+dy}"
+            if candidate not in opened:frontier.add(candidate)
+    return sorted((land_chunk_info(int(v.split(",")[0])*size,int(v.split(",")[1])*size,target) for v in frontier),key=lambda a:(a["chunkY"],a["chunkX"]))
+
+def unlock_land_chunk(chunk_x,chunk_y):
+    ensure_land_claims();size=int(state["landClaims"].get("chunkSize",LAND_CHUNK_SIZE));chunk_x=int(chunk_x);chunk_y=int(chunk_y);info=land_chunk_info(chunk_x*size,chunk_y*size)
+    if info["unlocked"]:raise ValueError("Esa zona ya está desbloqueada.")
+    if not info["unlockable"]:raise ValueError("Primero tenés que desbloquear una zona vecina.")
+    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+    if available<info["cost"]:raise ValueError(f"Quedan $ {available}; desbloquear esta zona cuesta $ {info['cost']}.")
+    state["money"]-=info["cost"];state["landClaims"]["unlockedChunks"].append(info["chunk"]);state["landClaims"]["unlockedChunks"].sort();state["landClaims"]["expansionCount"]=max(0,len(state["landClaims"]["unlockedChunks"])-(4 if state.get("newSettlement") else 0))
+    ev("Terreno municipal desbloqueado",f"Se habilitó el sector {chunk_x},{chunk_y}: {size*size} parcelas nuevas para calles, zonificación y construcciones. Inversión $ {info['cost']}.")
+    return info
 
 state = new_settlement_state()
 
@@ -2107,7 +2151,8 @@ def begin_unloading(order):
     return True
 
 def is_water(x,y):
-    return x>=24 or (y<3 and x>18)
+    # Costa acotada del mapa original; el resto del terreno es extensible.
+    return (x==24 and 0<=y<20) or (y<3 and 18<x<24)
 
 def route_between(start_coord, destination_coord):
     condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}
@@ -2414,9 +2459,9 @@ def heat_exposure(x,y):
     roads={tuple(p) for p in state.get("roads",[])}
     occupied=roads|{(b.get("x"),b.get("y")) for b in state.get("buildings",[])}|{(p.get("x"),p.get("y")) for p in state.get("projects",[])}
     shade=0
-    for tx in range(max(1,x-1),min(22,x+1)+1):
-        for ty in range(max(1,y-1),min(18,y+1)+1):
-            if (tx,ty) in occupied or tx>=24 or (ty<3 and tx>18):continue
+    for tx in range(x-1,x+2):
+        for ty in range(y-1,y+2):
+            if (tx,ty) in occupied or is_water(tx,ty):continue
             value=math.sin((tx*97+ty*53)*127.1+78.233)*43758.5453
             if value-math.floor(value)<=.27:shade+=1
     terrain=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
@@ -2830,7 +2875,7 @@ def bus_stop_sites(line):
         if (x,y) not in roads:continue
         for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
             point=(x+dx,y+dy)
-            if 0<=point[0]<28 and 0<=point[1]<20 and not is_water(*point) and point not in occupied:candidates.add(point)
+            if not is_water(*point) and land_tile_unlocked(*point) and point not in occupied:candidates.add(point)
     built=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="busStop" and b.get("status") in ("operativo","habilitado") and min((abs(b["x"]-x)+abs(b["y"]-y) for x,y in path),default=99)<=1)
     reserved=sum(1 for p in state.get("projects",[]) if p.get("kind")=="busStop" and p.get("busLineId")==line.get("id"))
     limit=max(0,4-built-reserved)
@@ -5323,6 +5368,7 @@ def building_road_access(building):
     return bool(route_between((4,10),(building["x"],building["y"])))
 
 def public_state(player_id=None):
+    ensure_land_claims()
     ensure_supply_state()
     ensure_finance_state()
     record_municipal_cash_movement()
@@ -5336,6 +5382,7 @@ def public_state(player_id=None):
         connected=building_road_access(building)
         view["buildings"].append({**building,"roadAccessConnected":connected,"roadAccessReason":None if connected else "Sin una ruta vial continua hasta el acceso exterior."})
     view["stateRevision"]=STATE_REVISION
+    view["landClaims"]={**state["landClaims"],"frontierChunks":land_frontier(state)}
     view["governmentReport"]=government_report()
     view["municipalTeam"]=municipal_team_report(player_id)
     view["heritageReport"]=heritage_report()
@@ -5470,8 +5517,13 @@ class Handler(BaseHTTPRequestHandler):
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
                 ensure_government_state()
+                ensure_land_claims()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
                     self._send(409,{"error":"El equipo dejó el gobierno. La partida quedó en modo observación; podés guardar la ciudad o iniciar una nueva."});return
+                if action=="unlockLand":
+                    try:unlock_land_chunk(data.get("chunkX"),data.get("chunkY"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action in POLICE_COSTS or action=="setPolicePriority":
                     try:invest_police_unit(action,int(data.get("x",-1)),int(data.get("y",-1)),data.get("priority"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
@@ -5708,12 +5760,13 @@ class Handler(BaseHTTPRequestHandler):
                         refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
                 elif action=="place":
                     kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
-                    if kind not in PROJECTS or x<0 or y<0 or x>=28 or y>=20: self._send(400,{"error":"Proyecto o parcela inválidos"}); return
+                    if kind not in PROJECTS: self._send(400,{"error":"Proyecto o parcela inválidos"}); return
+                    if not land_tile_unlocked(x,y):self._send(409,{"error":"La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir."});return
                     investment_id=str(data.get("investmentId", ""));investment_book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)});investment_offer=investment_book.get("proposal")
                     if investment_id and (not investment_offer or investment_offer.get("status")!="disponible" or investment_offer.get("id")!=investment_id or investment_offer.get("x")!=x or investment_offer.get("y")!=y or contractor!=investment_offer.get("contractor") or kind!="shop" or state["day"]>investment_offer.get("expiresDay",0)):
                         self._send(409,{"error":"La oportunidad privada cambió o venció. Revisá la propuesta actual."});return
                     if is_water(x,y) and not (kind=="port" and x==23 and not is_water(x,y) and is_water(x+1,y)): self._send(409,{"error":"La terminal debe ocupar la franja costera edificable, junto al agua."}); return
-                    if kind=="port" and (x!=23 or not is_water(x+1,y)): self._send(409,{"error":"La terminal portuaria debe ubicarse en la costa este (parcela 24) con agua al lado."}); return
+                    if kind=="port" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":"La terminal portuaria necesita una calle terminada al lado."});return
                     if kind=="port" and any(b.get("kind")=="port" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene una terminal portuaria."}); return
                     if kind=="airport" and any(b.get("kind")=="airport" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene un aeropuerto regional."}); return
                     contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
@@ -5948,7 +6001,8 @@ class Handler(BaseHTTPRequestHandler):
                     for cell in cells:
                         if not isinstance(cell,(list,tuple)) or len(cell)!=2:self._send(400,{"error":"Parcela de zonificación inválida."});return
                         x,y=map(int,cell)
-                        if x<0 or y<0 or x>=28 or y>=20 or is_water(x,y):self._send(409,{"error":"La franja incluye una parcela fuera del suelo edificable."});return
+                        if is_water(x,y):self._send(409,{"error":"La franja incluye una parcela de agua."});return
+                        if not land_tile_unlocked(x,y):self._send(409,{"error":"La franja incluye terreno bloqueado. Desbloquealo tocando su candado."});return
                         if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
                         if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle terminada al lado."});return
                         if (x,y) not in seen:normalized.append((x,y));seen.add((x,y))

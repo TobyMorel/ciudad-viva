@@ -74,7 +74,8 @@ def assign_rail_bus_transfers(state,trips,day):
             if count<=0:continue
             remaining-=count;transfers+=count
             rail["dailyRiders"]+=count
-            bus["ridersByWindow"]["midday"]+=count
+            window=bus.setdefault("ridersByWindow",{})
+            window["midday"]=window.get("midday",0)+count
             bus["nonworkRiders"]=bus.get("nonworkRiders",0)+count
             bus["dailyRiders"]=bus.get("dailyRiders",0)+count
             key=",".join(map(str,trip["from"]));day_key=str(day)

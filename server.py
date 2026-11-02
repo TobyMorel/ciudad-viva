@@ -5541,7 +5541,7 @@ def destroy_burning_building(incident):
             working=bool(person.get("workerEligible") and person.get("employerId"))
             outdoors=(working and 480<=minute<1080) or (540<=minute<1140 and stable_skill(identity,"salida-incendio")%100<12)
             if outdoors:
-                person.update({"status":"buscando vivienda","displacedBy":"incendio total","originHomeX":target["x"],"originHomeY":target["y"],"displacedDay":state["day"],"plannedReturnDay":None,"admittedDay":state["day"],"shelterId":None})
+                person.update({"status":"buscando vivienda","displacedBy":"incendio total","originHomeX":target["x"],"originHomeY":target["y"],"displacedDay":state["day"],"plannedReturnDay":state["day"]+1,"admittedDay":state["day"],"shelterId":None})
                 shelter.append(person);displaced+=1
             else:
                 deceased.append({"residentId":identity,"name":person.get("name") or f"Residente #{identity[-5:]}","age":int(person.get("age") or 0),"year":year,"deathDay":state["day"],"homeX":target["x"],"homeY":target["y"],"cause":"incendio","disposition":"en espera","funeralPreference":funeral_preference(identity)})

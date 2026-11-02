@@ -11,9 +11,10 @@
 }
 
 .layout {
+  position: relative;
   min-width: 0;
   min-height: 0;
-  grid-template-columns: var(--city-report-rail-width, 76px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .left {
@@ -21,8 +22,12 @@
 }
 
 .city-report-rail {
-  grid-column: 1;
-  grid-row: 1;
+  grid-area: auto !important;
+  position: absolute;
+  z-index: 12;
+  top: 0;
+  bottom: 100px;
+  left: 0;
   display: grid;
   grid-auto-flow: column;
   grid-template-rows: repeat(var(--city-report-rows, 12), 64px);
@@ -31,17 +36,17 @@
   justify-content: start;
   gap: 6px;
   width: var(--city-report-rail-width, 76px);
-  height: 100%;
+  height: auto;
   min-width: 0;
-  padding: 10px 8px;
+  padding: 54px 8px 10px;
   overflow: auto;
-  border: 0;
-  background: transparent;
+  border: 0 !important;
+  background: transparent !important;
   scrollbar-width: none;
 }
 
 .world-wrap {
-  grid-column: 2;
+  grid-column: 1;
   grid-row: 1;
 }
 
@@ -68,20 +73,35 @@
 }
 
 .city-report-rail button span {
-  font-size: 31px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--report-icon-border, #6f9c84);
+  border-radius: 50%;
+  background: var(--report-icon-bg, #244c43);
+  font-size: 26px;
   line-height: 1;
-  filter: drop-shadow(0 2px 1px #183b3326);
+  filter: drop-shadow(0 3px 4px #10261e55);
   transition: transform .16s ease;
 }
+
+.city-report-rail button:nth-child(6n + 1) span { --report-icon-bg: #244c43; --report-icon-border: #7db79a; }
+.city-report-rail button:nth-child(6n + 2) span { --report-icon-bg: #253e5a; --report-icon-border: #7ca7ce; }
+.city-report-rail button:nth-child(6n + 3) span { --report-icon-bg: #4e3a58; --report-icon-border: #b28ac3; }
+.city-report-rail button:nth-child(6n + 4) span { --report-icon-bg: #59432d; --report-icon-border: #d5aa6a; }
+.city-report-rail button:nth-child(6n + 5) span { --report-icon-bg: #294d57; --report-icon-border: #70adba; }
+.city-report-rail button:nth-child(6n) span { --report-icon-bg: #56363b; --report-icon-border: #c57c82; }
 
 .city-report-rail button small {
   display: block;
   max-width: 60px;
   max-height: 18px;
   overflow: hidden;
-  color: #496762;
+  color: #f1f5e9;
   font: 700 8.5px/1.05 system-ui;
   text-align: center;
+  text-shadow: 0 1px 3px #10251dcc;
   text-overflow: ellipsis;
   white-space: normal;
 }
@@ -122,9 +142,13 @@ body[data-theme="dark"] .city-report-rail button small {
   color: #d8e9e1;
 }
 
+body[data-theme="dark"] .city-report-rail {
+  background: transparent !important;
+}
+
 @media (max-width: 950px) {
   .layout {
-    grid-template-columns: var(--city-report-rail-width, 76px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -169,7 +193,7 @@ body[data-theme="dark"] .city-report-rail button small {
     overflow: auto;
     border: 0;
     border-radius: 0;
-    background: transparent;
+    background: transparent !important;
     box-shadow: none;
     backdrop-filter: none;
   }
@@ -181,7 +205,9 @@ body[data-theme="dark"] .city-report-rail button small {
   }
 
   .city-report-rail button span {
-    font-size: 25px;
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
   }
 
   .city-report-rail button small {

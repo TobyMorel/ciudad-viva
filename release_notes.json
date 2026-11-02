@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.177",
+  "currentVersion": "0.178",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.178",
+      "date": "2026-11-02",
+      "title": "Parcelas contiguas e accesos visuales",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las parcelas bloqueadas ocupan su cuadrícula completa y se unen con los sectores vecinos sin dejar huecos.",
+        "Cada informe tiene un icono circular de color oscuro con borde; se quitó el fondo claro continuo de la barra."
+      ],
+      "verification": "Comprobación visual en escritorio y móvil; parcelas y barra revisadas.",
+      "pending": []
+    },
     {
       "version": "0.177",
       "date": "2026-11-02",

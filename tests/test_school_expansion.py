@@ -27,7 +27,7 @@ class SchoolExpansion(unittest.TestCase):
         self.assertEqual(project["seatsAdded"], 48)
         self.assertEqual(project["teachersAdded"], 3)
         self.assertEqual(project["stages"][-1], "Equipamiento e inspección")
-        self.assertGreater(project["materialsRequired"]["steel"], 0)
+        self.assertTrue(all(amount == 0 for amount in project["materialsRequired"].values()))
         self.assertEqual(project["paid"], round(project["cost"] * .2))
         self.assertEqual(starting_money - server.state["money"], project["paid"])
         self.assertEqual(self.school["classrooms"], 4)
@@ -55,7 +55,7 @@ class SchoolExpansion(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "límite de ampliación"):
                 server.contract_school_expansion(10, 9, "Constructora Delta")
 
-    def test_annex_runs_through_real_daily_material_and_certificate_pipeline(self):
+    def test_annex_runs_through_daily_stages_without_material_inventory(self):
         school = {
             "kind": "school", "serviceModel": "primarySchool", "name": "Escuela Integral",
             "x": 10, "y": 11, "status": "habilitado", "classrooms": 4, "jobSlots": 12,
@@ -68,7 +68,7 @@ class SchoolExpansion(unittest.TestCase):
         project["changeOrderReviewed"] = True
         yard = server.state["supply"]["contractors"][project["contractor"]]
         for material in yard:
-            yard[material] = project["materialsRequired"].get(material, 0) + 100_000
+            yard[material] = 0
 
         with patch.object(server, "assess_contract_delay", return_value=False), patch.object(server, "advance_zoned_development"), patch.object(server, "road_incident_report", return_value={}):
             for _ in range(project["duration"] + 2):
@@ -81,7 +81,7 @@ class SchoolExpansion(unittest.TestCase):
         self.assertEqual(school["jobSlots"], 15)
         self.assertEqual(school["expansionHistory"][-1]["classrooms"], 2)
         self.assertEqual(school["expansionHistory"][-1]["seats"], 48)
-        self.assertEqual(school["expansionHistory"][-1]["materialsUsed"], project["materialsRequired"])
+        self.assertTrue(all(amount == 0 for amount in school["expansionHistory"][-1]["materialsUsed"].values()))
         self.assertTrue(any(event["title"] == "Hito de obra certificado" for event in server.state["events"]))
         self.assertTrue(any(event["title"] == "Anexo escolar habilitado" for event in server.state["events"]))
 

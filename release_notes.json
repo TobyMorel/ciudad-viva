@@ -1,7 +1,26 @@
 {
-  "currentVersion": "0.150",
+  "currentVersion": "0.151",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.151",
+      "date": "2026-11-02",
+      "roadmapPhase": 4,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "El promotor urbano reacciona a zonas y demanda en cada ciclo diario. La partida nueva admite a las 36 personas interesadas al terminar las primeras viviendas, aunque todavía no existan puestos de trabajo; casas y locales mantienen obra por etapas e inspección.",
+        "La construcción ya no espera inventarios ni remesas de materiales. Se conservaron materias primas como parte de la producción industrial. El excedente de fábricas puede venderse por carretera, puerto o aeropuerto; los camiones siguen una ruta vial y el ingreso se acredita a la empresa al llegar.",
+        "Los vehículos de llegada recorren el acceso exterior y continúan por las calles conectadas que se construyan. Los semáforos de cada aproximación miran hacia los autos que llegan; cada tramo vial conserva una farola orientada al asfalto.",
+        "El acceso inicial tiene un túnel 3D alineado con la carretera regional. Árboles, rocas y arbustos se generan por sectores según lo que ve la cámara y el zoom, en vez de poblar/renderizar todo el mapa a la vez.",
+        "Se amplió el indicador de demanda y se compactó el selector Offline/Online con iconos vectoriales y textos alineados. Se invirtió la dirección vertical del arrastre de cámara."
+      ],
+      "pending": [
+        "Validar el diseño visual en los navegadores y tamaños de pantalla reales de los jugadores; la prueba física de LAN entre dos equipos sigue pendiente.",
+        "La exportación por carretera está cubierta por pruebas en ambos motores; completar pruebas de extremo a extremo para despachos aéreos y portuarios en cada modo.",
+        "La demanda residencial inicial y el disparo diario de obra están probados; quedan por ampliar fases del roadmap, incluidos subte con capa bajo tierra, pasajeros de cruceros y conectividad aeroportuaria completa."
+      ]
+    },
     {
       "version": "0.150",
       "date": "2026-11-02",

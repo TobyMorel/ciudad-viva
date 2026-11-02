@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {collectCityAlerts,projectGuide,MATERIAL_HELP,INDUSTRIES,gettingStarted} from '../cityGuide.js';
+import {collectCityAlerts,projectGuide,INDUSTRIES,gettingStarted} from '../cityGuide.js';
 
 test('Incidentes físicos muestran marcador 2D con acción y sin inventar eventos',()=>{
  const empty={day:32,policeReport:{recentIncidents:[]},fireReport:{recentIncidents:[]},waste:{report:{litterTiles:[]}},projects:[],roadAssets:[]};
@@ -30,14 +30,10 @@ test('Calle deteriorada no interpreta ausencia de calidad como desperfecto',()=>
  assert.equal(a[0].x,6);
 });
 
-test('La guía de hormigón explica cantera, planta, orden de compra y trabajo real',()=>{
- const help=MATERIAL_HELP.concrete;
- assert.ok(help.steps.join(' ').includes('Hormigonera'));
- assert.ok(help.steps.join(' ').includes('Pedir materiales'));
+test('Las obras avanzan sin pedir materiales y la industria conserva su producción',()=>{
  assert.equal(INDUSTRIES.concrete.label,'Hormigonera');
  const p=projectGuide({}, {label:'Comisaría',status:'pausada',materialsRequired:{concrete:20,steel:5},materialsUsed:{concrete:7,steel:1}});
- assert.equal(p.remaining.find(x=>x.key==='concrete').required,20);
- assert.equal(p.remaining.find(x=>x.key==='concrete').used,7);
+ assert.ok(!JSON.stringify(p).toLowerCase().includes('faltan materiales'));
  assert.ok(p.reason.includes('pausaste'));
 });
 
@@ -45,8 +41,8 @@ test('Tutorial inicial marca únicamente pasos alcanzados por el estado real',()
  const empty=gettingStarted({roads:[],zones:[],projects:[],buildings:[],supply:{orders:[]}});
  assert.equal(empty.length,6);
  assert.equal(empty.filter(x=>x.done).length,1,'Reconocer la ciudad es el único paso inicial no condicionado.');
- const advanced=gettingStarted({roads:[[4,10]],zones:[{kind:'factory'}],projects:[{kind:'factory'}],
-  buildings:[{kind:'school',name:'Escuela'}],supply:{orders:[{id:'order'}]}});
+ const advanced=gettingStarted({roads:[[4,10]],zones:[{kind:'home'},{kind:'shop'},{kind:'factory'}],projects:[{kind:'factory'}],
+  buildings:[{kind:'school',name:'Escuela'},{kind:'factory'},{kind:'fireStation'}],supply:{orders:[]}});
  assert.ok(advanced.every(x=>x.done));
  assert.ok(advanced.every(x=>x.description.length>=40));
 });

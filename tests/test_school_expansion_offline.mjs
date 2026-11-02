@@ -11,7 +11,7 @@ async function scenario(city,run){
  finally{globalThis.fetch=old.fetch;globalThis.localStorage=old.storage;Date.now=old.now}
 }
 
-test('Offline: anexo escolar es obra contratada y solo suma plazas al ser inspeccionado',async()=>{
+test('Offline: anexo escolar avanza por etapas y suma plazas tras inspección',async()=>{
  const city=seed();city.paused=true;city.money=200000;
  city.buildings.push({kind:'school',serviceModel:'primarySchool',name:'Escuela del Parque',x:10,y:9,status:'habilitado',classrooms:4,jobSlots:12,monthlyCost:820});
  await scenario(city,async({view,action})=>{
@@ -19,21 +19,21 @@ test('Offline: anexo escolar es obra contratada y solo suma plazas al ser inspec
   const started=await action({action:'expandSchool',x:10,y:9,contractor:'Constructora Delta'});
   const project=started.projects.find(p=>p.projectType==='schoolExpansion');
   assert.ok(project);assert.equal(project.classroomsAdded,2);assert.equal(project.seatsAdded,48);assert.equal(project.teachersAdded,3);
-  assert.equal(project.status,'contratada');assert.ok(project.materialsRequired.steel>0);assert.equal(project.paid,Math.round(project.cost*.2));
+  assert.equal(project.status,'contratada');assert.equal(Object.values(project.materialsRequired).reduce((a,n)=>a+n,0),0);assert.equal(project.paid,Math.round(project.cost*.2));
   assert.equal(startingMoney-started.money,project.paid);
   const school=started.buildings.find(b=>b.name==='Escuela del Parque');assert.equal(school.classrooms,4);assert.equal(school.jobSlots,12);
   await assert.rejects(action({action:'expandSchool',x:10,y:9,contractor:'Sur Obras'}),/ya tiene un anexo/);
  });
 });
 
-test('Offline: el anexo consume materiales, certifica hitos y habilita plazas al completar los días de obra',async()=>{
+test('Offline: el anexo avanza sin materiales, certifica hitos y habilita plazas tras la obra',async()=>{
  const city=seed();city.buildings=[{kind:'school',serviceModel:'primarySchool',name:'Escuela Integral Offline',x:10,y:11,status:'habilitado',classrooms:4,jobSlots:12,monthlyCost:820}];
  city.roads=[...Array(7)].map((_,i)=>[i+4,10]).concat([[10,11]]);city.roadAssets=[];city.population=0;city.jobs=0;city.money=200000;city.paused=false;city.speed=1;city.day=1;city.traffic={segmentFlow:{}};
  city.projects=[];city.supply.yardCapacity=100000;city.supply.storageCapacity=100000;
  for(const stock of Object.values(city.supply.contractors||{}))for(const material of ['aggregate','concrete','steel','timber','components'])stock[material]=10000;
  await scenario(city,async({view,action,clock,elapse})=>{
   const start=await action({action:'expandSchool',x:10,y:11,contractor:'Sur Obras'}),project=start.projects.find(p=>p.projectType==='schoolExpansion');
-  assert.ok(project);const required={...project.materialsRequired};clock(false);
+  assert.ok(project);const required=Object.fromEntries(Object.keys(project.materialsRequired).map(k=>[k,0]));clock(false);
   let state=start;
   for(let i=0;i<project.duration+5&&state.projects.some(p=>p.id===project.id);i++)state=await elapse();
   assert.ok(!state.projects.some(p=>p.id===project.id),'el contrato debe llegar a inspección en la simulación diaria');

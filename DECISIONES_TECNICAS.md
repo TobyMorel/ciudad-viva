@@ -1,3 +1,12 @@
+# Decisiones añadidas · Alfa 0.151
+
+- Las obras urbanas no dependen de una cadena logística municipal de materiales. En las partidas guardadas se migran cantidades requeridas/usadas a cero y se reactiva una obra cuyo único bloqueo era la falta de material. Las fábricas sí consumen insumos para su producción comercial.
+- Las viviendas y otros permisos privados reaccionan a la zonificación en cada día simulado. La cohorte inicial puede ocupar las primeras viviendas aunque todavía no haya empleo; el ciclo laboral empieza a reaccionar con los negocios que abre la ciudad.
+- Los excedentes de fábrica se apartan de su stock real por encima de una reserva. Se vende el lote por carretera a la salida regional o, si existen, por puerto/aeropuerto conectados. El dinero se acredita al completar el viaje.
+- Vegetación ambiental es procedural y se crea solo en la caja visible de cámara, con densidad ajustada por zoom. El conjunto de edificios/calles impide colocar vegetación encima de objetos urbanos.
+- Cada tile vial crea una farola y cada brazo se orienta hacia el centro del asfalto. Las cabezas de semáforo miran al carril de procedencia del tráfico.
+- El modelo inicial del túnel está alineado con la aproximación de carretera en `[4,10]`; revisar captura antes de cambiar coordenadas.
+
 # Decisiones técnicas · Alfa 0.150
 
 ## Taxis de circuito manual · Alfa 0.150

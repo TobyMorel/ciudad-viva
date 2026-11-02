@@ -1,3 +1,14 @@
+# Estado de desarrollo · Alfa 0.151
+
+## Crecimiento, vías de entrada, exportación y escena ambiental
+
+Los promotores zonificados revisan la demanda a diario en Online y Offline. La nueva partida admite la cohorte inicial sin exigir empleo previo; las viviendas privadas conservan inversión, etapas y revisión final. Los materiales ya no forman parte de los requisitos de construcción: los guardados antiguos migran inventarios requeridos a cero y se reanudan si estaban suspendidos solo por materiales. La producción industrial mantiene materias primas, abastecimiento y ventas; excedentes reales salen por carretera, barco o avión y el pago entra a la caja de la fábrica al llegar.
+
+El acceso regional quedó conectado con la ruta de visitantes; el recorrido recalcula calles nuevas conectadas en cada actualización del mundo. Los cuatro modelos de semáforo orientan su cara a los vehículos entrantes. Hay una farola por tramo vial, ubicada al borde y con la lámpara hacia el asfalto. Se alineó el túnel de entrada con la ruta exterior. La vegetación procedural cubre el terreno disponible dentro del área visible según cámara y zoom. La demanda tiene barras más legibles y la selección de modo ocupa menos espacio.
+
+Verificación de esta entrega: 124 pruebas Python y suite Offline completa (incluye crecimiento residencial diario y exportación industrial terrestre); Chromium responsive a 390×844 y 1440×900 sin texto recortado, controles fuera de pantalla, desborde horizontal ni solapamientos. Sintaxis JavaScript/Python, JSON y `git diff --check` pasan. La prueba manual en dos equipos LAN y el resultado de CI de GitHub quedan por comprobar después de publicar.
+
+Hito actual: fase 4 · 60% (crecimiento privado visible); el trabajo visual de movilidad continúa en fase 7 · 95%. Fase 9 · 75%. Estimación global del juego aún no disponible: el roadmap no tiene ponderaciones de aceptación comunes verificadas para sus 34 fases. Próximo hito: completar mecánicas de transporte de pasajeros, subte y conectividad entre modos, sin detener el avance en pulido.
 # Estado de desarrollo · Alfa 0.150
 
 ## Taxis con depósito y ruta manual · fase 7

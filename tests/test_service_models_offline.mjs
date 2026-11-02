@@ -30,7 +30,7 @@ test('Municipalidad no brinda salud seguridad bomberos o basureros sin edificios
  });
 });
 
-test('Licitación de hospital y central de higiene persiste modelo y materiales crecientes',async()=>{
+test('Hospital y central de higiene conservan su modelo y se construyen sin materiales',async()=>{
  const city=seed();city.money=200000;city.paused=true;
  await scenario(city,async({view,action})=>{
   const start=await view();
@@ -41,7 +41,7 @@ test('Licitación de hospital y central de higiene persiste modelo y materiales 
   assert.equal(project.serviceModel,'generalHospital');
   assert.equal(project.label,'Hospital general');
   assert.ok(project.cost>8000);
-  assert.ok(project.materialsRequired.steel>22,'El hospital debe consumir más acero que el consultorio.');
+  assert.equal(Object.values(project.materialsRequired).reduce((a,n)=>a+n,0),0);
   assert.ok(s.money<start.money);
   await assert.rejects(action({...tender,serviceModel:'wasteComplex',x:11,y:11}),/incompatible/);
  });
@@ -53,7 +53,7 @@ test('El centro de acogida es una obra pública de 30 plazas con costo y persona
   const result=await action({action:'place',contractor:'Constructora Delta',kind:'civic',serviceModel:'socialShelter',x:10,y:11});
   const project=result.projects.find(p=>p.x===10&&p.y===11);
   assert.equal(project.serviceModel,'socialShelter');assert.equal(project.label,'Centro de acogida temporal');assert.ok(project.cost>8000);
-  assert.ok(project.materialsRequired.steel>22,'la obra de 30 camas requiere más insumos que un consultorio');
+  assert.equal(Object.values(project.materialsRequired).reduce((a,n)=>a+n,0),0);
   assert.ok(result.socialServices.shelterResidents.length===0,'no crea personas sin una demanda migratoria sin vivienda');
   const facility={kind:'civic',name:'Acogida',serviceModel:'socialShelter',status:'habilitado',jobSlots:12,monthlyCost:1180,socialShelter:{beds:30,residents:[]},x:5,y:10,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}};
   const home={kind:'home',x:4,y:11,occupants:1,capacity:1,residents:[{id:'resident-a',age:32,workerEligible:true,status:'buscando',skills:{salud:100},expectedMonthlyWage:8,carAccess:false}],quality:90};

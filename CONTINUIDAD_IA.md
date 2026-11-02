@@ -1,3 +1,13 @@
+# Continuidad inmediata · Alfa 0.151
+
+Se corrigió el crecimiento automático inicial para que corra cada día y se quite la barrera de empleos a la primera cohorte de residentes. Verificar zonas conectadas en la misma coordenada de acceso. Las calles se conectan desde `[4,10]`; para visitantes el render usa `cityEntryRoute(openRoads)`, debe recalcularse al cambiar el conjunto de calles. La vegetación procedural de `world3d.js` se actualiza por vista/zoom; no ampliar la densidad sin medir el costo de render. El túnel de entrada se centra en el extremo exterior de esa misma vía.
+
+Construcción: no exigir áridos/acero/madera/hormigón para vivienda, servicios, calles o rehabilitación. Las materias primas permanecen como entradas de producción industrial. La cola `factoryExportOrders` mueve excedentes por carretera, avión o puerto y paga al productor al completar el viaje. Hay prueba terrestre en ambos motores; completar cobertura de barco/avión y revisar logs de CI publicados.
+
+Lógica visual nueva: semáforo se ubica en cada aproximación vial y debe mirar hacia el vehículo entrante; la cara local `+Z` se invirtió en cada eje. Una farola por tile de calle con brazo/lámpara encima del asfalto. Comprobar intersecciones en captura de Chromium si falla el workflow. La ventana de modalidad y demanda tienen escalas compactas/mayores respectivamente.
+
+Verificación tras los cambios: `python3 -m unittest discover -s tests -p 'test_*.py' -v`, suite Node Offline y `node tests/test_ui_layout.mjs`, junto con pruebas de cámara/marcadores. Correo de commit: `66056611+TobyMorel@users.noreply.github.com`. Publicar `main`, confirmar SHA/checks y entregar ZIP sin `.git`, dependencias instaladas ni archivos de partidas. Estimación global sigue no disponible; fases 4/7/9 conservan 60/95/75%.
+
 # Continuidad inmediata · Alfa 0.150
 
 ## Alfa 0.150 · taxis con circuito manual visible

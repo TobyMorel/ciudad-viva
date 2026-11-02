@@ -1,3 +1,11 @@
+# Auditoría · Alfa 0.151 · crecimiento y actividad industrial
+
+La fase 4 mantiene el 60%: ahora la demanda residencial puede iniciar obra privada zonificada en el ciclo diario y la cohorte de 36 residentes puede alojarse al habilitarse sus viviendas. Una prueba confirma creación de proyecto en `tick_one_day`; otra del flujo Offline confirma disparo automático sin pedidos. Esto verifica la mecánica inicial, no la economía/comportamiento completo de las fases de empresas.
+
+Las construcciones dejaron de bloquearse por materiales y las escenas viejas migran ese estado. Se conservaron materias primas para las cadenas industriales. Los excedentes reales de fábrica se despachan por carretera, puerto o aeropuerto; solo el transporte terrestre tiene pruebas de integración en ambos motores en esta entrega.
+
+La fase 7 sigue 95%: semáforos orientados a entradas de calle, farola por tramo, túnel y exportación amplían actividad representada, pero no completan taxis con pasajeros, subte, cruceros ni red aeroportuaria. Fase 9 queda 75%. Global permanece no estimable: faltan ponderaciones y criterios homogéneos para las 34 fases.
+
 # Auditoría · Alfa 0.150 · taxi con recorrido manual
 
 La movilidad existente ofrecía vehículos y líneas de corredor generadas automáticamente, pero no permitía elegir el camino y las paradas desde un depósito. Se agregó el flujo completo con ruta vial ordenada, 2–12 paradas, una sola línea manual por depósito, flota facturada y paso de pasajeros por la ruta directa y transbordos compartidos. La UI muestra paradas mientras se diseña y señales en el mundo. Los motores online/offline y pruebas de navegador cubren guardado y puesta en marcha.

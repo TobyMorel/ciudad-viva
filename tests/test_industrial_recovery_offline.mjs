@@ -20,13 +20,10 @@ function recoveryFixture(demand=true){
     utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100},
     business:{id:'old-quarry',industryType:'quarry',status:'cerrado',
       cash:-300,closedDay:-100,aggregateStock:0,quarryReserve:73,jobSlots:20}});
-  if(demand)city.projects.push({id:'industrial-demand',kind:'road',x:4,y:11,contractor:'Estudio y Obra Norte',
-    workersAssigned:4,status:'cambio_pendiente',label:'Demanda de áridos',cost:0,paid:0,privatePaid:true,
-    stages:['Inspección'],duration:1,elapsed:0,progress:0,stageIndex:0,
-    materialsRequired:{aggregate:12},materialsUsed:{aggregate:0}});
+  if(demand)city.buildings.push({kind:'factory',x:6,y:9,name:'Hormigonera activa',status:'habilitado',utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100},business:{id:'concrete-demand',industryType:'concrete',status:'abierto',cash:5000,concreteStock:0,jobSlots:20}});
   return city;
 }
-test('Offline: promotor rehabilita una cantera por demanda y reserva capital y cuadrilla',async()=>{
+test('Offline: la demanda industrial real activa una rehabilitación de cantera',async()=>{
   const input=recoveryFixture();
   await scenario(input,async({tick})=>{
     let city=await tick();

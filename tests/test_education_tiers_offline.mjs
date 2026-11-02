@@ -12,7 +12,7 @@ async function scenario(city,run){
  try{const adapter=await createOfflineAdapter();await run({view:()=>adapter.request('/api/state'),action:body=>adapter.request('/api/action',body)})}
  finally{globalThis.fetch=old.fetch;globalThis.localStorage=old.storage;Date.now=old.now}
 }
-test('Offline: secundaria contrata costo y materiales reales',async()=>{
+test('Offline: secundaria conserva su costo y se construye sin materiales',async()=>{
  const city=seed();city.money=250000;city.paused=true;
  await scenario(city,async({view,action})=>{
   const before=await view();
@@ -21,7 +21,7 @@ test('Offline: secundaria contrata costo y materiales reales',async()=>{
   assert.equal(p.serviceModel,'secondarySchool');
   assert.equal(p.label,'Escuela secundaria');
   assert.ok(p.cost>=17800);
-  assert.ok(p.materialsRequired.steel>25);
+  assert.equal(Object.values(p.materialsRequired).reduce((a,n)=>a+n,0),0,'la construcción no espera materiales');
   assert.ok(s.money<before.money);
   await assert.rejects(action({action:'place',kind:'school',serviceModel:'policePost',x:11,y:11,contractor:'Sur Obras'}),/incompatible/);
  });

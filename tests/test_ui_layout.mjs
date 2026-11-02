@@ -40,6 +40,9 @@ try{
     await page.locator('#modeThemeToggle').evaluate(button=>button.click());
     assert.equal(await page.locator('body').getAttribute('data-theme'),'dark',name+': el tema oscuro debe aplicarse en inicio');
     await page.locator('#modeThemeToggle').evaluate(button=>button.click());
+    const modeLayout=await page.evaluate(()=>{const card=document.querySelector('.mode-card'),r=card.getBoundingClientRect(),buttons=[...card.querySelectorAll('.mode-option')],inside=x=>{const b=x.getBoundingClientRect();return b.left>=r.left&&b.right<=r.right&&b.top>=r.top&&b.bottom<=r.bottom},title=document.querySelector('#modeTitle').getBoundingClientRect(),intro=document.querySelector('#modeIntro').getBoundingClientRect();return{insideViewport:r.top>=0&&r.bottom<=innerHeight,buttons:buttons.length,buttonsInside:buttons.every(inside),icons:buttons.every(b=>Boolean(b.querySelector('.mode-icon svg'))),titleIntroClear:intro.top>=title.bottom-1,cardHeight:r.height}});
+    assert.ok(modeLayout.insideViewport&&modeLayout.buttons===2&&modeLayout.buttonsInside&&modeLayout.icons&&modeLayout.titleIntroClear,
+      name+': pantalla inicial recortada o desalineada '+JSON.stringify(modeLayout));
     await page.locator('#onlineMode').evaluate(button=>button.click());
     await page.locator('#browseRoom').evaluate(button=>button.click());
     await page.waitForFunction(()=>document.getElementById('roomList')?.textContent?.includes('Salas disponibles'),{timeout:10000});
@@ -47,6 +50,8 @@ try{
     await page.locator('#lanBack').evaluate(button=>button.click());
     await page.locator('#offlineMode').click();
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+    if((await page.locator('#speedLabel').innerText())!=='PAUSADO')await page.locator('#pauseBtn').click();
+    await page.waitForFunction(()=>document.getElementById('speedLabel')?.textContent==='PAUSADO',{timeout:8000});
     // Freeze the 3D draw loop after the static city loads; this test measures layout, not animation frame rate.
     await page.evaluate(()=>{window.requestAnimationFrame=()=>0});
     await page.waitForTimeout(400);
@@ -72,8 +77,8 @@ try{
     await page.locator('[data-popup="guide"]').evaluate(button=>button.click());
     await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
     const instructions=await page.locator('#popupContent').innerText();
-    assert.ok(instructions.includes('Primeros pasos en tu ciudad')&&instructions.includes('Hormigón')&&instructions.includes('Hormigonera'),
-      name+': la guía de construcción no explica el hormigón ni la progresión.');
+    assert.ok(instructions.includes('Primeros pasos en tu ciudad')&&instructions.includes('zonas')&&instructions.includes('constru'),
+      name+': la guía no explica el crecimiento urbano ni la progresión.');
     assert.equal(await page.locator('#popupContent .quick-start-step').count(),6);
     await page.locator('#popupClose').evaluate(button=>button.click());
     await page.locator('[data-popup="alerts"]').evaluate(button=>button.click());
@@ -89,7 +94,7 @@ try{
         noClippedNames:buttons.every(b=>b.querySelector('b').getBoundingClientRect().height>9&&b.scrollWidth<=b.clientWidth+3),
         noHorizontalOverflow:pane.scrollWidth<=pane.clientWidth+3};
     });
-    assert.ok(catalog.count===20&&catalog.factoryCount===5&&catalog.categories.length===8&&catalog.categories.some(x=>x.includes('SERVICIOS FUNERARIOS'))&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
+    assert.ok(catalog.count===21&&catalog.factoryCount===5&&catalog.categories.length===8&&catalog.categories.some(x=>x.includes('SERVICIOS FUNERARIOS'))&&catalog.noClippedNames&&catalog.noHorizontalOverflow,
       name+': catálogo de edificios recortado o incompleto '+JSON.stringify(catalog));
     await page.locator('#popupClose').evaluate(button=>button.click());
 

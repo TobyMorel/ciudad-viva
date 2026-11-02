@@ -340,3 +340,44 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 
 /* Ficha breve de herramientas: precio y uso sin interrumpir la colocación. */
 .build-help-popover{position:fixed;z-index:1000;display:grid;gap:5px;width:min(280px,calc(100vw - 24px));padding:11px 13px;border:1px solid #b9d5c1;border-radius:12px;background:#fffef7;color:#24483e;box-shadow:0 10px 32px #102b2040;pointer-events:none;font:12px/1.4 system-ui,sans-serif}.build-help-popover[hidden]{display:none}.build-help-popover>b{font-size:13px;color:#1d5b48}.build-help-popover>span{color:#536f61}.build-help-popover>small{padding-top:4px;border-top:1px solid #e3ebdf;color:#73887a;font-size:10px}
+/* Modal de inicio: jerarquía compacta, iconos vectoriales y contraste estable. */
+.mode-backdrop{padding:18px;background:rgba(7,20,20,.72);backdrop-filter:blur(7px)}
+.mode-card{position:relative;display:grid;grid-template-columns:1fr;gap:0;width:min(590px,100%);max-height:min(90dvh,720px);overflow:auto;padding:26px 28px 24px;border:1px solid #c8d8c8;border-radius:22px;background:#f7f7ef;color:#233e39;box-shadow:0 24px 70px #12251f55}
+.mode-card .mode-head-icon{display:grid;place-items:center;width:42px;height:42px;margin-bottom:15px;border-radius:13px;background:#e0eee2;color:#39795c}
+.mode-card .mode-head-icon svg,.mode-card .mode-icon svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mode-card .mode-theme-toggle{position:absolute;top:22px;right:22px;width:38px;height:38px;border-radius:11px;background:#eaf0e8;color:#42665a}
+.mode-card>.eyebrow{margin:0;color:#598273;font-size:10px;letter-spacing:.14em}
+.mode-card h1{margin:7px 0 5px;color:#233e39;font-size:clamp(25px,4vw,33px);letter-spacing:-.035em}
+.mode-card>p{margin:0;color:#627871;font-size:14px;line-height:1.5}
+.mode-options{gap:12px;margin-top:19px}
+.mode-option{min-height:0;padding:17px 17px 15px;border:1px solid #d6e1d6;border-radius:16px;background:#fffefa;color:#29483f}
+.mode-option:hover,.mode-option:focus-visible{transform:translateY(-2px);border-color:#6eae88;background:#f4fbf3}
+.mode-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#eaf4e8;color:#438260}
+.mode-option b{margin-top:11px;color:#29483f;font-size:17px}
+.mode-option em{margin-top:12px;color:#6b8579;font:800 9px system-ui;letter-spacing:.12em}
+.mode-option small{margin-top:7px;color:#687d75;font-size:12px;line-height:1.45}
+.mode-option strong{margin-top:14px;padding-top:0;color:#287754;font-size:11px;letter-spacing:.04em}
+.mode-error{margin-top:10px!important;color:#a14335!important}
+.mode-card .lan-back{color:#287754}.mode-card .lan-choice{border-color:#d2e1d5;background:#f5faf3}.mode-card .lan-choice>b{color:#29483f}.mode-card .lan-choice>small{color:#687d75}.mode-card .lan-choice>span{display:grid;place-items:center;width:35px;height:35px;border-radius:11px;background:#e5f0e3;color:#39795c;font-size:0}.mode-card .lan-choice>span:after{font-size:16px}.mode-card #createRoom>span:after{content:'＋'}.mode-card #joinRoom>span:after{content:'↗'}.mode-card #browseRoom>span:after{content:'⌕'}
+.mode-card .lan-choice:hover{background:#eaf5e8;border-color:#7fb692}.mode-card .lan-join-form,.mode-card .room-list,.mode-card .created-room{border-color:#d5e2d4;background:#f2f7ef;color:#38594d}.mode-card .lan-join-form label{color:#58736a}.mode-card .lan-join-form input{border-color:#d0ddd0;background:#fff;color:#29483f}.mode-card .lan-join-form>small{color:#6a8076}
+@media(max-width:600px){.mode-backdrop{padding:12px}.mode-card{padding:20px 17px 18px;border-radius:18px}.mode-card .mode-head-icon{width:36px;height:36px;margin-bottom:12px}.mode-card .mode-theme-toggle{top:17px;right:16px}.mode-options{grid-template-columns:1fr;gap:9px;margin-top:15px}.mode-option{display:grid;grid-template-columns:40px 1fr;column-gap:11px;align-items:center;padding:12px}.mode-option .mode-icon{grid-row:1/4}.mode-option em{grid-column:2;margin:0}.mode-option b{grid-column:2;margin:4px 0 0;font-size:16px}.mode-option small{grid-column:2;margin:4px 0 0;font-size:11px}.mode-option strong{grid-column:2;margin-top:8px}.mode-card .lan-choice-grid{grid-template-columns:1fr}.mode-card .lan-choice{min-height:0}}
+
+/* Alfa 0.151: selector inicial compacto y legible en móvil. */
+.mode-card{position:relative;width:min(610px,100%);padding:26px 30px 23px;border-radius:20px}
+.mode-card h1{margin:7px 0 5px;font-size:clamp(25px,4vw,34px)}
+.mode-card>p{margin:0;color:#bdcbc3;font-size:13px}
+.mode-head-icon{display:none}
+.mode-options{gap:10px;margin-top:17px}
+.mode-option{min-height:170px;padding:16px;border-radius:14px}
+.mode-icon{width:29px;height:29px;display:grid;place-items:center}
+.mode-icon svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.mode-option em{margin-top:7px;color:#a9c9b4;font:700 9px/1.3 system-ui;letter-spacing:.08em}
+.mode-option b{margin-top:4px;font-size:17px}
+.mode-option small{margin-top:6px;font-size:11px;line-height:1.45}
+.mode-option strong{padding-top:10px;font-size:10px}
+.mode-error{min-height:12px;font-size:11px}
+@media(max-width:600px){.mode-backdrop{padding:12px}.mode-card{width:min(420px,100%);padding:21px 17px 16px;border-radius:16px}.mode-card h1{font-size:25px}.mode-card>p{font-size:12px}.mode-options{grid-template-columns:1fr;gap:7px;margin-top:12px}.mode-option{min-height:126px;padding:12px;display:grid;grid-template-columns:34px 1fr;grid-template-rows:auto auto 1fr auto;column-gap:8px;align-items:start}.mode-option .mode-icon{grid-row:1/3}.mode-option em,.mode-option b,.mode-option small,.mode-option strong{grid-column:2}.mode-option em{margin-top:0}.mode-option b{margin-top:1px;font-size:15px}.mode-option small{margin-top:3px;font-size:10px}.mode-option strong{padding-top:5px}.mode-option:hover{transform:none}}
+.growth-demand{width:clamp(238px,23vw,300px);padding:12px 15px 11px}
+.growth-demand-item{grid-template-rows:17px 54px 13px 14px;gap:4px}
+.growth-demand-title{font-size:10px}.growth-demand-percent{font-size:12px}.growth-demand-track{width:13px}.growth-demand-item b,.growth-demand-item small{font-size:9px}
+@media(max-width:650px){.growth-demand{width:clamp(222px,64vw,260px);padding:10px 11px 9px}.growth-demand-item{grid-template-rows:16px 45px 13px 14px;gap:3px}.growth-demand-title{font-size:9px}.growth-demand-percent{font-size:11px}.growth-demand-item b,.growth-demand-item small{font-size:8px}}

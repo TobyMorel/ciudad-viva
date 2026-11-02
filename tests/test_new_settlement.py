@@ -82,6 +82,16 @@ class NewSettlement(unittest.TestCase):
         self.assertEqual(server.state["supply"]["orders"],[])
         self.assertLess(server.state["privateCapital"],before)
 
+    def test_zoned_home_development_reacts_on_daily_tick(self):
+        server.state["roads"]=[[4,10],[5,10]]
+        server.state["zones"]=[{"x":5,"y":9,"kind":"home","status":"disponible"}]
+        server.state["day"]=2
+        server.tick_one_day()
+        project=next(p for p in server.state["projects"] if p.get("zonedDevelopment"))
+        self.assertEqual(project["kind"],"home")
+        self.assertEqual(project["status"],"contratada")
+        self.assertEqual(project["materialsRequired"],{key:0 for key in server.MATERIAL_NAMES})
+
 
 if __name__=="__main__":
     unittest.main()

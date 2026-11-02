@@ -43,7 +43,7 @@ test('Offline: viviendas zonificadas usan inversión privada y no esperan entreg
     assert.equal(project.status,'contratada','La casa igualmente pasa por construcción y lleva plazos');
   });
 });
-test('Offline: materiales agotados no bloquean vivienda privada zonificada',async()=>{
+test('Offline: la vivienda zonificada construye sin depender de inventarios',async()=>{
   const city=base();
   city.supply.yardCapacity=1;
   for(const depot of city.supply.depots||[])depot.capacity=0;

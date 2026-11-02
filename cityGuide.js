@@ -16,14 +16,13 @@ export const MATERIAL_HELP={
   components:{title:'Componentes',description:'Piezas técnicas para instalaciones. Se compran a proveedores o se fabrican en una metalúrgica a partir de acero.',steps:['Pedí componentes desde Obras → Pedir materiales.', 'Para producirlos, construí una Metalúrgica y asegurá acero, personal, servicios y ruta de entrega.']}
 };
 export function projectGuide(state,project){
- const remaining=Object.entries(project.materialsRequired||{}).map(([key,total])=>({key,required:Number(total)||0,used:Number(project.materialsUsed?.[key])||0})).filter(r=>r.required>r.used);
  const stopped=['pausada','suspendida','cambio_pendiente'].includes(project.status);
  const reason=project.status==='pausada'?'La pausaste. Reanudala desde Obras cuando estés listo.':
-  project.status==='suspendida'?'El contrato está suspendido. Revisá su financiación y las órdenes pendientes.':
+  project.status==='suspendida'?'El contrato está suspendido. Revisá la financiación y la causa que figura en la obra.':
   project.status==='cambio_pendiente'?'La constructora pidió modificar el contrato. Aceptá o rechazá el cambio en Obras.':
-  project.cause||project.statusCause||'Esta obra avanza durante los días de simulación cuando dispone de materiales, trabajadores y pagos.';
- return {title:project.label||'Obra',reason,stopped,remaining,hasConcrete:remaining.some(x=>x.key==='concrete'),
-  steps:['Revisá en Obras si está pausada, esperando pago o materiales.','Tocá Pedir materiales: el proveedor necesita stock y el contratista fondos.','Esperá la entrega del camión por una calle conectada y dejá avanzar los días.','La obra termina tras sus etapas y la inspección, no inmediatamente al asignar zona.']};
+  project.cause||project.statusCause||'Esta obra conserva sus etapas y avanza con los días de simulación.';
+ return {title:project.label||'Obra',reason,stopped,
+  steps:['Revisá el estado y los fondos comprometidos en Obras.','Comprobá que el sitio tenga acceso por una calle conectada.','Dejá avanzar los días para ver el progreso y cada etapa.','La obra se habilita después de completar la última etapa y su inspección.']};
 }
 export function collectCityAlerts(state){
  if(!state)return [];
@@ -89,7 +88,7 @@ export function collectCityAlerts(state){
   if(!site(project.x,project.y)||!['pausada','suspendida','cambio_pendiente'].includes(project.status))continue;
   const g=projectGuide(state,project);
   push(item('construction','⚒','Obra detenida: '+(project.label||'Proyecto'),g.reason,
-   'Abrí Obras para resolver materiales, financiación, pausa o cambio contractual.',project.x,project.y,now,`project-${project.id}`,1));
+   'Abrí Obras para revisar fondos, pausa o cambio contractual.',project.x,project.y,now,`project-${project.id}`,1));
  }
  for(const r of state.roadAssets||[]){
   if(!r||!site(r.x,r.y)||Number(r.quality??100)>=25)continue;
@@ -105,9 +104,9 @@ export function gettingStarted(state){
  return [
   {title:'Reconocé tu ciudad',done:true,description:'Tocá una parcela para saber qué hay y qué necesita. Abrí Avisos para ver emergencias reales.'},
   {title:'Conectá calles',done:roads.length>0,description:'Usá Construir → Construir calle. Cada tramo cuesta $1.200 y queda habilitado al instante; las obras y los servicios necesitan caminos conectados.'},
-  {title:'Prepará suelo industrial',done:zones.some(z=>z?.kind==='factory'),description:'Elegí Zona industrial y pintá una parcela libre junto a una calle. El suelo amarillo solo es un permiso, no una fábrica.'},
-  {title:'Licitá la fábrica correcta',done:projects.some(p=>p?.kind==='factory')||buildings.some(b=>b?.kind==='factory'),description:'En Construir elegí Cantera para producir áridos o Hormigonera para producir hormigón. Seleccioná constructora y verificá el capital.'},
-  {title:'Pedí materiales para una obra',done:activeOrders.length>0,description:'En Obras, elegí un contrato → Pedir materiales. Revisá stock del proveedor, caja, espacio de destino y conexión vial.'},
-  {title:'Sostené servicios municipales',done:buildings.some(b=>b?.kind==='fireStation'||b?.kind==='school'||(b?.kind==='civic'&&b.name!=='Municipalidad')),description:'Construí escuelas, policía, bomberos y salud. No funcionan sin trabajadores, energía, agua, presupuesto y calles.'}
+  {title:'Habilitá viviendas',done:zones.some(z=>z?.kind==='home')||buildings.some(b=>b?.kind==='home'),description:'Pintá verde parcelas vacías junto a calles. Las familias interesadas financiarán sus casas y llegarán cuando haya capacidad.'},
+  {title:'Abrí actividad económica',done:zones.some(z=>z?.kind==='shop'||z?.kind==='factory')||buildings.some(b=>b?.kind==='shop'||b?.kind==='factory'),description:'Pintá zonas azules para comercios o amarillas para fábricas. La demanda y el acceso guían la expansión privada.'},
+  {title:'Impulsá la producción local',done:buildings.some(b=>b?.kind==='factory'),description:'Las industrias abastecen a los comercios y pueden exportar por conexiones terrestres, puerto o aeropuerto.'},
+  {title:'Sostené servicios municipales',done:buildings.some(b=>b?.kind==='fireStation'||b?.kind==='school'||(b?.kind==='civic'&&b.name!=='Municipalidad')),description:'Bomberos, policía, salud y educación necesitan personal, redes, presupuesto y calles conectadas.'}
  ];
 }

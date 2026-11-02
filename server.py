@@ -1669,7 +1669,7 @@ def initial_state():
 def new_settlement_state():
     """Empty playable map: the only road is the westbound regional gate."""
     fresh=initial_state();gate=[[4,10]]
-    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":48000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Necesitan vivienda terminada, empleo y servicios para quedarse."}]})
+    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":48000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Buscan parcelas verdes conectadas para financiar y construir sus viviendas."}]})
     fresh["fireService"]={"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0}
     fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
     fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}
@@ -1888,8 +1888,9 @@ def service_route_within(building,target,radius=None):
     return path if path and max(0,len(path)-1)<=radius else None
 
 def material_plan(kind, initial_progress=0):
-    return {key:max(1,round(amount*(1-initial_progress))) if amount else 0
-            for key,amount in MATERIAL_NEEDS[kind].items()}
+    # El suministro industrial sigue existiendo para producción y comercio, pero
+    # ninguna obra municipal o privada queda detenida por inventario de obra.
+    return {key:0 for key in MATERIAL_NEEDS[kind]}
 
 def ensure_business_state():
     shops=[b for b in state["buildings"] if b.get("kind")=="shop"]
@@ -2082,21 +2083,16 @@ def ensure_supply_state():
     supply["storageCapacity"]=max(int(supply["storageCapacity"]),capacity_floor,stored+inbound)
     for p in state["projects"]:
         p.setdefault("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
-        if "materialsRequired" not in p:
-            p["materialsRequired"]=material_plan(p["kind"],p.get("initialProgress",0))
-            local_progress=p.get("elapsed",0)/max(1,p.get("duration",1))
-            # Compatibilidad: obras de versiones anteriores no vuelven a gastar materiales ya ejecutados.
-            p["materialsUsed"]={key:math.ceil(amount*material_fraction(key,local_progress))
-                                for key,amount in p["materialsRequired"].items()}
-        p.setdefault("materialsUsed",{key:0 for key in MATERIAL_NAMES})
+        p["materialsRequired"]={key:0 for key in MATERIAL_NAMES}
+        p["materialsUsed"]={key:0 for key in MATERIAL_NAMES}
+        if p.get("status")=="suspendida" and "material" in str(p.get("cause","")).lower():
+            p["status"]="contratada";p["cause"]="La obra retoma sus etapas: ya no necesita materiales de construcción"
     ensure_business_state()
     ensure_finance_state()
     ensure_resident_roster()
 
 def material_delta(p, next_elapsed):
-    local_progress=next_elapsed/max(1,p["duration"])
-    return {key:max(0,math.ceil(amount*material_fraction(key,local_progress))-p["materialsUsed"].get(key,0))
-            for key,amount in p["materialsRequired"].items()}
+    return {key:0 for key in MATERIAL_NAMES}
 
 def material_sources(contractor, project):
     sources=[("patio",state["supply"]["contractors"][contractor],route_between((4,10),(project["x"],project["y"])))]
@@ -2106,9 +2102,7 @@ def material_sources(contractor, project):
     return sorted((source for source in sources if source[2]),key=lambda source:len(source[2]))
 
 def missing_materials(p, next_elapsed):
-    sources=material_sources(p["contractor"],p)
-    available={key:sum(stock[key] for _,stock,_ in sources) for key in MATERIAL_NAMES}
-    return [key for key,amount in material_delta(p,next_elapsed).items() if available[key]<amount]
+    return []
 
 def consume_materials(project, amounts):
     sources=material_sources(project["contractor"],project)
@@ -4394,8 +4388,10 @@ def move_households():
         demand_state["lastGenerated"]=generated;demand_state["lastFilled"]=0
         vacancies=sum(max(0,b.get("capacity",0)-b.get("occupants",0)) for b in homes if b.get("emergencyReturnDay",0)<=state.get("day",1))
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
+        if state.get("newSettlement"):jobs_room=max(jobs_room,max(0,120-int(state.get("population",0))))
         awaiting_home=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
-        arrivals=min(awaiting_home,vacancies,jobs_room);placed=0
+        admission_room=max(jobs_room,max(0,120-int(state.get("population",0))) if state.get("newSettlement") else 0)
+        arrivals=min(awaiting_home,vacancies,admission_room);placed=0
         for index in range(arrivals):
             available=[b for b in homes if b.get("occupants",0)<b.get("capacity",0) and b.get("emergencyReturnDay",0)<=state.get("day",1)]
             if not available:break
@@ -4449,6 +4445,48 @@ def move_households():
     social["shelterReport"]=report
     update_older_adult_care()
 
+def queue_factory_exports():
+    """Vender excedentes reales de fábricas por puerto, aeropuerto o salida terrestre."""
+    supply=state.setdefault("supply",{});orders=supply.setdefault("factoryExportOrders",[]);industry=state.setdefault("localIndustry",{})
+    for factory in state.get("buildings",[]):
+        firm=factory.get("business",{});kind=firm.get("industryType")
+        if factory.get("kind")!="factory" or firm.get("status")!="abierto" or kind not in ("food","quarry","concrete","sawmill","metalworks"):continue
+        if any(o.get("businessId")==firm.get("id") and o.get("status") in ("en tránsito","en vuelo","en viaje","en puerto","pendiente","esperando patio") for o in orders+supply.get("portOrders",[]) if o.get("originType")=="factory"):continue
+        if kind=="food":
+            vendor=supply.setdefault("market",{}).get(f"Fábrica local {factory['x']+1}-{factory['y']+1}",{});stock=max(0,int(vendor.get("stock",0)));stock_key="stock";product=vendor.get("commodity","alimentos");base=max(1,float(vendor.get("unitCost",4)))
+        else:
+            vendor_name,product,stock_key,_=next((name,commodity,key,metric) for name,(specialty,commodity,key,metric) in INDUSTRIAL_VENDOR_GOODS.items() if specialty==kind)
+            vendor=supply.setdefault("suppliers",{}).get(vendor_name,{});stock=max(0,int(firm.get(stock_key,0)));base=MATERIAL_PRICE[product]*SUPPLIERS[vendor_name]["price"]
+        reserve=max(8,round(max(1,int(vendor.get("maxStock",180)))*.24));quantity=min(30,max(0,stock-reserve))
+        if quantity<8:continue
+        x,y=factory["x"],factory["y"];ports=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo") and route_between((x,y),(b["x"],b["y"]))),key=lambda b:(len(route_between((x,y),(b["x"],b["y"])) or []),b["x"],b["y"]))
+        airports=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="airport" and b.get("operational") and route_between((x,y),(b["x"],b["y"]))),key=lambda b:(len(route_between((x,y),(b["x"],b["y"])) or []),b["x"],b["y"]))
+        land_route=route_between((x,y),(23,10));mode="ship" if ports else "air" if airports else "land" if land_route else None
+        if not mode:continue
+        unit_price=max(1,round(base*.88));order={"id":uuid.uuid4().hex,"originType":"factory","businessId":firm.get("id"),"businessName":firm.get("name",factory.get("name","Fábrica local")),"factoryX":x,"factoryY":y,"product":product,"quantity":quantity,"unitPrice":unit_price,"orderedDay":state["day"],"status":"pendiente","mode":mode,"route":[]}
+        if mode=="ship":
+            port=ports[0];order.update({"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"destination":"Puerto","status":"pendiente"});supply.setdefault("portOrders",[]).append(order)
+        else:
+            destination=airports[0] if mode=="air" else {"x":23,"y":10};order["destination"]="Aeropuerto" if mode=="air" else "Mercado terrestre";order["destinationX"],order["destinationY"]=destination["x"],destination["y"];order["route"]=route_between((x,y),(destination["x"],destination["y"])) or [];order["distance"]=max(1,len(order["route"])-1);order["status"]="en tránsito";orders.append(order)
+        vendor_stock_key="stock" if kind=="food" else product
+        vendor[vendor_stock_key]=max(0,int(vendor.get(vendor_stock_key,0))-quantity)
+        if kind!="food":firm[stock_key]=max(0,int(firm.get(stock_key,0))-quantity)
+        ev("Excedente industrial exportado",f"{factory.get('name','La fábrica')} despachó {quantity} unidades de {product} por {order['destination'].lower()}; el camión sigue una ruta conectada.")
+
+def process_factory_exports():
+    supply=state.setdefault("supply",{});industry=state.setdefault("localIndustry",{});industry.setdefault("exportedUnits",0);industry.setdefault("exportRevenue",0)
+    for order in supply.setdefault("factoryExportOrders",[]):
+        if order.get("status")=="en tránsito":
+            route=order.get("route") or [];order["travelledDistance"]=min(order.get("distance",1),order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
+            if order["travelledDistance"]<order.get("distance",1):continue
+            if order.get("mode")=="air":order.update({"status":"en vuelo","arrivalDay":state["day"]+1});continue
+            order["status"]="exportado"
+        elif order.get("status") in ("en vuelo","en viaje") and state["day"]>=order.get("arrivalDay",state["day"]+1):order["status"]="exportado"
+        if order.get("status")!="exportado" or order.get("settled"):continue
+        factory=next((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("id")==order.get("businessId")),None)
+        if not factory:order["status"]="cancelado";continue
+        revenue=int(order.get("quantity",0))*int(order.get("unitPrice",1));firm=factory["business"];firm["cash"]=int(firm.get("cash",0)+revenue);firm["lastExportUnits"]=firm.get("lastExportUnits",0)+order["quantity"];firm["lastExportRevenue"]=firm.get("lastExportRevenue",0)+revenue;industry["exportedUnits"]+=order["quantity"];industry["exportRevenue"]+=revenue;order.update({"settled":True,"completedDay":state["day"],"revenue":revenue});ev("Exportación industrial recibida",f"{order['quantity']} unidades de {order.get('product','mercadería')} llegaron al mercado exterior por {order.get('destination','red regional').lower()}; ingreso empresarial $ {revenue}.")
+
 def process_port_logistics():
     """Exportaciones reales de comercios: camión por calles, patio limitado y barco por demanda."""
     supply=state["supply"];ports=[b for b in state["buildings"] if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo")]
@@ -4456,9 +4494,9 @@ def process_port_logistics():
     for order in orders:
         if order.get("status") not in ("pendiente","en tránsito","esperando acceso","esperando patio"):continue
         port=next((b for b in ports if b.get("id")==order.get("portId")),None)
-        shop=next((b for b in state["buildings"] if b.get("kind")=="shop" and b.get("business",{}).get("id")==order.get("businessId")),None)
-        if not port or not shop:order["status"]="cancelado";continue
-        route=route_between((shop["x"],shop["y"]),(port["x"],port["y"]))
+        source=next((b for b in state["buildings"] if b.get("kind") in ("shop","factory") and b.get("business",{}).get("id")==order.get("businessId")),None)
+        if not port or not source:order["status"]="cancelado";continue
+        route=route_between((source["x"],source["y"]),(port["x"],port["y"]))
         if not route:order.update({"status":"esperando acceso","route":[]});continue
         order["route"]=route;distance=max(1,len(route)-1);order["status"]="en tránsito"
         order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
@@ -4471,6 +4509,10 @@ def process_port_logistics():
         quantity=min(port.get("shipCapacity",180),port["cargoStored"]);port["cargoStored"]-=quantity;port["lastShipDay"]=state["day"];port["shipsDeparted"]=port.get("shipsDeparted",0)+1
         fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee
         voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"cargoType":"mercadería","direction":"exportación","departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
+        factory_orders=[o for o in orders if o.get("originType")=="factory" and o.get("portId")==port.get("id",f"port-{port['x']}-{port['y']}") and o.get("status")=="en puerto"]
+        for order in factory_orders:order.update({"status":"en viaje","arrivalDay":voyage["arrivalDay"],"route":voyage["route"]})
+        voyage["factoryOrderIds"]=[o["id"] for o in factory_orders]
+        supply.setdefault("factoryExportOrders",[]).extend(o for o in factory_orders if o not in supply.get("factoryExportOrders",[]))
         voyages.append(voyage);ev("Buque de carga zarpó",f"Un buque partió con {quantity} unidades exportadas; tasa portuaria $ {fee} ingresó a tesorería.")
     for voyage in voyages:
         if voyage.get("direction")!="importación" and voyage.get("status")=="en ruta" and state["day"]>=voyage.get("arrivalDay",999999):voyage["status"]="entregado";voyage["deliveredDay"]=state["day"];ev("Exportación entregada",f"El cargamento de {voyage['quantity']} unidades llegó al mercado regional.")
@@ -4772,6 +4814,7 @@ def tick_one_day():
         tourism_tax=simulate_hotel_month(economic)
         renew_private_commercial_leases()
         activity=simulate_business_month(economic)
+        queue_factory_exports()
         settle_tourism_event_retail()
         rebalance_private_staffing(economic)
         reprice_private_shops()
@@ -4836,14 +4879,18 @@ def tick_one_day():
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
         move_households()
-        advance_zoned_development()
         consider_industrial_reopenings()
         update_government_cycle()
         if net<0: ev("Presión sobre la tesorería","El gasto mensual supera los ingresos disponibles; revisar compromisos y servicios.")
     process_government_election()
+    # El promotor reacciona a las parcelas y a la demanda todos los días, no
+    # solamente al cierre mensual. Las obras conservan sus etapas y duración.
+    if state.get("zones"):
+        advance_zoned_development()
     process_market_orders()
     process_supply_orders()
     process_port_logistics()
+    process_factory_exports()
     for p in list(state["projects"]):
         if p.get("status")=="pausada": continue
         if p.get("status")=="cambio_pendiente": continue

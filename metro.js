@@ -102,7 +102,8 @@ export function metroAction(s,action,data){
   const rail=line.mode==='elevated',cost=rail?RAIL_TRAIN_COST:METRO_TRAIN_COST,limit=rail?4:5;
   if((action==='buyRailTrain')!==rail)throw Error('Acción incorrecta para este tipo de tren.');
   if(!['active','paused'].includes(line.status)||(line.trainCount||0)>=limit)throw Error('La línea no está habilitada o alcanzó su flota máxima.');
-  if((s.money||0)<cost)throw Error('No hay fondos para otro tren.');
+  const reserved=(s.projects||[]).filter(p=>!p.privatePaid).reduce((v,p)=>v+Math.max(0,(p.cost||0)-(p.paid||0)),0);
+  if((s.money||0)-reserved<cost)throw Error('No hay fondos libres para otro tren.');
   s.money-=cost;line.trainCount++;
  }else if(action==='pauseMetroLine'||action==='pauseRailLine'){
   if((action==='pauseRailLine')!==(line.mode==='elevated'))throw Error('Acción incorrecta para la línea.');

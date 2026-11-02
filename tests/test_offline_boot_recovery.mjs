@@ -9,7 +9,7 @@ try{
  await freshPage.waitForFunction(()=>document.querySelectorAll('#releaseNotes .release-card').length>=2,{timeout:10000});
  assert.match(await freshPage.locator('.ref-version-banner').first().innerText(),/Alfa 0\.166/,'Cambios y novedades muestra la versión actual desde la primera apertura');
  const releaseTitles=await freshPage.locator('#releaseNotes .release-card .release-head b').allTextContents();
- assert.deepEqual(releaseTitles.slice(0,3),['Alfa 0.166','Alfa 0.164','Alfa 0.163'],'el historial muestra primero la versión publicada y conserva las anteriores');
+ assert.deepEqual(releaseTitles.slice(0,3),['Alfa 0.166','Alfa 0.165','Alfa 0.164'],'el historial muestra primero la versión publicada y conserva las anteriores');
  assert.match(await freshPage.locator('#releaseNotes').innerText(),/pasajeros|taxis/i,'los viajes de taxi se describen en Cambios');
  await freshPage.locator('#popupClose').evaluate(e=>e.click());
  await freshPage.close();

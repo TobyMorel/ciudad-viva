@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.165",
+  "currentVersion": "0.166",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.166",
+      "date": "2026-11-02",
+      "title": "Colectivos intermodales para compras y servicios",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los residentes ahora pueden tomar líneas de colectivos ya operativas para ir a comprar y utilizar servicios. Se calculan trayectos con origen/destino reales y frecuencia; solamente se aceptan pasajeros si existen asientos libres en el turno de mediodía.",
+        "Los viajes pueden combinar dos líneas mediante paradas próximas, con cupo descontado en ambas y tarifa de transbordo reducida. Los pasajeros que no encuentran asiento conservan su automóvil o viaje a pie, sin crear viajes ficticios.",
+        "Los boletos se registran por hogar y día, sin repetir cargos al consultar varias veces la ciudad. Al cierre mensual se cobra hasta donde alcanza el dinero de cada hogar y se abona a la tesorería municipal.",
+        "Taxis y colectivos ya no pueden transportar al mismo visitante dos veces. El panel de Movilidad muestra viajeros no laborales por línea y transbordos; se verifica que los textos no se corten en móvil ni escritorio."
+      ],
+      "verification": "Regresiones Online, Offline, escenarios de aforo/transbordos/pago, estrés económico 30 años y prueba Chromium de legibilidad 390/1440 px en GitHub Actions.",
+      "pending": [
+        "Red de metro/tren y obras por etapas, conexión portuaria y aeroportuaria intermodal, LAN física en dos equipos."
+      ]
+    },
     {
       "version": "0.165",
       "date": "2026-11-02",

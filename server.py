@@ -4,6 +4,7 @@ import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from taxi_passengers import assign_taxi_passengers
+from bus_nonwork import assign_bus_nonwork_passengers
 from growth_demand import growth_demand
 
 ROOT = Path(__file__).resolve().parent
@@ -3393,6 +3394,7 @@ def commute_model():
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
     services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
+    bus_nonwork=assign_bus_nonwork_passengers(state,shopping+services)
     taxi_service=assign_taxi_passengers(state,shopping+services)
     for route in taxi_service['activeRoutes']:
         for aa,bb in zip(route,route[1:]):
@@ -3402,6 +3404,7 @@ def commute_model():
     model['dailyEmissionsKg']+=taxi_service['vehicleEmissionsKg']
     model['taxiRiders']=taxi_service['dailyRiders']
     model['taxiVehicles']=taxi_service['activeVehicles']
+    model.update(bus_nonwork)
     for trip in shopping+services:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]

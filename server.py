@@ -3824,7 +3824,7 @@ def refresh_private_investment_opportunity(report,local_unmet=0):
     current=book.get("proposal")
     if current and current.get("status")=="disponible":
         valid_zone=any(z.get("x")==current.get("x") and z.get("y")==current.get("y") and z.get("kind")=="shop" for z in state.get("zones",[]))
-        occupied=any(e.get("x")==current.get("x") and e.get("y")==current.get("y") for key in ("buildings","projects","abandoned") for e in state.get(key,[]))
+        occupied=any(e.get("x")==current.get("x") and e.get("y")==current.get("y") for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[]))
         if state.get("day",1)>current.get("expiresDay",0) or not valid_zone or occupied:
             current["status"]="vencida" if state.get("day",1)>current.get("expiresDay",0) else "parcela ocupada"
             book["history"].append(dict(current));book["history"]=book["history"][-24:];book["proposal"]=None;book["nextOfferDay"]=state.get("day",1)+45
@@ -3839,7 +3839,7 @@ def refresh_private_investment_opportunity(report,local_unmet=0):
     report["localUnmet"]=local_unmet
     if regional_unmet<12 and local_unmet<12:
         book["reason"]="El promotor espera ventas regionales pendientes o compras de hogares que las tiendas actuales no logran cubrir.";return
-    candidates=[];reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
+    candidates=[];reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
     for z in state.get("zones",[]):
         if z.get("kind")!="shop" or z.get("status") not in (None,"disponible") or (z.get("x"),z.get("y")) in reserved:continue
         if not any(abs(rx-z["x"])+abs(ry-z["y"])==1 for rx,ry in state.get("roads",[])):continue
@@ -4371,7 +4371,7 @@ def advance_zoned_development():
     """Promoters spend real capital and buy the materials for approved projects."""
     demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
     supply=growth_demand(state)
-    reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned") for e in state.get(key,[])}
+    reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
     for kind,threshold in (("home",12),("shop",0),("factory",0)):
         if kind=="home" and supply["housing"]["shortage"]<threshold:continue
         if kind=="shop" and not supply["commercial"]["shortage"]:continue
@@ -6147,7 +6147,7 @@ class Handler(BaseHTTPRequestHandler):
                     contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     if not instant_public and not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles. Elegí otra empresa o esperá la entrega de una obra."}); return
                     if not instant_public and contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} necesita {LABOR_NEEDS[kind]} trabajadores para esta obra y solo tiene {contractor_free_workers(contractor)} libres."}); return
-                    if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])): self._send(409,{"error":"La parcela ya está ocupada"}); return
+                    if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])): self._send(409,{"error":"La parcela ya está ocupada"}); return
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
                     if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
@@ -6384,7 +6384,7 @@ class Handler(BaseHTTPRequestHandler):
                         x,y=map(int,cell)
                         if is_water(x,y):self._send(409,{"error":"La franja incluye una parcela de agua."});return
                         if not land_tile_unlocked(x,y):self._send(409,{"error":"La franja incluye terreno bloqueado. Desbloquealo tocando su candado."});return
-                        if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
+                        if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
                         if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle terminada al lado."});return
                         if (x,y) not in seen:normalized.append((x,y));seen.add((x,y))
                     state["zones"]=[z for z in state.setdefault("zones",[]) if (z.get("x"),z.get("y")) not in seen]

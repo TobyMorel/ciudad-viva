@@ -21,8 +21,9 @@ jobs:
           node-version: '22'
       - name: Sintaxis y JSON
         run: |
-          python -m py_compile server.py
+          python -m py_compile server.py taxi_passengers.py
           node --check offline.js
+          node --check taxi_passengers.js
           node --check offline_client.js
           node --check offline_worker.js
           node --check traffic.js

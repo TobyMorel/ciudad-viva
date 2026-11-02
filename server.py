@@ -3,6 +3,7 @@
 import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from taxi_passengers import assign_taxi_passengers
 
 ROOT = Path(__file__).resolve().parent
 SAVE = ROOT / "ciudad_guardada.json"
@@ -3148,7 +3149,8 @@ def commute_model():
     key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
          tuple((b.get("x"),b.get("y"),b.get("kind"),b.get("occupants",0),b.get("status"),b.get("business",{}).get("status"),b.get("business",{}).get("jobSlots"),b.get("business",{}).get("wage"),tuple((r.get("id"),r.get("workerEligible"),r.get("status"),tuple(sorted(r.get("skills",{}).items())),r.get("expectedMonthlyWage")) for r in b.get("residents",[]))) for b in homes+sites),
          tuple((o.get("id"),o.get("status"),round(o.get("travelledDistance",0),1)) for o in state.get("supply",{}).get("orders",[]) if o.get("status")=="en tránsito"),
-         tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])))
+         tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])),
+         tuple((t.get("id"),t.get("status"),t.get("operational"),tuple(map(tuple,t.get("route",[]))),tuple(tuple(s.get("at",[])) for s in t.get("stops",[]))) for t in state.get("taxiRoutes",[])))
     if key==_commute_cache_key and not state["busRoutes"]:
         for line in state.get("busRoutes",[]):
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
@@ -3390,6 +3392,15 @@ def commute_model():
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
     services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
+    taxi_service=assign_taxi_passengers(state,shopping+services)
+    for route in taxi_service['activeRoutes']:
+        for aa,bb in zip(route,route[1:]):
+            edge=tuple(sorted((tuple(aa),tuple(bb))))
+            segment_flow[edge]=segment_flow.get(edge,0)+1/80
+    model['vehicles']+=taxi_service['activeVehicles']
+    model['dailyEmissionsKg']+=taxi_service['vehicleEmissionsKg']
+    model['taxiRiders']=taxi_service['dailyRiders']
+    model['taxiVehicles']=taxi_service['activeVehicles']
     for trip in shopping+services:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
@@ -4862,7 +4873,7 @@ def tick_one_day():
         economic=commute_model()
         collect_bus_fares(economic)
         business_income=round(economic["privateStaffedJobs"]*2)
-        taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
+        taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
         taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
         transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_income
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost
@@ -5700,6 +5711,8 @@ def public_state(player_id=None):
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["transferCommuters"]=commute.get("transferCommuters",0)
     view["traffic"]["carAccessWorkers"]=commute.get("carAccessWorkers",0)
+    view["traffic"]["taxiRiders"]=commute.get("taxiRiders",0)
+    view["traffic"]["taxiVehicles"]=commute.get("taxiVehicles",0)
     view["traffic"]["queueReport"]=commute.get("queueReport",{})
     view["commutes"]=commute["routes"]
     view["busRouteCatalog"]=bus_route_catalog(commute)
@@ -5719,7 +5732,7 @@ def public_state(player_id=None):
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant"))
     taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost
-    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))
+    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
     view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
     view["transitMonthlyIncome"]=transit_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)

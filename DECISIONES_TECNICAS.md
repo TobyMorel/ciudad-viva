@@ -1,4 +1,10 @@
-# Decisiones técnicas · Alfa 0.149
+# Decisiones técnicas · Alfa 0.150
+
+## Taxis de circuito manual · Alfa 0.150
+
+Cada entidad `taxiRoutes[]` representa un taxi y su circuito cerrado, con `depotId`, `route` (secuencia de calles), paradas ordenadas (`at`), estado operacional y costos. Un depósito `serviceModel=taxiYard` ofrece cuatro plazas; un taxi usa su acceso vial determinista y vuelve al mismo tramo. La ruta se valida completa antes del cargo: todas las paradas deben ser distintas y sobre calles conectadas/desbloqueadas. Compra $2.800, infraestructura $220 por parada, operación $260/mes. `cancelTaxiRoute` reembolsa la mitad del costo del vehículo; las paradas no se reembolsan. Cliente Online/Offline conservan mismo formato/validación. Vehículo dibujado por `world3d.js`; parada física representativa, no es aún un objeto con capacidad/cobro. La firma de render incluye `taxiRoutes` para reconstruir la escena al cambiar un circuito; los tramos activos suman carga a su calle. El actor expone ficha al seleccionarlo en el mapa.
+
+Todavía no simular conductores, viajes de pasajero, destinos, espera, ocupación o recaudación en taxi; esas variables quedan en cero hasta implementar la movilidad bajo demanda. Evitar agregar ingresos ficticios. En fases próximas: rutas origen/destino de demanda real y asignación de conductor/turno, entonces conectar al modelo de movilidad.
 
 ## Líneas de colectivo elegidas por jugador
 

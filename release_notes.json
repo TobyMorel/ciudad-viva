@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.149",
+  "currentVersion": "0.150",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.150",
+      "date": "2026-11-02",
+      "roadmapPhase": 7,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Se agrega un Depósito de taxis (4 vehículos por depósito) y un editor para marcar entre 2 y 8 paradas manuales sobre calles, en el orden del circuito. Cada taxi vuelve por ruta conectada al depósito; se cobra $2.800 por vehículo y $220 por parada.",
+        "Los taxis circulan visibles e inspeccionables en el mapa 3D, con postes físicos en sus paradas. El panel de Movilidad permite trazar, pausar, reanudar y retirar vehículos; la operación cuesta $260/mes.",
+        "Las rutas, depósitos, costos y acciones tienen paridad Online/Offline y quedan guardados. El panel permite pausar, reanudar y retirar taxis; las líneas de colectivos existentes siguen funcionando.",
+        "El render 3D invalida la escena al crear/cambiar circuitos de taxi, muestra los vehículos y sus postes sobre el mapa y suma sus tramos al estrés vial. El jugador puede tocar un taxi para abrir su ficha."
+      ],
+      "pending": [
+        "Taxis aún no tienen conductores, asignación de pasajeros puerta a puerta ni tarifa dinámica; no generan ingresos hasta que se implemente ese sistema.",
+        "Red de subte con estaciones y vista subterránea; después cruceros con pasajeros y conexión urbana de aeropuerto."
+      ]
+    },
     {
       "version": "0.149",
       "date": "2026-11-02",

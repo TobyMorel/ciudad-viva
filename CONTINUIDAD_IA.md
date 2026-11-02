@@ -1,4 +1,12 @@
-# Continuidad inmediata · Alfa 0.149
+# Continuidad inmediata · Alfa 0.150
+
+## Alfa 0.150 · taxis con circuito manual visible
+
+`index.html` añade Depósito de taxis a Construir → Logística; quita duplicados en el catálogo. `game.js` reutiliza el editor de paradas con límite taxi de 2–8, acciones de pausa/reanudar/retiro y panel de Movilidad. `server.py` / `offline.js` crean un vehículo único por circuito cerrado, con tope de cuatro por depósito, precio de $2.800 + $220 por parada y $260 de operación mensual. `world3d.js` dibuja el taxi en movimiento y señal física por parada. Las rutas requieren calles conectadas al depósito. Estado de guardado expone rutas y depósitos.
+
+Verificación: `tests/test_manual_taxi_route.py`, `tests/test_taxi_route_offline.mjs`, `tests/test_taxi_route_ui.mjs` y `tests/test_bus_route_ui.mjs` pasan. En Chromium 390×844 y 1440×900 se comprobó el panel sin desborde horizontal, el trazado de paradas, el actor 3D y la ficha al tocar el taxi. La regresión acumulada pasa: 122 pruebas Python y 78 Offline. El render invalida su firma cuando cambia `taxiRoutes`. Taxis todavía no incluye conductores asignados, pasajeros, destinos ni tarifa dinámica; no representar estas partes como completas.
+
+Hito: fase 7 permanece 95%; fase 4 60%; fase 9 75%; estimación global no disponible por falta de ponderación/aceptación común verificable. Próximo alcance: sistemas de pasajero/conductor de taxi, luego subte con estaciones y cámara por debajo de superficie; luego cruceros con turismo y acceso urbano al aeropuerto.
 
 No empezar desde cero. Priorizar mecánicas conectadas, entregar sistemas nuevos en vez de encadenar pulido, ejecutar las verificaciones existentes y publicar cada versión en `main` con GitHub noreply. Leer también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`.
 

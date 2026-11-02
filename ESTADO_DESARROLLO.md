@@ -1,4 +1,14 @@
-# Estado de desarrollo · Alfa 0.149
+# Estado de desarrollo · Alfa 0.150
+
+## Taxis con depósito y ruta manual · fase 7
+
+En Construir → Logística se puede ubicar un Depósito de taxis; una vez terminado y conectado a calles, Movilidad permite asignar hasta cuatro taxis por depósito. El jugador marca de 2 a 8 paradas de calle en orden. El motor calcula el circuito vial de ida y retorno, factura $2.800 por vehículo más $220 por parada y carga $260/mes por taxi activo. Se dibujan los vehículos y postes de parada; se puede pausar, reanudar o retirar el taxi. Online y Offline guardan ruta, flota y costos. Los colectivos manuales siguen operativos.
+
+Alcance que sigue pendiente dentro del taxi: conductores asignados, recogidas y destinos de pasajeros, tarifa/ingreso basado en viajes y demanda. La vista 3D demuestra circulación por el circuito, pero todavía no simula ocupantes.
+
+Verificado: 122 pruebas Python y 78 pruebas Offline (incluyen taxis y colectivos), `tests/test_taxi_route_ui.mjs` y la regresión `tests/test_bus_route_ui.mjs` en Chromium a 390×844 y 1440×900. Se comprobó que el circuito aparece sin desborde horizontal, el vehículo se dibuja en 3D y al tocarlo abre su ficha. Sintaxis JavaScript/Python, JSON y `git diff --check` pasan. Fase 7 se mantiene en 95%; fases 4/9 en 60%/75%; global no estimable por falta de pesos comparables verificables para 34 fases.
+
+Hito actual: fase 7 · colectivos manuales y primera versión de taxi con circuito visible. Próximo: completar interacción de pasajeros/conductores de taxi y luego red de subte con capa de cámara; cruceros y acceso urbano al aeropuerto quedan después.
 
 ## Líneas de colectivo manuales desde depósito · fase 7
 

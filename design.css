@@ -131,3 +131,10 @@ body[data-theme="dark"] .build-help-popover{background:#20373b;color:#eef5ed;bor
 @media(max-width:650px){.bus-route-composer{bottom:91px;left:8px;transform:none;width:calc(100% - 16px);padding:9px 10px;gap:5px 8px}.bus-route-composer>b{font-size:11px}.bus-route-composer>span{font-size:10px}.bus-route-composer button{min-height:34px;padding:6px 8px;font-size:10px}.bus-garage-row{grid-template-columns:1fr}.bus-garage-row button{justify-self:start;max-width:100%}}
 .bus-route-markers{position:absolute;z-index:5;inset:0;pointer-events:none}.bus-route-markers[hidden]{display:none}.bus-route-marker{position:absolute;display:grid;place-items:center;width:25px;height:25px;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;background:#187f76;color:#fff;font:800 11px/1 system-ui;box-shadow:0 2px 9px #143d3c77}
 @media(max-width:650px){.bus-route-marker{width:23px;height:23px;font-size:10px}}
+
+.taxi-route-marker{background:#bd7b22;border-color:#fff1ca;box-shadow:0 2px 10px #68441666}
+.taxi-route{border-color:#e0bb78}
+
+.taxi-panel{display:grid;gap:10px}.taxi-panel>p{line-height:1.5}.taxi-route{border-left:3px solid #d6a23f;padding-left:9px}.taxi-panel .bus-garage-row{grid-template-columns:minmax(0,1fr)}.taxi-panel .bus-garage-row button{justify-self:start;max-width:100%;white-space:normal}.taxi-panel .bus-actions{display:flex;flex-wrap:wrap;gap:6px}.taxi-panel .bus-actions button{min-height:34px;padding:6px 10px}
+body[data-theme="dark"] .taxi-panel{color:#e7f0eb}
+@media(max-width:650px){.taxi-panel .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.taxi-panel .bus-line small{overflow-wrap:anywhere}.taxi-panel .bus-garage-row button{width:100%}}

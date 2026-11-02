@@ -1,4 +1,4 @@
-# Auditoría · Alfa 0.149 · líneas de colectivo diseñadas
+# Auditoría · Alfa 0.150 · taxi con recorrido manual
 
 La movilidad existente ofrecía vehículos y líneas de corredor generadas automáticamente, pero no permitía elegir el camino y las paradas desde un depósito. Se agregó el flujo completo con ruta vial ordenada, 2–12 paradas, una sola línea manual por depósito, flota facturada y paso de pasajeros por la ruta directa y transbordos compartidos. La UI muestra paradas mientras se diseña y señales en el mundo. Los motores online/offline y pruebas de navegador cubren guardado y puesta en marcha.
 

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.175",
+  "currentVersion": "0.176",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.176",
+      "date": "2026-11-02",
+      "title": "Informes municipales y catálogo de construcción",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se retiró la guía general y sus accesos para simplificar la interfaz.",
+        "Las categorías del informe municipal ahora se abren desde una barra vertical de iconos y cada panel explica qué información muestra.",
+        "Los indicadores se presentan en tarjetas con mejor jerarquía para encontrar capacidades, estados y necesidades.",
+        "El catálogo de construcción separa terreno, zonas, vivienda, salud, educación, bienestar, emergencias, residuos, industria, movilidad y redes."
+      ],
+      "verification": "Cambios de interfaz implementados; pendientes de revisi?n en navegador.",
+      "pending": []
+    },
     {
       "version": "0.175",
       "date": "2026-11-02",

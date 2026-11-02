@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.179",
+  "currentVersion": "0.180",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.180",
+      "date": "2026-11-02",
+      "title": "Sombreado de todo el terreno bloqueado",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "El mapa oscurece todos los sectores bloqueados visibles y deja despejados los sectores ya desbloqueados.",
+        "El sombreado se actualiza al mover o acercar la cámara y al desbloquear suelo; cada nuevo borde habilitado muestra sus próximos sectores comprables."
+      ],
+      "verification": "Revisión visual del sombreado completo en el mapa; compra de terreno conserva la expansión por sectores vecinos.",
+      "pending": []
+    },
     {
       "version": "0.179",
       "date": "2026-11-02",

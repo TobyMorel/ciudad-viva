@@ -660,7 +660,15 @@ export function createWorld(canvas){
     }
 
     for(const incident of state.fireReport?.activeIncidents||[]){if(!incident||!Number.isInteger(incident.x)||!Number.isInteger(incident.y))continue;const [fx,fz]=tilePos(incident.x,incident.y),flames=[],smoke=[];for(let i=0;i<11;i++){const mesh=new THREE.Mesh(new THREE.ConeGeometry(.12+(i%3)*.025,.42+(i%3)*.12,7),new THREE.MeshBasicMaterial({color:['#f1a03a','#ef6435','#f6cb62'][i%3],transparent:true,opacity:.88,depthWrite:false}));mesh.renderOrder=20;dynamicRoot.add(mesh);flames.push({mesh,phase:i/11});}for(let i=0;i<18;i++){const mesh=new THREE.Mesh(new THREE.SphereGeometry(.18+(i%4)*.025,9,7),new THREE.MeshBasicMaterial({color:i%3?'#687375':'#8a8980',transparent:true,opacity:0,depthWrite:false}));mesh.renderOrder=19;dynamicRoot.add(mesh);smoke.push({mesh,phase:i/18});}fireVisuals.push({fx,fz,flames,smoke,seed:fx+fz});}
-    for(const a of state.abandoned||[])addSite(dynamicRoot,a,true);
+    for(const a of state.abandoned||[]){
+      if(a.status==='vivienda abandonada'){
+        const houseData={...a,kind:'home',level:1,urbanCondition:12,status:'abandonado',occupants:0};
+        addBuilding(dynamicRoot,houseData,roads,renewalKeys);
+        const [hx,hz]=tilePos(a.x,a.y);
+        for(const z of [-.7,.7])for(const x of [-.37,.37])box(dynamicRoot,.45,.075,.045,'#826b51',hx+x,1.15,hz+z);
+        for(const x of [-.68,.68])box(dynamicRoot,.18,.35,.1,'#8f8778',hx+x,.22,hz+.48);
+      }else addSite(dynamicRoot,a,true);
+    }
     for(const p of state.projects)addSite(dynamicRoot,p,false);for(const w of state.adaptiveReuseWorks||[])addSite(dynamicRoot,w,false);
     addSelection(dynamicRoot,chosen);
 

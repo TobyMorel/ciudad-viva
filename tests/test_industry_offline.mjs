@@ -73,35 +73,13 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
 
     assert.ok(v.localIndustry.concreteProduced>=factory.lastProduction);
 
-    // Venta de cemento local y consumo por una obra pública real.
-    v=await adapter.request('/api/action',{action:'place',kind:'road',x:4,y:11,contractor:'Sur Obras'});
-    const projectId=v.projects.at(-1).id;
-    let stalled=false;
-    for(let day=0;day<20;day++){
-      v=await tick();
-      const project=v.projects.find(p=>p.id===projectId);
-      stalled=project?.status==='suspendida'&&String(project.cause||'').includes('hormigón');
-      if(stalled)break;
-    }
-    assert.ok(stalled,'La obra debe detenerse cuando no tiene hormigón');
-    const before=v.buildings.find(b=>b.business?.id==='concrete-test').business;
-    const beforeStock=before.concreteStock,beforeCash=before.cash;
-    v=await adapter.request('/api/action',{action:'orderMaterials',projectId,supplier:'Hormigonera local',items:{concrete:6},destinationId:'yard'});
-    const order=v.supply.orders.at(-1);
-    assert.equal(order.status,'en tránsito');
-    assert.equal(order.supplier,'Hormigonera local');
-    assert.equal(v.buildings.find(b=>b.business?.id==='concrete-test').business.concreteStock,beforeStock-6);
-    assert.ok(v.buildings.find(b=>b.business?.id==='concrete-test').business.cash>beforeCash);
-    let arrived=false;
-    for(let day=0;day<65;day++){
-      v=await tick();
-      arrived ||=v.supply.orders.find(o=>o.id===order.id)?.status==='entregado';
-      if(!v.projects.some(p=>p.id===projectId))break;
-    }
-    assert.ok(arrived,'El hormigón local debe entregarse por carretera');
-    assert.ok(!v.projects.some(p=>p.id===projectId),'La obra debe superar inspección');
+    // Las calles ahora se colocan en el momento y no reservan materiales de obra.
+    const beforeRoad=v.money,stockBefore=v.supply.contractors['Sur Obras'].concrete;
+    v=await adapter.request('/api/action',{action:'placeRoad',x:4,y:11});
     assert.ok(v.roads.some(([x,y])=>x===4&&y===11));
-    assert.equal(v.supply.contractors['Sur Obras'].concrete,0,'Se consumen las seis unidades, sin duplicación');
+    assert.equal(v.money,beforeRoad-1200);
+    assert.equal(v.projects.length,0,'La calle instantánea no crea proyecto ni espera cuadrilla.');
+    assert.equal(v.supply.contractors['Sur Obras'].concrete,stockBefore,'La calle instantánea no consume materiales.');
   });
 });
 

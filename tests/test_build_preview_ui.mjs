@@ -18,6 +18,11 @@ try{
   await page.waitForFunction(()=>[...document.querySelectorAll('#projects .project')].filter(el=>el.textContent.includes('Consultorio barrial')).length===2,{timeout:15000});
   assert.equal(await page.locator('#bidBackdrop').count(),0,`${name}: no debe existir el diálogo repetitivo de obra`);
   assert.equal(await clinic.evaluate(el=>el.classList.contains('active')),true,`${name}: herramienta permanece lista para colocar otra obra`);
+  await page.locator('[data-popup="build"]').click();const roadTool=page.locator('.tool[data-tool="road"]');await roadTool.hover();assert.match(await help.innerText(),/1\.200 por tramo · instantánea/i);assert.doesNotMatch(await help.innerText(),/cuadrilla|trabajadores|días de obra|empresa se asigna/i,`${name}: la calle no debe mostrar requisitos de obra`);await roadTool.click();
+  const moneyBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).money);
+  for(const [x,y] of [[13,5],[14,5]]){const point=await page.evaluate(([x,y])=>{const p=window.__ciudadVivaProjectTile(x,y,0),r=document.querySelector('#city').getBoundingClientRect();return{...p,x:p.x+r.left,y:p.y+r.top}},[x,y]);assert.ok(point.visible,`${name}: tramo de calle fuera de cámara`);await page.mouse.click(point.x,point.y)}
+  await page.waitForFunction(()=>{const city=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));return city.roads.some(([x,y])=>x===13&&y===5)&&city.roads.some(([x,y])=>x===14&&y===5)},{timeout:10000});
+  const roadResult=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')));assert.equal(roadResult.money,moneyBefore-2400,`${name}: cobra una vez por cada tramo`);assert.equal(roadResult.projects.filter(project=>project.kind==='road').length,0,`${name}: no crea proyectos/animaciones viales`);assert.equal(await page.locator('#bidBackdrop').count(),0,`${name}: los clics viales no abren popup`);assert.equal(await roadTool.evaluate(el=>el.classList.contains('active')),true,`${name}: se pueden seguir colocando tramos`);
   assert.deepEqual(errors,[],`${name}: errores JS`);await page.close();
  }
 }finally{await browser.close();server.kill('SIGTERM')}

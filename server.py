@@ -3402,6 +3402,27 @@ def toggle_traffic_signal(x,y):
     ev("Semáforo actualizado",f"Intersección {x+1},{y+1}: {'semáforo instalado' if enabled else 'semáforo retirado'}.")
     return enabled
 
+ROAD_BUILD_COST=PROJECTS["road"]["cost"]
+def place_road_instantly(x,y):
+    """Construye un tramo municipal al instante, sin contratista, materiales ni proyecto."""
+    x=int(x);y=int(y)
+    if not land_tile_unlocked(x,y):raise ValueError("La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir.")
+    if is_water(x,y):raise ValueError("No se puede construir una calle sobre agua.")
+    if [x,y] in state.get("roads",[]):raise ValueError("Ese tramo ya forma parte de la red vial.")
+    if any(item.get("x")==x and item.get("y")==y for key in ("buildings","projects","abandoned") for item in state.get(key,[])):
+        raise ValueError("La parcela ya está ocupada.")
+    if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state.get("roads",[])):
+        raise ValueError("La calle debe conectar con la red existente.")
+    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    available=max(0,int(state.get("money",0))-reserved)
+    if available<ROAD_BUILD_COST:raise ValueError(f"Quedan $ {available}; construir este tramo cuesta $ {ROAD_BUILD_COST}.")
+    state["money"]-=ROAD_BUILD_COST
+    state.setdefault("roads",[]).append([x,y])
+    state.setdefault("roadAssets",[]).append({"x":x,"y":y,"quality":82,"monthlyCost":15})
+    state["monthlyExpenses"]=state.get("monthlyExpenses",0)+15
+    ev("Calle construida",f"Tramo {x+1},{y+1} habilitado al instante · inversión municipal $ {ROAD_BUILD_COST} · sin materiales ni cuadrilla.")
+    return ROAD_BUILD_COST
+
 
 def traffic_factor(route, exclude_order=None):
     """Tiempo relativo por tramo: empleo local más camiones que ocupan ese tramo hoy."""
@@ -5539,6 +5560,10 @@ class Handler(BaseHTTPRequestHandler):
                     try:toggle_traffic_signal(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid));return
+                if action=="placeRoad":
+                    try:place_road_instantly(data.get("x"),data.get("y"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid));return
                 if action in POLICE_COSTS or action=="setPolicePriority":
                     try:invest_police_unit(action,int(data.get("x",-1)),int(data.get("y",-1)),data.get("priority"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
@@ -5776,6 +5801,10 @@ class Handler(BaseHTTPRequestHandler):
                 elif action=="place":
                     kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
                     if kind not in PROJECTS: self._send(400,{"error":"Proyecto o parcela inválidos"}); return
+                    if kind=="road":
+                        try:place_road_instantly(x,y)
+                        except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                        self._send(200,public_state(pid));return
                     if not land_tile_unlocked(x,y):self._send(409,{"error":"La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir."});return
                     investment_id=str(data.get("investmentId", ""));investment_book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)});investment_offer=investment_book.get("proposal")
                     if investment_id and (not investment_offer or investment_offer.get("status")!="disponible" or investment_offer.get("id")!=investment_id or investment_offer.get("x")!=x or investment_offer.get("y")!=y or contractor!=investment_offer.get("contractor") or kind!="shop" or state["day"]>investment_offer.get("expiresDay",0)):

@@ -1,4 +1,8 @@
-# Siguiente entrega · después de Alfa 0.146
+# Siguiente entrega · después de Alfa 0.147
+
+La Alfa 0.147 hace instantánea la colocación de calles: $1.200 por tramo, sin animación de obra, materiales, constructora o cuadrilla; varios clics seguidos mantienen activa la herramienta. Online/Offline están cubiertos por pruebas. Fase 4 permanece en 60%, y el avance total sigue no estimable porque las 34 fases no tienen pesos de aceptación comparables.
+
+Próxima mecánica: patrullas policiales que recorren físicamente las calles y responden a incidentes, con capacidad, ruta, llegada y causa cuando no haya unidad disponible. Después verificar docentes/cobertura tras ampliaciones escolares y seguir con crecimiento privado de viviendas, comercios e industria en partidas extensas.
 
 La Alfa 0.146 añadió semáforos 3D configurables y efectos acústicos contextuales. Las fases 7 y 9 mantienen 95% y 75%: quedan criterios de movilidad y servicios sin terminar. El global sigue no estimable porque el roadmap no aporta pesos comunes verificables para agregar las 34 fases.
 

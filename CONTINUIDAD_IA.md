@@ -1,6 +1,12 @@
-# Continuidad inmediata · Alfa 0.146
+# Continuidad inmediata · Alfa 0.147
 
 No empezar desde cero. Priorizar mecánicas conectadas y evitar varias entregas de pulido. Lee también `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md`. Publicar cada versión en `main` con el correo GitHub noreply configurado.
+
+## Alfa 0.147 · calles instantáneas
+
+Las rutas se colocan directamente desde el mapa: un clic, un tramo conectado, $1.200 de costo único, sin animación, materiales, proyecto ni cuadrilla. La herramienta continúa seleccionada para encadenar clics. El mantenimiento municipal de $15/mes por tramo sigue integrado al sistema de redes. Acciones Online y Offline validadas, además del modo heredado `place`/`road`.
+
+Pruebas: `tests/test_road_instant.py`, `tests/test_road_instant_offline.mjs`; suite Python reportó 117 aprobadas, Offline 63 aprobadas. Fase 4 continúa en 60%, avance global no estimable.
 
 ## Alfa 0.146 · sirenas, fuego, bocinas y semáforos
 

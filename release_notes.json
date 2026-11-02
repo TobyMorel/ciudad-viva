@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.146",
+  "currentVersion": "0.147",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.147",
+      "date": "2026-11-02",
+      "roadmapPhase": 4,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "Las calles se habilitan al instante: se quitó el proyecto, la animación de obra, la selección de constructora, las cuadrillas y el pedido de materiales. Cada tramo cuesta $1.200, se paga una sola vez al colocarlo y agrega el mantenimiento mensual municipal habitual.",
+        "La herramienta de calles permanece seleccionada para permitir varios clics consecutivos. Se conserva la validación de zona desbloqueada, parcela libre, conexión a la red y fondos; construir funciona igual en Online y Offline.",
+        "Verificado: 117 pruebas Python, 63 pruebas Offline y Chromium responsive a 390×844/1440×900; se comprobaron dos clics seguidos, costo, herramienta activa y ausencia de popup vial. Incluye el nuevo caso de varias calles consecutivas. Fase 4 continúa en 60%: faltan crecimiento privado sostenido y validar su realimentación económica. Progreso global no estimable sin pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.146",
       "date": "2026-11-02",

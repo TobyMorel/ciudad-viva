@@ -1,4 +1,8 @@
-## Última decisión registrada · Alfa 0.146
+## Última decisión registrada · Alfa 0.147
+
+La calle municipal deja de ser una obra contractual. `placeRoad` coloca y cobra un tramo de inmediato en Online y Offline, con precio base $1.200, sin `project`, constructora, materiales ni mano de obra. `place` con `kind=road` conserva compatibilidad redirigiendo a la misma acción. La adyacencia ortogonal a la red, terreno habilitado, agua, ocupación y fondos comprometidos siguen validados. Cada tramo añade el activo de mantenimiento actual ($15/mes). El cliente mantiene la herramienta de calles activa y serializa clics sucesivos para no competir por el mismo saldo.
+
+## Decisiones anteriores · Alfa 0.146
 
 Los semáforos se modelan con `trafficSignalOverrides`: ausencia de una clave significa instalado en cruces con al menos tres accesos; `false`/`true` guarda la preferencia al retirar/instalar. La misma coordenada y el mismo override alimentan Three.js, la espera visual y el cálculo de viaje Online/Offline. El servidor ejecuta la mutación bajo su lock compartido.
 

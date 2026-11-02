@@ -1,4 +1,12 @@
-# Estado de desarrollo · Alfa 0.146
+# Estado de desarrollo · Alfa 0.147
+
+## Calles instantáneas por tramo · fase 4
+
+Al elegir la herramienta de calles, cada clic coloca un tramo conectado inmediatamente. El precio único de construcción es $1.200 por tramo (precio base existente); no se genera proyecto ni se usan contratistas, cuadrillas, materiales, anticipos o animación de obra. Se mantienen las validaciones de sector desbloqueado, agua, parcela libre, conexión vial y fondos disponibles. Cada tramo conserva el costo operativo de mantenimiento municipal de $15/mes. La herramienta queda activa entre clics. Funciona en Online y Offline, y también la acción heredada `place` con `kind=road` se redirige al flujo instantáneo.
+
+Verificación Alfa 0.147: 117 pruebas Python, 63 pruebas Offline y Chromium responsive a 390×844/1440×900; incluye varias calles seguidas, costo exacto, herramienta activa, ausencia de popup vial, red y rechazo de duplicados/conexiones/fondos. Fase 4 se mantiene en 60%; falta crecimiento y retroalimentación económica de largo plazo. Progreso global no estimable sin pesos verificables comunes para 34 fases.
+
+Hito actual: mecánicas de crecimiento y movilidad. Próximo: patrullas policiales físicas y respuesta visible; luego completar docentes/cobertura y continuar crecimiento privado.
 
 ## Respuesta audiovisual y semáforos configurables · fases 7 y 9
 

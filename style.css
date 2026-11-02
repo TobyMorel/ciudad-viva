@@ -383,3 +383,14 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 @media(max-width:650px){.growth-demand{width:clamp(222px,64vw,260px);padding:10px 11px 9px}.growth-demand-item{grid-template-rows:16px 45px 13px 14px;gap:3px}.growth-demand-title{font-size:9px}.growth-demand-percent{font-size:11px}.growth-demand-item b,.growth-demand-item small{font-size:8px}}
 
 .land-lock-markers{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}.land-lock-pin{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid #a87b45;border-radius:10px;background:#fff8e8;color:#624b30;box-shadow:0 3px 9px #172b2940;pointer-events:auto;cursor:pointer;font:700 10px/1 system-ui}.land-lock-pin svg{width:19px;height:19px;fill:none;stroke:#75572c;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}.land-lock-pin small{font:inherit;white-space:nowrap}.land-lock-pin:hover,.land-lock-pin:focus-visible{background:#ffe9bb;outline:2px solid #b88845;outline-offset:2px}@media(max-width:650px){.land-lock-pin{padding:5px;border-radius:9px}.land-lock-pin small{display:none}.land-lock-pin svg{width:21px;height:21px}}
+
+/* Subte: controles y tarjetas adaptables, sin solapamientos con etiquetas extensas. */
+.metro-panel{display:grid;gap:10px;min-width:0;max-width:100%;margin:13px 0;padding:12px;background:#eef5f6;border:1px solid #cadfe3;border-radius:12px;box-sizing:border-box}
+.metro-panel>p,.metro-panel>small,.metro-line>small{margin:0;line-height:1.55;overflow-wrap:anywhere;white-space:normal}
+.metro-build{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:9px;min-width:0}
+.metro-build label{display:grid;gap:4px;min-width:0;font-size:11px;color:#385d66;font-weight:650}
+.metro-build select,.metro-build button{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:9px;border-radius:8px;border:1px solid #c3d7d9;background:#fff;color:#20444f;font:600 12px/1.4 system-ui}
+.metro-build button{background:#267c78;color:white;cursor:pointer;align-self:end}.metro-build button:disabled{opacity:.5;cursor:not-allowed}
+.metro-lines{display:grid;gap:8px;min-width:0;max-width:100%}.metro-line,.metro-line>small,.metro-line .bus-line-top{min-width:0;max-width:100%}.metro-line .bus-line-top>b{overflow-wrap:anywhere}
+.metro-line .bus-actions button{min-height:36px;white-space:normal}
+@media(max-width:650px){.metro-panel{padding:10px;gap:9px}.metro-build{grid-template-columns:minmax(0,1fr)}.metro-build select,.metro-build button{min-height:42px}}

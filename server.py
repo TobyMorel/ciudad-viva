@@ -5594,7 +5594,7 @@ def fire_service_report(workplaces=None,advance=False,dispatch_only=False):
                     target["quality"]=max(20,target.get("quality",75)-damage)
                     if target.get("kind")=="home":target["householdCash"]=max(0,target.get("householdCash",0)-damage*25)
                     elif target.get("business"):target["business"]["cash"]=max(0,target["business"].get("cash",0)-damage*45)
-                    incident.update({"status":"controlado","route":incident["responseRoute"],"damage":damage,"resolvedDay":day})
+                    incident.update({"status":"controlado","responseStatus":"intervención terminada","route":incident["responseRoute"],"damage":damage,"resolvedDay":day})
                     fire["resolved"]+=1
                     ev("Incendio controlado",f"{incident['station']} llegó a {incident['name']} y sofocó las llamas; daño {damage} puntos.")
                 else:

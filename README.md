@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.163
+# Ciudad Viva · Alfa 0.164
+
+En Alfa 0.164, la demanda de vivienda solo sube cuando no hay plazas habitables libres: una vivienda vacía reduce la presión a 0% y la llegada de residentes continúa. Los comercios aprovechan capacidad de ventas existente antes de pedir más locales; no hay oficinas independientes todavía.
 
 La versión visible de la aplicación y **Cambios y novedades** se actualizan juntos. Alfa 0.162 registra puentes viales y Alfa 0.163 registra pasajeros y recaudación de taxis. Cada nueva entrega jugable debe sumar una nota en `release_notes.json`, incrementar el título y cache-busting del cliente y renombrar los paquetes de CI; una prueba rechaza un PR con cambios de juego sin incremento de versión.
 

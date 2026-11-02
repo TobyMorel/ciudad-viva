@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.159",
+  "currentVersion": "0.160",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.160",
+      "date": "2026-11-02",
+      "title": "Emergencias con recorridos, suministros reales y Tesorería transparente",
+      "changes": [
+        "Los candados de territorios bloqueados se muestran como íconos planos 2D sobre el mapa 3D, en lugar de objetos tridimensionales.",
+        "La tarjeta Tesorería separa el dinero total de caja, los importes reservados para obras municipales en curso y el saldo efectivamente disponible. Los avisos por falta de fondos detallan esos tres valores antes de construir.",
+        "Un edificio que arde cinco días sin respuesta se destruye totalmente y deja un terreno de cenizas. Se registran como fallecidas las personas presentes en su interior; las que estaban fuera quedan desplazadas y entran en la lista de alojamiento y búsqueda de vivienda. El registro funerario conserva las víctimas.",
+        "Se incorporó la Planta de suministro de gas (160 m³/día por instalación), con costo, contrato, plantilla y modelo 3D. Electricidad, agua y gas dependen de plantas de capacidad limitada y redes conectadas; las casas no reciben estos suministros sin producción. Al aumentar la población crece la demanda y se necesitan nuevas plantas.",
+        "Las autobombas se despachan por la ruta de calles hacia incendios activos y controlan el fuego al llegar. Un cuartel nuevo intenta responder también a incendios ya iniciados. La policía pasa a registrar patrullas en camino y la llegada al incidente; se mejoró la visualización de vehículos de emergencias en 3D, incluido el trayecto de ambulancias.",
+        "La ciudad preconstruida incluye instalaciones de generación eléctrica, potabilización y suministro de gas. Las partidas nuevas disponen de fondos iniciales para desarrollar las tres infraestructuras."
+      ],
+      "verification": "Revisión sintáctica de JavaScript y simulaciones funcionales offline del despacho de autobomba, la pérdida por incendio y el arranque sin generación. Se añadieron pruebas de regresión online y offline. Queda pendiente confirmar el resultado completo del flujo automatizado de GitHub Actions y el despliegue público."
+    },
     {
       "version": "0.159",
       "date": "2026-11-02",

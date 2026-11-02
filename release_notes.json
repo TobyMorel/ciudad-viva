@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.181",
+  "currentVersion": "0.182",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.182",
+      "date": "2026-11-02",
+      "title": "Iconos ilustrados para informes municipales",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los 19 botones de informes de la barra izquierda usan las ilustraciones circulares del paquete entregado, con etiquetas de texto independientes.",
+        "Los iconos conservan su nitidez y se adaptan al tamaño de escritorio y móvil."
+      ],
+      "verification": "Asignación de los 19 iconos por categoría y ajuste responsive revisados.",
+      "pending": []
+    },
     {
       "version": "0.181",
       "date": "2026-11-02",

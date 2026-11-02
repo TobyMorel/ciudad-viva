@@ -238,3 +238,19 @@ body[data-theme="dark"] .game-dock>[data-popup]:focus-visible span {
     font-size: 7px;
   }
 }
+
+/* Iconos ilustrados de los informes municipales. */
+.city-report-rail button img {
+  display: block;
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px #10261e55);
+}
+
+@media (max-width: 650px) {
+  .city-report-rail button img {
+    width: 38px;
+    height: 38px;
+  }
+}

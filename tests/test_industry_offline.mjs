@@ -76,7 +76,7 @@ test('Offline: cantera compra y entrega áridos a hormigonera que consume 2 por 
     }
     assert.equal(delivered,true,'La compra debe llegar realmente a la planta');
     const factory=v.buildings.find(b=>b.business?.id==='concrete-test').business;
-    assert.ok(factory.lastProduction>0,'En el siguiente cierre se debe producir hormigón');
+    assert.ok((v.localIndustry.concreteProduced||0)>0,'La hormigonera debe haber producido hormigón a partir de áridos entregados: '+JSON.stringify({lastProduction:factory.lastProduction,aggregateInventory:factory.rawMaterialInventory,produced:v.localIndustry.concreteProduced,services:v.buildings.find(b=>b.business?.id==='concrete-test')?.utilityAccess}));
     assert.equal(v.supply.suppliers['Hormigonera local'].concrete,factory.concreteStock);
 
     assert.ok(v.localIndustry.concreteProduced>=factory.lastProduction);

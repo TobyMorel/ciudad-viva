@@ -40,7 +40,7 @@ export function planElevatedRail(s,from,to,trains=1){
  if(rails.some(l=>l.status!=='retired'&&l.stations?.every(p=>[from,to].some(q=>distance(p,q)===0))))throw Error('Ya existe un tren entre esas estaciones.');
  if(rails.some(l=>l.status!=='retired'&&(l.route||[]).some(p=>route.some(q=>distance(p,q)===0))))throw Error('El nuevo viaducto no puede superponerse a otro corredor ferroviario.');
  trains=Number(trains);if(![1,2].includes(trains))throw Error('Contratá uno o dos trenes inicialmente.');
- const construction=9500+950*d+3600,total=construction+trains*RAIL_TRAIN_COST;
+ const construction=9500+950*d,total=construction+trains*RAIL_TRAIN_COST;
  const reserved=(s.projects||[]).filter(p=>!p.privatePaid).reduce((n,p)=>n+Math.max(0,(p.cost||0)-(p.paid||0)),0);
  if((s.money||0)-reserved<total)throw Error('Fondos disponibles insuficientes: se necesitan $ '+total.toLocaleString('es-AR')+'.');
  s.money-=total;const day=Math.max(1,Math.trunc(s.day||1)),number=rails.length+1;
@@ -62,7 +62,7 @@ export function planMetro(s,from,to,trains=1){
  if(lines.filter(l=>l.mode!=='elevated').length>=5)throw Error('La red admite hasta cinco líneas de subte en esta etapa.');
  if(lines.some(line=>line.status!=='retired'&&line.stations?.every(p=>[from,to].some(q=>distance(p,q)===0))))throw Error('Ya existe una línea entre esas estaciones.');
  trains=Number(trains);if(![1,2,3].includes(trains))throw Error('La flota inicial permite de uno a tres trenes.');
- const construction=12500+d*1150+4400,total=construction+trains*METRO_TRAIN_COST,reserved=(s.projects||[]).filter(p=>!p.privatePaid).reduce((sum,p)=>sum+Math.max(0,(p.cost||0)-(p.paid||0)),0);
+ const construction=12500+d*1150,total=construction+trains*METRO_TRAIN_COST,reserved=(s.projects||[]).filter(p=>!p.privatePaid).reduce((sum,p)=>sum+Math.max(0,(p.cost||0)-(p.paid||0)),0);
  if((s.money||0)-reserved<total)throw Error(`La inversión requiere $ ${total.toLocaleString('es-AR')} de fondos disponibles.`);
  s.money-=total;const day=Math.max(1,Math.trunc(s.day||1));
  const line={id:`metro-${day}-${lines.length+1}`,name:`Línea ${lines.length+1}`,stations:[from,to],stationNames:[a.name,b.name],route,status:'building',stageIndex:0,stage:STAGES[0],elapsed:0,duration:72+d*5,constructionCost:construction,purchaseCost:total,trainCount:trains,fareCents:METRO_FARE_CENTS,createdDay:day,dailyRiders:0,monthlyFareRevenue:0,operational:false,powerRequiredKw:55+trains*35};

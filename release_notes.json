@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.160",
+  "currentVersion": "0.161",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.161",
+      "date": "2026-11-02",
+      "title": "Corrección del inicio de partida y recuperación de recursos 3D",
+      "changes": [
+        "Se corrige una regresión del motor 3D que podía impedir el arranque completo del juego y dejar inactivos los botones de selección de partida.",
+        "Los botones de Jugar offline y Elegir sala LAN ahora tienen comprobaciones automatizadas de interacción. Si un archivo del motor no se puede cargar, el menú muestra un diagnóstico visible y ofrece reintentar sin reutilizar la versión defectuosa en caché.",
+        "Se actualizan las URLs versionadas de los módulos del juego para evitar combinaciones de archivos nuevos y antiguos después de una publicación.",
+        "Las pruebas visuales ahora crean una red vial conectada, fuentes reales de agua y energía, y residentes capacitados para activar las misiones de ambulancia. Se mantiene la regla de que los servicios no operan gratis."
+      ],
+      "verification": "La batería online, offline y estrés económico de la Alfa 0.160 pasó en GitHub Actions. Esta corrección incorpora pruebas específicas del menú inicial y su recuperación; la publicación pública requiere que Vercel pueda ejecutar un nuevo despliegue."
+    },
     {
       "version": "0.160",
       "date": "2026-11-02",

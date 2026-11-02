@@ -2,7 +2,7 @@ import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
 import {createWorld} from './world3d.js?v=0.176';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
-import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,INDUSTRIES} from './cityGuide.js';
+import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
 import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);

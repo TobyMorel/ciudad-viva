@@ -29,6 +29,7 @@ test('Offline: puente contratado abre ambos tramos tras inspección, nunca al so
     await assert.rejects(action(tender),/ocupado/);
     await assert.rejects(action({action:'placeRoad',x:24,y:10}),/sobre agua/);
     adapter.setRealtimeClock(false);
+    await action({action:'pause'}); // La partida de prueba empieza en pausa.
     let state=started;
     for(let i=0;i<p.duration+35&&state.projects.some(q=>q.id===p.id);i++){
       clock+=1000;

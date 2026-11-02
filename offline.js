@@ -620,6 +620,7 @@ export async function createOfflineAdapter(){
         .filter(row=>row.minutes<=40).sort((a,b)=>a.minutes-b.minutes||a.unit.name.localeCompare(b.unit.name));
       return {building:b,choices,protected:choices.some(row=>row.unit.active>0)};
     });
+    if(advance)for(const mission of p.recentIncidents||[]){if(mission.status==='en respuesta'&&state.day>=(mission.arrivalDay||state.day+1)){mission.status='atendido';mission.resolvedDay=state.day;event('Patrulla llegó al incidente',(mission.station||'La policía')+' intervino en '+(mission.location||'el barrio')+'.')}}
     if(advance&&month>(p.lastProcessedMonth??state.lastMonth??0)){
       p.lastProcessedMonth=month;
       const incidents=[];let unanswered=0,responded=0,damage=0;
@@ -644,7 +645,7 @@ export async function createOfflineAdapter(){
           }
         }
         incidents.push({id:`seg-${month}-${kind}-${b.x}-${b.y}`,month,day:state.day,location:b.name||'Barrio',
-          kind:kind==='shop'?'Comercio':'Espacio residencial',x:b.x,y:b.y,status:response?'atendido':'sin respuesta',
+          kind:kind==='shop'?'Comercio':'Espacio residencial',x:b.x,y:b.y,arrivalDay:state.day+1,status:response?'en respuesta':'sin respuesta',
           responseMinutes:response?.minutes??null,station:response?.station??null,stationX:response?.stationX??null,stationY:response?.stationY??null,route:response?.route??null});
       }
       p.recentIncidents=[...(p.recentIncidents||[]),...incidents].slice(-24);
@@ -652,7 +653,7 @@ export async function createOfflineAdapter(){
       p.totalResponded=(p.totalResponded||0)+responded;p.totalUnanswered=(p.totalUnanswered||0)+unanswered;
       if(unanswered>=2)state.approval=Math.max(0,(state.approval||0)-1);
       if(unanswered>=4)state.services=Math.max(0,(state.services||0)-1);
-      if(incidents.length)event('Operativo mensual de seguridad',incidents.length+' incidentes de convivencia y comercio; '+responded+' atendidos, '+unanswered+' sin dotación. Pérdidas físicas de comercios: '+damage+' unidades.');
+      if(incidents.length)event('Operativo mensual de seguridad',incidents.length+' incidentes de convivencia y comercio; '+responded+' patrullas despachadas, '+unanswered+' sin dotación. Pérdidas físicas de comercios: '+damage+' unidades.');
     }
     const coverage=rows.filter(r=>r.protected).length,base=units.reduce((n,u)=>n+u.vehicles*390,0),variable=Math.max(0,p.lastResponded||0)*70;
     return {month,sites:sites.length,coveredSites:coverage,coveragePct:Math.round(100*coverage/Math.max(1,sites.length)),
@@ -1448,7 +1449,7 @@ export async function createOfflineAdapter(){
       else{debtDays+=elapsed*Math.max(1,state.speed||1);days=Math.floor(debtDays);debtDays-=days}
       for(let d=0;d<days;d++){
         revision++;state.day++;advanceOfflineSteelShipments();processOfflineMaterialOrders();advanceOfflineGuarantees();advanceOfflineHeritage();advanceOfflineUrbanEvolution();advanceOfflineUrbanRenewals();advanceOfflineAdaptiveReuse();
-        advanceOfflineUtilityRepairs();calculateOfflineUtilities();advanceOfflineIndustrialReopenings();for(const b of state.buildings||[]){const used=Math.min(b.backupFuelKwh||0,(b.backupKwToday||0)*24);if(used>0){b.backupFuelKwh=+Math.max(0,b.backupFuelKwh-used).toFixed(2);if(b.backupFuelKwh<=0)event('Grupo electrógeno sin combustible',`${b.name||'Servicio crítico'} agotó su reserva. Reabastecer para recuperar el respaldo eléctrico.`)}}applyOfflineClimateImpacts();applyOfflineDrainageImpacts();advanceOfflineRecovery();state.healthReport=calculateOfflineHealthReport(state.workplaces||[],true);calculateOfflineFireReport(true);const roadIncidentReport=calculateOfflineRoadIncidents(true);if(roadIncidentReport.closureChanged)updateOfflineLabor();state.roadIncidentReport=roadIncidentReport;calculateOfflineWasteBalance(true,true);advanceOfflineHouseholdMigration();if(state.zones?.length)advanceOfflineZonedDevelopment();
+        advanceOfflineUtilityRepairs();calculateOfflineUtilities();advanceOfflineIndustrialReopenings();for(const b of state.buildings||[]){const used=Math.min(b.backupFuelKwh||0,(b.backupKwToday||0)*24);if(used>0){b.backupFuelKwh=+Math.max(0,b.backupFuelKwh-used).toFixed(2);if(b.backupFuelKwh<=0)event('Grupo electrógeno sin combustible',`${b.name||'Servicio crítico'} agotó su reserva. Reabastecer para recuperar el respaldo eléctrico.`)}}applyOfflineClimateImpacts();applyOfflineDrainageImpacts();advanceOfflineRecovery();state.healthReport=calculateOfflineHealthReport(state.workplaces||[],true);calculateOfflineFireReport(true);offlinePoliceReport(state.workplaces||[],true);const roadIncidentReport=calculateOfflineRoadIncidents(true);if(roadIncidentReport.closureChanged)updateOfflineLabor();state.roadIncidentReport=roadIncidentReport;calculateOfflineWasteBalance(true,true);advanceOfflineHouseholdMigration();if(state.zones?.length)advanceOfflineZonedDevelopment();
         for(const p of [...(state.projects||[])]){
           if(p.status==='pausada'||p.status==='cambio_pendiente')continue;if(assessOfflineContractDelay(p))continue;
           const nextElapsed=p.elapsed+1,stageCount=Math.max(1,(p.stages||[]).length),milestoneBase=Math.max(0,Math.min(stageCount,Number(p.milestoneBase||0))),milestonesRemaining=Math.max(1,stageCount-milestoneBase),nextProgress=p.scheduleBaseProgress!=null?Math.min(1,p.scheduleBaseProgress+(1-p.scheduleBaseProgress)*Math.max(0,nextElapsed-(p.scheduleBaseElapsed||0))/Math.max(1,p.scheduleRemainingDays||1)):Math.min(1,(p.initialProgress||0)+(1-(p.initialProgress||0))*nextElapsed/Math.max(1,p.duration)),earnedMilestones=Math.max(0,Math.min(milestonesRemaining,Math.floor(nextProgress*stageCount+1e-9)-milestoneBase)),certified=Number(p.certifiedMilestones??Math.max(0,Math.floor((p.progress||0)*stageCount+1e-9)-milestoneBase)),targetPaid=p.cost*(.2+(.8-Math.max(0,Math.min(.2,Number(p.retentionPct||0))))*earnedMilestones/milestonesRemaining),due=Math.max(0,targetPaid-(p.paid||0));

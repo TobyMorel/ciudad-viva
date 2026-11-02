@@ -282,6 +282,44 @@ export function createWorld(canvas){
     cylinder(g,.13,.16,1.45,'#8b8a7e',.46,1.72,-.35,8);cylinder(g,.16,.17,.16,'#af7251',.46,2.5,-.35,8);
     box(g,.55,.06,.42,'#9baf9d',-.52,.12,.62,{cast:false});
   }
+  // Edificios ferroviarios físicos visibles desde la colocación de los cimientos.
+  function railStationModel(g,mode='metro',progress=1){
+    const elevated=mode==='elevated',done=progress>=1;
+    box(g,1.82,.12,1.8,'#c3c5b5',0,.045,0,{cast:false});
+    if(elevated){
+      // Estación ferroviaria elevada: pilares, escaleras, plataforma y cubierta.
+      for(const x of [-.62,.62])for(const z of [-.48,.48])box(g,.2,1.54,.2,'#9aa7a6',x,.79,z,{cast:true});
+      box(g,1.78,.18,1.46,'#667f82',0,1.63,0,{cast:true});
+      box(g,1.74,.075,.82,'#ded8bd',0,1.75,.24);
+      // Escalera visible en la entrada principal.
+      for(let i=0;i<6;i++)box(g,.56,.08,.18,'#c8d2c5',0,.18+i*.247,.78-i*.14,{cast:true});
+      for(const z of [-.38,.38])box(g,1.61,.08,.07,'#e3ca7c',0,1.78,z);
+      if(done){
+        for(const x of [-.71,.71])for(const z of [-.48,.48])box(g,.08,.65,.08,'#427585',x,2.16,z);
+        box(g,1.84,.12,1.35,'#336c7a',0,2.53,0,{cast:true});
+        box(g,1.24,.26,.09,'#f2ead0',0,2.34,.67);
+        box(g,.44,.22,.04,'#2d6878',0,2.34,.731);
+      }
+    }else{
+      // Subte: edificio de acceso y marquesina; el túnel real queda bajo tierra.
+      box(g,1.46,.12,1.26,'#777c73',0,.13,0,{cast:true});
+      box(g,.9,.06,.66,'#263b44',0,.23,.21);
+      for(const x of [-.54,.54])box(g,.115,1.18,.12,'#3d7787',x,.75,-.3,{cast:true});
+      box(g,1.28,.16,.96,'#406c7d',0,1.39,-.24,{cast:true});
+      for(const z of [-.47,.33])box(g,1.12,.37,.09,'#b4dfdf',0,1.06,z);
+      if(done){
+        box(g,1.19,.28,.08,'#e0ece7',0,1.26,.29);
+        box(g,.42,.29,.085,'#2d8e97',0,1.26,.344);
+        for(const x of [-.7,.7])cylinder(g,.07,.07,.68,'#566e75',x,.41,.58,8);
+      }
+    }
+    if(!done){
+      for(const x of [-.75,.75])for(const z of [-.74,.74])box(g,.07,1.05,.07,'#dd9d43',x,.59,z);
+      for(const z of [-.74,.74])box(g,1.56,.06,.06,'#dd9d43',0,1.11,z);
+      box(g,1.23,.12,.17,'#e7bd5c',0,.21,.76);
+    }
+    return g;
+  }
   function addBuilding(root,b,roads,renewalKeys){const [cx,cz]=tilePos(b.x,b.y),g=new THREE.Group();g.position.set(cx,0,cz);if(roads.has(key(b.x,b.y-1)))g.rotation.y=Math.PI;else if(roads.has(key(b.x+1,b.y)))g.rotation.y=Math.PI/2;else if(roads.has(key(b.x-1,b.y)))g.rotation.y=-Math.PI/2;root.add(g);groundShadow(g,0,0,1.25,.17);box(g,1.96,.055,1.96,'#d9ceb0',0,.025,0,{cast:false});if(b.name==='Municipalidad')townHall(g);else if(b.kind==='civic'&&['policePost','policeStation','policeHQ'].includes(b.serviceModel))policeStationModel(g,b.serviceModel==='policeHQ'?3:b.serviceModel==='policeStation'?2:1);else if(b.kind==='civic'&&b.serviceModel==='socialShelter')socialShelter(g);else if(b.kind==='civic'&&['cemetery','crematorium'].includes(b.serviceModel))funeralFacility(g,b.serviceModel);else if(b.kind==='civic')clinic(g);else if(b.kind==='school'){school(g);if(b.serviceModel==='kindergarten'){for(const x of [-.5,.5])sphere(g,.2,'#e9b35e',x,.3,1.05,1)}else if(b.serviceModel==='secondarySchool'||b.serviceModel==='university'){const high=b.serviceModel==='university';box(g,1.4,high?1.18:.52,1,'#c5cec2',0,high?2.35:1.93,-.2,{cast:true});box(g,1.52,.1,1.12,high?'#446b8b':'#577d72',0,high?3.01:2.27,-.2);if(high)cylinder(g,.14,.16,.35,'#e8c17e',0,3.26,-.2)}}else if(b.kind==='fireStation'){fireStation(g);if(b.serviceModel==='fireStationPlus'||b.serviceModel==='fireCommand')box(g,1.3,.33,.75,'#a4614d',0,1.49,-.27);if(b.serviceModel==='fireCommand')box(g,.7,.5,.55,'#ceae86',0,1.93,-.27)}else if(b.kind==='depot'){if(b.serviceModel==='taxiYard')taxiDepot(g);else depot(g);if(b.serviceModel==='wasteDepot'||b.serviceModel==='wasteComplex')box(g,1.3,.3,.7,'#607d71',0,1.97,-.2);if(b.serviceModel==='wasteComplex')box(g,.8,.35,.5,'#7b9e8b',0,2.29,-.22)}else if(b.kind==='landfill')landfillFacility(g);else if(b.kind==='recyclingPlant')recyclingFacility(g);else if(b.kind==='port')portTerminal(g);else if(b.kind==='airport')airportTerminal(g);else if(b.kind==='hotel')hotel(g,b);else if(b.kind==='powerPlant')powerPlant(g);else if(b.kind==='waterPlant')waterPlant(g);else if(b.kind==='gasPlant')gasPlant(g);else if(b.kind==='wastewaterPlant')wastewaterPlant(g);else if(b.kind==='busGarage')busGarage(g);else if(b.kind==='busStop')busShelter(g);else if(b.kind==='shop')shop(g,b);else if(b.kind==='factory')factory(g,b);else house(g,b);finishArchitecture(g,b);if(!view.preview&&view.zoom>=1.4)premiumArchitecture(g,b);if(b.kind==='home'){sphere(g,.23,'#448c62',-.82,.31,.73,1);sphere(g,.2,'#5b9c68',.82,.28,-.6,1)}if(b.heritageEligible){const protectedSite=['protección parcial','protección integral'].includes(b.heritageLevel),integral=b.heritageLevel==='protección integral',plaque=integral?'#a96b3e':protectedSite?'#568c69':'#a68b50';box(g,.34,.38,.07,'#e7d7b6',.62,1.58,.85);box(g,.27,.3,.08,plaque,.62,1.58,.9);sphere(g,.075,integral?'#f3ca72':protectedSite?'#b5dc9a':'#e6ce82',.62,1.59,.96,1);if(protectedSite)box(g,1.64,.045,.08,integral?'#bc8050':'#759f70',0,2.05,0)}if((b.urbanCondition??100)<60||renewalKeys.has(key(b.x,b.y))){const active=renewalKeys.has(key(b.x,b.y)),frame=active?'#d69a4e':'#9e9c88';for(const x of [-.98,.98])for(const z of [-.91,.91])box(g,.065,3.1,.065,frame,x,1.55,z,{cast:false});for(const y of [.55,1.65,2.75]){box(g,2.04,.055,.055,frame,0,y,.93,{cast:false});box(g,.055,.055,1.96,frame,.98,y,0,{cast:false})}for(const y of [.9,2.05])box(g,.055,1.1,.055,frame,0,y,.95,{cast:false});if(active)box(g,.28,.28,.055,'#edbd63',.81,2.94,.97,{cast:false})}if((b.backupCapacityKw||0)>0){box(g,.42,.24,.34,'#56656a',.68,.15,.66);box(g,.18,.06,.36,(b.backupFuelKwh||0)>0?'#e0a342':'#b64d48',.68,.3,.66);box(g,.045,.16,.045,'#343e41',.77,.4,.66)} }
   function addSite(root,p,abandoned=false){const [x,z]=tilePos(p.x,p.y),g=new THREE.Group();g.position.set(x,0,z);root.add(g);const progress=clamp(p.progress||0,0,1),steel=abandoned?'#8b786c':'#c28a52',concrete=abandoned?'#91867e':'#c7bca9';box(g,1.94,.065,1.94,abandoned?'#a58b75':'#bf9d72',0,.03,0,{cast:false});
     if(p.kind==='road'){box(g,1.55,.09,.98,abandoned?'#76706a':progress>.6?'#647577':'#a48767',0,.09,0,{cast:false});for(const zz of [-.7,.7])for(const xx of [-.64,.64]){box(g,.25,.25,.19,'#e2a55d',xx,.2,zz);box(g,.13,.06,.19,'#eee2c2',xx,.34,zz)}return}
@@ -501,6 +539,18 @@ export function createWorld(canvas){
     const renewalKeys=new Set((state.urbanRenewalWorks||[]).map(w=>key(w.x,w.y)));for(const b of state.buildings)addBuilding(dynamicRoot,b,roads,renewalKeys);
 
 
+    // Estaciones construidas por el jugador, con obra visual por etapas.
+    for(const site of state.railStations||[]){
+      if(!['building','active'].includes(site.status))continue;
+      const [cx,cz]=tilePos(site.x,site.y),group=new THREE.Group();
+      group.position.set(cx,0,cz);
+      const completion=site.status==='active'?1:Math.min(.99,(site.elapsed||0)/Math.max(1,site.duration||1));
+      railStationModel(group,site.mode,completion);
+      group.userData.railStationSite=true;
+      group.userData.railSiteId=site.id;
+      dynamicRoot.add(group);
+    }
+
     // Primer ferrocarril urbano: un viaducto propio sobre tramos de calle ya conectados.
     for(const trainLine of (state.metroLines||[]).filter(l=>l.mode==='elevated')){
       if(!['building','active','paused'].includes(trainLine.status))continue;
@@ -544,7 +594,7 @@ export function createWorld(canvas){
 
     // Vista técnica de la infraestructura subterránea: trazado proyectado, no vías sobre la calzada.
     const stationTiles=new Set();
-    const metroLines=(state.metroLines||[]).slice().sort((a,b)=>(a.status==='building')-(b.status==='building'));
+    const metroLines=(state.metroLines||[]).filter(l=>l.mode!=='elevated').slice().sort((a,b)=>(a.status==='building')-(b.status==='building'));
     for(const metro of metroLines){
       const plan=metroVisualPlan(metro);if(!plan)continue;
       for(let i=1;i<=plan.tunnelSegments;i++){
@@ -601,7 +651,7 @@ export function createWorld(canvas){
     }
 
     // Solo hay trenes visuales cuando el motor autoritativo declara la línea operativa.
-    for(const metro of state.metroLines||[]){
+    for(const metro of (state.metroLines||[]).filter(l=>l.mode!=='elevated')){
       const plan=metroVisualPlan(metro);if(!plan||!plan.trains)continue;
       const path=plan.route.map(([x,y])=>tilePos(x,y));
       if(path.length<2)continue;
@@ -718,6 +768,11 @@ export function createWorld(canvas){
     else if(tool==='school'){school(group);if(model==='university'){box(group,1.4,1.1,1,'#ccd6ca',0,2.8,-.2);box(group,1.55,.1,1.1,'#476b88',0,3.4,-.2)}}
     else if(tool==='fireStation')fireStation(group);
     else if(tool==='depot'){if(model==='taxiYard')taxiDepot(group);else depot(group)}
+    else if(tool==='metroStation'||tool==='railStation')railStationModel(group,tool==='railStation'?'elevated':'metro');
+    else if(tool==='metroLink'||tool==='railLink'){
+      railStationModel(group,tool==='railLink'?'elevated':'metro');
+      box(group,3.2,.05,.1,tool==='railLink'?'#687f83':'#37a4b1',0,tool==='railLink'?1.83:.18,-1.1);
+    }
     else if(tool==='busGarage')busGarage(group);
     else if(tool==='busStop'){busShelter(group)}
     else if(tool==='taxiStop'){box(group,1.35,.07,.72,'#566d61',0,1.2,0);for(const x of [-.58,.58])box(group,.07,1.15,.07,'#6a7363',x,.58,0);box(group,.92,.12,.12,'#e5bd58',0,.75,.37);box(group,.42,.35,.08,'#fff1c7',0,.39,.43);box(group,.32,.14,.08,'#dca63f',0,.38,.49)}
@@ -738,7 +793,7 @@ export function createWorld(canvas){
   function paintBuildPreview({canvas:target,item}){if(!target||!item)return;const data=buildPreviewCache.get(JSON.stringify(item));if(!data)return;const ctx=target.getContext('2d');if(!ctx)return;target.width=previewWidth;target.height=previewHeight;ctx.putImageData(new ImageData(data,previewWidth,previewHeight),0,0)}
   window.addEventListener('resize',updateCamera);
   return {sync,screenToTile,screenToActor,setView,focusTile,projectTile,renderBuildPreviews,invalidate(){visualSignature=''},
-    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
+    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
     getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
     getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),
     getFireParticleCounts:()=>({incidents:fireVisuals.length,flames:fireVisuals.reduce((n,f)=>n+f.flames.length,0),smoke:fireVisuals.reduce((n,f)=>n+f.smoke.length,0)}),

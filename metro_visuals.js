@@ -7,6 +7,8 @@ export function metroVisualPlan(line) {
   if (!Array.isArray(line.route) || line.route.length < 2 || !line.route.every(validPoint)) return null;
   if (!Array.isArray(line.stations) || line.stations.length !== 2 || !line.stations.every(validPoint)) return null;
   if (!samePoint(line.route[0],line.stations[0]) || !samePoint(line.route.at(-1),line.stations[1])) return null;
+  if (samePoint(line.stations[0],line.stations[1])) return null;
+  if (line.route.some((p,i) => i > 0 && Math.abs(p[0]-line.route[i-1][0]) + Math.abs(p[1]-line.route[i-1][1]) !== 1)) return null;
 
   const completed = line.status !== 'building';
   const elapsed = Math.max(0,Number(line.elapsed) || 0);

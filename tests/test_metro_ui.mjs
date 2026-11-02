@@ -12,11 +12,21 @@ try{
   await page.evaluate(async()=>{
    const city=await fetch('/offline_seed.json').then(r=>r.json());
    city.paused=true;city.money=120000;city.jobs=30;
-   city.roads=Array.from({length:9},(_,i)=>[i+4,10]);
+   city.roads=Array.from({length:11},(_,i)=>[i+4,10]);
    city.buildings=[{kind:'home',name:'Barrio Norte',x:5,y:9,status:'habilitado',capacity:28,occupants:0,residents:[]},
                    {kind:'shop',name:'Centro comercial',x:11,y:9,status:'habilitado',business:{status:'abierto',jobSlots:6,lastLocalSales:0}},
                    {kind:'powerPlant',name:'Central eléctrica',x:9,y:9,status:'habilitado',generationKw:900,quality:82}];
-   city.projects=[];city.busRoutes=[];city.taxiRoutes=[];city.metroLines=[];
+   city.projects=[];city.busRoutes=[];city.taxiRoutes=[];
+   city.railStations=[
+     {id:'station-metro-6-9',mode:'metro',x:6,y:9,name:'Subte Norte',status:'active',elapsed:42,duration:42,cost:6800},
+     {id:'station-metro-12-9',mode:'metro',x:12,y:9,name:'Subte Sur',status:'active',elapsed:42,duration:42,cost:6800},
+     {id:'station-elevated-6-11',mode:'elevated',x:6,y:11,name:'Elevada Norte',status:'active',elapsed:50,duration:50,cost:9400},
+     {id:'station-elevated-13-11',mode:'elevated',x:13,y:11,name:'Elevada Sur',status:'active',elapsed:50,duration:50,cost:9400}
+   ];
+   city.metroLines=[
+    {id:'metro-test',name:'Línea 1',stations:[[6,9],[12,9]],stationNames:['Subte Norte','Subte Sur'],route:Array.from({length:7},(_,i)=>[i+6,9]),status:'building',elapsed:0,duration:102,trainCount:1,mode:'metro'},
+    {id:'rail-test',name:'Tren elevado 1',stations:[[6,11],[13,11]],stationNames:['Elevada Norte','Elevada Sur'],route:Array.from({length:8},(_,i)=>[i+6,10]),status:'building',elapsed:0,duration:106,trainCount:1,mode:'elevated'}
+   ];
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
   await page.locator('#offlineMode').evaluate(e=>e.click());
@@ -25,36 +35,27 @@ try{
   await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
   await page.locator('#popupContent [data-city-section-button="mobility"]').evaluate(e=>e.click());
   await page.locator('#popupContent .metro-panel').waitFor();
-  await page.locator('[data-metro-from]').selectOption('5,9');
-  await page.locator('[data-metro-to]').selectOption('11,9');
-  await page.locator('[data-metro-build]').evaluate(e=>e.click());
-  await page.waitForFunction(()=>document.querySelector('#popupContent .metro-line')?.textContent?.includes('En obra'),null,{timeout:15000});
-  await page.locator('[data-rail-from]').selectOption('5,9');
-  await page.locator('[data-rail-to]').selectOption('11,9');
-  await page.locator('[data-rail-build]').evaluate(e=>e.click());
-  await page.waitForFunction(()=>document.querySelector('.rail-panel .metro-line')?.textContent?.includes('En obra'),null,{timeout:15000});
-  const railDisplay=await page.evaluate(()=>({scene:window.__ciudadVivaScene?.(),panel:document.querySelector('.rail-panel')?.innerText||''}));
-  assert.ok(railDisplay.scene&&railDisplay.scene.railTrains===0&&railDisplay.scene.railTracks===0,
-    name+': el tren en obra no debe aparecer habilitado '+JSON.stringify(railDisplay.scene));
-  assert.match(railDisplay.panel,/Tren elevado 1/);
-
-  // La obra nueva marca dos estaciones, pero los estudios aún no han excavado.
-  await page.waitForFunction(()=>window.__ciudadVivaScene?.().metroStations===2,null,{timeout:15000});
+  const panel=await page.evaluate(()=>document.querySelector('#popupContent').innerText);
+  assert.match(panel,/Subte Norte/);assert.match(panel,/Tren elevado 1/);
+  assert.match(panel,/Construir/);
+  assert.equal(await page.locator('[data-metro-build], [data-rail-build]').count(),0,'Movilidad no debe crear infraestructura por botones');
+  await page.waitForFunction(()=>window.__ciudadVivaScene?.().physicalRailStations===4,null,{timeout:15000});
   const scene=await page.evaluate(()=>window.__ciudadVivaScene());
-  assert.equal(scene.metroTunnelSegments,0,name+': los estudios no dibujan túneles terminados');
-  assert.equal(scene.metroTrains,0,name+': no circulan trenes antes de la habilitación');
+  assert.equal(scene.metroStations,2,name+': la infraestructura de subte existente conserva sus accesos');
+  assert.equal(scene.metroTunnelSegments,0,name+': estudios sin excavación completa');
+  assert.equal(scene.metroTrains,0,name+': sin tren antes de habilitar');
+  assert.equal(scene.railTrains,0,name+': tren elevado sin inspeccionar');
+  assert.equal(scene.railTracks,0,name+': vías elevadas sin construir');
   const layout=await page.evaluate(()=>{
    const root=document.querySelector('#popupContent .metro-panel');
-   const r=root.getBoundingClientRect(),controls=[...root.querySelectorAll('.metro-build label,.metro-build button')].map(el=>el.getBoundingClientRect());
-   const texts=[...root.querySelectorAll('p,small,.metro-line b,.metro-line span')].filter(el=>el.getBoundingClientRect().height>0);
-   const within=rect=>rect.left>=r.left-3&&rect.right<=r.right+3&&rect.width>0;
-   return{rootWidth:r.width,panelOverflow:root.scrollWidth-root.clientWidth,controlsWithin:controls.every(within),
-    textOverflow:texts.filter(el=>el.scrollWidth>el.clientWidth+3).map(el=>el.textContent.slice(0,75)),
-    controlsOverlap:controls.some((a,i)=>controls.slice(i+1).some(b=>a.left<b.right-1&&a.right>b.left+1&&a.top<b.bottom-1&&a.bottom>b.top+1)),
-    lineVisible:root.textContent.includes('Línea 1')};
+   const r=root.getBoundingClientRect();
+   return {width:r.width,overflow:root.scrollWidth-root.clientWidth,visible:root.textContent.includes('Línea 1')};
   });
-  assert.ok(layout.rootWidth>0&&layout.panelOverflow<=2&&layout.controlsWithin&&!layout.textOverflow.length&&!layout.controlsOverlap&&layout.lineVisible,
-    name+': interfaz del subte con controles o textos superpuestos '+JSON.stringify(layout));
+  assert.ok(layout.width>0&&layout.overflow<=2&&layout.visible,name+': panel ferroviario legible '+JSON.stringify(layout));
+  await page.locator('.game-dock [data-popup="build"]').evaluate(e=>e.click());
+  await page.locator('#panelPopup:not(.hidden)').waitFor();
+  for(const tool of ['metroStation','railStation','metroLink','railLink'])
+   assert.equal(await page.locator('#popupContent .build-catalog-item[data-tool="'+tool+'"]').count(),1,name+': herramienta física '+tool);
   assert.deepEqual(errors,[],name+': errores JavaScript');
   await page.close();
  }

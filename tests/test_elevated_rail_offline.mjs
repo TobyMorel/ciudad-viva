@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {planElevatedRail,metroRefresh,advanceMetroDay,metroAction,metroAssignPassengers,settleMetroMonth} from '../metro.js';
 
 const city=()=>({
- day:1,money:100000,jobs:8,projects:[],metroLines:[],
+ day:1,money:100000,jobs:8,projects:[],metroLines:[],railStations:[{mode:'elevated',status:'active',x:6,y:9,name:'Estación viviendas'},{mode:'elevated',status:'active',x:13,y:9,name:'Estación mercado'}],
  roads:Array.from({length:11},(_,i)=>[4+i,10]),
  buildings:[
   {kind:'home',name:'Viviendas',x:5,y:9,status:'habilitado',householdCash:80},
@@ -13,7 +13,7 @@ const city=()=>({
 });
 const trip=()=>({reason:'compras',mode:'auto',from:[5,9],to:[12,9],distance:9,workers:7,busRiders:2,vehicles:5,dailyEmissionsKg:2.5});
 test('obras ferroviarias, trazado y conservación de caja',()=>{
- const s=city(),cash=s.money,line=planElevatedRail(s,[5,9],[12,9],1);
+ const s=city(),cash=s.money,line=planElevatedRail(s,[6,9],[13,9],1);
  assert.equal(s.money,cash-line.purchaseCost);
  assert.equal(line.mode,'elevated');
  assert.equal(line.route.length,8);
@@ -24,10 +24,10 @@ test('obras ferroviarias, trazado y conservación de caja',()=>{
  assert.equal(line.status,'active');assert.equal(line.stage,'Habilitada');
  metroRefresh(s);assert.equal(line.operational,true);
  assert.equal(line.dailyCapacity,420);
- assert.throws(()=>planElevatedRail(s,[5,9],[12,9],1),/Ya existe|superponerse/);
+ assert.throws(()=>planElevatedRail(s,[6,9],[13,9],1),/Ya existe|superponerse/);
 });
 test('energía, pausa, flota, aforo y boletos reales',()=>{
- const s=city(),line=planElevatedRail(s,[5,9],[12,9],1);
+ const s=city(),line=planElevatedRail(s,[6,9],[13,9],1);
  line.status='active';metroRefresh(s);
  const t=trip(),result=metroAssignPassengers(s,[t]);
  assert.equal(result.railRiders,5);
@@ -48,7 +48,7 @@ test('energía, pausa, flota, aforo y boletos reales',()=>{
 });
 test('rutas imposibles y fondos reservados bloquean la contratación',()=>{
  const s=city();s.roads=s.roads.filter(([x])=>x!==8);
- assert.throws(()=>planElevatedRail(s,[5,9],[12,9],1),/conectados/);
+ assert.throws(()=>planElevatedRail(s,[6,9],[13,9],1),/conectados/);
  const d=city();d.projects=[{cost:99000,paid:0,privatePaid:false}];
- assert.throws(()=>planElevatedRail(d,[5,9],[12,9],1),/Fondos/);
+ assert.throws(()=>planElevatedRail(d,[6,9],[13,9],1),/Fondos/);
 });

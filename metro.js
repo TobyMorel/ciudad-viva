@@ -1,13 +1,14 @@
+import {placeRailStation,advanceRailStations} from './rail_sites.js';
 import {assignRailBusTransfers} from './rail_bus_intermodal.js';
 // Metro municipal: paridad con metro.py, estaciones en edificios existentes.
 export const METRO_TRAIN_COST=2400, METRO_SEATS=80, METRO_FARE_CENTS=60;
 const STAGES=['Estudios y permisos','Excavación y sostenimiento','Vías y estaciones','Inspección y habilitación'];
 const distance=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]);
 const active=b=>['habilitado','operativo'].includes(b.status||'operativo');
-export function metroStationCatalog(s){
+export function metroStationCatalog(s,mode=null){
  const roads=new Set((s.roads||[]).map(p=>p.join(',')));
- return (s.buildings||[]).filter(b=>['home','shop','civic','school','hotel','airport','port','depot','factory'].includes(b.kind)&&active(b)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([x,y])=>roads.has([b.x+x,b.y+y].join(','))))
- .sort((a,b)=>a.x-b.x||a.y-b.y).slice(0,80).map(b=>({point:[b.x,b.y],name:b.name||b.kind,label:`${b.name||b.kind} · ${b.x+1},${b.y+1}`}));
+ return (s.railStations||[]).filter(site=>site.status==='active'&&(!mode||site.mode===mode)&&[[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>roads.has([site.x+dx,site.y+dy].join(','))))
+ .sort((a,b)=>a.x-b.x||a.y-b.y).slice(0,80).map(site=>({point:[site.x,site.y],name:site.name,mode:site.mode,label:site.name+' · '+(site.x+1)+','+(site.y+1)}));
 }
 function routeBetween(a,b){const points=[[...a]];let[x,y]=a;while(x!==b[0]){x+=x<b[0]?1:-1;points.push([x,y])}while(y!==b[1]){y+=y<b[1]?1:-1;points.push([x,y])}return points}
 
@@ -30,8 +31,8 @@ function elevatedRoadRoute(s,from,to){
  return route.reverse();
 }
 export function planElevatedRail(s,from,to,trains=1){
- const entries=metroStationCatalog(s),a=entries.find(e=>Array.isArray(from)&&distance(e.point,from)===0),b=entries.find(e=>Array.isArray(to)&&distance(e.point,to)===0);
- if(!a||!b||a===b)throw Error('Elegí dos edificios distintos conectados por calles.');
+ const entries=metroStationCatalog(s,'elevated'),a=entries.find(e=>Array.isArray(from)&&distance(e.point,from)===0),b=entries.find(e=>Array.isArray(to)&&distance(e.point,to)===0);
+ if(!a||!b||a===b)throw Error('Construí primero dos estaciones elevadas terminadas y conectadas a calles.');
  const route=elevatedRoadRoute(s,from,to),d=(route?.length||0)-1;
  if(!route||d<4||d>45)throw Error('El tren elevado necesita entre 4 y 45 tramos viales conectados sin cruzar el río.');
  const lines=s.metroLines||(s.metroLines=[]),rails=lines.filter(l=>l.mode==='elevated');
@@ -52,8 +53,8 @@ export function planElevatedRail(s,from,to,trains=1){
 }
 
 export function planMetro(s,from,to,trains=1){
- const entries=metroStationCatalog(s),a=entries.find(r=>Array.isArray(from)&&distance(r.point,from)===0),b=entries.find(r=>Array.isArray(to)&&distance(r.point,to)===0);
- if(!a||!b||a===b)throw Error('Elegí dos edificios distintos con acceso vial para las estaciones.');
+ const entries=metroStationCatalog(s,'metro'),a=entries.find(r=>Array.isArray(from)&&distance(r.point,from)===0),b=entries.find(r=>Array.isArray(to)&&distance(r.point,to)===0);
+ if(!a||!b||a===b)throw Error('Construí primero dos estaciones de subte terminadas y conectadas a calles.');
  const route=routeBetween(from,to),d=route.length-1;
  if(d<3||d>26)throw Error('Las estaciones deben separarse de 3 a 26 tramos.');
  if(route.some(p=>p[0]===24||p[0]===25))throw Error('La primera línea no puede atravesar el cauce del río.');
@@ -68,6 +69,7 @@ export function planMetro(s,from,to,trains=1){
  lines.push(line);return line;
 }
 export function advanceMetroDay(s){
+ advanceRailStations(s);
  for(const line of s.metroLines||[]){
   if(line.status!=='building')continue;
   if((s.jobs||0)<=0){line.pauseReason='La obra espera puestos de trabajo y cuadrillas disponibles.';continue}
@@ -96,6 +98,7 @@ export function metroRefresh(s){
  }
 }
 export function metroAction(s,action,data){
+ if(action==='placeMetroStation'||action==='placeRailStation')return placeRailStation(s,action==='placeRailStation'?'elevated':'metro',data.x,data.y);
  if(action==='planMetroLine')return planMetro(s,data.from,data.to,data.trains??1);
  if(action==='planRailLine')return planElevatedRail(s,data.from,data.to,data.trains??1);
  const line=(s.metroLines||[]).find(l=>l.id===data.id);if(!line)throw Error('La línea de subte ya no existe.');

@@ -1,3 +1,9 @@
+## Después de Alfa 0.171 · Infraestructura real antes que paneles
+
+**Regla de diseño:** ningún nuevo sistema de movilidad puede ponerse en funcionamiento sin objetos 3D físicos que el jugador deba construir en terreno habilitado. En Alfa 0.171, subtes y trenes elevados ya requieren estaciones terminadas y el jugador conecta las dos estaciones directamente en el mapa. Movilidad sirve para estadísticas y diagnósticos, no para contratar infraestructura.
+
+Próximo: estaciones intermedias con andenes y capacidad, transbordos entre subte y tren elevado a través de estaciones construidas, depósito/terminal ferroviaria y cargas de fábricas al puerto. Revisar gradualmente los demás paneles para retirar botones que implementen servicios sin una infraestructura y cadena constructiva real. Mantener verificaciones de terreno, caja, cuadrillas, energía y paridad LAN/Offline. No atribuir avance global sin ponderaciones homologadas.
+
 ## Después de Alfa 0.170 · Próxima etapa fase 22
 
 La combinación colectivo↔subte y colectivo↔tren elevado ya reasigna pasajeros existentes, cobra tarifas por tramo y exige capacidad real. Próxima iteración: añadir estaciones intermedias sobre trazados ya contratados y transbordo entre líneas ferroviarias, manteniendo dosificar andenes y rutas causales. Luego desarrollar trenes de carga con clientes industriales reales, carga física, vías portuarias, inventarios y costes; evitar únicamente trenes decorativos. Mantener equivalencia LAN/Offline, tests responsive y la validación LAN entre dos equipos físicos.

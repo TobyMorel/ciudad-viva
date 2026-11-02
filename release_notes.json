@@ -1,7 +1,26 @@
 {
-  "currentVersion": "0.170",
+  "currentVersion": "0.171",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.171",
+      "date": "2026-11-02",
+      "title": "Estaciones 3D físicas y construcción ferroviaria sobre el mapa",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Construir → Transporte ahora contiene edificios 3D distintos de estación de subte y estación de tren elevado, con vistas previas del modelo. Cada estación ocupa una parcela real libre con calle adyacente, valida terreno y reservas de caja y paga una inversión inicial de $6.800 o $9.400.",
+        "Las estaciones pasan por cimientos, estructura y andenes, instalaciones e inspección durante 42 o 50 días con cuadrillas disponibles. Antes de terminar no se aceptan conexiones ni pasajeros.",
+        "Las herramientas de mapa Tender línea de subte y Construir viaducto ferroviario requieren tocar dos estaciones físicas habilitadas. Los motores LAN y Offline prohíben formalizar una línea sobre viviendas, comercios u otros edificios comunes.",
+        "Movilidad es informativa para las redes ferroviarias: visualiza estaciones, obra, líneas y pasajeros; ya no contrata líneas, flotas ni pausas desde botones.",
+        "Los edificios se dibujan en el mapa y en el catálogo 3D incluso durante sus obras. Se evita duplicar trenes y proyecciones subterráneas en corredores elevados. El trazado de subte continúa como proyección técnica de superficie, no como vista subterránea real.",
+        "Se añadieron pruebas JS y Python para ocupación, presupuesto, lotes bloqueados, cuadras viales, obra y habilitación, y se adaptó el test de interfaz en móvil y escritorio."
+      ],
+      "verification": "Cambios de código, pruebas nuevas y actualización de CI incorporados; resultado global de CI, comprobación en navegador y verificación LAN entre equipos por confirmar.",
+      "pending": [
+        "Extender a todos los sistemas la regla de gestión basada en objetos físicos; estaciones intermedias, conexión subte↔tren, carga ferroviaria hacia el puerto, cuadrillas especializadas y vista subterránea real."
+      ]
+    },
     {
       "version": "0.170",
       "date": "2026-11-02",

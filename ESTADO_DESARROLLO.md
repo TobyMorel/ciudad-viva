@@ -1,3 +1,11 @@
+## Alfa 0.171 · Estaciones ferroviarias físicas en el city builder
+
+Se corrigió el diseño del ferrocarril de pasajeros: **las líneas nuevas no pueden construirse desde edificios comunes ni iniciarse pulsando un botón del panel Movilidad**. En Construir → Transporte se crean estaciones de subte 3D ($6.800, 42 días) y tren elevado 3D ($9.400, 50 días) sobre parcelas disponibles con acceso vial. Quedan visibles desde el comienzo de la obra, se desarrollan por etapas si hay cuadrillas y solo se habilitan al completarse. La estación se inspecciona tocándola en el mapa.
+
+Con las herramientas Tender línea de subte y Construir viaducto ferroviario se eligen directamente dos estaciones físicas terminadas sobre el mapa; recién entonces se reserva presupuesto para el corredor de vías y su flota. El panel Movilidad informa resultados, no crea ni administra infraestructura ferroviaria. Se mantiene la simulación y equivalencia LAN/Offline; los subtes todavía usan una proyección superficial de túneles, no una cámara 3D bajo tierra. Se añadieron verificaciones de suelo, fondos y ocupación para obras y nuevas edificaciones municipales y privadas. Se deja pendiente convertir las demás acciones puramente administrativas del juego a interacciones respaldadas por edificios físicos, estaciones intermedias y tren de carga al puerto.
+
+Las regresiones JS/Python y el test responsive del panel ferroviario fueron actualizados; CI completo y pruebas LAN entre equipos pendientes de corroborar.
+
 ## Alfa 0.170 · Transbordos colectivos, subtes y trenes elevados
 
 Una persona que viaje por compras o servicios puede enlazar una línea municipal de colectivo operativa con un subte o tren elevado, en cualquiera de los dos sentidos. La parada debe coincidir con el recorrido vial, el acceso a la estación debe quedar próximo y ambos medios reservar asientos. Se calcula espera, caminata, conexión y tiempos de cada tramo; si la combinación es demasiado lenta se conserva el desplazamiento original. El segundo boleto tiene una rebaja del 25%. Se registran los dos componentes tarifarios por hogar y día y se liquidan en los cierres existentes de colectivos y ferrocarril, sin doble asignación de personas ni autos.

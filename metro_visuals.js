@@ -3,7 +3,7 @@ const validPoint = p => Array.isArray(p) && p.length === 2 && p.every(Number.isI
 const samePoint = (a,b) => a[0] === b[0] && a[1] === b[1];
 
 export function metroVisualPlan(line) {
-  if (!line || !['building','active','paused'].includes(line.status)) return null;
+  if (!line || line.mode==='elevated' || !['building','active','paused'].includes(line.status)) return null;
   if (!Array.isArray(line.route) || line.route.length < 2 || !line.route.every(validPoint)) return null;
   if (!Array.isArray(line.stations) || line.stations.length !== 2 || !line.stations.every(validPoint)) return null;
   if (!samePoint(line.route[0],line.stations[0]) || !samePoint(line.route.at(-1),line.stations[1])) return null;

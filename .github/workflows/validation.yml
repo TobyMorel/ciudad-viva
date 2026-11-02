@@ -23,12 +23,13 @@ jobs:
           node-version: '22'
       - name: Sintaxis y JSON
         run: |
-          python -m py_compile server.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py
+          python -m py_compile server.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py
           node --check offline.js
           node --check taxi_passengers.js
           node --check bus_nonwork.js
           node --check rail_bus_intermodal.js
           node --check metro.js
+          node --check rail_sites.js
           node --check metro_visuals.js
           node --check growth_demand.js
           node --check offline_client.js
@@ -50,7 +51,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.170
+          name: ciudad-viva-alfa-0.171
           path: |
             .
             !.git/**
@@ -84,7 +85,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.170-responsive
+          name: ciudad-viva-alfa-0.171-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

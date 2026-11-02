@@ -1,3 +1,15 @@
+# Estado de desarrollo · Alfa 0.142
+
+## Colocación directa de calles y edificios · fase 2
+
+Las herramientas de calles y edificios ya no abren una ficha bloqueante tras cada clic. Seleccionar un elemento del catálogo deja el modo activo; cada clic en el mapa inicia una obra sin repetir confirmaciones. La asignación automática de cuadrilla, las validaciones autoritativas de fondos y sitio, y la construcción animada por etapas siguen vigentes. La cola de colocación serializa solicitudes rápidas para evitar carreras de cuadrillas/saldo. Los errores del servidor continúan mostrándose.
+
+Al pasar el cursor, enfocar o tocar una opción aparece una ficha compacta con la descripción del catálogo y, en obras por etapas, costo estimado, plazo, trabajadores y etapas/inspección. Se retiró la ventana de inicio repetitiva del HTML y el cliente ya no conserva el flujo de licitación/confirmación.
+
+Verificado en esta sesión: `tests/test_build_preview_ui.mjs` con Chromium a 390×844 y 1440×900; cada vista coloca consecutivamente dos consultorios, confirma que la herramienta sigue activa, comprueba costo/plazo en la ayuda contextual y ausencia del diálogo. Sintaxis JavaScript y `git diff --check` pasan. La animación visual ya existente se conserva por el mismo ciclo de proyectos; no se cambió el motor de avance de obras.
+
+Fase 2 se mantiene en 75%: mejora de interacción sin adelantar los criterios pendientes de permisos completos, riesgos/retrasos y contratos especializados. Fase principal actual: 2. Próximo hito: fase 9, despacho de patrullas y respuesta visible a robos. Progreso global no estimable: el roadmap no aporta pesos comunes verificables para combinar las 34 fases.
+
 # Estado de desarrollo · Alfa 0.141
 
 ## Ciclo de vida y servicios funerarios · fase 9

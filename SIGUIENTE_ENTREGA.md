@@ -1,4 +1,4 @@
-# Siguiente entrega · después de Alfa 0.141
+# Siguiente entrega · después de Alfa 0.142
 
 Prioridad de mecánicas, con un corte corto por sistema para no dejar subsistemas en pulido indefinido:
 
@@ -7,5 +7,7 @@ Prioridad de mecánicas, con un corte corto por sistema para no dejar subsistema
 3. **Fase 4 · crecimiento inicial:** partida vacía, acceso exterior conectado, demanda residencial en aumento y ocupación de parcelas verdes con obras privadas por etapas; después vincular población a demanda comercial y producción industrial. Hacer que el progreso sea visible con varias parcelas permitidas, no sólo contadores.
 4. **Fase 9 · capacidad funeraria:** validar la renovación de cremación por año, cupo persistente, red desconectada, baja de empleo y muerte en partidas largas. Añadir transporte funerario sólo si el resto del ciclo anual sigue estable.
 5. Verificar suites completas Python/Node, prueba responsive existente a 390×844/1440×900 y carga del panel de Ciudad. Publicar en `main`, revisar estado CI y entregar ZIP.
+
+La colocación directa de Alfa 0.142 ya fue comprobada en escritorio y móvil; seguir usando `placeQuick`/`placementQueue`, conservar la animación por etapas y no restaurar un modal por parcela.
 
 Estado actual: mortalidad natural determinista, retiro del hogar/padrón, cementerio (120 sepulturas), crematorio (24 anuales), colas por carretera/cupo, gastos y reportes funcionan en Online y Offline. Fase 9 orientativa: 75%; fase 4: 60% (sin evidencia nueva para cambiarla). Fase 9 está parcial. Global no estimable sin pesos comunes verificables para las 34 fases. No se ha probado la conexión LAN física entre dos computadoras.

@@ -606,3 +606,10 @@ Un guardado anterior inicia el libro con el efectivo actual y sin entradas inven
 `municipal_finance_scenarios` y `offlineMunicipalScenarios` reutilizan el motor existente de caja, obras y deuda en tres casos paralelos: base 0/0, favorable +10% ingresos y −5% gastos, adverso −15% ingresos y +10% gastos. Cada motor copia las cuotas; no descuenta efectivo, no cambia obligaciones ni guarda la hipótesis. El resultado mantiene contratos, prioridades, reservas y condiciones tributarias actuales; esa limitación se muestra al jugador. El caché usa los campos que afectan a proyección y se invalida ante cambios relevantes.
 
 `municipal-scenarios` es plegable para no saturar Economía; muestra supuestos, ingreso/gasto aplicado, caja y mora al mes 12, déficit y primer impago. La fase 29 pasa a 50% porque el bloque de escenarios se considera parcial (cinco bloques iguales; 100/50/50/0/50). El alcance plurianual, inflación, población, salarios y demanda queda explícitamente pendiente.
+
+
+## Alfa 0.142 · inicio directo de obras
+
+La acción de ubicar una calle/edificio reutiliza `/api/action` con el contratista elegido automáticamente y ya no abre una confirmación en cada parcela. `placeQuick` encadena los clics en `placementQueue` para que cada respuesta actualice el estado antes de elegir la siguiente cuadrilla. El servidor continúa siendo autoridad para costo, sitio y capacidad. No cambiar el avance por etapas ni la animación asociada a los proyectos.
+
+La ayuda del catálogo es no bloqueante y se activa con `pointerenter`, foco y toque. Muestra datos de descripción del botón y agrega costo/plazo/cuadrilla calculados con el mismo multiplicador de la cuadrilla disponible. La estimación puede cambiar al terminarse otra obra; la cifra definitiva siempre la valida el servidor. Zonificación y redes que tienen acciones propias describen su operación sin fingir que crean un proyecto por etapas.

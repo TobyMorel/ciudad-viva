@@ -1,3 +1,11 @@
+# Continuidad inmediata · Alfa 0.142
+
+El usuario pidió retirar confirmaciones repetitivas al construir calles y edificios. En `game.js`, `placeQuick` invoca la acción autoritativa `place`/`rescue` con cuadrilla automática y encadena acciones en `placementQueue`; deja activa la herramienta para repetir clics. Las obras conservan animación y progreso por etapas. El diálogo de `bidBackdrop` se quitó del HTML y ya no hay llamadas a `openBid`. Errores de presupuesto, sitio o cuadrilla siguen apareciendo mediante `send`/aviso.
+
+En catálogo, `showBuildHelp` crea una ayuda compacta con descripción, costo, plazo, dotación y etapas para las obras. Se activa con hover, foco y toque móvil. El precio/plazo es estimativo con la cuadrilla disponible en ese momento; validación final autoritativa del servidor no cambia. No confundirla con la ficha municipal al seleccionar parcelas ni con confirmaciones de pedidos de materiales.
+
+Regresión: `tests/test_build_preview_ui.mjs`, Chromium 390×844 y 1440×900; verifica la ayuda y la colocación sucesiva de dos consultorios sin modal y con el modo activo. Fase 2 queda en 75%; este cambio es usabilidad y no cumple criterios nuevos de fase. Global `null` por falta de pesos comunes verificables. Siguiente mecánica: fase 9, patrulla física para incidentes; luego farolas garantizadas en nuevas calles. Autor Git: `66056611+TobyMorel@users.noreply.github.com`. Publicar a `main`, revisar CI/Vercel y crear ZIP completo desde el commit publicado.
+
 # Continuidad para otra IA · Alfa 0.141
 
 **No empezar de cero.** Lee `CONTINUIDAD_IA.md`, `ESTADO_DESARROLLO.md`, `DECISIONES_TECNICAS.md`, `SIGUIENTE_ENTREGA.md` y `AUDITORIA_ROADMAP.md` antes de modificar el motor. Conserva Online/Offline en paridad y los guardados viejos; no cambies servicios, economía o infraestructura existente por contadores cosméticos.

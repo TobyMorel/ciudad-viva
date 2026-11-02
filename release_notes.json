@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.141",
+  "currentVersion": "0.142",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.142",
+      "date": "2026-11-02",
+      "roadmapPhase": 2,
+      "phaseProgress": 75,
+      "overallProgress": null,
+      "changes": [
+        "La colocación de calles y edificios inicia directamente al hacer clic en una parcela; desaparece la ventana de confirmación que interrumpía cada construcción. El modo queda seleccionado para repetir colocaciones rápidamente.",
+        "Las solicitudes de construcción rápida se procesan en una cola serial: dos clics seguidos no compiten por la misma cuadrilla ni por el saldo. El servidor conserva las validaciones de fondos, cuadrillas y sitio; los errores siguen visibles.",
+        "La animación de las obras por etapas permanece activa. Las opciones del catálogo muestran una ficha compacta al pasar el cursor, enfocar con teclado o tocar en móvil: descripción, costo estimado, plazo, cuadrilla y etapas cuando corresponda.",
+        "Verificado con Chromium a 390×844 y 1440×900: ayuda contextual legible y colocación consecutiva de dos consultorios sin modal. La fase 2 permanece en 75%; este cambio reduce fricción de manejo pero no completa permisos, riesgo y retrasos que faltan. Global no estimable por falta de pesos verificables comunes para las 34 fases."
+      ]
+    },
     {
       "version": "0.141",
       "date": "2026-11-02",
@@ -1560,7 +1573,7 @@
       "phase": 2,
       "title": "Constructoras, contrataciones y obras por etapas",
       "progress": 75,
-      "summary": "Obras por etapas, cuadrillas, contratos y asignación automática de una empresa compatible; el jugador consulta costo/plazo y comienza sin licitar.",
+      "summary": "Obras por etapas, cuadrillas y contratos con asignación automática; colocación directa sin confirmar cada proyecto, con costo y plazo consultables en el catálogo.",
       "pending": [
         "Permisos y planificación completos para todos los usos",
         "riesgos y retrasos integrales",

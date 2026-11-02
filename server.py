@@ -3576,7 +3576,7 @@ def place_road_instantly(x,y):
     if not land_tile_unlocked(x,y):raise ValueError("La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir.")
     if is_water(x,y):raise ValueError("No se puede construir una calle sobre agua.")
     if [x,y] in state.get("roads",[]):raise ValueError("Ese tramo ya forma parte de la red vial.")
-    if any(item.get("x")==x and item.get("y")==y for key in ("buildings","projects","abandoned") for item in state.get(key,[])):
+    if any(item.get("x")==x and item.get("y")==y for key in ("buildings","projects","abandoned","railStations") for item in state.get(key,[])):
         raise ValueError("La parcela ya está ocupada.")
     if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state.get("roads",[])):
         raise ValueError("La calle debe conectar con la red existente.")
@@ -6049,6 +6049,11 @@ class Handler(BaseHTTPRequestHandler):
                 elif action=="createTaxiRouteFromDepot":
                     try:create_taxi_route_from_depot(data.get("depotX"),data.get("depotY"),data.get("stops",[]))
                     except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
+                elif action in ("placeMetroStation","placeRailStation"):
+                    try:
+                        site=metro_action(state,action,data)
+                        ev("Obra ferroviaria iniciada",f"{site['name']} · construcción {site['duration']} días.")
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action in ("planMetroLine","buyMetroTrain","pauseMetroLine","resumeMetroLine","planRailLine","buyRailTrain","pauseRailLine","resumeRailLine"):
                     try:
                         line=metro_action(state,action,data)
@@ -6118,6 +6123,8 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
                 elif action=="place":
+                    if any(site.get("x")==data.get("x") and site.get("y")==data.get("y") for site in state.get("railStations",[])):
+                        self._send(409,{"error":"La parcela está ocupada por una estación ferroviaria."});return
                     kind=data.get("kind"); x=int(data.get("x",-1)); y=int(data.get("y",-1)); contractor=data.get("contractor")
                     service_id=data.get("serviceModel") or SERVICE_DEFAULT.get(kind)
                     instant_public=service_id in INSTANT_PUBLIC_MODELS and (SERVICE_MODELS.get(service_id) or {}).get("kind")==kind

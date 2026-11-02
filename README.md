@@ -1,3 +1,13 @@
+# Ciudad Viva · Alfa 0.171
+
+**Estaciones ferroviarias construibles y reales en el mapa 3D.** El subte y el tren elevado ya no se proyectan desde botones en Movilidad: Construir → Transporte incorpora los edificios de estación, con maqueta 3D, parcela propia, calle adyacente, inversión y obra por etapas. Cada estación exige cuadrillas, y solo queda habilitada al terminar. Con las herramientas «Tender línea de subte» y «Construir viaducto ferroviario» se seleccionan dos estaciones terminadas directamente en el mapa; se contrata el trazado con su obra, energía y flota. El panel Movilidad pasa a informar estaciones, líneas y pasajeros, sin controles para construir ferroviarias.
+
+Los accesos de subte se ven como edificios 3D de entrada en superficie; los trazados subterráneos siguen siendo una **proyección técnica** en la superficie, no una cámara subterránea real. El tren elevado tiene estación de andenes y escaleras, además de sus viaductos y trenes 3D. Las reglas de caja, ocupación y obras se aplican tanto en Offline como en LAN. Las partidas antiguas conservan sus líneas, mientras que las nuevas deben partir de estaciones físicas terminadas.
+
+**Pendiente:** extensión de esta regla a todos los demás sistemas de gestión que aún usen paneles; conexiones entre dos líneas ferroviarias, estaciones intermedias y ferrocarril de carga al puerto. No hay una ponderación global verificable de las 34 fases del roadmap.
+
+## Historial
+
 # Ciudad Viva · Alfa 0.170
 
 La fase 22 incorpora **transbordos reales entre colectivos y subtes o trenes elevados** para viajes existentes de compras y servicios. Un viaje puede ir primero en colectivo y continuar en tren, o hacer el trayecto inverso, si los accesos están próximos, el recorrido es válido y los dos vehículos tienen cupo. Se suman espera, caminata, conexión y tiempo a bordo: la combinación debe competir en tiempo con el modo original. El segundo boleto tiene una bonificación del 25% y ambos componentes se registran por hogar; no se cobra hasta el cierre municipal.

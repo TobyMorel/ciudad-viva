@@ -433,7 +433,7 @@ export async function createOfflineAdapter(){
       for(let j=0;j<Math.max(0,b.occupants||0);j++){
         const p=people[j]||{id:'fire-'+incident.id+'-'+j,age:0,status:'inactivo'},id=String(p.id);
         const away=Boolean(p.workerEligible&&p.employerId&&minute>=480&&minute<1080)||(minute>=540&&minute<1140&&stableSkill(id,'salida-incendio')%100<12);
-        if(away){Object.assign(p,{status:'buscando vivienda',displacedBy:'incendio total',originHomeX:b.x,originHomeY:b.y,displacedDay:state.day,plannedReturnDay:null,admittedDay:state.day,shelterId:null});queue.push(p);displaced++}
+        if(away){Object.assign(p,{status:'buscando vivienda',displacedBy:'incendio total',originHomeX:b.x,originHomeY:b.y,displacedDay:state.day,plannedReturnDay:state.day+1,admittedDay:state.day,shelterId:null});queue.push(p);displaced++}
         else {deceased.push({residentId:id,name:p.name||('Residente #'+id.slice(-5)),age:p.age||0,year,deathDay:state.day,homeX:b.x,homeY:b.y,cause:'incendio',disposition:'en espera',funeralPreference:offlineFuneralPreference(id)});dead++}
       }
       state.urbanEvolution.deceased=deceased.slice(-2000);state.population=Math.max(0,(state.population||0)-dead);

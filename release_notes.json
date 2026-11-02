@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.176",
+  "currentVersion": "0.177",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.177",
+      "date": "2026-11-02",
+      "title": "Pantalla completa e informes más visibles",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La interfaz usa la altura real de la ventana para que la partida no quede recortada en pantalla completa.",
+        "Los iconos de informes son más grandes, mantienen sus colores y ya no tienen tarjetas blancas de fondo.",
+        "La barra calcula cuántas columnas necesita para mostrar todos los informes según el alto disponible, también en móvil."
+      ],
+      "verification": "Vista en escritorio y móvil revisada en navegador; la interfaz ocupa el viewport sin desbordamiento de página.",
+      "pending": []
+    },
     {
       "version": "0.176",
       "date": "2026-11-02",

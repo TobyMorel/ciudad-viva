@@ -1,3 +1,7 @@
+## Alfa 0.167 · Red subterránea inicial
+
+La fase 22 incorpora la primera línea de metro con estaciones subterráneas vinculadas a edificios existentes, trazado ortogonal, obra civil secuencial, cuadrillas, inversión pagada, trenes, frecuencia, capacidad, energía y presupuesto de movilidad. Ofrece viajes reales de compras y servicios en competencia modal con autos, elimina doble asignación en taxis y cobra al cierre de los hogares. Se publica panel responsive, novedades y pruebas LAN/Offline. **Pendiente para la fase 22 completa:** trazados de varias estaciones y transbordos metro/autobús, representación 3D, trenes de superficie y logística ferroviaria.
+
 ## Alfa 0.166 · trayectos intermodales no laborales
 
 El tráfico de compras y servicios usa la demanda preexistente de hogares y destinos, sin crear pasajeros. Cada línea de colectivo requiere operación, paradas accesibles y asientos de mediodía; los viajes pueden transbordar entre dos líneas y ambas descuentan capacidad. La tarifa integrada se registra por hogar/día y se cobra al cierre mensual limitada a su caja, sin dobles ingresos ni asignaciones simultáneas a taxi. Panel y documentación actualizados, verificación automática de layout móvil/escritorio agregada. Próximo: metro con obras, energía y material rodante.

@@ -29,6 +29,15 @@ try{
   await page.locator('[data-metro-to]').selectOption('11,9');
   await page.locator('[data-metro-build]').evaluate(e=>e.click());
   await page.waitForFunction(()=>document.querySelector('#popupContent .metro-line')?.textContent?.includes('En obra'),null,{timeout:15000});
+  await page.locator('[data-rail-from]').selectOption('5,9');
+  await page.locator('[data-rail-to]').selectOption('11,9');
+  await page.locator('[data-rail-build]').evaluate(e=>e.click());
+  await page.waitForFunction(()=>document.querySelector('.rail-panel .metro-line')?.textContent?.includes('En obra'),null,{timeout:15000});
+  const railDisplay=await page.evaluate(()=>({scene:window.__ciudadVivaScene?.(),panel:document.querySelector('.rail-panel')?.innerText||''}));
+  assert.ok(railDisplay.scene&&railDisplay.scene.railTrains===0&&railDisplay.scene.railTracks===0,
+    name+': el tren en obra no debe aparecer habilitado '+JSON.stringify(railDisplay.scene));
+  assert.match(railDisplay.panel,/Tren elevado 1/);
+
   // La obra nueva marca dos estaciones, pero los estudios aún no han excavado.
   await page.waitForFunction(()=>window.__ciudadVivaScene?.().metroStations===2,null,{timeout:15000});
   const scene=await page.evaluate(()=>window.__ciudadVivaScene());

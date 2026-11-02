@@ -35,13 +35,67 @@ def _path(a,b):
     while y!=b[1]:y+=1 if b[1]>y else -1;route.append([x,y])
     return route
 
+
+RAIL_TRAIN_COST=3900
+RAIL_SEATS=140
+RAIL_FARE_CENTS=85
+RAIL_STAGES=("Estudios y trazado","Montaje de pilotes","Viaducto, vías y andenes","Pruebas e inspección")
+
+def elevated_road_route(state,a,b):
+    roads={tuple(p) for p in state.get("roads",[]) if p[0] not in (24,25)}
+    def around(point):
+        x,y=point
+        return [(x+dx,y+dy) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)) if (x+dx,y+dy) in roads]
+    from collections import deque
+    starts=around(a);goals=set(around(b))
+    q=deque(starts);prev={p:None for p in starts}
+    end=None
+    while q:
+        p=q.popleft()
+        if p in goals:end=p;break
+        for n in around(p):
+            if n not in prev:prev[n]=p;q.append(n)
+    if end is None:return None
+    path=[]
+    while end is not None:path.append(list(end));end=prev[end]
+    return list(reversed(path))
+
+def plan_elevated_rail(state,from_point,to_point,trains=1):
+    a=_station(state,from_point);b=_station(state,to_point)
+    if not a or not b or a is b:raise ValueError("Elegí dos edificios distintos conectados por calles.")
+    route=elevated_road_route(state,from_point,to_point)
+    d=len(route)-1 if route else -1
+    if d<4 or d>45:raise ValueError("El tren elevado necesita entre 4 y 45 tramos viales conectados sin cruzar el río.")
+    lines=state.setdefault("metroLines",[]);rails=[l for l in lines if l.get("mode")=="elevated"]
+    if len(rails)>=3:raise ValueError("Por ahora se pueden contratar hasta tres líneas ferroviarias elevadas.")
+    if any(set(map(tuple,l["stations"]))==set(map(tuple,(from_point,to_point))) for l in rails if l.get("status")!="retired"):
+        raise ValueError("Ya existe un tren entre esas estaciones.")
+    if any(any(tuple(p) in {tuple(q) for q in route} for p in l.get("route",[])) for l in rails if l.get("status")!="retired"):
+        raise ValueError("El nuevo viaducto no puede superponerse a otro corredor ferroviario.")
+    trains=int(trains)
+    if trains not in (1,2):raise ValueError("Contratá uno o dos trenes inicialmente.")
+    construction=9500+950*d+3600;total=construction+trains*RAIL_TRAIN_COST
+    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
+    if state.get("money",0)-reserved<total:raise ValueError(f"Fondos disponibles insuficientes: se necesitan $ {total:,}.")
+    state["money"]-=total
+    day=max(1,int(state.get("day",1)));number=len(rails)+1
+    line={"id":f"rail-{day}-{number}","name":f"Tren elevado {number}","mode":"elevated",
+          "stations":[list(from_point),list(to_point)],
+          "stationNames":[a.get("name","Estación A"),b.get("name","Estación B")],
+          "route":route,"status":"building","stageIndex":0,"stage":RAIL_STAGES[0],"elapsed":0,
+          "duration":65+d*4,"constructionCost":construction,"purchaseCost":total,
+          "trainCount":trains,"fareCents":RAIL_FARE_CENTS,"createdDay":day,
+          "dailyRiders":0,"monthlyFareRevenue":0,"operational":False,
+          "powerRequiredKw":95+trains*55}
+    lines.append(line);return line
+
 def plan_metro(state,from_point,to_point,trains=1):
     a=_station(state,from_point);b=_station(state,to_point)
     if not a or not b or a is b:raise ValueError("Elegí dos edificios distintos con acceso vial para las estaciones.")
     route=_path(from_point,to_point);distance=len(route)-1
     if distance<3 or distance>26:raise ValueError("Las estaciones deben separarse de 3 a 26 tramos.")
     if any(p[0] in (24,25) for p in route):raise ValueError("La primera línea no puede atravesar el cauce del río.")
-    if len(state.setdefault("metroLines",[]))>=5:raise ValueError("La red admite hasta cinco líneas en esta etapa.")
+    if sum(l.get("mode")!="elevated" for l in state.setdefault("metroLines",[]))>=5:raise ValueError("La red admite hasta cinco líneas de subte en esta etapa.")
     if any(set(map(tuple,line["stations"]))==set(map(tuple,[from_point,to_point])) for line in state["metroLines"] if line.get("status")!="retired"):
         raise ValueError("Ya existe una línea entre esas estaciones.")
     trains=int(trains)
@@ -73,7 +127,7 @@ def advance_metro_day(state):
         line["elapsed"]=min(line["duration"],line.get("elapsed",0)+1)
         ratio=line["elapsed"]/max(1,line["duration"])
         line["stageIndex"]=0 if ratio<.12 else 1 if ratio<.58 else 2 if ratio<.94 else 3
-        line["stage"]=STAGES[line["stageIndex"]]
+        line["stage"]=(RAIL_STAGES if line.get("mode")=="elevated" else STAGES)[line["stageIndex"]]
         if line["elapsed"]>=line["duration"]:
             line["status"]="active";line["stage"]="Habilitada";line["completedDay"]=state.get("day",1)
 
@@ -98,25 +152,32 @@ def metro_refresh(state):
                             "Presupuesto de movilidad insuficiente" if active and funding<.5 else None)
         d=max(1,len(line.get("route",[]))-1)
         n=line.get("trainCount",0)
-        line["headwayMinutes"]=max(5,math.ceil(d*4/max(1,n)))
-        line["dailyCapacity"]=n*METRO_SEATS*3 if ready else 0
-        line["monthlyOperatingCost"]=round(230+85*d+140*n+line.get("powerRequiredKw",0)*.7) if ready else 0
+        rail=line.get("mode")=="elevated"
+        line["headwayMinutes"]=max(5,math.ceil(d*(3 if rail else 4)/max(1,n)))
+        line["dailyCapacity"]=n*(RAIL_SEATS if rail else METRO_SEATS)*3 if ready else 0
+        line["monthlyOperatingCost"]=round((390 if rail else 230)+(110 if rail else 85)*d+(260 if rail else 140)*n+line.get("powerRequiredKw",0)*.7) if ready else 0
         line["energyKw"]=line.get("powerRequiredKw",0) if ready else 0
 
 def metro_action(state,action,data):
     if action=="planMetroLine":
         a=data.get("from");b=data.get("to")
         return plan_metro(state,a,b,data.get("trains",1))
+    if action=="planRailLine":return plan_elevated_rail(state,data.get("from"),data.get("to"),data.get("trains",1))
     line=next((l for l in state.get("metroLines",[]) if l.get("id")==data.get("id")),None)
     if line is None:raise ValueError("La línea de subte ya no existe.")
-    if action=="buyMetroTrain":
-        if line.get("status") not in ("active","paused") or line.get("trainCount",0)>=5:raise ValueError("Solo se amplían líneas habilitadas, hasta cinco trenes.")
-        if state.get("money",0)<METRO_TRAIN_COST:raise ValueError("No hay fondos para otro tren.")
-        state["money"]-=METRO_TRAIN_COST;line["trainCount"]+=1
-    elif action=="pauseMetroLine":
+    if action in ("buyMetroTrain","buyRailTrain"):
+        rail=line.get("mode")=="elevated";cost=RAIL_TRAIN_COST if rail else METRO_TRAIN_COST;limit=4 if rail else 5
+        if (action=="buyRailTrain")!=rail:raise ValueError("Acción incorrecta para este tipo de tren.")
+        if line.get("status") not in ("active","paused") or line.get("trainCount",0)>=limit:raise ValueError("La línea no está habilitada o alcanzó su flota máxima.")
+        reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
+        if state.get("money",0)-reserved<cost:raise ValueError("No hay fondos libres para otro tren.")
+        state["money"]-=cost;line["trainCount"]+=1
+    elif action in ("pauseMetroLine","pauseRailLine"):
+        if (action=="pauseRailLine")!=(line.get("mode")=="elevated"):raise ValueError("Acción incorrecta para la línea.")
         if line.get("status")!="active":raise ValueError("La línea no está activa.")
         line["status"]="paused"
-    elif action=="resumeMetroLine":
+    elif action in ("resumeMetroLine","resumeRailLine"):
+        if (action=="resumeRailLine")!=(line.get("mode")=="elevated"):raise ValueError("Acción incorrecta para la línea.")
         if line.get("status")!="paused":raise ValueError("La línea no está en pausa.")
         line["status"]="active"
     else:raise ValueError("Acción de subte desconocida.")
@@ -131,7 +192,7 @@ def metro_assign_passengers(state,trips):
             line["fareMonth"]=month;line["fareByDay"]={}
         line["dailyRiders"]=0
         line["fareByDay"][str(day)]={}
-    total=0
+    total=0;rail_total=0
     for trip in trips:
         if trip.get("reason") not in ("compras","servicios") or trip.get("mode") not in ("auto","walk"):continue
         if not isinstance(trip.get("from"),list) or not isinstance(trip.get("to"),list):continue
@@ -143,12 +204,14 @@ def metro_assign_passengers(state,trips):
             can_backward=abs(b[0]-trip["from"][0])+abs(b[1]-trip["from"][1])<=2 and abs(a[0]-trip["to"][0])+abs(a[1]-trip["to"][1])<=2
             if not (can_forward or can_backward):continue
             wait=line["headwayMinutes"]/2
-            minutes=8+wait+(len(line["route"])-1)*1.25
+            minutes=(4 if line.get("mode")=="elevated" else 8)+wait+(len(line["route"])-1)*(1 if line.get("mode")=="elevated" else 1.25)
             car_minutes=7+trip.get("distance",0)*2.5
             if minutes>car_minutes*1.3:continue
             count=min(remaining,max(0,line["dailyCapacity"]-line["dailyRiders"]))
             if not count:continue
             line["dailyRiders"]+=count;remaining-=count;total+=count
+            if line.get("mode")=="elevated":
+                rail_total+=count;trip["railRiders"]=trip.get("railRiders",0)+count;trip["railLineId"]=line["id"]
             trip["metroRiders"]=trip.get("metroRiders",0)+count
             trip["metroLineId"]=line["id"]
             home=",".join(map(str,trip["from"]))
@@ -160,7 +223,9 @@ def metro_assign_passengers(state,trips):
             trip["dailyEmissionsKg"]=round(trip["vehicles"]*trip.get("distance",0)*.18*2,2)
     for line in state.get("metroLines",[]):
         line["fareDue"]=round(sum(sum(v.values()) for v in line["fareByDay"].values())/100,2)
-    return {"metroRiders":total,"metroLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]))}
+    return {"metroRiders":total-rail_total,"railRiders":rail_total,
+            "metroLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")!="elevated"),
+            "railLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")=="elevated")}
 
 def settle_metro_month(state):
     homes={(b.get("x"),b.get("y")):b for b in state.get("buildings",[]) if b.get("kind")=="home"}

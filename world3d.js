@@ -539,22 +539,6 @@ export function createWorld(canvas){
     for(const z of state.zones||[])addZone(dynamicRoot,z);for(const chunk of state.landClaims?.frontierChunks||[])addLandLock(dynamicRoot,chunk);
     for(const ruin of state.fireService?.ruins||[]){if((state.buildings||[]).some(b=>b.x===ruin.x&&b.y===ruin.y)||(state.projects||[]).some(p=>p.x===ruin.x&&p.y===ruin.y))continue;const [rx,rz]=tilePos(ruin.x,ruin.y);plane(dynamicRoot,1.82,1.82,'#4c4b47',rx,.088,rz);for(let i=0;i<15;i++){const dx=(seeded(i+ruin.x*11+ruin.y*29)-.5)*1.4,dz=(seeded(i+ruin.x*19+ruin.y*13+50)-.5)*1.4,block=box(dynamicRoot,.12+(i%3)*.06,.06+(i%4)*.055,.15+(i%2)*.05,i%3?'#77716b':'#b3a498',rx+dx,.13,rz+dz);block.rotation.y=i*.71}for(let i=0;i<4;i++)plane(dynamicRoot,.35,.32,'#292d2b',rx+(i-1.5)*.29,.093,rz+(i%2?.26:-.29))}
     const renewalKeys=new Set((state.urbanRenewalWorks||[]).map(w=>key(w.x,w.y)));for(const b of state.buildings)addBuilding(dynamicRoot,b,roads,renewalKeys);
-    // Advertencias flotantes legibles incluso al girar la cámara.
-    for(const b of [...(state.buildings||[]),...(state.railStations||[])]){
-      const missing=b.missingServices||[];if(!missing.length)continue;
-      const glyph={power:'⚡',water:'💧',gas:'🔥',tv:'📺',wifi:'📶'};
-      const short=missing.slice(0,5).map(service=>glyph[service]).join(' ');
-      const c=document.createElement('canvas');c.width=256;c.height=80;const ctx=c.getContext('2d');
-      ctx.fillStyle='rgba(44,43,42,.93)';ctx.beginPath();ctx.roundRect(4,6,248,68,16);ctx.fill();
-      ctx.strokeStyle='#f7bc54';ctx.lineWidth=4;ctx.stroke();
-      ctx.font='29px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='white';ctx.fillText(short,128,42,240);
-      const texture=new THREE.CanvasTexture(c),matSprite=new THREE.SpriteMaterial({map:texture,depthTest:false,transparent:true});
-      const sprite=new THREE.Sprite(matSprite),[cx,cz]=tilePos(b.x,b.y);sprite.position.set(cx,4.35,cz);
-      sprite.scale.set(2.15,.67,1);sprite.renderOrder=27;sprite.userData.serviceWarning=missing;dynamicRoot.add(sprite);
-    }
-
-
-
     // Estaciones construidas por el jugador, con obra visual por etapas.
     for(const site of state.railStations||[]){
       if(!['building','active'].includes(site.status))continue;
@@ -818,7 +802,7 @@ export function createWorld(canvas){
   function paintBuildPreview({canvas:target,item}){if(!target||!item)return;const data=buildPreviewCache.get(JSON.stringify(item));if(!data)return;const ctx=target.getContext('2d');if(!ctx)return;target.width=previewWidth;target.height=previewHeight;ctx.putImageData(new ImageData(data,previewWidth,previewHeight),0,0)}
   window.addEventListener('resize',updateCamera);
   return {sync,screenToTile,screenToActor,setView,focusTile,projectTile,renderBuildPreviews,invalidate(){visualSignature=''},
-    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,serviceWarningCount:dynamicRoot.children.filter(x=>x.userData.serviceWarning).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
+    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
     getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
     getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),
     getFireParticleCounts:()=>({incidents:fireVisuals.length,flames:fireVisuals.reduce((n,f)=>n+f.flames.length,0),smoke:fireVisuals.reduce((n,f)=>n+f.smoke.length,0)}),

@@ -10,7 +10,7 @@ try{
   await page.goto('http://127.0.0.1:18766/',{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{
    const city=await fetch('/offline_seed.json').then(r=>r.json());
-   city.paused=true;city.newSettlement=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'atendido',station:'Comisaría',route:[[10,10],[10,9]]}]};
+   city.paused=true;city.newSettlement=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'sin respuesta'}]};
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
   await page.locator('#offlineMode').click();

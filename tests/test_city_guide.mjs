@@ -1,6 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {collectCityAlerts,projectGuide,INDUSTRIES,gettingStarted} from '../cityGuide.js';
+import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,projectGuide,INDUSTRIES,gettingStarted} from '../cityGuide.js';
+
+test('Cinco servicios faltantes comparten un solo pin y desaparecen al restablecerse',()=>{
+ const home={kind:'home',name:'Casa del barrio',x:8,y:9,missingServices:['power','water','gas','tv','wifi'],missingServiceReasons:{power:'Sin central',water:'Capacidad máxima alcanzada'},serviceOutageDays:{power:2}};
+ const state={day:5,buildings:[home]};
+ const needs=collectBuildingNeeds(state),groups=groupAlertsByTile(needs);
+ assert.equal(needs.length,5);
+ assert.equal(groups.length,1);
+ assert.deepEqual(groups[0].items.map(item=>item.icon),['⚡','💧','🔥','📺','📶']);
+ assert.match(needs[0].detail,/2 días sin servicio/);
+ home.missingServices=['water'];
+ assert.deepEqual(collectBuildingNeeds(state).map(item=>item.icon),['💧']);
+ home.missingServices=[];
+ assert.equal(collectBuildingNeeds(state).length,0);
+});
 
 test('Incidentes físicos muestran marcador 2D con acción y sin inventar eventos',()=>{
  const empty={day:32,policeReport:{recentIncidents:[]},fireReport:{recentIncidents:[]},waste:{report:{litterTiles:[]}},projects:[],roadAssets:[]};

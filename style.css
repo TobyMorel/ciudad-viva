@@ -259,6 +259,7 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .city-alert-pin{position:absolute;transform:translate(-50%,-100%);display:grid;place-items:center;min-height:34px;min-width:34px;width:36px;height:36px;padding:0;border:2px solid #fff8fb;border-radius:14px;background:#fff7f9;box-shadow:0 5px 16px #4a283a60;color:#6b3d54;font-size:19px;cursor:pointer;pointer-events:auto;animation:city-alert-appear .24s ease-out}
 .city-alert-pin:hover,.city-alert-pin:focus-visible{background:#f6d5e3;scale:1.12;z-index:8}
 .city-alert-pin.city-alert-fire{background:#fff0e7}
+.city-alert-pin.city-alert-service{background:#fff4dd}
 .city-alert-pin.city-alert-police{background:#f0f0ff}
 .city-alert-pin.city-alert-litter,.city-alert-pin.city-alert-waste{background:#fff3df}
 .city-alert-pin.city-alert-construction,.city-alert-pin.city-alert-road{background:#fff2e2}
@@ -266,6 +267,9 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 @keyframes city-alert-appear{from{opacity:0;transform:translate(-50%,-75%) scale(.8)}to{opacity:1;transform:translate(-50%,-100%) scale(1)}}
 .city-alert-counter{position:absolute;z-index:4;right:18px;bottom:100px;background:#fffafcda;border:1px solid #f0dce6;border-radius:12px;padding:7px 11px;color:#845c75;font-size:11px;font-weight:680;box-shadow:0 7px 20px #64415b21;pointer-events:none}
 .city-alert-counter.has-alerts{background:#fff0f5;color:#965473}
+.tile-need{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid #e9dce5}
+.tile-need>span{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;border-radius:11px;background:#fff0dc;font-size:20px}
+.tile-need>div{min-width:0}.tile-need b{display:block}.tile-need p{margin:5px 0}.tile-need small{display:block;line-height:1.4}
 @media(max-width:950px){.game-dock>[data-popup]{flex-basis:48px}}
 @media(max-width:650px){
  .topbar{padding:0 9px}.brand b{font-size:11px}

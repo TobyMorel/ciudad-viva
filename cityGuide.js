@@ -92,6 +92,38 @@ export function collectCityAlerts(state){
  return items.sort((a,b)=>a.priority-b.priority||b.day-a.day||a.id.localeCompare(b.id)).slice(0,32);
 }
 
+const SERVICE_NEEDS={
+ power:{icon:'⚡',name:'Electricidad',action:'Construí una central eléctrica conectada a las calles y comprobá su capacidad disponible.'},
+ water:{icon:'💧',name:'Agua',action:'Construí una planta de agua conectada a las calles y comprobá su capacidad disponible.'},
+ gas:{icon:'🔥',name:'Gas',action:'Construí una planta de gas conectada a las calles y comprobá su capacidad disponible.'},
+ tv:{icon:'📺',name:'TV por cable',action:'Construí una cabecera de TV conectada a las calles y comprobá sus conexiones disponibles.'},
+ wifi:{icon:'📶',name:'Internet y Wi-Fi',action:'Construí un centro de internet conectado a las calles y comprobá sus conexiones disponibles.'}
+};
+export function collectBuildingNeeds(state){
+ const needs=[];
+ for(const building of [...(state?.buildings||[]),...(state?.railStations||[])]){
+  if(!site(building?.x,building?.y))continue;
+  for(const service of new Set(building.missingServices||[])){
+   const spec=SERVICE_NEEDS[service];if(!spec)continue;
+   const days=Math.max(0,Number(building.serviceOutageDays?.[service])||0);
+   needs.push(item('service',spec.icon,'Falta '+spec.name,
+    `${building.name||'Edificio'}: ${building.missingServiceReasons?.[service]||'sin suministro'}. ${days} ${days===1?'día':'días'} sin servicio.`,
+    spec.action,building.x,building.y,state.day,`service-${service}-${building.x}-${building.y}`,1));
+  }
+ }
+ return needs;
+}
+export function groupAlertsByTile(alerts){
+ const groups=new Map();
+ for(const alert of alerts||[]){
+  if(!site(alert?.x,alert?.y))continue;
+  const key=`${alert.x},${alert.y}`;
+  if(!groups.has(key))groups.set(key,{key,x:alert.x,y:alert.y,items:[]});
+  groups.get(key).items.push(alert);
+ }
+ return [...groups.values()];
+}
+
 
 export function gettingStarted(state){
  const roads=state?.roads||[],zones=state?.zones||[],projects=state?.projects||[],buildings=state?.buildings||[];

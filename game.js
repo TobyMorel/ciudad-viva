@@ -2,7 +2,7 @@ import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
 import {createWorld} from './world3d.js?v=0.172';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
-import {collectCityAlerts,projectGuide,INDUSTRIES,gettingStarted} from './cityGuide.js';
+import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,projectGuide,INDUSTRIES,gettingStarted} from './cityGuide.js';
 import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
@@ -160,7 +160,7 @@ function renderBusRouteComposer(){if(!busRouteComposer)return;busRouteComposer.h
 busRouteComposer?.addEventListener('change',e=>{if(e.target.matches('[data-bus-draft-fleet]'))busFleetCount=+e.target.value||1});
 busRouteComposer?.addEventListener('click',async e=>{const button=e.target.closest('[data-bus-draft]');if(!button||!busRouteDraft)return;const action=button.dataset.busDraft;if(action==='cancel'){busRouteDraft=null;renderBusRouteComposer();showToast('Diseño de línea cancelado.');return}if(action==='undo'){busRouteDraft.stops.pop();renderBusRouteComposer();draw();return}if(action==='finish'){if(busRouteDraft.stops.length<2){showToast('Marcá al menos dos paradas sobre calles.');return}const draft=busRouteDraft;button.disabled=true;try{S=await api('/api/action',draft.kind==='taxi'?{action:'createTaxiRouteFromDepot',depotX:draft.x,depotY:draft.y,stops:draft.stops}:{action:'createBusRouteFromGarage',garageX:draft.x,garageY:draft.y,stops:draft.stops,buses:busFleetCount});const taxi=draft.kind==='taxi';busRouteDraft=null;renderBusRouteComposer();renderUI();draw();playSound('bus');showToast(taxi?'Taxi asignado: ya recorre su circuito.':'Línea inaugurada: los colectivos ya recorren las paradas.')}catch(error){button.disabled=false;showToast(error.message)}}});
 let cityAlerts=[];
-const cityAlertCards=()=>collectCityAlerts(S);
+const cityAlertCards=()=>[...collectCityAlerts(S),...collectBuildingNeeds(S)];
 function renderAlertCounter(){
  if(!markerSummary||!S)return;
  const count=cityAlertCards().length;
@@ -195,20 +195,23 @@ function renderCitizenInbox(){
 }
 function renderAlertMarkers(){
  if(!S||!markerLayer)return;
- cityAlerts=cityAlertCards();const retained=new Set(),overlap=new Map();
- for(const alert of cityAlerts.slice(0,24)){
-  const roadAlert=['litter','waste','road','traffic'].includes(alert.kind);
-  const pos=world.projectTile(alert.x,alert.y,roadAlert?.42:1.75);
+ cityAlerts=cityAlertCards();const retained=new Set(),existing=new Map([...markerLayer.children].map(node=>[node.dataset.cityAlertTile,node]));
+ for(const group of groupAlertsByTile(cityAlerts)){
+  const alert=group.items[(Math.floor(Date.now()/3500)+Math.abs(group.x*31+group.y*17))%group.items.length];
+  const roadAlert=['litter','waste','road','traffic'].includes(alert.kind)&&!S.buildings?.some(b=>b.x===group.x&&b.y===group.y);
+  const pos=world.projectTile(group.x,group.y,roadAlert?.42:1.75);
   if(!pos?.visible)continue;
-  const key=alert.x+','+alert.y,offset=overlap.get(key)||0;overlap.set(key,offset+1);
-  let button=[...markerLayer.children].find(node=>node.dataset.cityAlert===String(alert.id));
-  if(!button){button=document.createElement('button');button.type='button';button.dataset.cityAlert=alert.id;markerLayer.append(button)}
+  let button=existing.get(group.key);
+  if(!button){button=document.createElement('button');button.type='button';button.dataset.cityAlertTile=group.key;markerLayer.append(button)}
+  button.dataset.cityAlert=alert.id;
   button.className='city-alert-pin city-alert-'+alert.kind;
-  button.textContent=alert.icon;button.title=alert.title;button.setAttribute('aria-label',alert.title+', parcela '+(alert.x+1)+', '+(alert.y+1));
-  button.style.left=pos.x+'px';button.style.top=(pos.y-offset*38)+'px';retained.add(String(alert.id));
+  button.textContent=alert.icon;button.title=group.items.length>1?`${alert.title} · ${group.items.length} avisos en esta parcela`:alert.title;
+  button.setAttribute('aria-label',group.items.length>1?`${group.items.length} avisos en parcela ${group.x+1}, ${group.y+1}. ${alert.title}`:alert.title+', parcela '+(group.x+1)+', '+(group.y+1));
+  button.style.left=pos.x+'px';button.style.top=pos.y+'px';retained.add(group.key);
  }
- for(const node of [...markerLayer.children])if(!retained.has(node.dataset.cityAlert))node.remove();
+ for(const node of [...markerLayer.children])if(!retained.has(node.dataset.cityAlertTile))node.remove();
 }
+setInterval(renderAlertMarkers,3500);
 function renderAlertsPanel(){
  if(!S)return;
  const list=cityAlertCards();
@@ -235,12 +238,23 @@ function showCityAlert(alert){playSound('alert');
  panel.innerHTML='<div class="event-detail-icon">'+alert.icon+'</div><h3>'+escHtml(alert.title)+'</h3><small>Parcela '+(alert.x+1)+', '+(alert.y+1)+' · día '+escHtml(alert.day||S.day)+'</small><p>'+escHtml(alert.detail)+'</p><div class="guide-block"><b>Qué podés hacer</b><p>'+escHtml(alert.action)+'</p></div><div class="event-detail-actions"><button data-event-parcel>Ver parcela</button><button data-guide-open="guide">Abrir guía</button></div>';
  openPopup('Aviso de la ciudad',[panel]);
 }
+function showTileNeeds(group){
+ if(!group)return;
+ playSound('alert');selected={x:group.x,y:group.y};selectedActor=null;renderUI();draw();
+ const panel=document.createElement('div');panel.className='city-event-detail';
+ panel.innerHTML=`<h3>Lo que necesita esta parcela</h3><small>Parcela ${group.x+1}, ${group.y+1} · ${group.items.length} ${group.items.length===1?'aviso':'avisos'}</small>`+
+  group.items.map(alert=>`<article class="tile-need"><span aria-hidden="true">${alert.icon}</span><div><b>${escHtml(alert.title)}</b><p>${escHtml(alert.detail)}</p><small>${escHtml(alert.action)}</small></div></article>`).join('')+
+  '<div class="event-detail-actions"><button data-event-parcel>Ver parcela</button></div>';
+ openPopup('Necesidades de los vecinos',[panel]);
+}
 function focusCitizenAlert(alert){if(!alert)return;selected={x:alert.x,y:alert.y};selectedActor=null;zoom=Math.max(zoom,1.45);const focused=world.focusTile(alert.x,alert.y,viewParams());panX=focused.panX;panY=focused.panY;closePopup();renderUI();setCameraView();draw();playSound('zoom')}
 document.addEventListener('click',e=>{
  const dismissButton=e.target.closest('[data-citizen-dismiss]');if(dismissButton){dismissedCitizenAlerts.add(String(dismissButton.dataset.citizenDismiss));citizenInboxSignature='';renderCitizenInbox();return}
  if(e.target.closest('[data-citizen-toggle]')){citizenInboxCollapsed=!citizenInboxCollapsed;citizenInboxSignature='';renderCitizenInbox();return}
  const focusButton=e.target.closest('[data-citizen-focus]');if(focusButton){focusCitizenAlert(cityAlertCards().find(alert=>alert.id===focusButton.dataset.citizenFocus));return}
  if(e.target.closest('[data-citizen-open]')){document.querySelector('.game-dock [data-popup="alerts"]')?.click();return}
+ const tileButton=e.target.closest('[data-city-alert-tile]');
+ if(tileButton){showTileNeeds(groupAlertsByTile(cityAlertCards()).find(group=>group.key===tileButton.dataset.cityAlertTile));return}
  const alertButton=e.target.closest('[data-city-alert]');
  if(alertButton){showCityAlert(cityAlertCards().find(a=>a.id===alertButton.dataset.cityAlert));return}
  const projectButton=e.target.closest('[data-guide-project]');

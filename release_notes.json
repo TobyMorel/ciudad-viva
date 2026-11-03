@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.184",
+  "currentVersion": "0.185",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.185",
+      "date": "2026-11-02",
+      "title": "Iconos nuevos para la barra inferior",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La barra inferior incorpora los iconos ilustrados entregados para avisos, construcción, tráfico, partida, economía, obras, registro y cambios.",
+        "Los controles de tema, sonido y velocidad usan sus ilustraciones dedicadas; la barra adapta su tamaño a pantallas chicas y grandes."
+      ],
+      "verification": "Recursos gráficos integrados y sintaxis de módulos revisada.",
+      "pending": []
+    },
     {
       "version": "0.184",
       "date": "2026-11-02",

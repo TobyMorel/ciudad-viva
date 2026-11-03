@@ -1,0 +1,132 @@
+/* Bottom dock artwork supplied for the Ciudad Viva interface. */
+.game-dock {
+  z-index: 80;
+  gap: clamp(4px, .55vw, 10px);
+  padding: clamp(9px, 1vw, 16px) clamp(12px, 1.45vw, 24px);
+  border: 2px solid rgba(255,255,255,.92);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,253,243,.98), rgba(244,239,220,.98));
+  box-shadow: 0 9px 28px rgba(16,43,35,.32), inset 0 2px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(142,126,84,.18);
+  backdrop-filter: blur(12px);
+}
+.game-dock > button {
+  flex: 0 0 clamp(70px, 7.15vw, 134px);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: #124c50;
+  box-shadow: none;
+  transform: none;
+}
+.game-dock > button:hover, .game-dock > button.active {
+  background: rgba(23,152,135,.09);
+  box-shadow: none;
+  transform: translateY(-2px);
+}
+.game-dock .dock-icon {
+  display: block;
+  width: clamp(48px, 5.1vw, 92px);
+  height: clamp(48px, 5.1vw, 92px);
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 3px 3px rgba(34,45,31,.20));
+}
+.game-dock > button small {
+  display: block;
+  color: #124c50;
+  font-size: clamp(10px, .92vw, 16px);
+  font-weight: 800;
+  line-height: 1.05;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255,255,255,.9);
+}
+.game-dock > #themeToggle, .game-dock > #soundToggle {
+  flex: 0 0 clamp(48px, 4.4vw, 78px);
+}
+.game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon {
+  width: clamp(42px, 4.2vw, 72px);
+  height: clamp(42px, 4.2vw, 72px);
+}
+.game-dock .dock-divider {
+  width: 2px;
+  height: clamp(42px, 4.5vw, 78px);
+  margin: 0 clamp(2px, .35vw, 8px);
+  background: rgba(48,79,70,.20);
+}
+.game-dock .time-controls {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, .5vw, 9px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.game-dock .time-controls > button {
+  flex: 0 0 clamp(48px, 4.55vw, 82px);
+  width: clamp(48px, 4.55vw, 82px);
+  height: clamp(48px, 4.55vw, 82px);
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  box-shadow: none;
+}
+.game-dock .time-controls > button img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 4px rgba(28,48,38,.2));
+}
+.game-dock .time-controls > button:hover { transform: translateY(-2px); }
+.game-dock .time-controls > button.speed.selected {
+  border-radius: 22px;
+  box-shadow: 0 0 0 3px rgba(28,202,159,.9), 0 0 15px rgba(10,192,144,.52);
+}
+.game-dock #pauseBtn[data-paused="true"] {
+  border-radius: 22px;
+  background: #008c78;
+  box-shadow: 0 0 0 3px rgba(28,202,159,.9), 0 0 15px rgba(10,192,144,.52);
+}
+.game-dock .dock-play-glyph { color: #fff; font-size: clamp(28px, 2.7vw, 48px); line-height: 1; }
+.game-dock #soundToggle.muted { opacity: .56; }
+@media (max-width: 1100px) {
+  .game-dock { left: 50%; right: auto; width: max-content; max-width: calc(100vw - 20px); transform: translateX(-50%); justify-content: flex-start; overflow-x: auto; gap: 3px; padding: 8px 10px; }
+  .game-dock > button { flex-basis: clamp(52px, 7vw, 72px); }
+  .game-dock .dock-icon { width: clamp(38px, 5.2vw, 52px); height: clamp(38px, 5.2vw, 52px); }
+  .game-dock > button small { font-size: clamp(8px, 1.25vw, 10px); }
+  .game-dock > #themeToggle, .game-dock > #soundToggle { flex-basis: clamp(38px, 5.5vw, 48px); }
+  .game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 38px; height: 38px; }
+  .game-dock .time-controls { gap: 3px; }
+  .game-dock .time-controls > button { flex-basis: clamp(36px, 5vw, 48px); width: clamp(36px, 5vw, 48px); height: clamp(36px, 5vw, 48px); }
+  .game-dock .dock-divider { height: 40px; margin: 0 2px; }
+}
+@media (max-width: 700px) {
+  .game-dock {
+    left: 50%; right: auto; bottom: max(7px, env(safe-area-inset-bottom));
+    width: max-content; max-width: calc(100vw - 12px); transform: translateX(-50%);
+    justify-content: flex-start; gap: 1px; padding: 7px 8px; overflow-x: auto;
+    border-radius: 24px;
+  }
+  .game-dock > button { flex-basis: 48px; width: 48px; gap: 1px; }
+  .game-dock .dock-icon { width: 36px; height: 36px; }
+  .game-dock > button small { font-size: 8px; }
+  .game-dock > #themeToggle, .game-dock > #soundToggle { flex-basis: 34px; width: 34px; }
+  .game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 32px; height: 32px; }
+  .game-dock .dock-divider { height: 34px; margin: 0 2px; }
+  .game-dock .time-controls { gap: 1px; }
+  .game-dock .time-controls > button { flex-basis: 34px; width: 34px; height: 34px; }
+}

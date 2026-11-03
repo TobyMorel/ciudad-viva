@@ -92,12 +92,14 @@ test('Offline: un móvil queda reservado en la ida y vuelta y no supera dos desp
   const center=city.buildings.find(b=>b.serviceModel==='policePost');
   await request({action:'openPoliceUnit',x:center.x,y:center.y});
   city=await view();
-  const sites=city.buildings.filter(b=>['home','shop'].includes(b.kind)).slice(0,3);
-  assert.equal(sites.length,3);
+  const sites=[{x:8,y:14,name:'Barrio de prueba oeste'},{x:10,y:14,name:'Barrio de prueba centro'},{x:8,y:16,name:'Barrio de prueba sur'}];
   const ids=sites.map((_,i)=>'pending-'+i);
   await reload(c=>{
    c.day=1;c.lastMonth=0;c.paused=false;
-   c.police={...(c.police||{}),lastProcessedMonth:0,recentIncidents:sites.map((b,i)=>({id:ids[i],x:b.x,y:b.y,day:1,month:0,status:'sin respuesta',location:b.name||'Barrio'}))};
+   const connector=Array.from({length:7},(_,i)=>[9,10+i]),roads=new Map([...(c.roads||[]),...connector].map(p=>[p.join(','),p]));
+   c.roads=[...roads.values()];
+   c.buildings.push(...sites.map(b=>({...b,kind:'home',status:'operativo'})));
+   c.police={...(c.police||{}),lastProcessedMonth:0,recentIncidents:sites.map((b,i)=>({id:ids[i],x:b.x,y:b.y,day:1,month:0,status:'sin respuesta',location:b.name}))};
    return c;
   });
   let report=(await next()).policeReport;

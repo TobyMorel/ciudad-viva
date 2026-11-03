@@ -24,7 +24,7 @@ Auditoría realizada el 3 de noviembre de 2026 para Ciudad Viva. La escena usa T
 - **InstancedMesh2 (MIT):** compatible con Three.js r159 o posterior y agrega culling y LOD por instancia. La versión del juego es r171; queda como alternativa si las pruebas reales muestran que el LOD manual necesita culling de instancia más fino.
 - **Babylon.js:** incluye thin instances y herramientas de hardware scaling, pero cambiar Three.js por Babylon implica reescribir el constructor de edificios, selección, materiales y cámara. No es un addon que se pueda instalar sin migrar el renderer.
 - **OpenSA/GTA San Andreas:** fue un motor TypeScript/Three.js que transmitía sectores IPL/IDE al navegador; el repositorio del autor ahora marca el proyecto como cerrado y no publica una licencia vigente. Era un motor completo para esos formatos, no un complemento de Ciudad Viva.
-- **WoW en navegador (Manila/Benilla):** es un cliente Rust/Bevy desde cero que compila a WebAssembly y usa WebGPU; el código está bajo Apache 2.0 y requiere que el usuario aporte los datos del cliente y un servidor compatible. Es una referencia de ingeniería y medición, no un addon; incorporarlo significaría reemplazar el renderer y la arquitectura del juego.
+- **WoW en navegador (Manila/Benilla):** es un cliente Rust/Bevy desde cero que compila a WebAssembly y usa WebGPU; requiere que el usuario aporte los datos del cliente y un servidor compatible. Es una referencia de ingeniería y medición, no un addon; incorporarlo significaría reemplazar el renderer y la arquitectura del juego.
 - **WebAssembly/C++:** conviene cuando un perfil demuestra que el CPU de la simulación es el cuello de botella. La simulación offline ya vive en un worker y el online corre en el servidor; moverla a WASM no elimina las llamadas de dibujo. Los hilos Wasm requieren SharedArrayBuffer y cabeceras COOP/COEP, que este repositorio no configura en GitHub Pages.
 
 ## Cambios de Alfa 0.228
@@ -43,8 +43,8 @@ La prueba automática comprueba el LOD, los lotes, el límite de resolución, la
 - Three.js, BatchedMesh: https://threejs.org/docs/pages/BatchedMesh.html
 - Three.js, SceneOptimizer (experimental): https://threejs.org/docs/pages/SceneOptimizer.html
 - InstancedMesh2, license MIT and Three.js r159+: https://github.com/agargaro/instanced-mesh
-- OpenSA, estado actual del repositorio: https://github.com/AlexSergey/opensa
-- Manila/Benilla, cliente WoW compatible con WASM/WebGPU y Apache 2.0: https://github.com/samwhosung/benilla
+- OpenSA, estado actual del repositorio: https://github.com/AlexSergey/opensa (upstream cerrado); https://github.com/Avatarchik/opensa (fork AGPL-3.0)
+- Manila/Benilla, cliente WoW compatible con WASM/WebGPU y Apache 2.0: https://github.com/Adrinalin4ik/manila
 - Chrome, compiling C/C++ to WebAssembly: https://developer.chrome.com/docs/modern-web-guidance/guides/wasm/cpp-on-the-web
 - Emscripten pthread requirements: https://emscripten.org/docs/porting/pthreads.html
 - MDN, OffscreenCanvas in workers: https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas

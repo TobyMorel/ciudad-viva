@@ -775,3 +775,8 @@ La cabecera en móviles separa marca y acciones de una fila de indicadores; teso
 ## Alfa 0.220 — Nueva partida regresa al mapa (fase 15)
 
 Al confirmar el reinicio de ciudad, se cierran los paneles, diálogos y capas auxiliares, se restablece la herramienta Inspeccionar y se muestra el mapa con el estado nuevo.
+
+
+## Alfa 0.221 — Redes esenciales sobre calles conectadas (fase 6)
+
+El cálculo de cobertura usa la misma regla que la red de servicios general: cada calle continua desde la entrada regional incluye los ductos compartidos. Así se reconocen calles nuevas aunque los arreglos históricos de cableado no las enumeren. Los fallos de red continúan desconectando el tramo afectado. La regla es idéntica en Online y Offline.

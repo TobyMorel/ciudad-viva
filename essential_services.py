@@ -45,7 +45,8 @@ def evaluate_essential_services(city):
     roads=_connected({tuple(p) for p in city.get("roads",[])})
     nets={}
     for service,key in NETWORK.items():
-        tiles={tuple(p) for p in u.get(key,[]) if tuple(p) in roads}
+        # Every connected street carries the shared utility ducts; legacy cable lists may predate new streets.
+        tiles=set(roads)
         network="telecom" if service in ("tv","wifi") else service
         failed={(f.get("x"),f.get("y")) for f in u.get("failures",[]) if f.get("network")==network and f.get("status")!="reparada"}
         nets[service]=_connected(tiles-failed)

@@ -39,7 +39,8 @@ export function evaluateEssentialServices(city){
  const roadTiles=connectedTiles(new Set((city.roads||[]).map(p=>k(...p))),'4,10');
  const nets={};
  for(const type of Object.keys(NETWORK)){
-  const roadLines=new Set((u[NETWORK[type]]||[]).map(p=>k(...p)).filter(p=>roadTiles.has(p)));
+  // Every connected street carries the shared utility ducts, including streets built after old cable lists.
+  const roadLines=new Set(roadTiles);
   const failed=new Set((u.failures||[]).filter(f=>f.status!=='reparada'&&f.network===(type==='tv'||type==='wifi'?'telecom':type)).map(f=>k(f.x,f.y)));
   for(const p of failed)roadLines.delete(p);
   nets[type]=connectedTiles(roadLines,'4,10');

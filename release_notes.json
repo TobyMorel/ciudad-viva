@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.199",
+  "currentVersion": "0.200",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.200",
+      "date": "2026-11-02",
+      "title": "Más espacio para leer las métricas",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se aumentó la altura de las métricas del encabezado para separar títulos e importes."
+      ],
+      "verification": "Publicación Pages completada; cambio preparado para volver a validar los anchos de pantalla.",
+      "pending": []
+    },
     {
       "version": "0.199",
       "date": "2026-11-02",

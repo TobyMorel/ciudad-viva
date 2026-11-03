@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.213",
+  "currentVersion": "0.214",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.214",
+      "date": "2026-11-03",
+      "title": "Ambiente sonoro que cambia por barrio",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "El mapa mezcla un murmullo urbano filtrado y muy bajo según las calles cercanas al centro de la vista.",
+        "Al acercarse a plazas, aparece un fondo natural más abierto con breves cantos sintéticos de aves; las capas entran y salen gradualmente.",
+        "Todo respeta el control global de sonido, se atenúa al cambiar de pestaña y continúa funcionando con la simulación pausada."
+      ],
+      "verification": "Validación sintáctica pendiente en el workflow de GitHub Actions; ambiente espacial sintetizado con Web Audio sin archivos externos."
+    },
     {
       "version": "0.213",
       "date": "2026-11-03",

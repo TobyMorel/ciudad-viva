@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.213-greenery2';
+import {createWorld} from './world3d.js?v=0.214-soundscape';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -79,7 +79,35 @@ function shortNoise({duration=.12,filterHz=1900,gainValue=.018,frequency=null}={
  try{const now=audioContext.currentTime,g=audioContext.createGain(),filter=audioContext.createBiquadFilter();g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(gainValue,now+.008);g.gain.exponentialRampToValueAtTime(.0001,now+duration);filter.type='lowpass';filter.frequency.value=filterHz;let source;if(frequency){source=audioContext.createOscillator();source.type='triangle';source.frequency.setValueAtTime(frequency,now);source.frequency.exponentialRampToValueAtTime(frequency*.82,now+duration)}else{const buffer=audioContext.createBuffer(1,Math.ceil(audioContext.sampleRate*duration),audioContext.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;source=audioContext.createBufferSource();source.buffer=buffer}source.connect(filter).connect(g).connect(audioContext.destination);source.start(now);source.stop(now+duration+.015)}catch{}
 }
 function playSiren(kind){if(!audioContext||!soundEnabled||document.hidden)return;const now=audioContext.currentTime,base=kind==='fire'?560:760;try{const osc=audioContext.createOscillator(),gain=audioContext.createGain(),filter=audioContext.createBiquadFilter();osc.type='sawtooth';filter.type='lowpass';filter.frequency.value=1250;gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(.016,now+.12);gain.gain.setValueAtTime(.016,now+1.6);gain.gain.exponentialRampToValueAtTime(.0001,now+2);osc.frequency.setValueAtTime(base,now);osc.frequency.linearRampToValueAtTime(base*1.32,now+.8);osc.frequency.linearRampToValueAtTime(base,now+1.6);osc.connect(filter).connect(gain).connect(audioContext.destination);osc.start(now);osc.stop(now+2.02)}catch{}}
+let zoneBedSource=null,zoneBedGain=null,zoneBedFilter=null,lastZoneUpdate=0,nextParkBirdAt=0;
+function ensureZoneBed(){
+ if(!audioContext||zoneBedSource)return;
+ try{const length=audioContext.sampleRate*2,buffer=audioContext.createBuffer(1,length,audioContext.sampleRate),data=buffer.getChannelData(0);let drift=0;for(let i=0;i<length;i++){drift=(drift+(Math.random()*2-1)*.025)*.985;data[i]=drift*12}
+ zoneBedSource=audioContext.createBufferSource();zoneBedSource.buffer=buffer;zoneBedSource.loop=true;zoneBedFilter=audioContext.createBiquadFilter();zoneBedFilter.type='lowpass';zoneBedFilter.frequency.value=520;zoneBedGain=audioContext.createGain();zoneBedGain.gain.value=.0001;zoneBedSource.connect(zoneBedFilter).connect(zoneBedGain).connect(audioContext.destination);zoneBedSource.start()
+ }catch{zoneBedSource=null;zoneBedGain=null}
+}
+function parkBirdNote(frequency,delay=0){
+ if(!audioContext||!soundEnabled||document.hidden)return;
+ try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain();osc.type='sine';osc.frequency.setValueAtTime(frequency,start);osc.frequency.exponentialRampToValueAtTime(frequency*1.22,start+.16);osc.frequency.exponentialRampToValueAtTime(frequency*.94,start+.34);filter.type='lowpass';filter.frequency.value=2800;gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(.0035,start+.025);gain.gain.exponentialRampToValueAtTime(.0001,start+.38);osc.connect(filter).connect(gain).connect(audioContext.destination);osc.start(start);osc.stop(start+.4)}catch{}
+}
+function updateAmbientZones(state){
+ if(!audioContext)return;
+ ensureZoneBed();if(!zoneBedGain)return;
+ const now=performance.now();if(now-lastZoneUpdate<1100)return;lastZoneUpdate=now;
+ const gain=zoneBedGain.gain,at=audioContext.currentTime;
+ if(!soundEnabled||document.hidden||!state){gain.setTargetAtTime(.0001,at,.8);return}
+ let center;try{center=world.screenToTile(canvas.clientWidth/2,canvas.clientHeight/2)}catch{return}
+ const radius=Math.max(5,Math.min(17,11/Math.max(.65,zoom))),r2=radius*radius;
+ let nearbyRoads=0,nearbyParks=0;
+ for(const road of state.roads||[]){const dx=road[0]-center[0],dy=road[1]-center[1];if(dx*dx+dy*dy<r2)nearbyRoads++}
+ for(const building of state.buildings||[]){if(building.serviceModel!=='urbanPark')continue;const dx=building.x-center[0],dy=building.y-center[1];if(dx*dx+dy*dy<r2)nearbyParks++}
+ const traffic=clamp(nearbyRoads/(r2*.16),0,1),park=clamp(nearbyParks/1.5,0,1);
+ zoneBedFilter.frequency.setTargetAtTime(park?1250:520,at,1.4);
+ gain.setTargetAtTime(.0001+traffic*.002+park*.00035,at,1.8);
+ if(park>.2&&now>nextParkBirdAt){parkBirdNote(1650+Math.random()*380);parkBirdNote(2050+Math.random()*420,.22);nextParkBirdAt=now+8500+Math.random()*7000}
+}
 function updateSoundscape(state){
+ updateAmbientZones(state);
  if(!soundEnabled||!audioContext||document.hidden||!state||state.paused){if(fireSoundNode){try{fireSoundNode.stop()}catch{}fireSoundNode=null;fireSoundGain=null}return}
  const activeFire=(state.fireReport?.activeIncidents||[]).filter(i=>i.status==='ardiendo'),day=Number(state.day)||1;
  const policeResponses=(state.policeReport?.recentIncidents||[]).filter(i=>i.status==='atendido'&&Number.isFinite(i.day)&&day-i.day>=0&&day-i.day<=1&&i.route?.length>1);
@@ -198,7 +226,7 @@ const demolishButton=document.getElementById('demolishTool');
 function updateDemolishTool(){const active=tool==='demolish';demolishButton.classList.toggle('active',active);demolishButton.setAttribute('aria-pressed',String(active));demolishButton.title=active?'Salir del modo demoler':'Activar modo demoler';demolishButton.setAttribute('aria-label',demolishButton.title)}
 demolishButton.addEventListener('click',()=>{const enabled=tool!=='demolish';tool=enabled?'demolish':'inspect';toolVariant=null;toolIndustry=null;hoverServiceTile=null;relocateFrom=null;railLinkDraft=null;document.querySelectorAll('.tool').forEach(button=>button.classList.toggle('active',!enabled&&button.dataset.tool==='inspect'));canvas.style.cursor='crosshair';updateDemolishTool();closePopup();showToast(enabled?'Modo demoler: tocá un edificio, calle u obra para eliminarla al instante. Volvé a tocar el botón para salir.':'Modo demoler desactivado.');draw()});
 const popupGroups={alerts:[alertsPanel],build:[document.querySelector('.tool-list')],city:[document.querySelector('.city-actions'),document.querySelector('.lan-card')],supply:[document.getElementById('supply')],projects:[document.getElementById('projectCount'),document.getElementById('projects')],events:[document.getElementById('events')],changes:[document.getElementById('updatesPanel')]};
-document.querySelectorAll('.game-dock [data-popup]:not([data-popup="traffic"])').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.popup==='alerts')renderAlertsPanel();const titles={alerts:'Qu\u00e9 est\u00e1 pasando',build:'Construir',city:'Partida y ciudad',supply:'Econom\u00eda y suministros',projects:'Obras y contratos',events:'Registro de acontecimientos',changes:'Cambios de versi\u00f3n'};openPopup(titles[button.dataset.popup],popupGroups[button.dataset.popup]||[]);decorateReferencePopup(button.dataset.popup,popupBody,S,{ui,alerts:cityAlerts,version:releaseData?.currentVersion||document.querySelector('meta[name="ciudad-viva-version"]')?.content||'0.213',phases:releaseData?.roadmapPhases?.length||34})}));
+document.querySelectorAll('.game-dock [data-popup]:not([data-popup="traffic"])').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.popup==='alerts')renderAlertsPanel();const titles={alerts:'Qu\u00e9 est\u00e1 pasando',build:'Construir',city:'Partida y ciudad',supply:'Econom\u00eda y suministros',projects:'Obras y contratos',events:'Registro de acontecimientos',changes:'Cambios de versi\u00f3n'};openPopup(titles[button.dataset.popup],popupGroups[button.dataset.popup]||[]);decorateReferencePopup(button.dataset.popup,popupBody,S,{ui,alerts:cityAlerts,version:releaseData?.currentVersion||document.querySelector('meta[name="ciudad-viva-version"]')?.content||'0.214',phases:releaseData?.roadmapPhases?.length||34})}));
 document.querySelector('#dockTime').append(document.querySelector('.left .time-controls'));
 document.getElementById('headerSave').addEventListener('click',()=>document.getElementById('saveBtn').click());document.getElementById('headerSettings').addEventListener('click',()=>document.getElementById('themeToggle').click());document.getElementById('headerMenu').addEventListener('click',()=>document.querySelector('[data-popup="city"]').click());document.getElementById('mapCenter').addEventListener('click',()=>{panX=0;panY=0;zoom=window.innerWidth<650?1.08:2.05;rotation=0;setCameraView()});
 document.getElementById('popupClose').addEventListener('click',closePopup);popup.addEventListener('click',e=>{if(e.target===popup)closePopup()});window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!popup.classList.contains('hidden'))closePopup()});

@@ -732,3 +732,10 @@ La preferencia familiar se fija por identidad y persiste en el registro de falle
 ## Decisión Alfa 0.155 · migrar colecciones offline ausentes
 
 Las partidas locales sobreviven a cambios de versión; una colección de estado que no existía en el esquema guardado se inicializa como `[]` al migrar, antes de que simulación/UI/3D la consulten. El render 3D conserva también fallbacks locales para `buildings` y `projects`. La prueba de arranque cubre save nuevo y save heredado incompleto y corre en CI en cada push.
+
+
+## Alfa 0.201 - catastro territorial (fase 1)
+
+`landClaims.chunkTitles` guarda un titulo municipal por sector habilitado (folio, titular, derecho, alta, costo y origen). `landClaims.parcelDeeds` es un indice disperso: solo agrega inmuebles de desarrollo privado; calles, edificios publicos y suelo municipal no requieren un registro repetido por cada celda. El titular municipal de una parcela se resuelve desde el titulo de su sector. Un permiso de zonificacion describe el uso urbanistico, no la propiedad.
+
+Al cargar partidas antiguas, una migracion de una sola vez crea los titulos faltantes y registra inmuebles privados ya construidos y obras con pago privado. Si el guardado viejo no conserva la fecha o el costo original de una compra, el registro marca esos campos como desconocidos en vez de inventarlos. En actualizaciones normales solo se examinan los ultimos cuatro sectores y ocho edificios/obras para detectar altas recientes; la compra inserta su titulo con el precio y dia exactos. Online y Offline conservan la misma estructura.

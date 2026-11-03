@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.200",
+  "currentVersion": "0.201",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.201",
+      "date": "2026-11-02",
+      "title": "Catastro y propiedad de parcelas",
+      "roadmapPhase": 1,
+      "overallProgress": null,
+      "changes": [
+        "Cada sector incorporado registra folio, titular municipal, fecha y costo de compra; el terreno inicial queda distinguido.",
+        "Las parcelas desarrolladas por privados reciben un folio persistente con titular, derecho, uso e inscripcion.",
+        "La zonificacion queda identificada como permiso urbanistico y no como cambio de propiedad.",
+        "Las partidas anteriores migran sin reiniciar la ciudad; online y offline comparten el registro.",
+        "El informe de Suelo suma resumen catastral e inscripciones recientes; cada parcela muestra su ficha al seleccionarla."
+      ],
+      "verification": "Regresiones focalizadas de catastro Online/Offline, migracion de partidas, compra de sectores y persistencia; sintaxis y comprobacion de rendimiento en un registro territorial extenso.",
+      "pending": [
+        "Validar visualmente la navegacion y construccion en sectores muy alejados en navegador."
+      ]
+    },
     {
       "version": "0.200",
       "date": "2026-11-02",
@@ -2363,8 +2381,8 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 1 · catastro y propiedad de parcelas",
-      "detail": "Completar titularidad/uso de parcelas y guardado, y probar navegación y construcción en sectores muy alejados; luego rotar a mecánicas con baja cobertura, como patrulla física de fase 9."
+      "title": "Fase 1 - navegacion y construccion en sectores alejados",
+      "detail": "Validar en navegador la compra, visualizacion, acceso y construccion en coordenadas distantes, con partidas grandes; despues continuar con la respuesta policial visible de fase 9."
     },
     {
       "title": "Fase 9 · respuesta policial visible",
@@ -2390,11 +2408,11 @@
     {
       "phase": 1,
       "title": "Terreno, parcelas, calles y urbanización",
-      "progress": 75,
-      "summary": "Parcelas, zonificación por color, pintura continua y expansión por sectores contiguos pagados, sin borde artificial de coordenadas.",
+      "progress": 85,
+      "summary": "Expansion pagada por sectores, permisos de uso y catastro persistente con titularidad municipal y privada.",
       "pending": [
-        "Catastro completo y derechos de propiedad.",
-        "Validar rendimiento, guardado/carga y herramientas en ciudades de gran escala."
+        "Validar navegacion y construccion en sectores alejados con la interfaz de mapa.",
+        "Compraventa y transferencia de inmuebles privados."
       ]
     },
     {

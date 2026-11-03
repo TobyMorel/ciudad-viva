@@ -1687,7 +1687,7 @@ def new_settlement_state():
     fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
     fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}
     fresh["waste"]={"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0}
-    fresh["landClaims"]={"chunkSize":8,"unlockedChunks":["0,0","1,0","0,1","1,1"],"expansionCount":0}
+    fresh["landClaims"]={"chunkSize":8,"unlockedChunks":["0,0","1,0","0,1","1,1"],"expansionCount":0,"chunkTitles":{},"parcelDeeds":{},"registryVersion":0}
     return fresh
 
 LAND_CHUNK_SIZE=8
@@ -1697,6 +1697,8 @@ def ensure_land_claims(target=None):
     if isinstance(claims,dict) and isinstance(claims.get("unlockedChunks"),list):
         claims.setdefault("chunkSize",LAND_CHUNK_SIZE)
         claims.setdefault("expansionCount",max(0,len(claims["unlockedChunks"])-(4 if target.get("newSettlement") else 0)))
+        claims.setdefault("chunkTitles",{});claims.setdefault("parcelDeeds",{})
+        _sync_land_registry(target,claims)
         return claims
     unlocked={"0,0","1,0","0,1","1,1"} if target.get("newSettlement") else set()
     for item in [*target.get("roads",[]),*target.get("buildings",[]),*target.get("projects",[]),*target.get("zones",[]),*target.get("abandoned",[])]:
@@ -1704,8 +1706,51 @@ def ensure_land_claims(target=None):
             x,y=(item[0],item[1]) if isinstance(item,(list,tuple)) else (item.get("x"),item.get("y"))
             if isinstance(x,int) and isinstance(y,int):unlocked.add(f"{x//LAND_CHUNK_SIZE},{y//LAND_CHUNK_SIZE}")
         except (TypeError,ValueError,IndexError):pass
-    target["landClaims"]={"chunkSize":LAND_CHUNK_SIZE,"unlockedChunks":sorted(unlocked),"expansionCount":max(0,len(unlocked)-(4 if target.get("newSettlement") else 0))}
+    target["landClaims"]={"chunkSize":LAND_CHUNK_SIZE,"unlockedChunks":sorted(unlocked),"expansionCount":max(0,len(unlocked)-(4 if target.get("newSettlement") else 0)),"chunkTitles":{},"parcelDeeds":{},"registryVersion":0}
+    _sync_land_registry(target,target["landClaims"])
     return target["landClaims"]
+
+def _land_key_id(prefix,x,y):
+    return f"CV-{prefix}-{str(int(x)).replace('-', 'N')}-{str(int(y)).replace('-', 'N')}"
+
+def _land_chunk_title(target,claims,chunk):
+    if chunk not in claims["chunkTitles"]:
+        try:cx,cy=map(int,chunk.split(",",1))
+        except (ValueError,AttributeError):return
+        initial=target.get("newSettlement") and chunk in {"0,0","1,0","0,1","1,1"}
+        migrated=claims.get("registryVersion",0)<1 and not initial
+        claims["chunkTitles"][chunk]={"id":_land_key_id("S",cx,cy),"chunkX":cx,"chunkY":cy,"ownerType":"municipal","ownerName":f"Municipalidad de {target.get('cityName','Puerto Claro')}","rights":"dominio municipal","registeredDay":1 if initial else int(target.get("day",1)),"acquiredDay":None if initial or migrated else int(target.get("day",1)),"purchasePrice":None if migrated else 0,"origin":"territorio inicial" if initial else "registro migrado" if migrated else "sector incorporado"}
+
+def _register_private_land(target,claims,item,category):
+    if not isinstance(item,dict) or not isinstance(item.get("x"),int) or not isinstance(item.get("y"),int):return
+    if category=="project" and not item.get("privatePaid"):return
+    kind=item.get("kind")
+    private=category=="project" or item.get("ownerType")=="private" or kind in {"home","shop","factory","hotel"}
+    if not private:return
+    x,y=item["x"],item["y"];key=f"{x},{y}";deed=claims["parcelDeeds"].get(key)
+    if deed and deed.get("ownerType")=="private":
+        business=item.get("business") or {};name=business.get("name") or item.get("ownerName") or item.get("name")
+        if name and deed.get("ownerName") in (None,"Promotor privado","Familia propietaria") :deed["ownerName"]=name
+        return
+    business=item.get("business") or {};owner_name=business.get("name") or item.get("ownerName") or item.get("name") or ("Familia propietaria" if kind=="home" else "Promotor privado")
+    claims["parcelDeeds"][key]={"id":_land_key_id("P",x,y),"x":x,"y":y,"ownerType":"private","ownerId":business.get("id") or item.get("ownerId") or item.get("id"),"ownerName":str(owner_name),"rights":"dominio privado","registeredDay":int(target.get("day",1)),"acquiredDay":item.get("acquiredDay"),"landUse":kind,"source":"obra privada" if category=="project" else "inmueble privado","status":"inscripto"}
+
+def _sync_land_registry(target,claims):
+    titles=claims["chunkTitles"];deeds=claims["parcelDeeds"]
+    if not isinstance(titles,dict):titles=claims["chunkTitles"]={}
+    if not isinstance(deeds,dict):deeds=claims["parcelDeeds"]={}
+    if claims.get("registryVersion",0)<1:
+        for chunk in claims["unlockedChunks"]:_land_chunk_title(target,claims,str(chunk))
+        for b in target.get("buildings",[]):_register_private_land(target,claims,b,"building")
+        for p in target.get("projects",[]):_register_private_land(target,claims,p,"project")
+        claims["registryVersion"]=1
+    else:
+        for chunk in claims["unlockedChunks"][-4:]:
+            if str(chunk) not in titles:_land_chunk_title(target,claims,str(chunk))
+        # Only inspect a short tail on live ticks; this catches newly appended assets
+        # without rescanning a potentially large city every time it is serialized.
+        for b in target.get("buildings",[])[-8:]:_register_private_land(target,claims,b,"building")
+        for p in target.get("projects",[])[-8:]:_register_private_land(target,claims,p,"project")
 
 def land_chunk_info(x,y,target=None):
     target=state if target is None else target;claims=ensure_land_claims(target);size=int(claims.get("chunkSize",LAND_CHUNK_SIZE));cx,cy=x//size,y//size;chunk=f"{cx},{cy}";opened=set(claims.get("unlockedChunks",[]));neighbors=[f"{cx+dx},{cy+dy}" for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))];tier=max(1,max(abs(cx),abs(cy)))
@@ -1729,7 +1774,7 @@ def unlock_land_chunk(chunk_x,chunk_y):
     if not info["unlockable"]:raise ValueError("Primero tenés que desbloquear una zona vecina.")
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
     if available<info["cost"]:raise ValueError(f"Quedan $ {available}; desbloquear esta zona cuesta $ {info['cost']}.")
-    state["money"]-=info["cost"];state["landClaims"]["unlockedChunks"].append(info["chunk"]);state["landClaims"]["unlockedChunks"].sort();state["landClaims"]["expansionCount"]=max(0,len(state["landClaims"]["unlockedChunks"])-(4 if state.get("newSettlement") else 0))
+    state["money"]-=info["cost"];state["landClaims"]["unlockedChunks"].append(info["chunk"]);state["landClaims"]["unlockedChunks"].sort();state["landClaims"]["expansionCount"]=max(0,len(state["landClaims"]["unlockedChunks"])-(4 if state.get("newSettlement") else 0));_land_chunk_title(state,state["landClaims"],info["chunk"]);state["landClaims"]["chunkTitles"][info["chunk"]].update({"acquiredDay":int(state.get("day",1)),"purchasePrice":info["cost"],"origin":"compra de expansión"})
     ev("Terreno municipal desbloqueado",f"Se habilitó el sector {chunk_x},{chunk_y}: {size*size} parcelas nuevas para calles, zonificación y construcciones. Inversión $ {info['cost']}.")
     return info
 

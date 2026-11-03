@@ -16,13 +16,21 @@ test('Offline: los candados desbloquean sectores contiguos pagando y la coordena
  globalThis.localStorage={getItem:()=>null,setItem:()=>{}};
  try{
   const adapter=await createOfflineAdapter();let state=await adapter.request('/api/state');
-  assert.equal(state.landClaims.unlockedChunks.length,4);assert.equal(state.landClaims.chunkSize,8);
+  assert.equal(state.landClaims.unlockedChunks.length,4);assert.equal(state.landClaims.chunkSize,8);assert.equal(state.landClaims.chunkTitles['0,0'].rights,'dominio municipal');
   const before=state.money;
   await assert.rejects(adapter.request('/api/action',{action:'unlockLand',chunkX:8,chunkY:8}),/zona vecina/);
   state=await adapter.request('/api/action',{action:'unlockLand',chunkX:-1,chunkY:0});
-  assert.equal(state.money,before-3500);assert.ok(state.landClaims.unlockedChunks.includes('-1,0'));
+  assert.equal(state.money,before-3500);assert.ok(state.landClaims.unlockedChunks.includes('-1,0'));assert.equal(state.landClaims.chunkTitles['-1,0'].purchasePrice,3500);assert.equal(state.landClaims.chunkTitles['-1,0'].ownerType,'municipal');
   await assert.rejects(adapter.request('/api/action',{action:'place',kind:'road',x:-1,y:10,contractor:'Sur Obras'}),/zona bloqueada/);
  }finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
+});
+
+test('Offline: migra partidas guardadas y registra dominios privados sin convertir zonificacion en propiedad',async()=>{
+ const fetch0=globalThis.fetch,storage0=globalThis.localStorage;let stored=null;
+ globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});
+ globalThis.localStorage={getItem:()=>stored,setItem:(_,value)=>{stored=value}};
+ try{const first=await createOfflineAdapter();await first.request('/api/state');const city=JSON.parse(stored);city.landClaims.registryVersion=0;city.buildings=[{id:'house-test',kind:'home',name:'Casa del Parque',x:6,y:10}];city.zones=[{kind:'shop',x:7,y:10,owner:'municipal'}];stored=JSON.stringify(city);const migrated=await createOfflineAdapter(),state=await migrated.request('/api/state');assert.equal(state.landClaims.parcelDeeds['6,10'].ownerType,'private');assert.equal(state.landClaims.parcelDeeds['6,10'].ownerName,'Casa del Parque');assert.equal(state.landClaims.parcelDeeds['7,10'],undefined);assert.equal(JSON.parse(stored).landClaims.parcelDeeds['6,10'].rights,'dominio privado')}
+ finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
 });
 
 test('Offline: el río continúa y deja terreno desbloqueable en la otra orilla',async()=>{

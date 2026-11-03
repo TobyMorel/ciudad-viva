@@ -665,3 +665,10 @@ Pruebas: regresión Online de semáforo instalado/retirado/restaurado y cruce in
 # Auditoría · Alfa 0.155 · guardados offline
 
 La regresión `.map` del arranque offline quedó cubierta por inicialización/migración de colecciones ausentes y fallback en render 3D. Chromium verificó partida limpia, guardado heredado sin edificios/obras, escena visible, acciones locales y respuesta LAN tardía. CI repetirá la prueba en cada push. No cambia la estimación: fase 7=95%, fase 4=60%, fase 9=75%; total sin estimar por falta de pesos comparables verificables para las 34 fases.
+
+
+## Alfa 0.201 - catastro y propiedad de parcelas (fase 1)
+
+Se incorporan folios de sector y parcela, titularidad municipal/privada y separacion explicita entre dominio y permiso urbanistico. La compra de sectores registra fecha y costo; las partidas heredadas reciben su titulo sin asignar datos historicos desconocidos. El informe municipal de Suelo y la seleccion de cada parcela exponen titular, derecho, uso y folio.
+
+Verificacion: 12 regresiones Python del asentamiento; 6 regresiones Node Offline (alta privada, migracion, zonificacion y persistencia); 10.000 sincronizaciones de un registro sintetico de 1.600 sectores, 50.000 edificios y 10.000 obras en 0,043 s; alta privada detectada en el siguiente ciclo. Sintaxis Python/JS y `git diff --check`. La prueba Chromium del flujo visual no pudo correr localmente porque Playwright no esta instalado. Fase 1: 85%; pendiente validacion visual de navegacion y construccion en sectores distantes y transferencias/compraventa de inmuebles privados.

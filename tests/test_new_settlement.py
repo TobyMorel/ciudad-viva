@@ -42,18 +42,35 @@ class NewSettlement(unittest.TestCase):
         self.assertGreater(city["privateCapital"],capital)
 
     def test_new_map_has_small_start_and_paid_unbounded_adjacent_expansion(self):
+        server.ensure_land_claims(server.state)
         claims=server.state["landClaims"]
         self.assertEqual(claims["chunkSize"],8)
         self.assertEqual(set(claims["unlockedChunks"]),{"0,0","1,0","0,1","1,1"})
+        self.assertEqual(claims["chunkTitles"]["0,0"]["rights"],"dominio municipal")
+        self.assertEqual(claims["chunkTitles"]["0,0"]["origin"],"territorio inicial")
         self.assertFalse(server.land_tile_unlocked(16,10))
         options=server.land_frontier()
         self.assertIn({"chunk":"2,1","chunkX":2,"chunkY":1,"chunkSize":8,"unlocked":False,"unlockable":True,"cost":5700},options)
         before=server.state["money"]
         server.unlock_land_chunk(2,1)
         self.assertEqual(server.state["money"],before-5700)
+        self.assertEqual(server.state["landClaims"]["chunkTitles"]["2,1"]["purchasePrice"],5700)
+        self.assertEqual(server.state["landClaims"]["chunkTitles"]["2,1"]["ownerType"],"municipal")
         self.assertTrue(server.land_tile_unlocked(16,10))
         self.assertTrue(server.land_tile_unlocked(23,15))
         self.assertFalse(server.land_tile_unlocked(24,10))
+
+    def test_registry_migration_records_private_title_and_keeps_zoning_as_permit(self):
+        city=server.state
+        city["buildings"]=[{"id":"house-test","kind":"home","name":"Casa del Parque","x":6,"y":10}]
+        city["zones"]=[{"kind":"shop","x":7,"y":10,"owner":"municipal"}]
+        city["landClaims"].pop("registryVersion",None)
+        claims=server.ensure_land_claims(city)
+        deed=claims["parcelDeeds"]["6,10"]
+        self.assertEqual(deed["ownerType"],"private")
+        self.assertEqual(deed["ownerName"],"Casa del Parque")
+        self.assertEqual(deed["rights"],"dominio privado")
+        self.assertNotIn("7,10",claims["parcelDeeds"])
 
     def test_unreachable_and_unfunded_expansion_are_rejected(self):
         with self.assertRaisesRegex(ValueError,"zona vecina"):

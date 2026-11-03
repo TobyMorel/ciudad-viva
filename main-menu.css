@@ -209,8 +209,8 @@ footer { display: none !important; }
 .metrics { height: 42px !important; max-height: 42px; gap: 7px; }
 .metric { flex-basis: 125px; grid-template-columns: 29px minmax(0, 1fr); height: 40px !important; max-height: 40px; gap: 8px; padding: 4px 10px !important; }
 .metric .metric-icon { width: 27px; height: 27px; font-size: 15px; }
-.topbar .metrics .metric > span { top: 3px; left: 47px; width: auto; height: auto; overflow: hidden; opacity: .82; color: #e8f3e9; font-size: 8px !important; line-height: 9px; white-space: nowrap; }
-.topbar .metrics .metric > small { display: block !important; position: absolute; left: 1px; bottom: -1px; width: 1px; height: 1px; overflow: hidden; opacity: 0; font-size: 1px !important; line-height: 1px; }
+.topbar .metrics .metric > span { top: 3px; left: 47px; width: auto; height: auto; grid-column: auto !important; grid-row: auto !important; overflow: hidden; opacity: .82; color: #e8f3e9; font-size: 8px !important; line-height: 9px; white-space: nowrap; }
+.topbar .metrics .metric > small { display: block !important; position: absolute; left: 1px; bottom: -1px; width: 1px; height: 1px; grid-column: auto !important; grid-row: auto !important; overflow: hidden; opacity: 0; font-size: 1px !important; line-height: 1px; }
 .metric b { align-self: end; margin-bottom: 2px; font-size: 14px; }
 .network { font-size: 11px; }
 .header-tools { gap: 7px; }

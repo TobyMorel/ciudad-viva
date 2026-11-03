@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.198",
+  "currentVersion": "0.199",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.199",
+      "date": "2026-11-02",
+      "title": "Corrección de alineación de métricas",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las etiquetas del encabezado ahora se alinean con su tarjeta también en el diseño intermedio."
+      ],
+      "verification": "Publicación Pages completada; corrección responsive incorporada.",
+      "pending": []
+    },
     {
       "version": "0.198",
       "date": "2026-11-02",

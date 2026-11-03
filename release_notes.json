@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.193",
+  "currentVersion": "0.194",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.194",
+      "date": "2026-11-02",
+      "title": "Interfaz más legible y sin recortes",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se agrandaron los textos, métricas, controles e iconos del HUD para mejorar su lectura.",
+        "La barra inferior ahora se desplaza horizontalmente sin ocultar sus botones y conserva el inicio visible.",
+        "Se corrigieron los tamaños adaptables del encabezado, informes laterales y panel de demanda."
+      ],
+      "verification": "Sintaxis y JSON revisados.",
+      "pending": []
+    },
     {
       "version": "0.193",
       "date": "2026-11-02",

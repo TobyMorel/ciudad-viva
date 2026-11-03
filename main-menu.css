@@ -189,3 +189,133 @@ footer { display: none !important; }
   .game-dock { bottom: 7px; max-width: calc(100% - 46px); padding: 3px 5px; }
   .game-dock > button { flex-basis: 37px; }
 }
+
+/* Readability and overflow repair for the compact HUD. */
+#app { grid-template-rows: 60px minmax(0, 1fr) !important; }
+.topbar {
+  height: 54px;
+  margin: 3px 10px 2px;
+  padding-inline: 14px;
+  gap: clamp(10px, 1.2vw, 20px);
+}
+.brand { width: clamp(165px, 15vw, 235px); gap: 10px; }
+.brand .mark { width: 36px; height: 36px; }
+.brand b { font-size: 15px; }
+.brand small { font-size: 9px; }
+.city-title { gap: 10px; padding-left: 18px; }
+.city-title > div { display: grid; gap: 2px; }
+.city-title strong { font-size: 15px; }
+.city-title span { font-size: 12px; }
+.metrics { height: 42px !important; max-height: 42px; gap: 7px; }
+.metric { flex-basis: 125px; grid-template-columns: 29px minmax(0, 1fr); height: 40px !important; max-height: 40px; gap: 8px; padding: 4px 10px !important; }
+.metric .metric-icon { width: 27px; height: 27px; font-size: 15px; }
+.topbar .metrics .metric > span { top: 3px; left: 47px; width: auto; height: auto; overflow: hidden; opacity: .82; color: #e8f3e9; font-size: 8px !important; line-height: 9px; white-space: nowrap; }
+.topbar .metrics .metric > small { display: none !important; }
+.metric b { align-self: end; margin-bottom: 2px; font-size: 14px; }
+.network { font-size: 11px; }
+.header-tools { gap: 7px; }
+.header-tools button { width: 36px; height: 36px; font-size: 17px; }
+.layout { grid-template-columns: 82px minmax(0, 1fr) !important; }
+.city-report-rail { width: 70px !important; margin-inline: 6px; padding: 42px 5px 8px; gap: 7px; }
+.city-report-rail button { flex: 0 0 66px; width: 64px; min-height: 66px; grid-template-rows: 45px auto; gap: 2px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.city-report-rail button img { width: 44px; height: 44px; border: 1px solid #a6d5bd; background: #143d45; box-shadow: 0 2px 8px #061d1680; }
+.city-report-rail button small { display: block; max-width: 58px; overflow: hidden; color: #fff; font-size: 9px; font-weight: 700; line-height: 11px; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #061d16; }
+.city-report-rail button:hover, .city-report-rail button[aria-current="true"] { border: 0; background: transparent; box-shadow: none; }
+.city-report-rail button:hover img, .city-report-rail button[aria-current="true"] img { border-color: #fff0af; box-shadow: 0 0 0 3px #f8e7a544, 0 2px 8px #061d1680; }
+.city-report-rail::before { content: "›"; width: 30px; height: 30px; font-size: 23px; }
+.world-toolbar { min-height: 42px; gap: 9px; padding: 5px 11px; }
+.world-toolbar .map-legend { gap: 10px; font-size: 11px; }
+.world-toolbar .map-legend .layer-label { display: inline; }
+.world-toolbar button { width: 30px; height: 30px; font-size: 16px; }
+.world-toolbar .demolish-button { width: auto; }
+.growth-demand { width: 205px; padding: 11px 13px 10px; }
+.growth-demand-title { margin-bottom: 7px; font-size: 11px; }
+.growth-demand-bars { gap: 10px; }
+.growth-demand-item { grid-template-rows: 16px 42px 13px 13px; gap: 3px; }
+.growth-demand-percent { font-size: 12px; }
+.growth-demand-track { width: 11px; }
+.growth-demand-item b, .growth-demand-item small { font-size: 9px; }
+.city-alert-counter { padding: 8px 12px; font-size: 10px; }
+.game-dock {
+  display: flex;
+  justify-content: flex-start;
+  left: 50%; right: auto; bottom: 12px;
+  width: max-content; max-width: calc(100% - 110px);
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  transform: translateX(-50%); gap: 3px; padding: 5px 10px;
+}
+.game-dock::-webkit-scrollbar { display: none; }
+.game-dock > button { flex: 0 0 58px; min-width: 58px; min-height: 52px; gap: 2px; }
+.game-dock .dock-icon { width: 36px; height: 36px; }
+.game-dock > button small { font-size: 10px; line-height: 12px; }
+.game-dock > #themeToggle, .game-dock > #soundToggle { flex: 0 0 38px; min-width: 38px; }
+.game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 29px; height: 29px; }
+.game-dock .dock-divider { height: 36px; margin-inline: 4px; }
+.game-dock .time-controls { flex: 0 0 auto; gap: 4px; }
+.game-dock .time-controls > button { flex: 0 0 40px; width: 40px; height: 40px; font-size: 14px; }
+@media (max-width: 1050px) {
+  #app { grid-template-rows: 58px minmax(0, 1fr) !important; }
+  .topbar { height: 52px; gap: 8px; margin: 3px 6px 2px; padding-inline: 8px; }
+  .brand { width: auto; }
+  .brand .mark { width: 31px; height: 31px; }
+  .brand b { font-size: 12px; }
+  .brand small { display: none; }
+  .city-title { gap: 0; padding-left: 8px; }
+  .city-title > div { display: grid; gap: 1px; }
+  .city-title strong { max-width: 125px; overflow: hidden; font-size: 13px; text-overflow: ellipsis; }
+  .city-title span { max-width: 150px; overflow: hidden; font-size: 10px; text-overflow: ellipsis; }
+  .metrics { justify-content: flex-end; gap: 3px; }
+  .metric { flex: 0 1 83px; grid-template-columns: 22px minmax(0, 1fr); min-width: 55px; height: 36px !important; padding: 3px 5px !important; }
+  .metric .metric-icon { width: 21px; height: 21px; font-size: 12px; }
+  .topbar .metrics .metric > span { left: 32px; font-size: 7px !important; }
+  .metric b { font-size: 11px; }
+  .metric:nth-child(4) { display: none; }
+  .network { display: none; }
+  .header-tools { gap: 3px; }
+  .header-tools button { width: 30px; height: 30px; }
+  .layout { grid-template-columns: 74px minmax(0, 1fr) !important; }
+  .city-report-rail { width: 64px !important; margin: 8px 4px; padding: 38px 3px 6px; gap: 5px; }
+  .city-report-rail button { flex-basis: 58px; width: 60px; min-height: 58px; grid-template-rows: 38px auto; }
+  .city-report-rail button img { width: 37px; height: 37px; }
+  .city-report-rail button small { font-size: 8px; line-height: 10px; }
+  .world-toolbar { right: 190px; max-width: calc(100% - 205px); }
+  .growth-demand { right: 8px; width: 174px; }
+  .game-dock { max-width: calc(100% - 90px); }
+}
+@media (max-width: 650px) {
+  #app { grid-template-rows: 54px minmax(0, 1fr) !important; }
+  .topbar { height: 48px; gap: 5px; padding-inline: 6px; }
+  .brand .mark { width: 25px; height: 25px; }
+  .brand b { font-size: 10px; letter-spacing: .04em; }
+  .city-title { padding-left: 6px; }
+  .city-title strong { max-width: 82px; font-size: 11px; }
+  .city-title span { max-width: 88px; font-size: 8px; }
+  .metrics { gap: 2px; }
+  .metric { flex: 0 1 39px; grid-template-columns: minmax(0,1fr); min-width: 28px; height: 30px !important; padding: 2px !important; }
+  .metric .metric-icon, .topbar .metrics .metric > span { display: none !important; }
+  .metric b { grid-column: 1; justify-self: center; align-self: center; margin: 0; font-size: 9px; }
+  .metric:nth-child(n+4) { display: none; }
+  .header-tools { gap: 2px; }
+  .header-tools button { width: 25px; height: 25px; font-size: 12px; }
+  .layout { grid-template-columns: 48px minmax(0, 1fr) !important; }
+  .city-report-rail { width: 42px !important; margin: 6px 2px; padding: 34px 1px 4px; gap: 4px; }
+  .city-report-rail button { flex-basis: 38px; width: 38px; min-height: 38px; grid-template-rows: 34px; padding: 1px; }
+  .city-report-rail button img { width: 33px; height: 33px; }
+  .city-report-rail button small { display: none; }
+  .world-toolbar { top: 6px; right: 6px; max-width: calc(100% - 12px); min-height: 36px; padding: 3px 6px; }
+  .world-toolbar .map-legend { display: none; }
+  .world-toolbar button { width: 27px; height: 27px; }
+  .growth-demand { top: 48px; right: 6px; width: 152px; padding: 8px; }
+  .growth-demand-title { font-size: 9px; }
+  .growth-demand-item { grid-template-rows: 13px 30px 11px 11px; }
+  .growth-demand-percent { font-size: 10px; }
+  .growth-demand-item b, .growth-demand-item small { font-size: 7px; }
+  .game-dock { left: 50%; bottom: 5px; max-width: calc(100% - 56px); gap: 2px; padding: 4px 7px; border-radius: 18px; }
+  .game-dock > button { flex-basis: 46px; min-width: 46px; min-height: 43px; }
+  .game-dock .dock-icon { width: 30px; height: 30px; }
+  .game-dock > button small { font-size: 8px; line-height: 10px; }
+  .game-dock > #themeToggle, .game-dock > #soundToggle { flex-basis: 31px; min-width: 31px; }
+  .game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 24px; height: 24px; }
+  .game-dock .time-controls > button { flex-basis: 34px; width: 34px; height: 34px; font-size: 12px; }
+}

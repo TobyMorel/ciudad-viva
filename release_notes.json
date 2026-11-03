@@ -9,7 +9,7 @@
       "roadmapPhase": 15,
       "overallProgress": null,
       "changes": [
-        "Se reorganizó la cabecera móvil en dos filas para que la tesorería y los indicadores se distingan y puedan desplazarse sin quedar comprimidos.",
+        "Se reorganizó la cabecera móvil en dos filas para que la tesorería y los indicadores se distingan; el dinero y el balance mensual permanecen juntos en la tarjeta destacada.",
         "La barra de informes empieza junto al mapa y ocupa el alto disponible; los mensajes de vecinos tienen un límite compacto y su lista se desplaza por dentro.",
         "Se ampliaron los botones e iconos de la barra inferior y se añadieron márgenes para las áreas seguras del teléfono."
       ],

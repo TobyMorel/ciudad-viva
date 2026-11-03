@@ -81,7 +81,39 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
       - name: Comprobar UI, construcción y Economía (390/1440 px)
-        run: node tests/test_treasury_metric_ui.mjs && node tests/test_demolition_ui.mjs && node tests/test_essential_services_ui.mjs && node tests/test_metro_ui.mjs && node tests/test_bus_route_ui.mjs && node tests/test_offline_boot_recovery.mjs && node tests/test_growth_demand_ui.mjs && node tests/test_instant_public_services_ui.mjs && node tests/test_camera_markers.mjs && node tests/test_ui_layout.mjs && node tests/test_utility_response_ui.mjs && node tests/test_municipal_forecast_ui.mjs && node tests/test_school_expansion_ui.mjs && node tests/test_school_commute_ui.mjs && node tests/test_build_preview_ui.mjs && node tests/test_property_acquisition_ui.mjs && node tests/test_port_import_ui.mjs && node tests/test_funeral_ui.mjs && node tests/test_land_expansion_ui.mjs && node tests/test_traffic_signal_ui.mjs && node tests/test_citizen_inbox_ui.mjs && node tests/test_taxi_route_ui.mjs && node tests/test_distant_land_ui.mjs
+        run: |
+          tests=(
+            tests/test_treasury_metric_ui.mjs
+            tests/test_demolition_ui.mjs
+            tests/test_essential_services_ui.mjs
+            tests/test_metro_ui.mjs
+            tests/test_bus_route_ui.mjs
+            tests/test_offline_boot_recovery.mjs
+            tests/test_growth_demand_ui.mjs
+            tests/test_instant_public_services_ui.mjs
+            tests/test_camera_markers.mjs
+            tests/test_ui_layout.mjs
+            tests/test_utility_response_ui.mjs
+            tests/test_municipal_forecast_ui.mjs
+            tests/test_school_expansion_ui.mjs
+            tests/test_school_commute_ui.mjs
+            tests/test_build_preview_ui.mjs
+            tests/test_property_acquisition_ui.mjs
+            tests/test_port_import_ui.mjs
+            tests/test_funeral_ui.mjs
+            tests/test_land_expansion_ui.mjs
+            tests/test_traffic_signal_ui.mjs
+            tests/test_citizen_inbox_ui.mjs
+            tests/test_taxi_route_ui.mjs
+            tests/test_distant_land_ui.mjs
+          )
+          status=0
+          for test in "${tests[@]}"; do
+            echo "::group::$test"
+            if ! node "$test"; then status=1; fi
+            echo "::endgroup::"
+          done
+          exit "$status"
       - name: Perfil de renderizado (zoom lejano, móvil y escritorio)
         if: always()
         run: node tests/test_render_performance.mjs

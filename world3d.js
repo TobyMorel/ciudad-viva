@@ -799,7 +799,8 @@ export function createWorld(canvas){
     else if(tool==='shop')shop(group,{name:'Mercado de barrio',business:{status:'abierto'}});
     else if(tool==='factory')factory(group,{business:{industryType:industry,lastProduction:2}});
     else if(tool==='civic'){
-      if(model==='tvHeadend'||model==='wifiHub')digitalUtilityBuilding(group,model);
+      if(model==='urbanPark')urbanPark(group);
+      else if(model==='tvHeadend'||model==='wifiHub')digitalUtilityBuilding(group,model);
       else if(model.startsWith('police'))policeStationModel(group,model==='policeHQ'?3:model==='policeStation'?2:1);
       else if(model==='cemetery'||model==='crematorium')funeralFacility(group,model);
       else if(model==='socialShelter')socialShelter(group);

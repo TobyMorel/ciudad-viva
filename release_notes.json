@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.206",
+  "currentVersion": "0.207",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.207",
+      "date": "2026-11-03",
+      "title": "Vista 3D correcta para la plaza en Construir",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La tarjeta 3D de Plaza barrial en Construir ahora muestra el mismo espacio p?blico abierto que se coloca en el mapa.",
+        "La vista previa ya no usa el edificio c?vico gen?rico para representar la plaza."
+      ],
+      "verification": "Comprobaci?n sint?ctica del renderizador 3D y del cat?logo de construcci?n."
+    },
     {
       "version": "0.206",
       "date": "2026-11-03",

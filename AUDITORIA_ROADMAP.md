@@ -737,3 +737,9 @@ Verificacion: sintaxis de JavaScript y validacion JSON de versiones y roadmap. F
 Las visitas de ocio ya calculadas para cada plaza generan caminantes 3D que recorren sus senderos. El número de peatones visibles escala con visitantes reales, con un límite por espacio para cuidar el rendimiento. Al seleccionarlos se ve el nombre de la plaza, la cantidad diaria de visitantes y la actividad; las plazas sin visitas no muestran peatones ficticios.
 
 Inspiración: el sistema de destinos de ocio de Cities: Skylines II; adaptación propia sobre los viajes existentes de Ciudad Viva, sin reutilizar recursos del juego.
+
+## Alfa 0.212 - vegetación animada por el viento (fase 15)
+
+Las copas de los árboles visibles se mecen con una oscilación lenta y discreta. El movimiento continúa al pausar la simulación y se aplica solo a los árboles cargados alrededor de la cámara; al regenerar vegetación, se reconstruye la lista de copas activas.
+
+Inspiración ambiental: clima cambiante y estaciones de Cities: Skylines II. La brisa es una animación visual local y no modifica el clima ni los indicadores de la ciudad.

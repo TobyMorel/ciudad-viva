@@ -32,9 +32,10 @@ try{
  const unlock=page.locator('[data-unlock-land][data-chunk-x="0"][data-chunk-y="2"]');await unlock.waitFor();
  await unlock.evaluate(el=>el.click());await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes('0,2'),undefined,{timeout:30000});
  await page.locator('[data-popup="build"]').evaluate(el=>el.click());await page.locator('.tool[data-tool="road"]').evaluate(el=>el.click());
+ const roadActive=await page.locator('.tool[data-tool="road"]').evaluate(el=>el.classList.contains('active'));assert.equal(roadActive,true,'el modo de calle queda activo');
  for(let y=11;y<=19;y++){
-  const p=await centerTile(4,y);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
-  await page.waitForFunction(y=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).roads.some(r=>r[0]===4&&r[1]===y),y,{timeout:15000});if(y%5===0)console.log(`calle 4,${y} construida`);
+  const p=await centerTile(4,y),screenPoint={x:canvas.x+p.x,y:canvas.y+p.y};await page.mouse.click(screenPoint.x,screenPoint.y);
+  try{await page.waitForFunction(y=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).roads.some(r=>r[0]===4&&r[1]===y),y,{timeout:8000})}catch(error){const detail=await page.evaluate(([sx,sy])=>({toast:document.getElementById('toast')?.textContent,mode:window.__ciudadVivaMode?.(),popup:document.getElementById('panelPopup')?.className,element:document.elementFromPoint(sx,sy)?.outerHTML.slice(0,350),roads:JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.roads?.slice(-4),money:JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.money}),[screenPoint.x,screenPoint.y]);throw new Error(`Calle 4,${y} sin construir: ${JSON.stringify({roadActive,detail,pageErrors:errors})}; ${error.message}`)}if(y%5===0)console.log(`calle 4,${y} construida`);
  }
  await page.locator('[data-popup="build"]').evaluate(el=>el.click());await page.locator('.tool[data-tool="civic"][data-model="clinic"]').evaluate(el=>el.click());
  const remoteClinic=await centerTile(5,19);await page.mouse.click(canvas.x+remoteClinic.x,canvas.y+remoteClinic.y);

@@ -28,6 +28,9 @@ try{
  for(let cy=2;cy<=6;cy++){
   const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
   await page.locator('.land-unlock-card').waitFor();
+  const card=page.locator('.land-unlock-card');
+  const landDebug=await page.evaluate(()=>({card:document.querySelector('.land-unlock-card')?.innerText,claims:JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims,buttons:[...document.querySelectorAll('[data-unlock-land]')].map(el=>({x:el.dataset.chunkX,y:el.dataset.chunkY,text:el.innerText}))}));
+  console.log('Ficha de terreno',JSON.stringify(landDebug));
   const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);await button.waitFor();await button.evaluate(el=>el.click());
   await page.waitForFunction(cy=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes(`0,${cy}`),cy);console.log(`sector 0,${cy} habilitado`);
  }

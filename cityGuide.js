@@ -113,6 +113,35 @@ export function collectBuildingNeeds(state){
  }
  return needs;
 }
+export function collectCitizenNeedAlerts(state){
+ if(!state)return [];
+ const homes=(state.buildings||[]).filter(b=>b?.kind==='home'&&(b.occupants||0)>0),day=Number(state.day)||1,alerts=[];
+ const add=(type,title,detail,action,home,id,icon)=>{if(!home)return;const alert=item('complaint',icon,title,detail,action,home.x,home.y,day,`need-${id}`,1);alert.citizenRequest=true;alert.complaintType=type;alerts.push(alert)};
+ const occupied=homes[0];
+ const education=state.educationReport||{},waiting=Math.max(0,Number(education.waiting)||0),unreachable=Math.max(0,Number(education.unreachable)||0);
+ if(waiting+unreachable>0){
+  const home=homes.find(b=>(b.residents||[]).some(p=>Number(p.age)>=5&&Number(p.age)<=24))||occupied;
+  add('school','Familias piden m\u00e1s vacantes escolares',`${waiting} estudiantes esperan una vacante y ${unreachable} no tienen una escuela de su nivel a distancia alcanzable.`,'Constru\u00ed una escuela conectada y revis\u00e1 en Ciudad > Educaci\u00f3n los cupos, docentes, servicios y alumnos en espera.',home,'school','\u{1f3eb}');
+ }
+ const parks=homes.length?(state.buildings||[]).filter(b=>b?.serviceModel==='urbanPark'&&['operativo','habilitado'].includes(b.status)):[],radius=8;
+ const outside=homes.filter(h=>!parks.some(p=>Math.abs(h.x-p.x)+Math.abs(h.y-p.y)<=radius));
+ const expectedVisitors=homes.reduce((n,h)=>n+Math.min(3,Math.max(1,Math.round((h.occupants||0)*.06))),0),capacity=parks.length*90;
+ if(homes.length&&(!parks.length||outside.length>0||expectedVisitors>capacity)){
+  const home=outside[0]||occupied,uncovered=outside.length;
+  const detail=!parks.length?'El barrio todav\u00eda no tiene una plaza p\u00fablica.':uncovered?`${uncovered} hogares ocupados quedan fuera del alcance aproximado de 8 parcelas de una plaza.`:`La demanda estimada es de ${expectedVisitors} visitas diarias y las plazas ofrecen ${capacity} lugares.`;
+  add('park','Vecinos piden una plaza cerca',detail,'Constru\u00ed una Plaza barrial conectada a las calles. Cada plaza puede recibir hasta 90 visitas por jornada; mir\u00e1 Ciudad > Evoluci\u00f3n para revisar la cobertura.',home,'park','\u{1f333}');
+ }
+ const police=state.policeReport||{},sites=Math.max(0,Number(police.sites)||0),covered=Math.max(0,Number(police.coveredSites)||0),coverage=Math.max(0,Number(police.coveragePct)||0);
+ if(sites>0&&(coverage<80||Number(police.lastUnanswered)>0)){
+  add('police','Vecinos piden m\u00e1s presencia policial',`${covered} de ${sites} hogares y comercios tienen cobertura policial (${coverage}%). ${Number(police.lastUnanswered)>0?`${police.lastUnanswered} incidentes recientes quedaron sin respuesta.`:''}`,'Constru\u00ed o equip\u00e1 un puesto/comisar\u00eda, asegur\u00e1 personal y m\u00f3viles, y revis\u00e1 Ciudad > Seguridad para localizar la cobertura faltante.',occupied,'police','\u{1f6e1}');
+ }
+ const health=state.healthReport||{},primary=health.primary||{},urgent=health.urgent||{},healthNeed=Math.round((Number(primary.waitlist)||0)+(Number(urgent.unservedPerDay)||0));
+ if(healthNeed>0){
+  add('health','Vecinos piden m\u00e1s atenci\u00f3n de salud',`Hay ${Math.round(Number(primary.waitlist)||0)} consultas primarias en espera y ${Math.round(Number(urgent.unservedPerDay)||0)} urgencias diarias sin capacidad suficiente.`,'Constru\u00ed o ampli\u00e1 un centro de salud conectado; revis\u00e1 Ciudad > Salud para ver personal, camas, servicios y cobertura.',occupied,'health','\u{1f3e5}');
+ }
+ return alerts;
+}
+
 export function groupAlertsByTile(alerts){
  const groups=new Map();
  for(const alert of alerts||[]){

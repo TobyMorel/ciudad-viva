@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.209",
+  "currentVersion": "0.210",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.210",
+      "date": "2026-11-03",
+      "title": "Los vecinos avisan lo que necesita cada barrio",
+      "roadmapPhase": 32,
+      "overallProgress": null,
+      "changes": [
+        "Avisos ahora convierte la falta de vacantes escolares, plazas cercanas, cobertura policial y atencion sanitaria en reclamos vecinales con ubicacion y recomendacion concreta.",
+        "Los mensajes usan los indicadores reales de educacion, salud, seguridad y paseos; desaparecen cuando la necesidad se resuelve y se pueden quitar de la bandeja.",
+        "La bandeja destaca al menos un reclamo ciudadano junto con los sucesos urgentes para que las necesidades de largo plazo no queden escondidas."
+      ],
+      "verification": "Comprobacion sintactica del generador de avisos, la interfaz y el catalogo de versiones."
+    },
     {
       "version": "0.209",
       "date": "2026-11-03",
@@ -2826,8 +2839,8 @@
     {
       "phase": 32,
       "title": "Gobierno municipal, ordenamiento y confianza ciudadana",
-      "progress": 65,
-      "summary": "Mandatos/electoral, metas, reclamos con causas, acuerdos de seguimiento y destitución",
+      "progress": 68,
+      "summary": "Mandatos, metas y reclamos vecinales conectados con necesidades reales de servicios y barrios",
       "pending": [
         "Padrón demográfico, consultas, transparencia completa y reclamos ligados a reparación directa."
       ]

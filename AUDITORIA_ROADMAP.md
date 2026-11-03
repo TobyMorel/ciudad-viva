@@ -724,3 +724,10 @@ La fase 22 sigue parcial: restan integracion completa de metro y tren, logistica
 Los grupos de estudiantes buscan lineas municipales activas que conecten hogar y escuela en ambos sentidos. Cada grupo reserva asientos para la ida en hora pico de la manana y para el regreso en hora pico de la tarde; se exige capacidad suficiente en ambas direcciones. Cuando el cupo es parcial, el remanente conserva su modo previo: caminata, bicicleta o auto. Solo el remanente genera peatones, ciclistas, vehiculos y emisiones. Movilidad informa los pasajeros escolares en colectivo y el mapa evita duplicarlos como viajeros particulares. Disponible en Online y Offline.
 
 Verificacion: sintaxis Python/JavaScript y validacion del JSON de versiones. La fase 22 permanece parcial: faltan integracion completa de metro/tren, logistica de carga, accidentes y capacidad vial detallada.
+
+
+## Alfa 0.210 - reclamos vecinales por necesidades del barrio (fase 32)
+
+Avisos genera pedidos concretos a partir de los indicadores reales de la ciudad: alumnos sin vacante o sin escuela alcanzable, hogares sin plaza cercana o con demanda recreativa superior a la capacidad, cobertura policial menor al 80% e insuficiencia de consultas/urgencias de salud. Cada reclamo aparece en una parcela habitada, explica la brecha y orienta a la categoria municipal que permite resolverla. La bandeja reserva espacio para un reclamo junto con la incidencia urgente mas importante, y los reclamos desaparecen de forma automatica cuando se corrige la necesidad. Funciona con los reportes compartidos por Online y Offline.
+
+Verificacion: sintaxis de JavaScript y validacion JSON de versiones y roadmap. Fase 32 permanece parcial: siguen pendientes consultas vecinales, transparencia completa y acuerdos ligados a reparaciones directas.

@@ -1,8 +1,8 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.209';
+import {createWorld} from './world3d.js?v=0.210';
 import {createOfflineWorkerAdapter} from './offline_client.js';
 import {growthDemand} from './growth_demand.js';
-import {collectCityAlerts,collectBuildingNeeds,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
+import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
 import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
@@ -198,7 +198,7 @@ const demolishButton=document.getElementById('demolishTool');
 function updateDemolishTool(){const active=tool==='demolish';demolishButton.classList.toggle('active',active);demolishButton.setAttribute('aria-pressed',String(active));demolishButton.title=active?'Salir del modo demoler':'Activar modo demoler';demolishButton.setAttribute('aria-label',demolishButton.title)}
 demolishButton.addEventListener('click',()=>{const enabled=tool!=='demolish';tool=enabled?'demolish':'inspect';toolVariant=null;toolIndustry=null;hoverServiceTile=null;relocateFrom=null;railLinkDraft=null;document.querySelectorAll('.tool').forEach(button=>button.classList.toggle('active',!enabled&&button.dataset.tool==='inspect'));canvas.style.cursor='crosshair';updateDemolishTool();closePopup();showToast(enabled?'Modo demoler: tocá un edificio, calle u obra para eliminarla al instante. Volvé a tocar el botón para salir.':'Modo demoler desactivado.');draw()});
 const popupGroups={alerts:[alertsPanel],build:[document.querySelector('.tool-list')],city:[document.querySelector('.city-actions'),document.querySelector('.lan-card')],supply:[document.getElementById('supply')],projects:[document.getElementById('projectCount'),document.getElementById('projects')],events:[document.getElementById('events')],changes:[document.getElementById('updatesPanel')]};
-document.querySelectorAll('.game-dock [data-popup]:not([data-popup="traffic"])').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.popup==='alerts')renderAlertsPanel();const titles={alerts:'Qu\u00e9 est\u00e1 pasando',build:'Construir',city:'Partida y ciudad',supply:'Econom\u00eda y suministros',projects:'Obras y contratos',events:'Registro de acontecimientos',changes:'Cambios de versi\u00f3n'};openPopup(titles[button.dataset.popup],popupGroups[button.dataset.popup]||[]);decorateReferencePopup(button.dataset.popup,popupBody,S,{ui,alerts:cityAlerts,version:releaseData?.currentVersion||document.querySelector('meta[name="ciudad-viva-version"]')?.content||'0.209',phases:releaseData?.roadmapPhases?.length||34})}));
+document.querySelectorAll('.game-dock [data-popup]:not([data-popup="traffic"])').forEach(button=>button.addEventListener('click',()=>{if(button.dataset.popup==='alerts')renderAlertsPanel();const titles={alerts:'Qu\u00e9 est\u00e1 pasando',build:'Construir',city:'Partida y ciudad',supply:'Econom\u00eda y suministros',projects:'Obras y contratos',events:'Registro de acontecimientos',changes:'Cambios de versi\u00f3n'};openPopup(titles[button.dataset.popup],popupGroups[button.dataset.popup]||[]);decorateReferencePopup(button.dataset.popup,popupBody,S,{ui,alerts:cityAlerts,version:releaseData?.currentVersion||document.querySelector('meta[name="ciudad-viva-version"]')?.content||'0.210',phases:releaseData?.roadmapPhases?.length||34})}));
 document.querySelector('#dockTime').append(document.querySelector('.left .time-controls'));
 document.getElementById('headerSave').addEventListener('click',()=>document.getElementById('saveBtn').click());document.getElementById('headerSettings').addEventListener('click',()=>document.getElementById('themeToggle').click());document.getElementById('headerMenu').addEventListener('click',()=>document.querySelector('[data-popup="city"]').click());document.getElementById('mapCenter').addEventListener('click',()=>{panX=0;panY=0;zoom=window.innerWidth<650?1.08:2.05;rotation=0;setCameraView()});
 document.getElementById('popupClose').addEventListener('click',closePopup);popup.addEventListener('click',e=>{if(e.target===popup)closePopup()});window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!popup.classList.contains('hidden'))closePopup()});
@@ -264,7 +264,7 @@ function renderBusRouteComposer(){if(!busRouteComposer)return;busRouteComposer.h
 busRouteComposer?.addEventListener('change',e=>{if(e.target.matches('[data-bus-draft-fleet]'))busFleetCount=+e.target.value||1});
 busRouteComposer?.addEventListener('click',async e=>{const button=e.target.closest('[data-bus-draft]');if(!button||!busRouteDraft)return;const action=button.dataset.busDraft;if(action==='cancel'){busRouteDraft=null;renderBusRouteComposer();showToast('Diseño de línea cancelado.');return}if(action==='undo'){busRouteDraft.stops.pop();renderBusRouteComposer();draw();return}if(action==='finish'){if(busRouteDraft.stops.length<2){showToast('Marcá al menos dos paradas sobre calles.');return}const draft=busRouteDraft;button.disabled=true;try{S=await api('/api/action',draft.kind==='taxi'?{action:'createTaxiRouteFromDepot',depotX:draft.x,depotY:draft.y,stops:draft.stops}:{action:'createBusRouteFromGarage',garageX:draft.x,garageY:draft.y,stops:draft.stops,buses:busFleetCount});const taxi=draft.kind==='taxi';busRouteDraft=null;renderBusRouteComposer();renderUI();draw();playSound('bus');showToast(taxi?'Taxi asignado: ya recorre su circuito.':'Línea inaugurada: los colectivos ya recorren las paradas.')}catch(error){button.disabled=false;showToast(error.message)}}});
 let cityAlerts=[];
-const cityAlertCards=()=>[...collectCityAlerts(S),...collectBuildingNeeds(S)];
+const cityAlertCards=()=>[...collectCityAlerts(S),...collectBuildingNeeds(S),...collectCitizenNeedAlerts(S)];
 function renderAlertCounter(){
  if(!markerSummary||!S)return;
  const count=cityAlertCards().length;
@@ -277,6 +277,7 @@ function citizenSender(alert){
 }
 function citizenMessage(alert){
  const place=(alert.detail||'el barrio').split(/[.!?]/)[0].slice(0,90)||'el barrio';
+ if(alert.citizenRequest){if(alert.complaintType==='school')return 'En el barrio faltan vacantes o una escuela cercana para nuestros chicos.';if(alert.complaintType==='park')return 'Nos gustar\u00eda tener una plaza cerca para encontrarnos y jugar.';if(alert.complaintType==='police')return 'Necesitamos m\u00e1s presencia policial y patrullas que puedan llegar al barrio.';if(alert.complaintType==='health')return 'Necesitamos m\u00e1s turnos y atenci\u00f3n de salud cerca de casa.';}
  if(alert.kind==='fire')return `¡Necesitamos bomberos en ${place}!`;
  if(alert.kind==='police')return `Hace falta una patrulla en ${place}. ¿Pueden venir?`;
  if(alert.kind==='litter'||alert.kind==='waste')return `Se está acumulando basura en ${place}. Necesitamos recolección.`;
@@ -290,7 +291,7 @@ function citizenMessage(alert){
 }
 function renderCitizenInbox(){
  if(!citizenInbox||!S)return;
- const all=cityAlertCards(),actionable=all.filter(alert=>alert.priority<=1),available=actionable.filter(alert=>!dismissedCitizenAlerts.has(String(alert.id))),messages=available.slice(0,2);
+ const all=cityAlertCards();for(const id of dismissedCitizenAlerts)if(String(id).startsWith('need-')&&!all.some(alert=>String(alert.id)===String(id)))dismissedCitizenAlerts.delete(id);const actionable=all.filter(alert=>alert.priority<=1),available=actionable.filter(alert=>!dismissedCitizenAlerts.has(String(alert.id))),urgent=available.filter(alert=>alert.priority===0),requests=available.filter(alert=>alert.citizenRequest),other=available.filter(alert=>!alert.citizenRequest&&alert.priority!==0),requestIndex=Math.floor((Number(S.day)||1)/3)%Math.max(1,requests.length),featuredRequest=requests.length?[requests[requestIndex]]:[],messages=[...urgent.slice(0,1),...featuredRequest,...other].slice(0,2);
  const signature=messages.map(alert=>[alert.id,citizenSender(alert),citizenMessage(alert)].join('|')).join('::')+`/${actionable.length}/${all.length}/${citizenInboxCollapsed}`;
  if(signature===citizenInboxSignature)return;citizenInboxSignature=signature;
  if(!messages.length&&!citizenInboxCollapsed){citizenInbox.hidden=true;citizenInbox.replaceChildren();return}
@@ -319,7 +320,7 @@ setInterval(renderAlertMarkers,3500);
 function renderAlertsPanel(){
  if(!S)return;
  const list=cityAlertCards();
- alertsPanel.innerHTML='<p class="guide-intro">Estos avisos representan sucesos registrados en tu ciudad. Tocá un aviso para saber qué pasó y cómo actuar.</p>'+
+ alertsPanel.innerHTML='<p class="guide-intro">Avisos y reclamos vecinales basados en necesidades reales de la ciudad. Toca uno para ver donde ocurre y como podes atenderlo.</p>'+
  (list.length?list.map(a=>'<button class="alert-list-card" data-city-alert="'+escHtml(a.id)+'"><span>'+a.icon+'</span><span><b>'+escHtml(a.title)+'</b><small>Parcela '+(a.x+1)+', '+(a.y+1)+' · '+escHtml(a.detail)+'</small></span></button>').join(''):'<p class="guide-empty">No hay avisos recientes. Los eventos aparecen al avanzar los días según los servicios y las condiciones reales.</p>');
 }
 function showCityAlert(alert){playSound('alert');

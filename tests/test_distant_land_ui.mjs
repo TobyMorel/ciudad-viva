@@ -29,7 +29,7 @@ try{
   const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
   const card=page.locator('.land-unlock-card');await card.waitFor();
   const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);
-  if(await button.count()===0){const cardText=await card.innerText(),landClaims=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.landClaims);throw new Error(`Sin botón para 0,${cy}; ficha=${JSON.stringify(cardText)}; sectores=${JSON.stringify(landClaims?.unlockedChunks)}`)}
+  if(await button.count()===0){const cardText=await card.innerText(),landClaims=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.landClaims),runtime=await page.evaluate(([x,y])=>window.__ciudadVivaLandPlotDiagnostic(x,y),[4,cy*8+4]);throw new Error(`Sin botón para 0,${cy}; ficha=${JSON.stringify(cardText)}; guardado=${JSON.stringify(landClaims?.unlockedChunks)}; runtime=${JSON.stringify(runtime)}`)}
   await button.waitFor();await button.evaluate(el=>el.click());
   await page.waitForFunction(cy=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes(`0,${cy}`),cy);console.log(`sector 0,${cy} habilitado`);
  }

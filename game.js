@@ -16,6 +16,7 @@ window.__ciudadVivaScene=()=>world.getSceneDiagnostics();
 window.__ciudadVivaSetZoomForDiagnostics=value=>{zoom=Math.max(.58,Math.min(4,Number(value)||1));draw()};
 window.__ciudadVivaMode=()=>gameMode;
 window.__ciudadVivaProjectTile=(x,y,height=0)=>world.projectTile(x,y,height);
+window.__ciudadVivaLandPlotDiagnostic=(x,y)=>({plot:landPlotAt(x,y),unlockedChunks:S?.landClaims?.unlockedChunks||null,chunkSize:S?.landClaims?.chunkSize||null,newSettlement:S?.newSettlement,gameMode});
 window.__ciudadVivaCoverage=(x,y,serviceModel)=>{if(!S)return [];world.sync(S,{x,y},{...viewParams(),servicePreview:serviceModel?{x,y,serviceModel}:null});return world.getCoverageTiles()};
 const ui={};['cityName','mapCityName','dateLabel','mapDate','mapTime','money','budgetFlow','population','jobs','employment','employmentNote','services','serviceNote','approval','approvalCause','netLabel','inviteAddress','selection','supply','projects','projectCount','events','playersLabel','speedLabel','pauseBtn','toast','fileInput','supplyBackdrop','orderClose','orderProject','orderSupplier','orderDestination','orderPriority','orderSupplierNote','orderItems','orderError','orderConfirm'].forEach(id=>ui[id]=document.getElementById(id));
 const pid=localStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).slice(2,9));localStorage.setItem('cv-player',pid);

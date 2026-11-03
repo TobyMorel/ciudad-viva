@@ -780,3 +780,8 @@ Al confirmar el reinicio de ciudad, se cierran los paneles, diálogos y capas au
 ## Alfa 0.221 — Redes esenciales sobre calles conectadas (fase 6)
 
 El cálculo de cobertura usa la misma regla que la red de servicios general: cada calle continua desde la entrada regional incluye los ductos compartidos. Así se reconocen calles nuevas aunque los arreglos históricos de cableado no las enumeren. Los fallos de red continúan desconectando el tramo afectado. La regla es idéntica en Online y Offline.
+
+
+## Alfa 0.222 — renovación integral de modelos 3D (fase 15)
+
+El renderizador compartido suma detalles por familia para edificios no residenciales, plantas y fábricas, parques, vegetación, caminos, señalización, farolas, obras, infraestructura de transporte y servicios, contenedores, vehículos y actores de calle. También se renovaron el acceso regional, detalles del río y las miniaturas del catálogo. Los modelos de las casas se mantuvieron intactos. La misma implementación alimenta las partidas Online, Offline y la vista previa de construcción.

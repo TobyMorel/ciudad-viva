@@ -15,3 +15,12 @@ Motor: Three.js 0.171, incluido en `vendor/`. `world3d.js` contiene la escena is
 ## Límites y siguiente pase
 
 El rediseño se mantiene procedural y todavía no alcanza la densidad ni el acabado de las ilustraciones. Faltan parque municipal jugable, muelles con mecánica propia, modelos de infraestructura de mayor escala, LOD por distancia y medición de rendimiento en ciudades densas. La fachada del proyecto puede requerir un segundo pase en zoom cercano. No se agregó ningún estado ni costo de simulación para obtener los nuevos detalles.
+
+
+## Alfa 0.222 · Renovación integral de modelos
+
+Se añadieron molduras biseladas, cornisas, marcos, soportes, cartelería y equipo de cubierta a los modelos de comercios, hoteles, escuelas, edificios cívicos, plantas de servicios, fábricas, depósitos, puertos y aeropuertos. Las casas conservan exactamente sus modelos anteriores.
+
+El pase también cubre árboles y plazas, aceras y calzadas, semáforos y farolas, obras en proceso, puentes, estaciones, contenedores, tuberías y cables visibles, vehículos de calle, peatones, trenes, barcos, aviones y miniaturas del catálogo. Cada familia recibe piezas diferenciadas y formas redondeadas donde corresponde. Las geometrías se construyen en el renderizador compartido, por lo que Online, Offline y el catálogo mantienen la misma dirección visual.
+
+La siguiente etapa puede centrarse en variaciones de estilo por barrio, acabados de fachada por material y una revisión visual de ciudades extensas en dispositivos móviles.

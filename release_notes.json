@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.221",
+  "currentVersion": "0.222",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.222",
+      "date": "2026-11-03",
+      "title": "Renovación integral de modelos 3D",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Se renovaron las fachadas y los volúmenes de comercios, hoteles, escuelas, edificios públicos, plantas, fábricas, depósitos, puertos y aeropuertos con molduras, marcos, equipos y accesorios visibles.",
+        "Árboles, parques, calles, farolas, semáforos, puentes, estaciones, redes, obras y mobiliario urbano ahora tienen más formas, bordes y piezas de detalle.",
+        "Autos, camiones, colectivos, vehículos de emergencia, peatones, bicicletas, trenes, barcos y aviones recibieron acabados propios para cada tipo.",
+        "Las miniaturas de construcción también muestran el nuevo nivel de detalle; se conservaron intactos los modelos de las casas."
+      ],
+      "verification": "Modelos generados por el renderizador 3D compartido en las partidas Online y Offline."
+    },
     {
       "version": "0.221",
       "date": "2026-11-03",

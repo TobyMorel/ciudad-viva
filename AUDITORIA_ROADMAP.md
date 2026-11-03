@@ -699,3 +699,8 @@ Se suma Plaza barrial como servicio cívico municipal construible al instante, c
 Los residentes con bicicleta eligen ese modo para viajes laborales, escolares (desde los 13 años) y cotidianos de 2 a 7 tramos, según su acceso individual o familiar. El regreso laboral mantiene la bicicleta. En el mapa aparecen ciclistas 3D seleccionables; movilidad informa los viajes ciclistas. Su flujo aporta una carga vial moderada y no genera emisiones ni se contabiliza como automóvil. La misma elección y visualización funciona en Online y Offline.
 
 La fase 22 continúa parcial: faltan transporte escolar colectivo, integración multimodal, logística de carga, accidentes y capacidad vial detallada.
+
+
+## Alfa 0.206 - plaza barrial como espacio p?blico abierto
+
+La plaza ya no hereda la base de hormig?n, el umbral ni el r?tulo de los edificios c?vicos. Se dibuja como suelo verde y pavimento peatonal con fuente baja, bancos, ?rboles y canteros. La selecci?n del lote la describe como lugar abierto de encuentro vecinal. La mec?nica de visitantes y paseos se conserva.

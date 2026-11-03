@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.205",
+  "currentVersion": "0.206",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.206",
+      "date": "2026-11-03",
+      "title": "La plaza barrial ahora es un espacio p?blico abierto",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La plaza se representa como un espacio peatonal abierto, sin base de edificio, fachada, entrada ni r?tulo institucional.",
+        "Se conservan la fuente baja, los senderos de piedra, los bancos, los ?rboles y los canteros como mobiliario urbano visible.",
+        "La inspecci?n de la parcela identifica la plaza como lugar p?blico de encuentro vecinal."
+      ],
+      "verification": "Revisi?n sint?ctica de la escena 3D y comprobaci?n de la nueva versi?n y del historial de cambios."
+    },
     {
       "version": "0.205",
       "date": "2026-11-03",

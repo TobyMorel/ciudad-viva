@@ -8,7 +8,7 @@ try{
  const page=await browser.newPage({viewport:{width:1280,height:800}});page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:30000});
- await page.locator('#newBtn').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
+ await page.locator('[data-popup="city"]').click();await page.locator('#newBtn').click();await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
  await page.evaluate(()=>{const key='ciudad-viva-offline-v1',city=JSON.parse(localStorage.getItem(key));city.money=1000000;localStorage.setItem(key,JSON.stringify(city))});
  await page.reload({waitUntil:'domcontentloaded'});await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:30000});
  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());

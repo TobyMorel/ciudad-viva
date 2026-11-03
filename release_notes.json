@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.236",
+  "currentVersion": "0.237",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.237",
+      "date": "2026-11-03",
+      "title": "Más barrios conectados a transbordos ferroviarios",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se amplía a tres parcelas la distancia peatonal entre el inicio o destino de un viaje y una terminal de tren/subte.",
+        "El transbordo entre las estaciones sigue requiriendo un intercambiador físico a dos parcelas o menos; se conserva la reserva de aforo y el cobro de ambas líneas."
+      ],
+      "verification": "Los radios y los viajes con transbordo se validan en los motores LAN y Offline."
+    },
     {
       "version": "0.236",
       "date": "2026-11-03",

@@ -1,9 +1,9 @@
-import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.236';
+import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.237';
 import {gameMinutesForElapsedSeconds} from './simulation_time.js';
-import {assignTaxiPassengers} from './taxi_passengers.js?v=0.236';
-import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.236';
+import {assignTaxiPassengers} from './taxi_passengers.js?v=0.237';
+import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.237';
 import {growthDemand} from './growth_demand.js';
-import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.236';
+import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.237';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';
 export function taxAdjustedBusinessCreditLimit(baseLimit,taxArrears=0,consecutiveMissedTaxMonths=0){const base=Math.max(0,Math.trunc(baseLimit||0));if((consecutiveMissedTaxMonths||0)>=3)return 0;return Math.max(0,base-Math.max(0,Math.trunc(taxArrears||0)))}
 export function taxPressurePenalty(pressure){return Math.min(5,Math.max(0,Math.floor((Math.max(0,Math.trunc(pressure||0))-5)/5)))}

@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.237
+
+**Acceso peatonal a transbordos ferroviarios:** las terminales pueden quedar a tres parcelas del origen o destino; el intercambio físico entre estaciones sigue limitado a dos. Así más barrios pueden aprovechar dos líneas sin perder la condición de estaciones construidas y conectadas.
+
 # Ciudad Viva · Alfa 0.236
 
 **Transbordos ferroviarios con demanda y capacidad reales:** pasajeros de compras, servicios y ocio pueden combinar dos líneas activas cuando las estaciones físicas terminadas quedan a dos parcelas o menos. La ruta reserva plazas en ambos trenes, aplica 25 % de descuento al segundo tramo y liquida ambos boletos al hogar.

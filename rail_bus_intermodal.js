@@ -126,7 +126,7 @@ export function assignRailRailTransfers(state,trips){
    for(const entryIndex of [0,1])for(const hubIndex of [0,1]){
     const firstHub=1-entryIndex,secondExit=1-hubIndex,entry=first.points[entryIndex],hub=first.points[firstHub],transfer=second.points[hubIndex],exit=second.points[secondExit];
     const walkIn=distance(start,entry),walkTransfer=distance(hub,transfer),walkOut=distance(exit,end);
-    if(walkIn>2||walkTransfer>2||walkOut>2)continue;
+    if(walkIn>3||walkTransfer>2||walkOut>3)continue;
     const minutes=walkIn*4+firstMinutes+4+walkTransfer*3+secondMinutes+walkOut*4;
     if(minutes>comparison*1.35)continue;
     options.push({minutes,first:first.line,second:second.line,entry,hub,transfer,exit,firstMode,secondMode});

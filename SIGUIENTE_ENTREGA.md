@@ -1,6 +1,6 @@
-## Después de Alfa 0.236 · Carga ferroviaria y validación LAN
+## Después de Alfa 0.237 · Carga ferroviaria y validación LAN
 
-Alfa 0.236 completa una mecánica pendiente de la fase 22: viajes reales de compras, servicios y ocio pueden transbordar entre dos líneas de subte y tren elevado. Se requieren líneas activas con energía, flota y aforo, estaciones construidas con calle adyacente y un intercambiador a dos parcelas o menos. Cada tramo reserva su capacidad; el segundo boleto tiene 25 % de descuento y ambos se liquidan una sola vez al hogar. Offline y LAN aplican las mismas reglas.
+Alfa 0.237 amplía el acceso peatonal desde el origen y destino hasta tres parcelas, manteniendo el intercambiador físico en un máximo de dos. Alfa 0.236 completó una mecánica pendiente de la fase 22: viajes reales de compras, servicios y ocio pueden transbordar entre dos líneas de subte y tren elevado. Se requieren líneas activas con energía, flota y aforo, estaciones construidas con calle adyacente y un intercambiador a dos parcelas o menos. Cada tramo reserva su capacidad; el segundo boleto tiene 25 % de descuento y ambos se liquidan una sola vez al hogar. Offline y LAN aplican las mismas reglas.
 
 Offline ahora ejecuta los viajes cotidianos ya definidos en el juego y los asigna a colectivos, subte, tren y taxis. Las rutas aparecen en el estado de la partida y alimentan la cola vial de nueve franjas. El cierre mensual conserva los registros de boletos.
 

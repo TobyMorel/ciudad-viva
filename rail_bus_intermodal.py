@@ -148,7 +148,7 @@ def assign_rail_rail_transfers(state,trips):
                         walk_in=abs(start[0]-first_points[first_entry][0])+abs(start[1]-first_points[first_entry][1])
                         walk_transfer=abs(first_points[first_hub][0]-second_points[second_hub][0])+abs(first_points[first_hub][1]-second_points[second_hub][1])
                         walk_out=abs(second_points[second_exit][0]-end[0])+abs(second_points[second_exit][1]-end[1])
-                        if walk_in>2 or walk_transfer>2 or walk_out>2:continue
+                        if walk_in>3 or walk_transfer>2 or walk_out>3:continue
                         minutes=walk_in*4+first_minutes+4+walk_transfer*3+second_minutes+walk_out*4
                         if minutes>comparison*1.35:continue
                         options.append({"minutes":minutes,"first":first,"second":second,

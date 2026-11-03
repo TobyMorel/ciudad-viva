@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.228",
+  "currentVersion": "0.229",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.229",
+      "date": "2026-11-03",
+      "title": "Edificios ligeros al alejar la cámara",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Al alejar el mapa, casas y edificios pasan a siluetas de tres mallas; al acercar se reconstruyen los modelos detallados. Los parques conservan una vista simplificada.",
+        "La vegetación lejana sigue agrupada en hasta cuatro InstancedMesh, con viento y densidad adaptada a la pantalla.",
+        "Se conservan la resolución de render adaptativa y la desactivación de sombras dinámicas durante el zoom lejano en escritorio."
+      ]
+    },
     {
       "version": "0.228",
       "date": "2026-11-03",

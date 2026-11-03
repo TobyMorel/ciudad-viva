@@ -12,7 +12,7 @@ try{
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
   await page.locator('#offlineMode').click();
   await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
-  for(let i=0;i<8;i++)await page.locator('#zoomOut').click();
+  await page.evaluate(()=>window.__ciudadVivaSetZoomForDiagnostics(.58));
   await page.waitForFunction(()=>window.__ciudadVivaScene?.()?.vegetationLOD==='instanced-far',null,{timeout:15000});
   await page.waitForTimeout(500);
   const diagnostics=await page.evaluate(()=>window.__ciudadVivaScene());
@@ -20,6 +20,7 @@ try{
   assert.ok(diagnostics.vegetationTrees>0,`${viewport.width}px: the map should have distant trees`);
   assert.ok(diagnostics.vegetationBatches>=2&&diagnostics.vegetationBatches<=4,`${viewport.width}px: distant vegetation uses ${diagnostics.vegetationBatches} batches`);
   assert.ok(diagnostics.pixelRatio<=viewport.maxRatio,`${viewport.width}px: pixel ratio exceeded its device cap`);
+  assert.equal(diagnostics.farBuildingLOD,true,`${viewport.width}px: distant building LOD should be active`);
   assert.equal(diagnostics.shadowMapEnabled,false,`${viewport.width}px: distant shadows should be disabled`);
   assert.ok(diagnostics.drawCalls>0&&diagnostics.triangles>0,`${viewport.width}px: no 3D scene was rendered`);
   assert.deepEqual(errors,[],`${viewport.width}px: render errors ${errors.join('; ')}`);

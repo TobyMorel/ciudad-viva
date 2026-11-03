@@ -27,9 +27,10 @@ Auditoría realizada el 3 de noviembre de 2026 para Ciudad Viva. La escena usa T
 - **WoW en navegador (Manila/Benilla):** es un cliente Rust/Bevy desde cero que compila a WebAssembly y usa WebGPU; requiere que el usuario aporte los datos del cliente y un servidor compatible. Es una referencia de ingeniería y medición, no un addon; incorporarlo significaría reemplazar el renderer y la arquitectura del juego.
 - **WebAssembly/C++:** conviene cuando un perfil demuestra que el CPU de la simulación es el cuello de botella. La simulación offline ya vive en un worker y el online corre en el servidor; moverla a WASM no elimina las llamadas de dibujo. Los hilos Wasm requieren SharedArrayBuffer y cabeceras COOP/COEP, que este repositorio no configura en GitHub Pages.
 
-## Cambios de Alfa 0.228
+## Cambios de Alfa 0.228 y 0.229
 
 - En escritorio, las sombras dinámicas se apagan mientras el zoom está por debajo de 0.72 y se reactivan al acercar la cámara; los móviles ya renderizan sin sombras.
+- En 0.229, casas y edificios lejanos usan tres mallas simples y recuperan el modelo detallado al acercar; los parques usan una sola base simplificada.
 - La prueba de rendimiento confirma el modo de vegetación instanciada y el ajuste visual de sombras al alejarse en dos tamaños de pantalla. La ejecución SwiftShader sirve para comprobar el código, no para estimar FPS de GPU real.
 
 ## Siguiente medición

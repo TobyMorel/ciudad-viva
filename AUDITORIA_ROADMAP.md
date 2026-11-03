@@ -747,3 +747,7 @@ Inspiración ambiental: clima cambiante y estaciones de Cities: Skylines II. La 
 ## Alfa 0.213 - vegetación más densa y brisa visible (fase 15)
 
 Se elevó la densidad de árboles y arbustos renderizados alrededor de la cámara: de 0,17 a 0,44 en móviles, de 0,23 a 0,48 en vista cercana y de 0,10 a 0,22 al recorrer sectores amplios. Las copas ahora se inclinan hasta unos siete grados y suman un balanceo independiente de mayor amplitud para que el viento se perciba claramente en pantallas pequeñas. El movimiento continúa con el juego pausado y no cambia la simulación.\n\n## Alfa 0.214 - ambiente sonoro por zonas (fase 15)\n\nSe sintetiza un lecho urbano grave y filtrado cuya intensidad sigue la densidad de calles cerca del centro de la cámara. Al haber plazas próximas, el filtro se abre y aparecen cantos breves de dos tonos a intervalos irregulares. Las capas usan transiciones suaves, obedecen al interruptor de sonido y se silencian cuando la pestaña pierde foco.
+
+## Alfa 0.215 - controles táctiles y conexión de servicios (fase 15)
+
+El mapa admite pellizco con dos dedos para acercar/alejar y desplazar la vista desde el centro del gesto. Se agregó un acceso fijo para restaurar la herramienta Inspeccionar. El catálogo indica que las plantas de agua y gas requieren sus redes conectadas; la potabilizadora también consume electricidad.

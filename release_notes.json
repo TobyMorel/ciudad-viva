@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.214",
+  "currentVersion": "0.215",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.215",
+      "date": "2026-11-03",
+      "title": "Mapa 3D con gestos táctiles",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "En teléfonos, pellizcar con dos dedos acerca o aleja la cámara 3D y desplaza el mapa con el punto medio del gesto.",
+        "Se agregó un botón permanente para volver a Inspeccionar después de elegir cualquier herramienta.",
+        "El catálogo aclara que las plantas de agua y gas requieren líneas de distribución conectadas; la sede de agua además necesita electricidad."
+      ],
+      "verification": "Sintaxis de game.js y world3d.js, datos de versión y pruebas de Pages ejecutadas en GitHub Actions."
+    },
     {
       "version": "0.214",
       "date": "2026-11-03",

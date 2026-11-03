@@ -398,3 +398,6 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 .metro-lines{display:grid;gap:8px;min-width:0;max-width:100%}.metro-line,.metro-line>small,.metro-line .bus-line-top{min-width:0;max-width:100%}.metro-line .bus-line-top>b{overflow-wrap:anywhere}
 .metro-line .bus-actions button{min-height:36px;white-space:normal}
 @media(max-width:650px){.metro-panel{padding:10px;gap:9px}.metro-build{grid-template-columns:minmax(0,1fr)}.metro-build select,.metro-build button{min-height:42px}}
+
+.world-toolbar button.select-mode-button{height:30px;width:30px;flex:0 0 30px;border-color:#71c9a7;background:#174838;color:#d9ffed;font-size:20px}
+@media(max-width:650px){.world-toolbar{gap:4px;padding:6px}.world-toolbar .map-legend{display:none}.world-toolbar button{height:30px;width:30px;flex:0 0 30px}.world-toolbar .map-city{min-width:0;overflow:hidden}.world-toolbar .map-city b{font-size:10px}.map-hint{white-space:normal;max-width:94vw}}

@@ -133,7 +133,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 11–15 | Parcial: estado compartido LAN y UI; aprobación básica | Elecciones, destitución, roles municipales, crisis y metas equilibradas |
 | 16–20 | Parcial en empresas y cadenas de comercio; resto pendiente | Derecho de suelo, industria, licitaciones complejas y alquileres |
 | 21 | Parcial: perfiles, migración con cohorte de edad, habilidades, búsqueda y cursos | Desigualdad territorial, movilidad social e ingresos a largo plazo |
-| 22 | Parcial: viajes laborales, escolares, civicos, de compras y ocio a pie/auto/bus; plazas barriales con capacidad diaria, flotas, paradas, cocheras, rutas, transbordos y regreso separado con capacidad por sentido | Transporte escolar colectivo, bicicletas, integracion multimodal, carga, accidentes y capacidad vial detallada |
+| 22 | Parcial: viajes laborales, escolares, cívicos, de compras y ocio a pie/bicicleta/auto/bus; plazas barriales con capacidad diaria, flotas, paradas, cocheras, rutas, transbordos y regreso separado con capacidad por sentido | Transporte escolar colectivo, integración multimodal, carga, accidentes y capacidad vial detallada |
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
@@ -692,3 +692,10 @@ Validación: matrícula y viajes Online/Offline, rutas conectadas, nueve franjas
 ## Alfa 0.204 - plazas y paseos urbanos (fase 22)
 
 Se suma Plaza barrial como servicio cívico municipal construible al instante, con inversión de $2.400, operación de $90 mensuales y capacidad de 90 visitas por jornada. Los hogares con recorrido vial a una plaza generan viajes de ocio proporcionales a su ocupación; el modo se resuelve por distancia y acceso del hogar a auto. Sus autos alimentan flujo, colas y emisiones junto con los demás viajes no laborales. Las plazas tienen modelo 3D propio con senderos, bancos, árboles, flores y fuente. Movilidad informa visitantes y caminantes; la inspección de un actor distingue el paseo. La mecánica existe en Online y Offline.
+
+
+## Alfa 0.205 - bicicletas en los viajes cotidianos (fase 22)
+
+Los residentes con bicicleta eligen ese modo para viajes laborales, escolares (desde los 13 años) y cotidianos de 2 a 7 tramos, según su acceso individual o familiar. El regreso laboral mantiene la bicicleta. En el mapa aparecen ciclistas 3D seleccionables; movilidad informa los viajes ciclistas. Su flujo aporta una carga vial moderada y no genera emisiones ni se contabiliza como automóvil. La misma elección y visualización funciona en Online y Offline.
+
+La fase 22 continúa parcial: faltan transporte escolar colectivo, integración multimodal, logística de carga, accidentes y capacidad vial detallada.

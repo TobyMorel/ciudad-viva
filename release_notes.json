@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.204",
+  "currentVersion": "0.205",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.205",
+      "date": "2026-11-03",
+      "title": "Bicicletas en los viajes cotidianos",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los residentes con bicicleta eligen ese modo para viajes laborales, escolares y cotidianos de distancia adecuada; el regreso conserva el mismo modo.",
+        "Las bicicletas recorren el mapa como actores 3D identificables y aparecen en las estadisticas de movilidad y en el flujo vial, sin sumar autos ni emisiones.",
+        "La fase 22 incorpora bicicletas al transporte cotidiano; siguen pendientes transporte escolar colectivo, integracion multimodal, carga, accidentes y capacidad vial detallada."
+      ],
+      "verification": "Validacion sintactica de los motores online, offline y escena 3D; comprobacion de contadores y recorridos de ida y vuelta."
+    },
     {
       "version": "0.204",
       "date": "2026-11-03",

@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.211",
+  "currentVersion": "0.212",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.212",
+      "date": "2026-11-03",
+      "title": "Los árboles se mecen con el viento",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Las copas de los árboles visibles se balancean suavemente con una brisa continua, incluso cuando la simulación está pausada.",
+        "El movimiento se limita a la vegetación cargada alrededor de la cámara y se reinicia al regenerar el paisaje para mantenerlo liviano."
+      ],
+      "verification": "Cambio visual en world3d.js; verificación automática pendiente por indisponibilidad temporal del entorno de ejecución."
+    },
     {
       "version": "0.211",
       "date": "2026-11-03",
@@ -43,15 +55,15 @@
     {
       "version": "0.208",
       "date": "2026-11-03",
-      "title": "Los viajes de ocio tambi\u00e9n conectan con el transporte p\u00fablico",
+      "title": "Los viajes de ocio también conectan con el transporte público",
       "roadmapPhase": 22,
       "overallProgress": null,
       "changes": [
         "Las visitas a las plazas pueden combinar viajes a pie, colectivo, subte, tren y taxi cuando la ruta, las paradas, el horario y la capacidad lo permiten.",
-        "La movilidad separa visitantes que caminan de quienes usan transporte p\u00fablico; los autos y sus emisiones bajan seg\u00fan los pasajeros que toman otros modos.",
-        "El mapa identifica a los viajeros que siguen a pie y muestra cu\u00e1ntos pasajeros de ocio atiende cada l\u00ednea municipal."
+        "La movilidad separa visitantes que caminan de quienes usan transporte público; los autos y sus emisiones bajan según los pasajeros que toman otros modos.",
+        "El mapa identifica a los viajeros que siguen a pie y muestra cuántos pasajeros de ocio atiende cada línea municipal."
       ],
-      "verification": "Comprobaci\u00f3n sint\u00e1ctica de los motores Online/Offline y de los m\u00f3dulos de colectivo, subte, tren y taxi."
+      "verification": "Comprobación sintáctica de los motores Online/Offline y de los módulos de colectivo, subte, tren y taxi."
     },
     {
       "version": "0.207",

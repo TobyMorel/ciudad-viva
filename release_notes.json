@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.196",
+  "currentVersion": "0.197",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.197",
+      "date": "2026-11-02",
+      "title": "Legibilidad del encabezado en tabletas",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se separaron el rótulo y el importe de tesorería en anchos intermedios."
+      ],
+      "verification": "Publicación Pages completada; ajuste guiado por el chequeo responsive.",
+      "pending": []
+    },
     {
       "version": "0.196",
       "date": "2026-11-02",

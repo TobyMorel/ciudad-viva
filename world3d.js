@@ -1360,12 +1360,12 @@ export function createWorld(canvas){
     // Solo hay trenes visuales cuando el motor autoritativo declara la línea operativa.
     const freightLines=new Map((state.metroLines||[]).filter(line=>line.mode==='elevated').map(line=>[String(line.id),line]));
     for(const order of (state.supply?.portOrders||[]).filter(item=>item.mode==='rail'&&item.status==='en tránsito ferroviario').slice(0,16)){
-      const line=freightLines.get(String(order.freightLineId)),railRoute=order.railRoute||[];
+      const line=freightLines.get(String(order.freightLineId)),railRoute=order.railRoute||[],freightLegs=order.freightLegs||[],freightLegIndex=Math.max(0,Math.min(freightLegs.length-1,order.freightLegIndex||0));
       if(!line||railRoute.length<2||railRoute.some((point,index)=>!Array.isArray(point)||point.length!==2||!point.every(Number.isInteger)||index&&Math.abs(point[0]-railRoute[index-1][0])+Math.abs(point[1]-railRoute[index-1][1])!==1))continue;
       const path=railRoute.map(([x,y])=>tilePos(x,y)),progress=clamp((order.travelledDistance||0)/Math.max(1,order.railDistance||railRoute.length-1),0,.999),spanDays=Math.max(1,(railRoute.length-1)/12),actor={
         mesh:makeElevatedTrain(true),route:path,offset:0,speed:1.5,side:0,height:1.82,railTrain:true,
         deliveryProgress:progress,actorKey:'rail-cargo-'+order.id,
-        selection:{type:'Carga ferroviaria',title:'Tren de carga · '+(order.businessName||'Fábrica'),description:'Carga industrial en ruta al puerto por una línea elevada operativa.',metrics:[['Mercadería',(order.quantity||0)+' u. de '+(order.product||'mercadería')],['Línea',line.name||'Tren elevado'],['Arribo previsto','Día '+(order.expectedPortDay||order.departureDay||state.day)]]}
+        selection:{type:'Carga ferroviaria',title:'Tren de carga · '+(order.businessName||'Fábrica'),description:freightLegs.length>1?'Carga industrial que cambia de corredor en estaciones elevadas construidas antes de llegar al puerto.':'Carga industrial en ruta al puerto por una línea elevada operativa.',metrics:[['Mercadería',(order.quantity||0)+' u. de '+(order.product||'mercadería')],['Línea',line.name||'Tren elevado'],['Tramo',`${freightLegIndex+1}/${Math.max(1,freightLegs.length)}`],['Intercambios',Math.max(0,freightLegs.length-1)],['Arribo previsto','Día '+(order.expectedPortDay||order.departureDay||state.day)]]}
       };
       if(line.operational){actor.deliveryStartDay=visualGameDay-progress*spanDays;actor.deliveryEndDay=actor.deliveryStartDay+spanDays}
       routeActors.push(actor);

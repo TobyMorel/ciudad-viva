@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.240",
+  "currentVersion": "0.241",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.241",
+      "date": "2026-11-03",
+      "title": "Transbordos de carga entre corredores ferroviarios",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las fábricas pueden enviar carga al puerto por hasta dos líneas elevadas activas, conectadas por estaciones físicas a dos parcelas o menos.",
+        "Cada tramo usa su propia formación, calendario de tres días, cupo compartido con pasajeros y capacidad de terminal; el transbordo espera una salida programada.",
+    "Si la continuación se llena mientras la carga espera, puede tomar otra línea construida desde el intercambiador y reservar el cupo disponible.",
+        "El envío conserva su itinerario y registra en cada línea las unidades transportadas; el ETA incluye viaje y espera del siguiente corredor.",
+        "Movilidad informa las estaciones de intercambio y el tren 3D muestra la etapa del recorrido. Offline y LAN aplican las mismas reglas."
+      ],
+      "verification": "Pruebas de integración Python y Offline recorren ambas líneas, comprueban capacidad por tramo, llegada y ETA; el panel ferroviario se revisa en Chromium a 390 y 1440 px. La validación LAN entre equipos físicos sigue pendiente."
+    },
     {
       "version": "0.240",
       "date": "2026-11-03",
@@ -3126,10 +3141,10 @@
     {
       "phase": 22,
       "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
-      "progress": 49,
-    "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio; carga industrial viaja por tren al puerto y comparte capacidad con pasajeros.",
+      "progress": 50,
+      "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio; carga industrial transfiere entre corredores físicos y comparte capacidad con pasajeros.",
       "pending": [
-      "Integrar completamente metro y tren en todos los viajes; ampliar carga ferroviaria con transbordos entre corredores; resolver accidentes y capacidad vial detallada."
+        "Integrar completamente metro y tren en todos los viajes; resolver accidentes y capacidad vial detallada."
       ]
     },
     {

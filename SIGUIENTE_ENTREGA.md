@@ -1,8 +1,8 @@
-## Después de Alfa 0.240 · Aforo compartido y fase 22
+## Después de Alfa 0.241 · Transbordos ferroviarios de carga
 
-Alfa 0.240 hace que las mercancías usen solo la capacidad diaria que queda después de pasajeros en los corredores elevados. Si una ruta queda llena, el envío intenta otra línea física activa antes de esperar; cada salida reserva cupo en el corredor y en ambos terminales. Movilidad muestra el cupo libre y nominal. LAN y Offline aplican las mismas reglas.
+Alfa 0.241 permite transferir carga en estaciones elevadas activas a dos parcelas o menos. Cada etapa usa su propia línea, horario y capacidad después de reservar pasajeros; el tren visible sigue el tramo actual y el ETA incluye las salidas de enlace. LAN y Offline aplican el mismo itinerario. Alfa 0.240 estableció el aforo compartido y la búsqueda de otro corredor cuando una línea se llena.
 
-Siguiente: permitir que la carga cambie de línea en estaciones de intercambio construidas y validar la sala LAN entre dos equipos. La prueba Hamachi física sigue fuera del entorno disponible.
+Siguiente en fase 22: integrar los viajes cotidianos que aún no usan metro y tren, y avanzar la respuesta a accidentes y la capacidad vial detallada. La validación LAN física entre equipos con Hamachi sigue pendiente.
 
 ## Después de Alfa 0.239 · Validación LAN y fase 22
 

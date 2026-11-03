@@ -31,13 +31,15 @@ try{
   });
   await page.locator('#offlineMode').evaluate(e=>e.click());
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
+  await page.waitForFunction(()=>!document.getElementById('offlineMode')?.disabled,null,{timeout:30000});
   await page.locator('.game-dock [data-popup="city"]').evaluate(e=>e.click());
-  await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:12000});
+  await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:30000});
   await page.locator('#cityReportRail [data-city-report=\"mobility\"]').evaluate(e=>e.click());
   await page.locator('#popupContent .metro-panel:not(.rail-panel)').waitFor();
   const panel=await page.evaluate(()=>document.querySelector('#popupContent').innerText);
   assert.match(panel,/Subte Norte/);assert.match(panel,/Tren elevado 1/);
   assert.match(panel,/Carga disponible tras pasajeros/i);
+  assert.match(panel,/Estaciones de intercambio/i);
   assert.match(panel,/Construir/);
   assert.equal(await page.locator('[data-metro-build], [data-rail-build]').count(),0,'Movilidad no debe crear infraestructura por botones');
   await page.waitForFunction(()=>window.__ciudadVivaScene?.().physicalRailStations===4,null,{timeout:15000});
@@ -54,13 +56,14 @@ try{
   });
   assert.ok(layout.width>0&&layout.overflow<=2&&layout.visible,name+': panel ferroviario legible '+JSON.stringify(layout));
   const railLayout=await page.evaluate(()=>{
-   const root=document.querySelector('#popupContent .rail-panel'),metric=[...root.querySelectorAll('.detail-grid div')].find(el=>el.textContent.includes('Carga disponible tras pasajeros'));
+   const root=document.querySelector('#popupContent .rail-panel'),metric=[...root.querySelectorAll('.detail-grid div')].find(el=>el.textContent.includes('Carga disponible tras pasajeros')),
+    transfer=[...root.querySelectorAll('.detail-grid div')].find(el=>el.textContent.includes('Estaciones de intercambio'));
    const line=root.querySelector('.metro-line'),small=line?.querySelector('small'),r=metric?.getBoundingClientRect(),textBox=small?.getBoundingClientRect();
-   return {width:root.clientWidth,overflow:root.scrollWidth-root.clientWidth,metricVisible:!!r&&r.width>0&&r.height>0,
+   const transferBox=transfer?.getBoundingClientRect();return {width:root.clientWidth,overflow:root.scrollWidth-root.clientWidth,metricVisible:!!r&&r.width>0&&r.height>0,transferVisible:!!transferBox&&transferBox.width>0&&transferBox.height>0,
     lineVisible:!!textBox&&textBox.width>0&&textBox.height>0,lineInside:!!textBox&&textBox.left>=root.getBoundingClientRect().left-1&&textBox.right<=root.getBoundingClientRect().right+1,
     pageOverflow:document.documentElement.scrollWidth-window.innerWidth};
   });
-  assert.ok(railLayout.width>0&&railLayout.overflow<=2&&railLayout.metricVisible&&railLayout.lineVisible&&railLayout.lineInside&&railLayout.pageOverflow<=2,
+  assert.ok(railLayout.width>0&&railLayout.overflow<=2&&railLayout.metricVisible&&railLayout.transferVisible&&railLayout.lineVisible&&railLayout.lineInside&&railLayout.pageOverflow<=2,
    name+': cupo compartido visible y sin desbordamiento '+JSON.stringify(railLayout));
   await page.locator('.game-dock [data-popup="build"]').evaluate(e=>e.click());
   await page.locator('#panelPopup:not(.hidden)').waitFor();

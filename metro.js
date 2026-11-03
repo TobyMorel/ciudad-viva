@@ -1,6 +1,6 @@
 import {placeRailStation,advanceRailStations} from './rail_sites.js';
-import {assignRailBusTransfers,assignRailRailTransfers} from './rail_bus_intermodal.js?v=0.240';
-import {freightCapacityMetrics} from './rail_freight.js?v=0.240';
+import {assignRailBusTransfers,assignRailRailTransfers} from './rail_bus_intermodal.js?v=0.241';
+import {freightCapacityMetrics} from './rail_freight.js?v=0.241';
 // Metro municipal: paridad con metro.py, estaciones en edificios existentes.
 export const METRO_TRAIN_COST=2400, METRO_SEATS=80, METRO_FARE_CENTS=60;
 const STAGES=['Estudios y permisos','Excavación y sostenimiento','Vías y estaciones','Inspección y habilitación'];

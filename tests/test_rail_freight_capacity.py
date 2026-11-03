@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from metro import metro_assign_passengers
-from rail_freight import freight_capacity_metrics, freight_routes_for_factory_port, rail_freight_report, reserve_freight_capacity, reserve_freight_route
+from rail_freight import freight_capacity_metrics, freight_leg_route, freight_routes_for_factory_port, freight_routes_from_station_to_port, rail_freight_report, reserve_freight_capacity, reserve_freight_route, serialize_freight_legs
 import server
 
 
@@ -106,6 +106,70 @@ class SharedRailFreightCapacity(unittest.TestCase):
         self.assertEqual(order["freightLineId"],"rail-alternate")
         self.assertEqual(second["freightUsedToday"],30)
         self.assertNotIn("freightUsedToday",first)
+
+    def test_cargo_transfers_between_two_built_corridors(self):
+        factory={"kind":"factory","x":1,"y":1}
+        port={"kind":"port","x":13,"y":1}
+        stations=[{"id":"a","mode":"elevated","status":"active","x":2,"y":1,"name":"Norte A"},
+                  {"id":"b","mode":"elevated","status":"active","x":8,"y":1,"name":"Centro A"},
+                  {"id":"c","mode":"elevated","status":"active","x":8,"y":2,"name":"Centro B"},
+                  {"id":"d","mode":"elevated","status":"active","x":13,"y":2,"name":"Puerto B"}]
+        first={**self.line(0),"id":"rail-a","stations":[[2,1],[8,1]],"route":[[x,1] for x in range(2,9)],"operational":True}
+        second={**self.line(0),"id":"rail-b","stations":[[8,2],[13,2]],"route":[[x,2] for x in range(8,14)],"operational":True}
+        state={"railStations":stations,"metroLines":[first,second]}
+        routes=freight_routes_for_factory_port(state,factory,port,lambda a,b:[[a["x"],a["y"]],[b["x"],b["y"]]])
+
+        self.assertEqual(len(routes),1)
+        self.assertEqual(routes[0]["transferCount"],1)
+        self.assertEqual([leg["line"]["id"] for leg in routes[0]["legs"]],["rail-a","rail-b"])
+        plan=serialize_freight_legs(routes[0])
+        state["railStations"]=stations
+        second_leg=freight_leg_route(state,plan[1])
+        self.assertEqual(second_leg["line"]["id"],"rail-b")
+        self.assertEqual(second_leg["route"][0],[8,2])
+
+    def test_port_shipment_changes_line_at_a_built_interchange(self):
+        state=server.new_settlement_state()
+        state["day"]=12
+        factory={"kind":"factory","x":1,"y":1,"status":"habilitado","business":{"id":"factory-transfer","status":"abierto"}}
+        port={"kind":"port","x":13,"y":1,"id":"port-13-1","status":"habilitado","cargoStored":0,"cargoCapacity":500}
+        stations=[{"mode":"elevated","status":"active","x":2,"y":1,"name":"Norte A"},
+                  {"mode":"elevated","status":"active","x":8,"y":1,"name":"Centro A"},
+                  {"mode":"elevated","status":"active","x":8,"y":2,"name":"Centro B"},
+                  {"mode":"elevated","status":"active","x":13,"y":2,"name":"Puerto B"},
+                  {"mode":"elevated","status":"active","x":8,"y":3,"name":"Centro C"},
+                  {"mode":"elevated","status":"active","x":13,"y":3,"name":"Puerto C"}]
+        first={**self.line(0),"id":"rail-a","stations":[[2,1],[8,1]],"route":[[x,1] for x in range(2,9)],"powerRequiredKw":100}
+        second={**self.line(420),"id":"rail-b","stations":[[8,2],[13,2]],"route":[[x,2] for x in range(8,14)],"powerRequiredKw":100}
+        third={**self.line(0),"id":"rail-c","stations":[[8,3],[13,3]],"route":[[x,3] for x in range(8,14)],"powerRequiredKw":100}
+        order={"id":"shipment-transfer","originType":"factory","businessId":"factory-transfer","businessName":"Procesadora",
+               "mode":"rail","portId":"port-13-1","status":"esperando tren programado","quantity":30,
+               "freightLineId":"rail-a","scheduledDepartureDay":12,"scheduleIntervalDays":3}
+        state["buildings"]=[factory,port,{"kind":"powerPlant","status":"operativo","generationKw":900}]
+        state["railStations"]=stations;state["metroLines"]=[first,second,third]
+        state["supply"]["portOrders"]=[order];state["supply"]["portVoyages"]=[]
+        old_state=server.state;server.state=state
+        try:
+            with patch.object(server,"route_between",return_value=[[1,1],[2,1]]):
+                server.process_port_logistics()
+                self.assertEqual((order["status"],order["freightLineId"],len(order["freightLegs"])),("en tránsito ferroviario","rail-a",2))
+                self.assertEqual(order["expectedPortDay"],16)
+                state["day"]=13;server.process_port_logistics()
+                self.assertEqual((order["status"],order["freightLegIndex"],order["scheduledDepartureDay"]),("esperando tren programado",1,15))
+                self.assertEqual(order["expectedPortDay"],16)
+                state["day"]=15;server.process_port_logistics()
+                self.assertEqual((order["status"],order["freightLineId"]),("en tránsito ferroviario","rail-c"))
+                self.assertEqual(order["freightLegs"][1]["lineId"],"rail-c")
+                self.assertEqual(order["expectedPortDay"],16)
+                state["day"]=16;server.process_port_logistics()
+        finally:
+            server.state=old_state
+
+        self.assertEqual(order["status"],"en puerto")
+        self.assertEqual(port["cargoStored"],30)
+        self.assertEqual(first["freightCarriedUnits"],30)
+        self.assertNotIn("freightCarriedUnits",second)
+        self.assertEqual(third["freightCarriedUnits"],30)
 
 
 if __name__=="__main__":

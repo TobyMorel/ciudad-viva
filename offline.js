@@ -1,10 +1,10 @@
-import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.240';
+import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.241';
 import {gameMinutesForElapsedSeconds} from './simulation_time.js';
-import {assignTaxiPassengers} from './taxi_passengers.js?v=0.240';
-import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.240';
+import {assignTaxiPassengers} from './taxi_passengers.js?v=0.241';
+import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.241';
 import {growthDemand} from './growth_demand.js';
-import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.240';
-import {freightRouteForFactoryPort,freightRoutesForFactoryPort,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.240';
+import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.241';
+import {freightRouteForFactoryPort,freightRoutesForFactoryPort,freightRoutesFromStationToPort,freightLegRoute,serializeFreightLegs,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.241';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';
 export function taxAdjustedBusinessCreditLimit(baseLimit,taxArrears=0,consecutiveMissedTaxMonths=0){const base=Math.max(0,Math.trunc(baseLimit||0));if((consecutiveMissedTaxMonths||0)>=3)return 0;return Math.max(0,base-Math.max(0,Math.trunc(taxArrears||0)))}
 export function taxPressurePenalty(pressure){return Math.min(5,Math.max(0,Math.floor((Math.max(0,Math.trunc(pressure||0))-5)/5)))}
@@ -1469,50 +1469,45 @@ function advanceOfflineZonedDevelopment(){
     metroRefresh(state);
     const ports=(state.buildings||[]).filter(b=>b.kind==='port'&&['habilitado','operativo'].includes(b.status)),orders=state.supply.portOrders||(state.supply.portOrders=[]),voyages=state.supply.portVoyages||(state.supply.portVoyages=[]);
     const activeStatuses=new Set(['pendiente','en tránsito','esperando acceso','esperando patio','esperando tren programado','esperando capacidad ferroviaria','esperando acceso ferroviario','en tránsito ferroviario']);
-    const applyFreightRoute=(order,freight)=>{const origin=freight.originStation,terminal=freight.portStation;Object.assign(order,{freightLineId:freight.line.id,railRoute:freight.route,route:freight.route,railDistance:Math.max(1,freight.route.length-1),freightOriginStation:[origin.x,origin.y],freightPortStation:[terminal.x,terminal.y],originAccessRoute:freight.originAccessRoute,portAccessRoute:freight.portAccessRoute});for(const [site,role] of [[origin,'industrial'],[terminal,'port']]){site.freightRoles=site.freightRoles||[];if(!site.freightRoles.includes(role))site.freightRoles.push(role);site.freightTerminal=true}};
+    const applyFreightRoute=(order,freight,storePlan=false,replaceLeg=false)=>{let index=Math.max(0,Math.trunc(order.freightLegIndex||0));const serialized=serializeFreightLegs(freight);if(storePlan){order.freightLegs=serialized;order.freightLegIndex=0;index=0}else if(replaceLeg){const plan=order.freightLegs||[];if(index<plan.length)plan[index]=serialized[0]}const legs=freight.legs||[freight],leg=storePlan?legs[0]:freight,origin=leg.originStation,terminal=leg.portStation,plan=order.freightLegs||serializeFreightLegs(freight),lastIndex=Math.max(0,plan.length-1);Object.assign(order,{freightLineId:leg.line.id,railRoute:leg.route,route:leg.route,railDistance:Math.max(1,leg.route.length-1),freightOriginStation:[origin.x,origin.y],freightPortStation:[terminal.x,terminal.y],originAccessRoute:freight.originAccessRoute||[],portAccessRoute:freight.portAccessRoute||[],transferCount:Math.max(0,plan.length-1)});for(const [site,role] of [[origin,index===0?'industrial':'transfer'],[terminal,index>=lastIndex?'port':'transfer']]){site.freightRoles=site.freightRoles||[];if(!site.freightRoles.includes(role))site.freightRoles.push(role);site.freightTerminal=true}};
+    const recordFreightLeg=(order,line,index)=>{const recorded=order.freightRecordedLegs||(order.freightRecordedLegs=[]);if(recorded.includes(index))return;line.freightCarriedUnits=(line.freightCarriedUnits||0)+(order.quantity||0);recorded.push(index)};
+    const expectedFreightArrival=(order,departureDay,startIndex=null)=>{const legs=order.freightLegs||[],index=Math.max(0,Math.trunc(startIndex??order.freightLegIndex??0)),interval=Math.max(1,Math.trunc(order.scheduleIntervalDays||3));let arrival=departureDay;for(let legIndex=index;legIndex<legs.length;legIndex++){arrival+=Math.max(1,Math.ceil(Math.max(1,(legs[legIndex].route||[]).length-1)/12));if(legIndex+1<legs.length)arrival=nextFreightDepartureDay(arrival,interval)}return arrival};
+    const resolveFreightArrival=(order,port,line)=>{const index=Math.max(0,Math.trunc(order.freightLegIndex||0)),plan=order.freightLegs||[];recordFreightLeg(order,line,index);if(index+1<plan.length){order.freightLegIndex=index+1;order.railArrived=false;const next=freightLegRoute(state,plan[index+1]);if(!next){Object.assign(order,{status:'esperando acceso ferroviario',waitReason:'El intercambiador está activo, pero la siguiente línea de carga no está operativa.'});return}applyFreightRoute(order,next);const departure=nextFreightDepartureDay(state.day,Math.max(1,Math.trunc(order.scheduleIntervalDays||3)));Object.assign(order,{status:'esperando tren programado',scheduledDepartureDay:departure,travelledDistance:0,waitReason:'Transbordo ferroviario; salida del siguiente corredor el día '+departure+'.',expectedPortDay:expectedFreightArrival(order,departure,index+1)});event('Transbordo ferroviario de carga',order.businessName+' pasó al intercambiador y espera otra formación.');return}if((port.cargoStored||0)+order.quantity>(port.cargoCapacity||500)){Object.assign(order,{status:'esperando patio',waitReason:'Patio portuario sin espacio.'});return}port.cargoStored=(port.cargoStored||0)+order.quantity;Object.assign(order,{status:'en puerto',arrivedDay:state.day,freightCost:Math.trunc(order.quantity)*2,waitReason:'',railArrivalRecorded:true});event('Carga ferroviaria recibida en puerto',order.quantity+' unidades de '+order.businessName+' llegaron por tren; patio '+port.cargoStored+'/'+(port.cargoCapacity||500)+'.')};
     for(const order of orders){
       if(!activeStatuses.has(order.status))continue;
       const port=ports.find(b=>(b.id||'port-'+b.x+'-'+b.y)===order.portId);
       const source=order.originType==='factory'?(state.buildings||[]).find(b=>b.kind==='factory'&&b.business?.id===order.businessId):(state.buildings||[]).find(b=>b.kind==='shop'&&b.business?.id===order.businessId);
       if(!port||!source){order.status='cancelado';continue}
       if(order.mode==='rail'){
-        const fixedRoute=order.status==='en tránsito ferroviario'||order.railArrived;
+        const legIndex=Math.max(0,Math.trunc(order.freightLegIndex||0)),fixedRoute=order.status==='en tránsito ferroviario'||order.railArrived||legIndex>0;
         let freightOptions;
-        if(fixedRoute){const current=freightRouteForFactoryPort(state,source,port,offlineRoadRoute,order.freightLineId);freightOptions=current?[current]:[]}
-        else{freightOptions=freightRoutesForFactoryPort(state,source,port,offlineRoadRoute);const preferred=String(order.freightLineId||'');freightOptions.sort((a,b)=>(String(a.line.id)!==preferred)-(String(b.line.id)!==preferred)||a.distance-b.distance||String(a.line.id).localeCompare(String(b.line.id)))}
+        if(fixedRoute){const storedLegs=order.freightLegs||[];if(legIndex>0&&order.status!=='en tránsito ferroviario'&&!order.railArrived&&legIndex<storedLegs.length){const previousStation=storedLegs[legIndex-1].portStation,excluded=storedLegs.slice(0,legIndex).map(leg=>leg.lineId);freightOptions=freightRoutesFromStationToPort(state,previousStation,port,offlineRoadRoute,excluded)}else{const stored=storedLegs[legIndex],current=stored?freightLegRoute(state,stored):freightRouteForFactoryPort(state,source,port,offlineRoadRoute,order.freightLineId);freightOptions=current?[current]:[]}}
+        else{freightOptions=freightRoutesForFactoryPort(state,source,port,offlineRoadRoute);const preferred=String(order.freightLineId||'');freightOptions.sort((a,b)=>(String((a.legs||[a])[0].line.id)!==preferred)-(String((b.legs||[b])[0].line.id)!==preferred)||(a.routingCost??a.distance)-(b.routingCost??b.distance)||a.distance-b.distance||String(a.line.id).localeCompare(String(b.line.id)))}
         if(!freightOptions.length){
           if(order.status!=='en tránsito ferroviario')Object.assign(order,{status:'esperando acceso ferroviario',waitReason:'Faltan terminales elevadas activas y conectadas.'});
           continue;
         }
-        let freight=freightOptions[0];applyFreightRoute(order,freight);let line=freight.line;
+        let freight=freightOptions[0];applyFreightRoute(order,freight,!fixedRoute);let line=(freight.legs||[freight])[0].line;
         if(order.railArrived){
-          if((port.cargoStored||0)+order.quantity>(port.cargoCapacity||500)){Object.assign(order,{status:'esperando patio',waitReason:'Patio portuario sin espacio.'});continue}
-          port.cargoStored=(port.cargoStored||0)+order.quantity;
-          Object.assign(order,{status:'en puerto',arrivedDay:state.day,freightCost:Math.trunc(order.quantity)*2,waitReason:''});
-          if(!order.railArrivalRecorded){line.freightCarriedUnits=(line.freightCarriedUnits||0)+order.quantity;order.railArrivalRecorded=true}
-          event('Carga ferroviaria recibida en puerto',order.quantity+' unidades de '+order.businessName+' llegaron por tren; patio '+port.cargoStored+'/'+(port.cargoCapacity||500)+'.');
+          resolveFreightArrival(order,port,line);
           continue;
         }
         if(order.status!=='en tránsito ferroviario'){
-          if(state.day<(order.scheduledDepartureDay||state.day)){Object.assign(order,{status:'esperando tren programado',waitReason:'Próxima salida día '+order.scheduledDepartureDay});continue}
+          if(state.day<(order.scheduledDepartureDay||state.day)){Object.assign(order,{status:'esperando tren programado',waitReason:(legIndex>0?'Transbordo ferroviario · próxima salida día ':'Próxima salida día ')+order.scheduledDepartureDay});continue}
           freight=reserveFreightRoute(freightOptions,order.quantity,state.day);
           if(!freight){
             const interval=Math.max(1,Math.trunc(order.scheduleIntervalDays||3));
             Object.assign(order,{status:'esperando capacidad ferroviaria',scheduledDepartureDay:nextFreightDepartureDay(state.day,interval),waitReason:'Los pasajeros tienen prioridad; el corredor o el terminal no tiene cupo libre para esta carga.'});continue;
           }
-          applyFreightRoute(order,freight);line=freight.line;
-          Object.assign(order,{status:'en tránsito ferroviario',departureDay:state.day,travelledDistance:0,waitReason:'',expectedPortDay:state.day+Math.max(1,Math.ceil(order.railDistance/12))});
+          applyFreightRoute(order,freight,!fixedRoute,legIndex>0);line=(freight.legs||[freight])[0].line;
+          Object.assign(order,{status:'en tránsito ferroviario',departureDay:state.day,travelledDistance:0,waitReason:'',expectedPortDay:expectedFreightArrival(order,state.day,Math.max(0,Math.trunc(order.freightLegIndex||0)))});
           continue;
         }
         if(!line.operational)continue;
         if(state.day>(order.departureDay||state.day))order.travelledDistance=Math.min(order.railDistance,(order.travelledDistance||0)+12);
         if((order.travelledDistance||0)<order.railDistance)continue;
         order.railArrived=true;
-        if((port.cargoStored||0)+order.quantity>(port.cargoCapacity||500)){Object.assign(order,{status:'esperando patio',waitReason:'Patio portuario sin espacio.'});continue}
-        port.cargoStored=(port.cargoStored||0)+order.quantity;
-        Object.assign(order,{status:'en puerto',arrivedDay:state.day,freightCost:Math.trunc(order.quantity)*2,waitReason:''});
-        if(!order.railArrivalRecorded){line.freightCarriedUnits=(line.freightCarriedUnits||0)+order.quantity;order.railArrivalRecorded=true}
-        event('Carga ferroviaria recibida en puerto',order.quantity+' unidades de '+order.businessName+' llegaron por tren; patio '+port.cargoStored+'/'+(port.cargoCapacity||500)+'.');
+        resolveFreightArrival(order,port,line);
         continue;
       }
       const route=offlineRoadRoute(source,port);
@@ -1566,7 +1561,7 @@ function advanceOfflineZonedDevelopment(){
         const freight=freightRouteForFactoryPort(state,plant,port,offlineRoadRoute);
         if(freight)railOptions.push({freight,port});
       }
-      railOptions.sort((a,b)=>a.freight.distance-b.freight.distance||String(a.freight.line.id).localeCompare(String(b.freight.line.id))||a.port.x-b.port.x||a.port.y-b.port.y);
+      railOptions.sort((a,b)=>(a.freight.routingCost??a.freight.distance)-(b.freight.routingCost??b.freight.distance)||a.freight.distance-b.freight.distance||String(a.freight.line.id).localeCompare(String(b.freight.line.id))||a.port.x-b.port.x||a.port.y-b.port.y);
       const ports=(state.buildings||[]).filter(b=>b.kind==='port'&&['habilitado','operativo'].includes(b.status)).map(building=>({building,route:offlineRoadRoute(plant,building)})).filter(x=>x.route).sort((a,b)=>a.route.length-b.route.length);
       const airports=(state.buildings||[]).filter(b=>b.kind==='airport'&&b.operational).map(building=>({building,route:offlineRoadRoute(plant,building)})).filter(x=>x.route).sort((a,b)=>a.route.length-b.route.length);
       const landRoute=offlineRoadRoute(plant,{x:23,y:10});

@@ -92,7 +92,7 @@ test('Offline: un móvil queda reservado en la ida y vuelta y no supera dos desp
   const center=city.buildings.find(b=>b.serviceModel==='policePost');
   await request({action:'openPoliceUnit',x:center.x,y:center.y});
   city=await view();
-  const sites=[{x:8,y:14,name:'Barrio de prueba oeste'},{x:10,y:14,name:'Barrio de prueba centro'},{x:8,y:16,name:'Barrio de prueba sur'}];
+  const sites=[{x:8,y:14,name:'Barrio de prueba oeste'},{x:10,y:14,name:'Barrio de prueba centro'},{x:9,y:15,name:'Barrio de prueba sur'}];
   const ids=sites.map((_,i)=>'pending-'+i);
   await reload(c=>{
    c.day=1;c.lastMonth=0;c.paused=false;

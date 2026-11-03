@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: '22'
       - name: Sintaxis y JSON
+        id: syntax
         run: |
           python -m py_compile server.py desktop_app.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py essential_services.py
           node --check offline.js
@@ -44,10 +45,12 @@ jobs:
           python -m json.tool release_notes.json > /dev/null
           python -m json.tool offline_seed.json > /dev/null
       - name: Regresión Online
+        id: online
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
         run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
       - name: Stress económico 30 años (cuatro perfiles)
+        if: ${{ !cancelled() && steps.syntax.outcome == 'success' && steps.online.outcome == 'success' }}
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
@@ -80,6 +83,8 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Validar construcción en sector remoto
+        run: node tests/test_distant_land_ui.mjs
       - name: Comprobar UI, construcción y Economía (390/1440 px)
         run: |
           tests=(
@@ -105,7 +110,6 @@ jobs:
             tests/test_traffic_signal_ui.mjs
             tests/test_citizen_inbox_ui.mjs
             tests/test_taxi_route_ui.mjs
-            tests/test_distant_land_ui.mjs
           )
           status=0
           for test in "${tests[@]}"; do

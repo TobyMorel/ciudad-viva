@@ -121,3 +121,69 @@ test('Offline: un móvil queda reservado en la ida y vuelta y no supera dos desp
   assert.equal(missions.find(m=>m.id===ids[2]).status,'sin respuesta','Dos despachos consumen el cupo mensual del móvil.');
  });
 });
+
+
+async function prepareTwoPoliceBases({request,view,reload}){
+ const city=await view();
+ const far=city.buildings.find(b=>b.name==='Comisaría construida de prueba');
+ assert.ok(far,'La base de prueba inicial está presente.');
+ await reload(c=>{
+  const first=c.buildings.find(b=>b.name==='Comisaría construida de prueba');
+  first.serviceModel='policeStation';
+  c.buildings.push({kind:'civic',serviceModel:'policeStation',name:'Base Este',x:18,y:12,status:'habilitado',jobSlots:22,
+   utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});
+  c.workplaces.push({kind:'civic',x:18,y:12,staffedJobs:16,workersAssigned:16,jobSlots:22});
+  return c;
+ });
+ await request({action:'openPoliceUnit',x:far.x,y:far.y});
+ await request({action:'openPoliceUnit',x:18,y:12});
+ return {farName:far.name,nearName:'Base Este'};
+}
+
+test('Offline: la base más cercana responde primero y la unidad ocupada cede el siguiente aviso',async()=>{
+ const s=seed();s.money=70000;s.day=1;s.lastMonth=0;s.paused=true;s.speed=1;
+ await scenario(s,async({request,view,next,reload})=>{
+  const {farName,nearName}=await prepareTwoPoliceBases({request,view,reload});
+  await reload(c=>{
+   c.day=1;c.lastMonth=0;c.paused=false;c.speed=1;
+   c.police={...(c.police||{}),lastProcessedMonth:0,recentIncidents:[
+    {id:'two-base-near',x:15,y:11,day:1,month:0,status:'sin respuesta',location:'Talleres del Puerto'},
+    {id:'two-base-fallback',x:15,y:11,day:1,month:0,status:'sin respuesta',location:'Talleres del Puerto'}
+   ]};
+   return c;
+  });
+  const report=(await next()).policeReport;
+  const missions=report.recentIncidents.filter(m=>m.id==='two-base-near'||m.id==='two-base-fallback');
+  const near=missions.find(m=>m.id==='two-base-near'),fallback=missions.find(m=>m.id==='two-base-fallback');
+  assert.equal(near.status,'en respuesta');
+  assert.equal(near.station,nearName,'El móvil más cercano debe tomar la primera incidencia.');
+  assert.equal(fallback.status,'en respuesta');
+  assert.equal(fallback.station,farName,'El móvil ocupado debe dejar que responda la otra base.');
+  const units=Object.fromEntries(report.units.map(unit=>[unit.name,unit]));
+  assert.equal(units[nearName].busyVehicles,1);
+  assert.equal(units[farName].busyVehicles,1);
+ });
+});
+
+test('Offline: una calle cortada en la base cercana desvía la patrulla a la otra base',async()=>{
+ const s=seed();s.money=70000;s.day=1;s.lastMonth=0;s.paused=true;s.speed=1;
+ await scenario(s,async({request,view,next,reload})=>{
+  const {farName,nearName}=await prepareTwoPoliceBases({request,view,reload});
+  await reload(c=>{
+   c.day=1;c.lastMonth=0;c.paused=false;c.speed=1;
+   c.roads=(c.roads||[]).filter(([x,y])=>x!==18||y!==10);
+   c.police={...(c.police||{}),lastProcessedMonth:0,recentIncidents:[
+    {id:'cut-nearest-road',x:15,y:11,day:1,month:0,status:'sin respuesta',location:'Talleres del Puerto'}
+   ]};
+   return c;
+  });
+  const report=(await next()).policeReport;
+  const mission=report.recentIncidents.find(m=>m.id==='cut-nearest-road');
+  assert.equal(mission.status,'en respuesta');
+  assert.equal(mission.station,farName,'La base Este queda sin camino por el corte y el despacho usa la ruta conectada.');
+  assert.notEqual(mission.station,nearName);
+  assert.ok(mission.route.some(([x,y])=>x===10&&y===10),'La respuesta usa la calle troncal de la base restante.');
+  assert.ok(!mission.route.some(([x,y])=>x===18&&y===10),'La patrulla no atraviesa el tramo cortado.');
+  assert.ok(mission.route.every((point,i,path)=>i===0||Math.abs(point[0]-path[i-1][0])+Math.abs(point[1]-path[i-1][1])===1));
+ });
+});

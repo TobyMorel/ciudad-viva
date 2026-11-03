@@ -1,3 +1,9 @@
+# Ciudad Viva · Alfa 0.233
+
+**Respuesta policial con varias bases:** la batería de regresión comprueba que una patrulla disponible de la base más cercana tome la primera incidencia y que una segunda base reciba la siguiente cuando ese móvil sigue ocupado.
+
+**Rutas cortadas:** la validación Offline desconecta el acceso de la base cercana y verifica que el despacho use el camino conectado de otra base. La validación LAN entre equipos físicos continúa pendiente.
+
 # Ciudad Viva · Alfa 0.232
 
 **Expansión de la ciudad:** los sectores vecinos se pueden desbloquear aunque una partida antigua no conserve la lista auxiliar de fronteras. La prueba crea una clínica remota y verifica que calles, terreno y edificio sobrevivan al guardado y recarga. Offline y LAN siguen validando el desbloqueo en el servidor.

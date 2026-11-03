@@ -1,8 +1,14 @@
+## Después de Alfa 0.233 · Validación LAN en vivo
+
+Las regresiones automatizadas ahora cubren el despacho policial entre varias bases, móviles ocupados y rutas interrumpidas. Falta comprobar en equipos físicos que una sala LAN sincronice la asignación de móviles, sus rutas y el estado de las incidencias entre los participantes.
+
+Siguiente: validar una sala LAN con clientes concurrentes en dos equipos reales y dejar documentados los resultados. No atribuir avance global sin ponderaciones comunes para las 34 fases.
+
 ## Después de Alfa 0.232 · Respuesta con varias bases
 
 La interfaz comprueba que se pueda desbloquear un sector vecino, construir una clínica junto a una calle y conservarla tras recargar. El perfil de expansión mantiene cinco sectores, 40 tramos de vía y la clínica periférica durante 360 cierres mensuales, junto a cuatro perfiles económicos de referencia.
 
-Siguiente: comprobar patrullas con varias bases, móviles ocupados, rutas cortadas y elección de la unidad disponible más cercana. Mantener pendiente la validación LAN entre dos equipos físicos y no atribuir avance global sin ponderaciones comunes.
+Completado en Alfa 0.233: pruebas Online y Offline cubren la elección de la base más cercana, el uso de una segunda unidad mientras la primera está ocupada y el desvío cuando se corta el acceso vial. La validación LAN entre equipos físicos sigue pendiente.
 
 ## Alfa 0.230 · Patrullas y cobertura explicada
 

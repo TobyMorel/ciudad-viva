@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.232",
+  "currentVersion": "0.233",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.233",
+      "date": "2026-11-03",
+      "title": "Respuesta policial desde varias bases",
+      "roadmapPhase": 9,
+      "overallProgress": null,
+      "changes": [
+        "Las pruebas Online verifican que la base con menor tiempo de llegada atienda primero y que un móvil ocupado deje el siguiente incidente a otra base disponible.",
+        "La regresión Offline comprueba que un corte en el acceso de la base más cercana redirija la patrulla por una ruta vial conectada.",
+        "Se mantiene el límite de dos despachos mensuales por móvil y la reserva de vehículos durante la respuesta y el regreso."
+      ]
+    },
     {
       "version": "0.232",
       "date": "2026-11-03",

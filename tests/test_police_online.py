@@ -118,5 +118,58 @@ class PoliceUrbanOnline(unittest.TestCase):
             server.police_service_report(self.staff,advance=True)
             self.assertEqual(missions[2]["status"],"sin respuesta","Un móvil conserva el límite de dos despachos en el mes.")
 
+
+    def test_nearest_available_base_takes_next_incident_when_closer_mobile_is_busy(self):
+        homes=[b for b in self.s["buildings"] if b.get("kind")=="home"][:2]
+        self.assertEqual(len(homes),2)
+        nearby={"kind":"civic","name":"Base Este","serviceModel":"policePost","x":18,"y":12,
+                "status":"habilitado","jobSlots":16,"policeUnit":{"vehicles":1,"priority":"mixto"}}
+        self.s["buildings"].append(nearby)
+        self.center["policeUnit"]={"vehicles":1,"priority":"mixto"}
+        workplaces=self.staff+[{"kind":"civic","x":18,"y":12,"staffedJobs":16}]
+        paths={}
+        for home in homes:
+            key=(home["x"],home["y"])
+            paths[(18,12,*key)]=[(18,12),(18,11),key]
+            paths[(12,12,*key)]=[(12,12),(13,12),(14,12),(15,12),key]
+        missions=[{"id":f"multi-base-{i}","x":home["x"],"y":home["y"],"day":1,
+                   "status":"sin respuesta","location":home.get("name","Barrio")} for i,home in enumerate(homes)]
+        self.s["day"]=1
+        self.s["police"]={"lastProcessedMonth":0,"recentIncidents":missions}
+        def route(base,target):
+            return paths.get((base["x"],base["y"],target["x"],target["y"]))
+        with patch.object(server,"service_route_within",side_effect=route):
+            report=server.police_service_report(workplaces,advance=True)
+        self.assertEqual(missions[0]["station"],"Base Este","La primera incidencia usa la base con menor tiempo de llegada.")
+        self.assertEqual(missions[1]["station"],self.center["name"],"La patrulla cercana ocupada deja paso a otra base disponible.")
+        units={unit["name"]:unit for unit in report["units"]}
+        self.assertEqual(units["Base Este"]["busyVehicles"],1)
+        self.assertEqual(units[self.center["name"]]["busyVehicles"],1)
+
+    def test_dispatch_uses_another_base_when_the_nearest_route_is_cut(self):
+        home=next(b for b in self.s["buildings"] if b.get("kind")=="home")
+        nearby={"kind":"civic","name":"Base Este","serviceModel":"policePost","x":18,"y":12,
+                "status":"habilitado","jobSlots":16,"policeUnit":{"vehicles":1,"priority":"mixto"}}
+        self.s["buildings"].append(nearby)
+        self.center["policeUnit"]={"vehicles":1,"priority":"mixto"}
+        workplaces=self.staff+[{"kind":"civic","x":18,"y":12,"staffedJobs":16}]
+        far_path=[(12,12),(13,12),(14,12),(15,12),(home["x"],home["y"])]
+        mission={"id":"cut-near-route","x":home["x"],"y":home["y"],"day":1,
+                 "status":"sin respuesta","location":home.get("name","Barrio")}
+        self.s["day"]=1
+        self.s["police"]={"lastProcessedMonth":0,"recentIncidents":[mission]}
+        def route(base,target):
+            if (target["x"],target["y"])!=(home["x"],home["y"]):return None
+            if base["x"]==18 and base["y"]==12:return None
+            if base["x"]==12 and base["y"]==12:return far_path
+            return None
+        with patch.object(server,"service_route_within",side_effect=route):
+            report=server.police_service_report(workplaces,advance=True)
+        self.assertEqual(mission["status"],"en respuesta")
+        self.assertEqual(mission["station"],self.center["name"])
+        self.assertEqual(mission["route"],far_path)
+        self.assertEqual(report["lastResponded"],0,"El aviso pendiente se despacha fuera del operativo mensual.")
+        self.assertIsNone(mission["responseCause"])
+
 if __name__=="__main__":
     unittest.main()

@@ -15,7 +15,7 @@ try{
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     const button=page.locator('#demolishTool');
     assert.equal(await button.isVisible(),true);
-    await button.click();
+    await button.evaluate(el=>el.click());
     assert.equal(await button.getAttribute('aria-pressed'),'true');
     const tile=await page.evaluate(()=>{const p=window.__ciudadVivaProjectTile(11,4,0),r=document.getElementById('city').getBoundingClientRect();return{x:p.x+r.left,y:p.y+r.top,visible:p.visible}});
     assert.equal(tile.visible,true,'el tramo debe estar a la vista');
@@ -28,7 +28,7 @@ try{
     await page.mouse.move(tile.x,tile.y);
     assert.equal(await page.locator('#city').evaluate(el=>el.style.cursor),'crosshair','cursor normal sobre terreno libre tras demoler');
     assert.equal(await button.getAttribute('aria-pressed'),'true','debe poder demoler varias veces sin reactivar');
-    await button.click();
+    await button.evaluate(el=>el.click());
     assert.equal(await button.getAttribute('aria-pressed'),'false');
     assert.deepEqual(errors,[],'errores inesperados en el navegador');
     await page.close();

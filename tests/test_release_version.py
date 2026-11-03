@@ -35,8 +35,10 @@ class ReleaseVersionTests(unittest.TestCase):
         self.assertIn('releaseData?.currentVersion', game, "El banner debe usar la versión vigente")
         self.assertIn('id="releaseNotes"', html, "Historial visible en Cambios")
         recovery = (ROOT / 'tests/test_offline_boot_recovery.mjs').read_text(encoding='utf-8')
-        self.assertIn('cv-refresh=' + version.replace('.', r'\.'), recovery,
-                      'La prueba de recuperación debe usar la Alfa publicada')
+        self.assertIn('releaseNotes.currentVersion', recovery,
+                      'La prueba de recuperacion debe usar la version publicada')
+        self.assertIn("url.searchParams.get('cv-refresh')===currentVersion", recovery,
+                      'La recuperacion debe volver a la version publicada')
 
     def test_code_changes_require_a_new_release_in_pr(self):
         """CI: un PR que altera el juego debe incrementar su versión y sus notas."""

@@ -1,25 +1,27 @@
 import {chromium} from 'playwright';
+import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
 import {startUiTestServer} from './ui_test_server.mjs';
 
+const releaseNotes=JSON.parse(readFileSync(new URL('../release_notes.json',import.meta.url),'utf8')),currentVersion=releaseNotes.currentVersion;
 const port=18791,server=await startUiTestServer(port),browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
 try{
  const freshPage=await browser.newPage({viewport:{width:390,height:844}}),freshErrors=[],freshExceptions=[];const diagnostics=await freshPage.context().newCDPSession(freshPage);diagnostics.on('Runtime.exceptionThrown',ev=>{const d=ev.exceptionDetails;freshExceptions.push({text:d.text,url:d.url,line:d.lineNumber,column:d.columnNumber,frames:d.stackTrace?.callFrames?.slice(0,3)})});await diagnostics.send('Runtime.enable');freshPage.on('pageerror',e=>freshErrors.push(e.stack||e.message));await freshPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});await freshPage.evaluate(()=>localStorage.removeItem('ciudad-viva-offline-v1'));await freshPage.locator('#onlineMode').click();assert.ok(await freshPage.locator('#lanChoices').isVisible(),'Elegir sala LAN debe abrir las opciones de red');await freshPage.locator('#lanBack').click();assert.ok(await freshPage.locator('#modeOptions').isVisible(),'Volver a los modos debe funcionar');await freshPage.locator('#offlineMode').click();try{await freshPage.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});}catch(e){throw Error('No se inició modo offline: '+await freshPage.locator('#modeError').innerText()+' · errores '+JSON.stringify(freshErrors)+' · excepciones '+JSON.stringify(freshExceptions)+' · '+e.message)}await freshPage.waitForTimeout(250);assert.deepEqual(freshErrors,[],'una partida offline nueva debe arrancar sin errores de render');assert.ok((await freshPage.evaluate(()=>window.__ciudadVivaScene())).drawCalls>0,'la partida nueva renderiza su escena 3D');
  await freshPage.locator('.game-dock [data-popup="changes"]').evaluate(e=>e.click());
  await freshPage.waitForFunction(()=>document.querySelectorAll('#releaseNotes .release-card').length>=2,{timeout:10000});
- assert.match(await freshPage.locator('.ref-version-banner').first().innerText(),/Alfa 0\.177/,'Cambios y novedades muestra la versión actual desde la primera apertura');
+ assert.ok((await freshPage.locator('.ref-version-banner').first().innerText()).includes(`Alfa ${releaseNotes.currentVersion}`),'Cambios y novedades muestra la version actual desde la primera apertura');
  const releaseTitles=await freshPage.locator('#releaseNotes .release-card .release-head b').allTextContents();
- assert.deepEqual(releaseTitles.slice(0,3),['Alfa 0.201','Alfa 0.200','Alfa 0.199'],'el historial muestra primero la versión publicada y conserva las anteriores');
- assert.match(await freshPage.locator('#releaseNotes').innerText(),/pasajeros|taxis/i,'los viajes de taxi se describen en Cambios');
+ assert.deepEqual(releaseTitles.slice(0,3),releaseNotes.versions.slice(0,3).map(item=>`Alfa ${item.version}`),'el historial muestra primero la version publicada y conserva las anteriores');
+ assert.ok((await freshPage.locator('#releaseNotes').innerText()).includes(releaseNotes.versions[0].changes[0]),'Cambios muestra el contenido de la version actual');
  await freshPage.locator('#popupClose').evaluate(e=>e.click());
  await freshPage.close();
  // Un recurso 3D defectuoso no debe dejar los botones sin respuesta ni explicación.
  const broken=await browser.newPage({viewport:{width:390,height:844}});
- await broken.route('**/world3d.js?v=0.201',route=>route.fulfill({status:200,contentType:'application/javascript',body:'export ];'}));
+ await broken.route(`**/world3d.js?v=${releaseNotes.currentVersion}`,route=>route.fulfill({status:200,contentType:'application/javascript',body:'export ];'}));
  await broken.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
  await broken.locator('#offlineMode').click();
- await broken.waitForURL(/cv-refresh=0\.200/,{waitUntil:'domcontentloaded',timeout:15000});
+ await broken.waitForURL(url=>url.searchParams.get('cv-refresh')===currentVersion,{waitUntil:'domcontentloaded',timeout:15000});
  await broken.waitForFunction(()=>document.getElementById('modeError')?.textContent.includes('No se pudo iniciar'),{timeout:15000});
  await broken.close();
  const legacyPage=await browser.newPage({viewport:{width:390,height:844}}),legacyErrors=[];legacyPage.on('pageerror',e=>legacyErrors.push(e.stack||e.message));await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});await legacyPage.evaluate(async()=>{const state=await fetch('/offline_seed.json').then(r=>r.json());delete state.buildings;delete state.projects;localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(state))});await legacyPage.locator('#offlineMode').click();await legacyPage.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});await legacyPage.waitForTimeout(250);assert.deepEqual(legacyErrors,[],'un guardado anterior sin edificios/obras debe poder cargarse');assert.ok((await legacyPage.evaluate(()=>window.__ciudadVivaScene())).drawCalls>0,'el guardado anterior renderiza su escena');await legacyPage.close();

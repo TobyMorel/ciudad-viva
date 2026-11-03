@@ -36,12 +36,16 @@ try{
   const p=await centerTile(4,y);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
   await page.waitForFunction(y=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).roads.some(r=>r[0]===4&&r[1]===y),y);if(y%10===0)console.log(`calle 4,${y} construida`);
  }
+ await page.locator('[data-popup="build"]').click();
+ await page.locator('.tool[data-tool="civic"][data-model="clinic"]').evaluate(el=>el.click());
+ const remoteClinic=await centerTile(5,49);await page.mouse.click(canvas.x+remoteClinic.x,canvas.y+remoteClinic.y);
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).buildings.some(b=>b.x===5&&b.y===49&&b.serviceModel==='clinic'),{timeout:20000});
  await page.locator('[data-popup="city"]').click();await page.locator('#saveBtn').evaluate(el=>el.click());
  await page.waitForFunction(()=>document.getElementById('toast')?.textContent.includes('Ciudad guardada'));
- console.log('ciudad guardada; recargando');const before=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money}});
+ console.log('ciudad guardada; recargando');const before=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));const clinic=c.buildings.find(b=>b.x===5&&b.y===49&&b.serviceModel==='clinic');return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money,remoteClinic:clinic?{x:clinic.x,y:clinic.y,serviceModel:clinic.serviceModel,status:clinic.status}:null}});
  await page.reload({waitUntil:'commit',timeout:60000});console.log('documento recargado; esperando iniciar el juego');await page.waitForFunction(()=>typeof window.__ciudadVivaProjectTile==='function',{timeout:60000});await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:60000});console.log('partida reanudada');
- const after=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money}});
- assert.equal(before.roads,40);assert.equal(before.sectors,9);assert.deepEqual(after,before);assert.deepEqual(errors,[]);
+ const after=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));const clinic=c.buildings.find(b=>b.x===5&&b.y===49&&b.serviceModel==='clinic');return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money,remoteClinic:clinic?{x:clinic.x,y:clinic.y,serviceModel:clinic.serviceModel,status:clinic.status}:null}});
+ assert.equal(before.roads,40);assert.equal(before.sectors,9);assert.deepEqual(before.remoteClinic,{x:5,y:49,serviceModel:'clinic',status:'habilitado'});assert.deepEqual(after,before);assert.deepEqual(errors,[]);
  console.log(JSON.stringify({before,after,pageErrors:errors.length}));await page.close();
 }finally{await browser.close();server.kill('SIGTERM')}
 

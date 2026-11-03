@@ -5,10 +5,10 @@ import {startUiTestServer} from './ui_test_server.mjs';
 const port=18949,server=await startUiTestServer(port);
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH||undefined,args:['--disable-dev-shm-usage','--use-gl=angle','--use-angle=swiftshader']});
 try{
- const page=await browser.newPage({viewport:{width:1280,height:800}});page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ const page=await browser.newPage({viewport:{width:1280,height:800}});page.setDefaultTimeout(20000);const errors=[],failedRequests=[],badResponses=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});page.on('requestfailed',r=>failedRequests.push({url:r.url(),error:r.failure()?.errorText||'request failed'}));page.on('response',r=>{if(r.status()>=400)badResponses.push({url:r.url(),status:r.status()})});page.on('dialog',d=>d.accept());
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.locator('#offlineMode').evaluate(el=>el.click());
- await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),undefined,{timeout:60000});
+ try{await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),undefined,{timeout:60000})}catch(error){const boot=await page.evaluate(()=>({mode:window.__ciudadVivaMode?.(),modeType:typeof window.__ciudadVivaMode,backdrop:document.getElementById('modeBackdrop')?.className}));throw new Error('Offline no inició: '+JSON.stringify({boot,pageErrors:errors,failedRequests,badResponses})+'; '+error.message)};
  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
  await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden')&&document.getElementById('money')?.textContent.includes('175.000')&&document.getElementById('population')?.textContent.trim()==='0',undefined,{timeout:30000});
  await page.locator('#pauseBtn').evaluate(el=>el.click());await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.paused===true,undefined,{timeout:15000});

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.185",
+  "currentVersion": "0.186",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.186",
+      "date": "2026-11-03",
+      "title": "Barra inferior más compacta",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se redujeron el tamaño de los iconos, los botones, el espaciado y el alto del dock para que ocupe menos pantalla.",
+        "Los controles y etiquetas siguen disponibles y la barra conserva el desplazamiento horizontal en pantallas chicas."
+      ],
+      "verification": "Vista previa visual revisada; sintaxis de módulos y datos de versión comprobados.",
+      "pending": []
+    },
     {
       "version": "0.185",
       "date": "2026-11-02",

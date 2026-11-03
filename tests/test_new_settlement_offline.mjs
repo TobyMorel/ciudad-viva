@@ -7,7 +7,7 @@ test('Offline nueva partida: empieza en terreno vacío, con acceso regional y de
  const fetch0=globalThis.fetch,storage0=globalThis.localStorage;
  globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});
  globalThis.localStorage={getItem:()=>null,setItem:()=>{}};
- try{const adapter=await createOfflineAdapter(),state=await adapter.request('/api/state');assert.deepEqual(state.buildings,[]);assert.deepEqual(state.roads,[[4,10]]);assert.equal(state.population,0);assert.equal(state.housingDemand.unmet,36);assert.equal(state.newSettlement,true);assert.equal(state.buildings.length,0)}finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
+ try{const adapter=await createOfflineAdapter(),state=await adapter.request('/api/state');assert.deepEqual(state.buildings,[]);assert.deepEqual(state.roads,[[4,10]]);assert.equal(state.population,0);assert.equal(state.money,175000);assert.equal(state.housingDemand.unmet,36);assert.equal(state.newSettlement,true);assert.equal(state.buildings.length,0)}finally{globalThis.fetch=fetch0;globalThis.localStorage=storage0}
 });
 
 test('Offline: los candados desbloquean sectores contiguos pagando y la coordenada no tiene borde',async()=>{

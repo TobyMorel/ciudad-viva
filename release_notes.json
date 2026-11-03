@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.233",
+  "currentVersion": "0.234",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.234",
+      "date": "2026-11-03",
+      "title": "Árboles detallados sin el frenazo del zoom intermedio",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "En el zoom intermedio, los árboles conservan copas, ramas, raíces, brotes y variedad de especies, pero cada modelo se comparte en lotes instanciados: hasta 16 lotes de vegetación, en vez de decenas de objetos dibujados por cada árbol. El viento actualiza esos lotes cada 85 ms y las sombras de árbol se agrupan.",
+        "El mapa mantiene las sombras de escritorio a 1024 px en el zoom intermedio y vuelve a 2048 px al acercar; el nivel lejano y los árboles completos de primer plano siguen disponibles.",
+        "Los autos que llegan por la entrada recalculan su recorrido cuando se agregan calles conectadas. Cada vehículo conserva su posición y su propia identidad entre actualizaciones.",
+        "El nuevo asentamiento comienza con $ 175.000 para cubrir calles y servicios esenciales antes de que la ciudad genere ingresos; los precios de construcción se mantienen."
+      ]
+    },
     {
       "version": "0.233",
       "date": "2026-11-03",

@@ -13,7 +13,7 @@ try{
   await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline',{timeout:30000});
   await page.locator('.game-dock').waitFor({timeout:30000});
   await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
-  await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000')&&document.getElementById('population')?.textContent.trim()==='0');
+  await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('175.000')&&document.getElementById('population')?.textContent.trim()==='0');
   for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
   let lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));
   if(!lock.visible){const canvas=page.locator('#city'),rect=await canvas.boundingBox();await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width/2-75,rect.y+rect.height/2,{steps:8});await page.mouse.up();lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));}

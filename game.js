@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.233';
+import {createWorld} from './world3d.js?v=0.234';
 import {createOfflineWorkerAdapter} from './offline_client.js?v=0.227';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -14,6 +14,8 @@ window.__ciudadVivaTaxiRoutes=()=>S?.taxiRoutes||[];
 window.__ciudadVivaFire=()=>world.getFireParticleCounts();
 window.__ciudadVivaScene=()=>world.getSceneDiagnostics();
 window.__ciudadVivaSetZoomForDiagnostics=value=>{zoom=Math.max(.58,Math.min(4,Number(value)||1));draw()};
+window.__ciudadVivaPanForDiagnostics=(dx,dy)=>{panX+=Number(dx)||0;panY+=Number(dy)||0;draw()};
+window.__ciudadVivaEntryTraffic=()=>world.getEntryTrafficRoutes();
 window.__ciudadVivaMode=()=>gameMode;
 window.__ciudadVivaProjectTile=(x,y,height=0)=>world.projectTile(x,y,height);
 window.__ciudadVivaCoverage=(x,y,serviceModel)=>{if(!S)return [];world.sync(S,{x,y},{...viewParams(),servicePreview:serviceModel?{x,y,serviceModel}:null});return world.getCoverageTiles()};

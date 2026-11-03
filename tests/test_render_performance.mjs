@@ -25,6 +25,22 @@ try{
   assert.ok(diagnostics.drawCalls>0&&diagnostics.triangles>0,`${viewport.width}px: no 3D scene was rendered`);
   assert.deepEqual(errors,[],`${viewport.width}px: render errors ${errors.join('; ')}`);
   console.log('Render profile',JSON.stringify({width:viewport.width,dpr:2,pixelRatio:diagnostics.pixelRatio,softwareFps:diagnostics.renderFps,dynamicObjects:diagnostics.dynamicObjects,shadowMapEnabled:diagnostics.shadowMapEnabled,drawCalls:diagnostics.drawCalls,triangles:diagnostics.triangles,trees:diagnostics.vegetationTrees,vegetationBatches:diagnostics.vegetationBatches}));
+  await page.evaluate(()=>window.__ciudadVivaSetZoomForDiagnostics(1.2));
+  await page.waitForFunction(()=>window.__ciudadVivaScene?.()?.vegetationLOD==='instanced-detailed',null,{timeout:15000});
+  await page.waitForTimeout(400);
+  const intermediate=await page.evaluate(()=>window.__ciudadVivaScene());
+  assert.equal(intermediate.contextLost,false,`${viewport.width}px: context lost at intermediate tree zoom`);
+  assert.ok(intermediate.vegetationTrees>0,`${viewport.width}px: intermediate tree models should be visible`);
+  assert.ok(intermediate.vegetationBatches>0&&intermediate.vegetationBatches<=16,`${viewport.width}px: detailed trees should use at most 16 batches, got ${intermediate.vegetationBatches}`);
+  assert.ok(intermediate.drawCalls>0&&intermediate.triangles>0,`${viewport.width}px: intermediate scene did not render`);
+  if(viewport.width>650){assert.equal(intermediate.shadowMapEnabled,true,`${viewport.width}px: desktop shadows remain visible`);assert.equal(intermediate.shadowMapSize,1024,`${viewport.width}px: intermediate shadow map should use 1024px`)}
+  await page.evaluate(()=>{const zoom=1.2,height=document.querySelector('#city').clientHeight,unit=(58/zoom)/Math.max(1,height);window.__ciudadVivaPanForDiagnostics(17/unit,0)});
+  await page.waitForTimeout(500);
+  const afterPan=await page.evaluate(()=>window.__ciudadVivaScene());
+  assert.equal(afterPan.contextLost,false,`${viewport.width}px: context lost after camera pan`);
+  assert.equal(afterPan.vegetationLOD,'instanced-detailed',`${viewport.width}px: pan should keep batched tree models active`);
+  assert.ok(afterPan.vegetationBatches<=16,`${viewport.width}px: panning expanded tree draw batches`);
+  console.log('Intermediate render profile',JSON.stringify({width:viewport.width,zoom:1.2,pixelRatio:intermediate.pixelRatio,softwareFps:intermediate.renderFps,drawCalls:intermediate.drawCalls,triangles:intermediate.triangles,trees:intermediate.vegetationTrees,vegetationBatches:intermediate.vegetationBatches,shadowMapSize:intermediate.shadowMapSize,afterPanDrawCalls:afterPan.drawCalls}));
   await page.close();
  }
 }finally{await browser.close();server.kill('SIGTERM')}

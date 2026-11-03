@@ -22,6 +22,7 @@ class NewSettlement(unittest.TestCase):
         self.assertEqual(server.state["buildings"],[])
         self.assertEqual(server.state["roads"],[[4,10]])
         self.assertEqual(server.state["population"],0)
+        self.assertEqual(server.state["money"],175000)
         self.assertEqual(server.state["housingDemand"]["unmet"],36)
         self.assertTrue(server.state["newSettlement"])
 
@@ -41,7 +42,7 @@ class NewSettlement(unittest.TestCase):
         self.assertGreaterEqual(city["housingDemand"]["unmet"],4)
         self.assertGreater(city["privateCapital"],capital)
 
-    def test_new_map_has_small_start_and_paid_unbounded_adjacent_expansion(self):
+    def test_new_map_funds_basic_services_and_paid_unbounded_adjacent_expansion(self):
         server.ensure_land_claims(server.state)
         claims=server.state["landClaims"]
         self.assertEqual(claims["chunkSize"],8)

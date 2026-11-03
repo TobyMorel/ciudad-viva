@@ -1,6 +1,6 @@
-## Después de Alfa 0.233 · Validación LAN en vivo
+## Después de Alfa 0.234 · Validación LAN en vivo
 
-Las regresiones automatizadas ahora cubren el despacho policial entre varias bases, móviles ocupados y rutas interrumpidas. Falta comprobar en equipos físicos que una sala LAN sincronice la asignación de móviles, sus rutas y el estado de las incidencias entre los participantes.
+Alfa 0.234 conserva el detalle y el viento de los árboles con lotes instanciados en el zoom intermedio, reencamina los autos de entrada al ampliar calles conectadas y financia el arranque de servicios esenciales. Alfa 0.233 sumó regresiones de despacho entre varias bases, móviles ocupados y rutas interrumpidas. Falta comprobar en equipos físicos que una sala LAN sincronice la asignación de móviles, sus rutas y el estado de las incidencias entre los participantes.
 
 Siguiente: validar una sala LAN con clientes concurrentes en dos equipos reales y dejar documentados los resultados. No atribuir avance global sin ponderaciones comunes para las 34 fases.
 

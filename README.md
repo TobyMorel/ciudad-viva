@@ -1,3 +1,11 @@
+# Ciudad Viva · Alfa 0.234
+
+**Árboles con modelos completos:** el zoom intermedio agrupa copas, ramas, raíces, brotes, sombras y animación de viento en lotes de GPU. Los árboles mantienen sus detalles y vuelven a sus modelos completos cuando la cámara se acerca.
+
+**Inicio de ciudad con fondos para infraestructura:** una nueva partida entrega $ 175.000 para construir calles y servicios esenciales antes de recibir ingresos. Se mantienen los precios de los edificios.
+
+**Autos de entrada y calles nuevas:** los vehículos regionales actualizan su recorrido al conectar nuevas calles y conservan su posición individual al refrescarse la escena.
+
 # Ciudad Viva · Alfa 0.233
 
 **Respuesta policial con varias bases:** la batería de regresión comprueba que una patrulla disponible de la base más cercana tome la primera incidencia y que una segunda base reciba la siguiente cuando ese móvil sigue ocupado.

@@ -10,7 +10,7 @@ try{
  await page.locator('#offlineMode').evaluate(el=>el.click());
  await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),undefined,{timeout:60000});
  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
- await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden')&&document.getElementById('money')?.textContent.includes('85.000')&&document.getElementById('population')?.textContent.trim()==='0',undefined,{timeout:30000});
+ await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden')&&document.getElementById('money')?.textContent.includes('175.000')&&document.getElementById('population')?.textContent.trim()==='0',undefined,{timeout:30000});
  await page.locator('#pauseBtn').evaluate(el=>el.click());await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.paused===true,undefined,{timeout:15000});
  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
  const canvas=await page.locator('#city').boundingBox();

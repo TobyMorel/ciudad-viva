@@ -16,7 +16,7 @@ class EssentialsTest(unittest.TestCase):
         self.assertEqual(city['buildings'][0]['missingServices'],['power','water','gas','tv','wifi'])
         self.assertEqual(city['utilities']['poweredStreetlightTiles'],[])
         self.assertTrue(all(row['capacity']==0 for row in grid.values()))
-    def test_sources_are_real_and_telecom_requires_cable(self):
+    def test_sources_are_real_and_telecom_failure_disconnects_road(self):
         city=fixture()
         city['buildings'].extend([provider('powerPlant',8),provider('waterPlant',9),provider('gasPlant',10),
                                  provider('civic',11,'tvHeadend'),provider('civic',12,'wifiHub')])
@@ -24,7 +24,7 @@ class EssentialsTest(unittest.TestCase):
         self.assertEqual([grid[k]['capacity'] for k in ('power','water','gas','tv','wifi')],[900,220,160,180,160])
         self.assertEqual(city['buildings'][0]['missingServices'],[])
         self.assertTrue(city['utilities']['poweredStreetlightTiles'])
-        city['utilities']['telecomLines']=[[4,10]]
+        city['utilities']['failures']=[dict(network='telecom',x=4,y=10,status='avería')]
         evaluate_essential_services(city)
         self.assertEqual(city['buildings'][0]['missingServices'],['tv','wifi'])
     def test_capacity_limit_preserves_existing_homes(self):

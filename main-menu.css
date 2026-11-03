@@ -775,3 +775,28 @@ footer { display: none !important; }
     height: 42px !important;
   }
 }
+
+
+@media (max-width: 650px) {
+  .topbar .metrics .metric:first-child > span {
+    position: absolute !important;
+    top: 3px;
+    right: 5px;
+    left: 29px;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  .topbar .metrics .metric:first-child > b {
+    position: absolute;
+    top: 12px;
+    right: 5px;
+    left: 29px;
+    width: auto;
+    height: auto;
+    grid-column: auto;
+    grid-row: auto;
+    align-self: auto;
+    justify-self: stretch;
+  }
+}

@@ -23,12 +23,18 @@ Auditoría realizada el 3 de noviembre de 2026 para Ciudad Viva. La escena usa T
 - **SceneOptimizer:** es un complemento oficial que automatiza batches, pero Three.js lo describe como experimental. No lo puse en una escena donde los edificios cambian, tienen selección y distintas capas de detalle.
 - **InstancedMesh2 (MIT):** compatible con Three.js r159 o posterior y agrega culling y LOD por instancia. La versión del juego es r171; queda como alternativa si las pruebas reales muestran que el LOD manual necesita culling de instancia más fino.
 - **Babylon.js:** incluye thin instances y herramientas de hardware scaling, pero cambiar Three.js por Babylon implica reescribir el constructor de edificios, selección, materiales y cámara. No es un addon que se pueda instalar sin migrar el renderer.
-- **OpenSA/GTA San Andreas:** es una reimplementación TypeScript/Three.js que carga archivos del juego y transmite sectores IPL/IDE al navegador. No es un plugin de rendimiento para otra simulación y su código usa AGPL-3.0. Los datos del juego deben aportarse aparte.
-- **WebAssembly/C++:** es una buena ruta cuando un perfil demuestra que el CPU de una simulación es el cuello de botella. Esta simulación offline ya vive en un worker; moverla a WASM no reducirá por sí solo las llamadas de dibujo del mapa. Los hilos Wasm requieren SharedArrayBuffer y cabeceras COOP/COEP, algo que GitHub Pages no deja configurar desde este repositorio.
+- **OpenSA/GTA San Andreas:** fue un motor TypeScript/Three.js que transmitía sectores IPL/IDE al navegador; el repositorio del autor ahora marca el proyecto como cerrado y no publica una licencia vigente. Era un motor completo para esos formatos, no un complemento de Ciudad Viva.
+- **WoW en navegador (Manila/Benilla):** es un cliente Rust/Bevy desde cero que compila a WebAssembly y usa WebGPU; el código está bajo Apache 2.0 y requiere que el usuario aporte los datos del cliente y un servidor compatible. Es una referencia de ingeniería y medición, no un addon; incorporarlo significaría reemplazar el renderer y la arquitectura del juego.
+- **WebAssembly/C++:** conviene cuando un perfil demuestra que el CPU de la simulación es el cuello de botella. La simulación offline ya vive en un worker y el online corre en el servidor; moverla a WASM no elimina las llamadas de dibujo. Los hilos Wasm requieren SharedArrayBuffer y cabeceras COOP/COEP, que este repositorio no configura en GitHub Pages.
+
+## Cambios de Alfa 0.228
+
+- En escritorio, las sombras dinámicas se apagan mientras el zoom está por debajo de 0.72 y se reactivan al acercar la cámara; los móviles ya renderizan sin sombras.
+- La prueba de rendimiento confirma el modo de vegetación instanciada y el ajuste visual de sombras al alejarse en dos tamaños de pantalla. La ejecución SwiftShader sirve para comprobar el código, no para estimar FPS de GPU real.
 
 ## Siguiente medición
 
-La prueba automática comprueba el LOD, las llamadas y la carga de cuadros con Chromium SwiftShader; no reemplaza medir FPS en teléfonos y PCs reales. También conviene medir la reconstrucción completa de la capa dinámica cuando cambia una ciudad grande: hoy se vuelve a crear si cambia su firma visual. Si esa reconstrucción domina los picos después del LOD, será la siguiente parte para convertir a actualizaciones incrementales.
+La prueba automática comprueba el LOD, los lotes, el límite de resolución, las sombras y el contexto WebGL en Chromium SwiftShader. Su tasa de cuadros no representa el rendimiento de una GPU real: para cuantificar FPS falta medir en el teléfono y la PC del jugador. También conviene medir la reconstrucción completa de la capa dinámica cuando cambia una ciudad grande: hoy se vuelve a crear si cambia su firma visual. Si esa reconstrucción domina los picos después del LOD, será la siguiente parte para convertir a actualizaciones incrementales.
 
 ## Fuentes
 
@@ -37,7 +43,8 @@ La prueba automática comprueba el LOD, las llamadas y la carga de cuadros con C
 - Three.js, BatchedMesh: https://threejs.org/docs/pages/BatchedMesh.html
 - Three.js, SceneOptimizer (experimental): https://threejs.org/docs/pages/SceneOptimizer.html
 - InstancedMesh2, license MIT and Three.js r159+: https://github.com/agargaro/instanced-mesh
-- OpenSA, engine notes and AGPL-3.0: https://github.com/Avatarchik/opensa
+- OpenSA, estado actual del repositorio: https://github.com/AlexSergey/opensa
+- Manila/Benilla, cliente WoW compatible con WASM/WebGPU y Apache 2.0: https://github.com/samwhosung/benilla
 - Chrome, compiling C/C++ to WebAssembly: https://developer.chrome.com/docs/modern-web-guidance/guides/wasm/cpp-on-the-web
 - Emscripten pthread requirements: https://emscripten.org/docs/porting/pthreads.html
 - MDN, OffscreenCanvas in workers: https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas

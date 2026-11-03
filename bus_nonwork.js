@@ -21,7 +21,7 @@ function offers(lines,trip){
 }
 export function assignBusNonworkPassengers(state,trips){
  const day=Math.max(1,Math.trunc(state.day||1)),month=Math.floor((day-1)/30),lines=(state.busRoutes||[]).filter(l=>l.status==='active'&&l.operational&&(l.route||[]).length>1&&stops(l).length>=2).sort((a,b)=>String(a.id||'').localeCompare(String(b.id||'')));
- for(const l of state.busRoutes||[]){if(l.nonworkFareMonth!==month){l.nonworkFareMonth=month;l.nonworkFaresByDay={}}(l.nonworkFaresByDay||(l.nonworkFaresByDay={}))[String(day)]={};l.nonworkRiders=0;l.nonworkFareToday=0}
+ for(const l of state.busRoutes||[]){if(l.nonworkRidersDay===day){l.ridersByWindow=l.ridersByWindow||{};l.ridersByWindow[WINDOW]=Math.max(0,(l.ridersByWindow[WINDOW]||0)-(l.nonworkRiders||0))}if(l.nonworkFareMonth!==month){l.nonworkFareMonth=month;l.nonworkFaresByDay={}}(l.nonworkFaresByDay||(l.nonworkFaresByDay={}))[String(day)]={};l.nonworkRidersDay=day;l.nonworkRiders=0;l.nonworkFareToday=0}
  let total=0,transfers=0;
  for(const trip of trips){
   delete trip.busRiders;delete trip.busJourneys;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {assignBusNonworkPassengers} from '../bus_nonwork.js';
-import {metroAssignPassengers} from '../metro.js';
+import {metroAssignPassengers,settleMetroMonth} from '../metro.js';
 import {assignTaxiPassengers} from '../taxi_passengers.js';
 
 function fixture(reverse=false,mode='metro'){
@@ -30,4 +30,39 @@ test('recalcular el mismo día no duplica tarifas ni usa dos veces los asientos'
  assert.equal(JSON.stringify(f.rail.fareByDay),oldRail);
  assert.equal(f.bus.ridersByWindow.midday,2);
  assert.equal(f.rail.dailyRiders,2);
+});
+
+
+function railTransferFixture(workers=5){
+ const roads=Array.from({length:21},(_,i)=>[i+3,10]);
+ const railStations=[
+  {mode:'metro',status:'active',x:3,y:9,name:'Terminal Norte'},
+  {mode:'metro',status:'active',x:13,y:9,name:'Intercambiador subte'},
+  {mode:'elevated',status:'active',x:13,y:11,name:'Intercambiador elevado'},
+  {mode:'elevated',status:'active',x:23,y:11,name:'Terminal Sur'}
+ ];
+ const first={id:'metro-a',stations:[[3,9],[13,9]],route:Array.from({length:11},(_,i)=>[i+3,9]),status:'active',trainCount:2,fareCents:60,powerRequiredKw:125};
+ const second={id:'rail-b',mode:'elevated',stations:[[13,11],[23,11]],route:Array.from({length:11},(_,i)=>[i+13,10]),status:'active',trainCount:2,fareCents:85,powerRequiredKw:205};
+ const state={day:1,roads,roadAssets:[],railStations,metroLines:[first,second],busRoutes:[],taxiRoutes:[],utilities:{},
+  finance:{programBudgets:{mobilityFundingFactor:1}},
+  buildings:[{kind:'home',x:3,y:8,householdCash:20},{kind:'powerPlant',status:'habilitado',generationKw:900,quality:82}]};
+ const trip={reason:'compras',mode:'auto',from:[3,8],to:[23,8],distance:30,workers,vehicles:Math.ceil(workers/1.4),dailyEmissionsKg:100};
+ return{state,trip,first,second};
+}
+test('líneas de subte y tren conectadas por estaciones físicas comparten el viaje y el cobro',()=>{
+ const f=railTransferFixture(),report=metroAssignPassengers(f.state,[f.trip]);
+ assert.equal(report.railTransfers,5);assert.equal(report.intermodalTransfers,5);
+ assert.equal(report.metroRiders,5);assert.equal(report.railRiders,5);
+ assert.equal(f.first.dailyRiders,5);assert.equal(f.second.dailyRiders,5);assert.equal(f.trip.vehicles,0);
+ assert.deepEqual(f.trip.intermodalJourneys[0].railLineIds,['metro-a','rail-b']);
+ assert.deepEqual(f.trip.intermodalJourneys[0].fareByLineCents,[60,64]);
+ assert.equal(settleMetroMonth(f.state).income,6);assert.equal(f.state.buildings[0].householdCash,14);
+ assert.equal(settleMetroMonth(f.state).income,0);
+});
+test('el transbordo usa el aforo menor y requiere una estación física terminada',()=>{
+ let f=railTransferFixture(300),report=metroAssignPassengers(f.state,[f.trip]);
+ assert.equal(report.intermodalTransfers,240);assert.equal(f.first.dailyRiders,240);assert.equal(f.second.dailyRiders,240);
+ f=railTransferFixture();f.state.railStations=f.state.railStations.filter(s=>s.x!==13||s.y!==11);
+ report=metroAssignPassengers(f.state,[f.trip]);assert.equal(report.intermodalTransfers,0);
+ assert.equal(f.first.dailyRiders,0);assert.equal(f.second.dailyRiders,0);
 });

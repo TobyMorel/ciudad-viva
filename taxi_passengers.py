@@ -45,7 +45,7 @@ def assign_taxi_passengers(state, trips):
             for trip in trips:
                 if riders >= TAXI_DAILY_CAPACITY:
                     break
-                if trip.get("reason") not in ("compras", "servicios") or trip.get("mode") != "auto":
+                if trip.get("reason") not in ("compras", "servicios", "ocio") or trip.get("mode") != "auto":
                     continue
                 if trip.get("distance", 0) < 4 or trip.get("workers", 0)-trip.get("busRiders", 0)-trip.get("metroRiders", 0) <= trip.get("taxiRiders", 0):
                     continue

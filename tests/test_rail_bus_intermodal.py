@@ -1,5 +1,6 @@
 """Comprobación LAN de pasajeros con transbordo entre tren, subte y colectivo."""
 import unittest
+import math
 from metro import metro_assign_passengers,settle_metro_month
 from bus_nonwork import assign_bus_nonwork_passengers,collect_bus_nonwork_fares
 from taxi_passengers import assign_taxi_passengers
@@ -64,5 +65,57 @@ class IntermodalPassengerTests(unittest.TestCase):
             with self.subTest(condition=condition):
                 self.assertEqual(run(state,trip)['intermodalTransfers'],0)
                 self.assertEqual(rail['dailyRiders'],0)
+
+
+def rail_transfer_fixture(workers=5):
+    roads=[[x,10] for x in range(3,24)]
+    stations=[
+        {"mode":"metro","status":"active","x":3,"y":9,"name":"Terminal Norte"},
+        {"mode":"metro","status":"active","x":13,"y":9,"name":"Intercambiador subte"},
+        {"mode":"elevated","status":"active","x":13,"y":11,"name":"Intercambiador elevado"},
+        {"mode":"elevated","status":"active","x":23,"y":11,"name":"Terminal Sur"},
+    ]
+    first={"id":"metro-a","stations":[[3,9],[13,9]],"route":[[x,9] for x in range(3,14)],
+           "status":"active","trainCount":2,"fareCents":60,"powerRequiredKw":125}
+    second={"id":"rail-b","mode":"elevated","stations":[[13,11],[23,11]],"route":[[x,10] for x in range(13,24)],
+            "status":"active","trainCount":2,"fareCents":85,"powerRequiredKw":205}
+    state={"day":1,"roads":roads,"roadAssets":[],"railStations":stations,"metroLines":[first,second],
+           "busRoutes":[],"taxiRoutes":[],"utilities":{},
+           "finance":{"programBudgets":{"mobilityFundingFactor":1}},
+           "buildings":[{"kind":"home","x":3,"y":8,"householdCash":20},
+                        {"kind":"powerPlant","status":"habilitado","generationKw":900,"quality":82}]}
+    trip={"reason":"compras","mode":"auto","from":[3,8],"to":[23,8],"distance":30,
+          "workers":workers,"vehicles":math.ceil(workers/1.4),"dailyEmissionsKg":100}
+    return state,trip,first,second
+
+class RailLineTransferTests(unittest.TestCase):
+    def test_built_nearby_stations_transfer_real_riders_and_fare_both_lines(self):
+        state,trip,first,second=rail_transfer_fixture()
+        report=metro_assign_passengers(state,[trip])
+        self.assertEqual(report["railTransfers"],5)
+        self.assertEqual(report["intermodalTransfers"],5)
+        self.assertEqual(report["metroRiders"],5)
+        self.assertEqual(report["railRiders"],5)
+        self.assertEqual((first["dailyRiders"],second["dailyRiders"]),(5,5))
+        self.assertEqual(trip["vehicles"],0)
+        journey=trip["intermodalJourneys"][0]
+        self.assertEqual(journey["railLineIds"],["metro-a","rail-b"])
+        self.assertEqual(journey["fareByLineCents"],[60,64])
+        self.assertEqual(settle_metro_month(state)["income"],6)
+        self.assertEqual(state["buildings"][0]["householdCash"],14)
+        self.assertEqual(settle_metro_month(state)["income"],0)
+
+    def test_transfer_needs_two_seats_and_a_finished_accessible_interchange(self):
+        state,trip,first,second=rail_transfer_fixture(300)
+        report=metro_assign_passengers(state,[trip])
+        self.assertEqual(report["intermodalTransfers"],240)
+        self.assertEqual(first["dailyRiders"],240)
+        self.assertEqual(second["dailyRiders"],240)
+        state,trip,first,second=rail_transfer_fixture()
+        state["railStations"]=[site for site in state["railStations"] if (site["x"],site["y"])!=(13,11)]
+        report=metro_assign_passengers(state,[trip])
+        self.assertEqual(report["intermodalTransfers"],0)
+        self.assertEqual(first["dailyRiders"],0)
+        self.assertEqual(second["dailyRiders"],0)
 
 if __name__=='__main__':unittest.main()

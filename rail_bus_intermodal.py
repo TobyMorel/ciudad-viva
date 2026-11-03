@@ -61,7 +61,7 @@ def assign_rail_bus_transfers(state,trips,day):
     rails=[l for l in state.get("metroLines",[]) if l.get("status")=="active" and l.get("operational") and l.get("dailyCapacity",0)>0]
     metro_riders=rail_riders=transfers=0
     for trip in trips:
-        if trip.get("reason") not in ("compras","servicios") or trip.get("mode") not in ("auto","walk") or not valid(trip.get("from")) or not valid(trip.get("to")):continue
+        if trip.get("reason") not in ("compras","servicios","ocio") or trip.get("mode") not in ("auto","walk") or not valid(trip.get("from")) or not valid(trip.get("to")):continue
         remaining=max(0,int(trip.get("workers",0))-int(trip.get("busRiders",0)))
         if not remaining:continue
         comparison=(2+trip.get("distance",0)*4 if trip["mode"]=="walk" else 7+trip.get("distance",0)*2.5*1.25)
@@ -98,3 +98,100 @@ def assign_rail_bus_transfers(state,trips,day):
                 "riders":count,"minutes":round(minutes),
                 "fareCents":bus_cents+rail_cents,"transferStop":transfer})
     return {"metroRiders":metro_riders,"railRiders":rail_riders,"transfers":transfers}
+
+
+def assign_rail_rail_transfers(state,trips):
+    """Reserva asientos en dos líneas ferroviarias que comparten un intercambiador físico."""
+    roads={tuple(p) for p in state.get("roads",[])}
+    stations={}
+    for site in state.get("railStations",[]):
+        mode=site.get("mode")
+        if site.get("status")!="active" or mode not in ("metro","elevated"):continue
+        point=(site.get("x"),site.get("y"))
+        if type(point[0]) is not int or type(point[1]) is not int:continue
+        if any((point[0]+dx,point[1]+dy) in roads for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):
+            stations.setdefault(mode,set()).add(point)
+    lines=[]
+    for line in state.get("metroLines",[]):
+        mode=line.get("mode") or "metro";points=line.get("stations");route=line.get("route") or []
+        if (line.get("status")!="active" or not line.get("operational") or mode not in ("metro","elevated")
+                or not isinstance(points,list) or len(points)!=2 or len(route)<2 or line.get("dailyCapacity",0)<=0):continue
+        coords=[]
+        for point in points:
+            if not isinstance(point,(list,tuple)) or len(point)!=2 or any(type(n) is not int for n in point):break
+            coords.append(tuple(point))
+        if len(coords)!=2 or coords[0]==coords[1] or any(point not in stations.get(mode,set()) for point in coords):continue
+        lines.append((line,coords,mode))
+    transfers=metro_riders=rail_riders=0
+    day_key=str(max(1,int(state.get("day",1))))
+    for trip in trips:
+        if trip.get("reason") not in ("compras","servicios","ocio") or trip.get("mode") not in ("auto","walk"):continue
+        start,end=trip.get("from"),trip.get("to")
+        if not valid(start) or not valid(end):continue
+        remaining=max(0,int(trip.get("workers",0))-int(trip.get("busRiders",0))-int(trip.get("intermodalRiders",0)))
+        if not remaining:continue
+        comparison=(2+trip.get("distance",0)*4 if trip.get("mode")=="walk" else 7+trip.get("distance",0)*2.5*1.25)
+        options=[]
+        for first,first_points,first_mode in lines:
+            for second,second_points,second_mode in lines:
+                if first is second:continue
+                first_dist=max(1,len(first.get("route") or [])-1)
+                second_dist=max(1,len(second.get("route") or [])-1)
+                first_headway=max(5,float(first.get("headwayMinutes") or 30))
+                second_headway=max(5,float(second.get("headwayMinutes") or 30))
+                first_minutes=(4 if first_mode=="elevated" else 8)+first_headway/2+first_dist*(1 if first_mode=="elevated" else 1.25)
+                second_minutes=(4 if second_mode=="elevated" else 8)+second_headway/2+second_dist*(1 if second_mode=="elevated" else 1.25)
+                for first_entry in (0,1):
+                    first_hub=1-first_entry
+                    for second_hub in (0,1):
+                        second_exit=1-second_hub
+                        walk_in=abs(start[0]-first_points[first_entry][0])+abs(start[1]-first_points[first_entry][1])
+                        walk_transfer=abs(first_points[first_hub][0]-second_points[second_hub][0])+abs(first_points[first_hub][1]-second_points[second_hub][1])
+                        walk_out=abs(second_points[second_exit][0]-end[0])+abs(second_points[second_exit][1]-end[1])
+                        if walk_in>2 or walk_transfer>2 or walk_out>2:continue
+                        minutes=walk_in*4+first_minutes+4+walk_transfer*3+second_minutes+walk_out*4
+                        if minutes>comparison*1.35:continue
+                        options.append({"minutes":minutes,"first":first,"second":second,
+                                        "entry":first_points[first_entry],"hub":first_points[first_hub],
+                                        "transfer":second_points[second_hub],"exit":second_points[second_exit],
+                                        "firstMode":first_mode,"secondMode":second_mode})
+        options.sort(key=lambda row:(row["minutes"],str(row["first"].get("id","")),str(row["second"].get("id","")),row["entry"],row["exit"]))
+        for option in options:
+            if remaining<=0:break
+            first,second=option["first"],option["second"]
+            first_free=max(0,int(first.get("dailyCapacity",0))-int(first.get("dailyRiders",0)))
+            second_free=max(0,int(second.get("dailyCapacity",0))-int(second.get("dailyRiders",0)))
+            count=min(remaining,first_free,second_free)
+            if count<=0:continue
+            remaining-=count;transfers+=count
+            first["dailyRiders"]=int(first.get("dailyRiders",0))+count
+            second["dailyRiders"]=int(second.get("dailyRiders",0))+count
+            fare_one=first.get("fareCents")
+            fare_two=second.get("fareCents")
+            fare_one=max(0,int(85 if option["firstMode"]=="elevated" else 60) if fare_one is None else int(fare_one))
+            fare_two=max(0,int(85 if option["secondMode"]=="elevated" else 60) if fare_two is None else int(fare_two))
+            fare_two=math.floor(fare_two*.75+.5)
+            home_key=",".join(map(str,start))
+            first_day=first.setdefault("fareByDay",{}).setdefault(day_key,{})
+            second_day=second.setdefault("fareByDay",{}).setdefault(day_key,{})
+            first_day[home_key]=first_day.get(home_key,0)+count*fare_one
+            second_day[home_key]=second_day.get(home_key,0)+count*fare_two
+            trip["intermodalRiders"]=int(trip.get("intermodalRiders",0))+count
+            trip["metroRiders"]=int(trip.get("metroRiders",0))+count
+            trip["metroLineId"]=first.get("id")
+            trip["metroLineIds"]=list(dict.fromkeys((trip.get("metroLineIds") or [])+[first.get("id"),second.get("id")]))
+            elevated=next((line for line,mode in ((first,option["firstMode"]),(second,option["secondMode"])) if mode=="elevated"),None)
+            if elevated:
+                trip["railRiders"]=int(trip.get("railRiders",0))+count
+                trip["railLineId"]=elevated.get("id")
+                rail_riders+=count
+            if "metro" in (option["firstMode"],option["secondMode"]):metro_riders+=count
+            trip.setdefault("intermodalJourneys",[]).append({
+                "type":"rail-rail","railLineIds":[first.get("id"),second.get("id")],
+                "modes":["tren" if option["firstMode"]=="elevated" else "subte",
+                         "tren" if option["secondMode"]=="elevated" else "subte"],
+                "direction":"rail-rail","riders":count,"minutes":round(option["minutes"]),
+                "fareCents":fare_one+fare_two,"fareByLineCents":[fare_one,fare_two],
+                "transferStations":[list(option["hub"]),list(option["transfer"])]})
+    return {"metroRiders":metro_riders,"railRiders":rail_riders,"transfers":transfers,
+            "railTransfers":transfers}

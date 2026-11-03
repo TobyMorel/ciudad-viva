@@ -1,8 +1,10 @@
-## Después de Alfa 0.235 · Validación LAN en vivo
+## Después de Alfa 0.236 · Carga ferroviaria y validación LAN
 
-Alfa 0.235 conserva detalle y viento de los árboles con lotes instanciados en el zoom intermedio. Alfa 0.234 reencamina los autos de entrada al ampliar calles conectadas y financia el arranque de servicios esenciales; Alfa 0.233 sumó regresiones de despacho entre varias bases, móviles ocupados y rutas interrumpidas. Falta comprobar en equipos físicos que una sala LAN sincronice la asignación de móviles, sus rutas y el estado de las incidencias entre los participantes.
+Alfa 0.236 completa una mecánica pendiente de la fase 22: viajes reales de compras, servicios y ocio pueden transbordar entre dos líneas de subte y tren elevado. Se requieren líneas activas con energía, flota y aforo, estaciones construidas con calle adyacente y un intercambiador a dos parcelas o menos. Cada tramo reserva su capacidad; el segundo boleto tiene 25 % de descuento y ambos se liquidan una sola vez al hogar. Offline y LAN aplican las mismas reglas.
 
-Siguiente: validar una sala LAN con clientes concurrentes en dos equipos reales y dejar documentados los resultados. No atribuir avance global sin ponderaciones comunes para las 34 fases.
+Offline ahora ejecuta los viajes cotidianos ya definidos en el juego y los asigna a colectivos, subte, tren y taxis. Las rutas aparecen en el estado de la partida y alimentan la cola vial de nueve franjas. El cierre mensual conserva los registros de boletos.
+
+Siguiente sistema: desarrollar una terminal de carga ferroviaria y permitir que fábricas envíen mercancía física al puerto con capacidad, horarios, inventario, costes y entregas verificables. Mantener pendiente la prueba LAN entre dos equipos físicos; el entorno de este desarrollo no tiene acceso a equipos Hamachi para hacerla.
 
 ## Después de Alfa 0.232 · Respuesta con varias bases
 

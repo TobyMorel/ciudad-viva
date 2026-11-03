@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.235",
+  "currentVersion": "0.236",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.236",
+      "date": "2026-11-03",
+      "title": "Transbordos ferroviarios y viajes cotidianos Offline",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los recorridos de compras, servicios y ocio pueden combinar dos líneas activas de subte y tren elevado si las estaciones físicas terminadas tienen acceso vial y quedan a dos parcelas o menos.",
+        "El viaje reserva aforo en ambas líneas, reduce los autos que siguen el recorrido y cobra los dos tramos desde el hogar; el segundo boleto tiene 25 % de descuento.",
+        "Offline ahora genera y asigna viajes cotidianos reales a colectivos, subte, tren y taxis cada día; las rutas y nueve franjas de colas se actualizan junto al mapa."
+      ],
+      "verification": "Las reglas de transbordo, aforo, estaciones y boletos se comparten entre Offline y LAN. El hito siguiente es la carga ferroviaria industrial y la validación LAN física entre equipos."
+    },
     {
       "version": "0.235",
       "date": "2026-11-03",

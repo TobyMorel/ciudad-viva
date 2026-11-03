@@ -3588,7 +3588,7 @@ def commute_model():
     model['taxiVehicles']=taxi_service['activeVehicles']
     model.update(bus_nonwork)
     model.update(metro_service)
-    model['busNonworkPassengers']+=metro_service['intermodalTransfers']
+    model['busNonworkPassengers']+=metro_service.get('busRailTransfers',metro_service['intermodalTransfers'])
     model['busNonworkFareRevenue']=round(sum(l.get('nonworkFareToday',0) for l in state.get('busRoutes',[])),2)
     for trip in shopping+services+recreation:
         commutes.append(trip)

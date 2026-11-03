@@ -1,9 +1,9 @@
-import {createOfflineAdapter} from './offline.js?v=0.227';
+import {createOfflineAdapter} from './offline.js?v=0.236';
 
 const SAVE_KEY='ciudad-viva-offline-v1';
 export async function createOfflineWorkerAdapter(){
   if(typeof Worker==='undefined')return createOfflineAdapter();
-  const worker=new Worker(new URL('./offline_worker.js?v=0.227',import.meta.url),{type:'module'}),pending=new Map();let nextId=1,readyResolve,readyReject;
+  const worker=new Worker(new URL('./offline_worker.js?v=0.236',import.meta.url),{type:'module'}),pending=new Map();let nextId=1,readyResolve,readyReject;
   const ready=new Promise((resolve,reject)=>{readyResolve=resolve;readyReject=reject});
   worker.addEventListener('message',event=>{
     const message=event.data||{};

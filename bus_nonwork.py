@@ -59,15 +59,19 @@ def assign_bus_nonwork_passengers(state,trips):
     day=max(1,int(state.get("day",1)));month=(day-1)//30
     lines=sorted((line for line in state.get("busRoutes",[]) if line.get("status")=="active" and line.get("operational") and len(line.get("route") or [])>1 and len(_stops(line))>=2),key=lambda line:str(line.get("id","")))
     for line in state.get("busRoutes",[]):
+        if line.get("nonworkRidersDay")==day:
+            windows=line.setdefault("ridersByWindow",{})
+            windows[WINDOW]=max(0,int(windows.get(WINDOW,0))-int(line.get("nonworkRiders",0)))
         if line.get("nonworkFareMonth")!=month:
             line["nonworkFareMonth"]=month;line["nonworkFaresByDay"]={}
         line.setdefault("nonworkFaresByDay",{})[str(day)]={}
+        line["nonworkRidersDay"]=day
         line["nonworkRiders"]=0
         line["nonworkFareToday"]=0
     riders_total=transfers_total=0
     for trip in trips:
         trip.pop("busRiders",None);trip.pop("busJourneys",None)
-        if trip.get("reason") not in ("compras","servicios") or trip.get("mode") not in ("auto","walk") or trip.get("workers",0)<=0:continue
+        if trip.get("reason") not in ("compras","servicios","ocio") or trip.get("mode") not in ("auto","walk") or trip.get("workers",0)<=0:continue
         remaining=int(trip["workers"])
         comparison=(2+trip.get("distance",0)*4 if trip["mode"]=="walk" else 7+trip.get("distance",0)*2.5*1.25)
         for minutes,legs,fares,transfer_stop in _offers(lines,trip):

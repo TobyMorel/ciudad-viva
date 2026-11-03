@@ -1,5 +1,10 @@
-# Ciudad Viva · Alfa 0.235
+# Ciudad Viva · Alfa 0.236
 
+**Transbordos ferroviarios con demanda y capacidad reales:** pasajeros de compras, servicios y ocio pueden combinar dos líneas activas cuando las estaciones físicas terminadas quedan a dos parcelas o menos. La ruta reserva plazas en ambos trenes, aplica 25 % de descuento al segundo tramo y liquida ambos boletos al hogar.
+
+**Viajes cotidianos en Offline:** compras, trámites y visitas a plazas ya recorren la ciudad en colectivo, subte, tren o taxi cuando hay capacidad. La ruta se incorpora al mapa y alimenta el informe de tráfico; los cobros por transporte se registran en las cuentas existentes.
+
+# Ciudad Viva · Alfa 0.235
 **Árboles detallados al desplazar el mapa:** el zoom intermedio conserva copas, ramas, raíces, brotes y especies en lotes instanciados, con animación de viento conjunta. Las copas completas siguen visibles al acercar.
 
 # Ciudad Viva · Alfa 0.234

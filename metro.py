@@ -3,7 +3,7 @@
 Las estaciones exigen una construcción física terminada en una parcela libre.
 """
 import math
-from rail_bus_intermodal import assign_rail_bus_transfers
+from rail_bus_intermodal import assign_rail_bus_transfers,assign_rail_rail_transfers
 from rail_sites import place_rail_station,advance_rail_stations
 
 METRO_TRAIN_COST=2400
@@ -195,11 +195,13 @@ def metro_assign_passengers(state,trips):
         line["dailyRiders"]=0
         line["fareByDay"][str(day)]={}
     for trip in trips:
-        for key in ("metroRiders","metroLineId","railRiders","railLineId","intermodalRiders","intermodalJourneys"):trip.pop(key,None)
-    intermodal=assign_rail_bus_transfers(state,trips,day)
-    total=intermodal["metroRiders"]+intermodal["railRiders"];rail_total=intermodal["railRiders"]
+        for key in ("metroRiders","metroLineId","metroLineIds","railRiders","railLineId","intermodalRiders","intermodalJourneys"):trip.pop(key,None)
+    bus_intermodal=assign_rail_bus_transfers(state,trips,day)
+    rail_intermodal=assign_rail_rail_transfers(state,trips)
+    total=bus_intermodal["metroRiders"]+bus_intermodal["railRiders"]+rail_intermodal["metroRiders"]+rail_intermodal["railRiders"]
+    rail_total=bus_intermodal["railRiders"]+rail_intermodal["railRiders"]
     for trip in trips:
-        if trip.get("reason") not in ("compras","servicios") or trip.get("mode") not in ("auto","walk"):continue
+        if trip.get("reason") not in ("compras","servicios","ocio") or trip.get("mode") not in ("auto","walk"):continue
         if not isinstance(trip.get("from"),list) or not isinstance(trip.get("to"),list):continue
         remaining=max(0,int(trip.get("workers",0))-int(trip.get("busRiders",0))-int(trip.get("intermodalRiders",0)))
         for line in state.get("metroLines",[]):
@@ -231,7 +233,8 @@ def metro_assign_passengers(state,trips):
     return {"metroRiders":total-rail_total,"railRiders":rail_total,
             "metroLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")!="elevated"),
             "railLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")=="elevated"),
-            "intermodalTransfers":intermodal["transfers"]}
+            "intermodalTransfers":bus_intermodal["transfers"]+rail_intermodal["transfers"],
+            "busRailTransfers":bus_intermodal["transfers"],"railTransfers":rail_intermodal["transfers"]}
 
 def settle_metro_month(state):
     homes={(b.get("x"),b.get("y")):b for b in state.get("buildings",[]) if b.get("kind")=="home"}

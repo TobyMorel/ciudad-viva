@@ -751,3 +751,7 @@ Se elevó la densidad de árboles y arbustos renderizados alrededor de la cámar
 ## Alfa 0.215 - controles táctiles y conexión de servicios (fase 15)
 
 El mapa admite pellizco con dos dedos para acercar/alejar y desplazar la vista desde el centro del gesto. Se agregó un acceso fijo para restaurar la herramienta Inspeccionar. El catálogo indica que las plantas de agua y gas requieren sus redes conectadas; la potabilizadora también consume electricidad.
+
+## Alfa 0.216 - calles con redes integradas (fase 6)
+
+La conectividad de servicios usa el componente conectado de calles como ducto compartido para electricidad, agua, gas, saneamiento, drenaje y telecomunicaciones. Las líneas existentes se preservan y pueden complementar la red vial. Una falla de red sigue aislando su casilla afectada.

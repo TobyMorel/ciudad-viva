@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.215",
+  "currentVersion": "0.216",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.216",
+      "date": "2026-11-03",
+      "title": "Las calles integran las redes de servicio",
+      "roadmapPhase": 6,
+      "overallProgress": null,
+      "changes": [
+        "Las calles conectadas conducen electricidad, agua, gas, saneamiento, drenaje y telecomunicaciones; no hace falta tender líneas manualmente para conectar plantas y edificios.",
+        "Los trazados explícitos anteriores se conservan como infraestructura adicional, y las averías siguen interrumpiendo el tramo afectado.",
+        "El catálogo aclara que las calles nuevas ya incorporan cableado y tuberías."
+      ],
+      "verification": "Validación sintáctica y regresiones online/offline lanzadas en GitHub Actions."
+    },
     {
       "version": "0.215",
       "date": "2026-11-03",

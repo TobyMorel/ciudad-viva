@@ -2354,7 +2354,9 @@ def ensure_utility_state():
 def energized_utility_tiles(network):
     utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}.get(network,"waterPipes")
     failed={(f.get("x"),f.get("y")) for f in utilities.get("failures",[]) if f.get("status")!="reparada" and f.get("network")==network}
-    lines={tuple(point) for point in utilities.get(key,[]) if tuple(point) not in failed};source=(4,10)
+    lines={tuple(point) for point in utilities.get(key,[])}
+    lines.update(tuple(point) for point in state.get("roads",[]))
+    lines.difference_update(failed);source=(4,10)
     if source not in lines:return set()
     connected={source};queue=[source]
     for x,y in queue:

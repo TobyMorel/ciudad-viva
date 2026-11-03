@@ -1,8 +1,8 @@
-## Después de Alfa 0.241 · Transbordos ferroviarios de carga
+## Después de Alfa 0.242 · Recorridos físicos de mercancías y compras
 
-Alfa 0.241 permite transferir carga en estaciones elevadas activas a dos parcelas o menos. Cada etapa usa su propia línea, horario y capacidad después de reservar pasajeros; el tren visible sigue el tramo actual y el ETA incluye las salidas de enlace. LAN y Offline aplican el mismo itinerario. Alfa 0.240 estableció el aforo compartido y la búsqueda de otro corredor cuando una línea se llena.
+Alfa 0.242 representa el ciclo de los pedidos de fábrica que viajan por carretera: los camiones cargados siguen la ruta del envío hasta comercios, puertos o aeropuertos y vuelven vacíos según el progreso guardado en Online y Offline. La carga ferroviaria continúa en sus trenes. Los viajes de compras muestran a los peatones entrando al local y saliendo con bolsas, también cuando llegaron en auto o bicicleta.
 
-Siguiente en fase 22: integrar los viajes cotidianos que aún no usan metro y tren, y avanzar la respuesta a accidentes y la capacidad vial detallada. La validación LAN física entre equipos con Hamachi sigue pendiente.
+Siguiente en fase 22: conectar visualmente la primera y última milla de la carga ferroviaria con sus estaciones y coordinar los vehículos con horarios y colas viales. Después, seguir con respuesta a accidentes y capacidad detallada. La validación LAN física entre equipos con Hamachi sigue pendiente.
 
 ## Después de Alfa 0.239 · Validación LAN y fase 22
 

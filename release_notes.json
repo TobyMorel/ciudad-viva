@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.241",
+  "currentVersion": "0.242",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.242",
+      "date": "2026-11-03",
+      "title": "Carga y compradores visibles en las calles",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los pedidos que viajan por carretera se ven en camiones con la mercadería cargada, por rutas registradas hasta comercios, puertos o aeropuertos; los pedidos ferroviarios continúan en sus trenes de carga.",
+        "Al entregar por carretera, los camiones vuelven vacíos a su fábrica; la ida y el regreso avanzan con la distancia y el estado real del pedido en LAN y Offline.",
+        "Las visitas de compras a pie salen del local con bolsas; cuando llegan en auto o bicicleta, se ve el tramo peatonal entre la calle y el comercio.",
+        "Las entregas Offline de productos locales conservan su ruta vial y dibujan el mismo recorrido que usa su pedido."
+      ],
+      "verification": "Pasaron las comprobaciones estáticas de sintaxis de Python y JavaScript. La escena no se validó visualmente en navegador; la prueba LAN física entre equipos sigue pendiente."
+    },
     {
       "version": "0.241",
       "date": "2026-11-03",

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createOfflineAdapter} from '../offline.js';
-import {metroAssignPassengers} from '../metro.js?v=0.241';
-import {freightCapacityMetrics,freightLegRoute,freightRoutesForFactoryPort,freightRoutesFromStationToPort,railFreightReport,reserveFreightCapacity,reserveFreightRoute,serializeFreightLegs} from '../rail_freight.js?v=0.241';
+import {metroAssignPassengers} from '../metro.js?v=0.242';
+import {freightCapacityMetrics,freightLegRoute,freightRoutesForFactoryPort,freightRoutesFromStationToPort,railFreightReport,reserveFreightCapacity,reserveFreightRoute,serializeFreightLegs} from '../rail_freight.js?v=0.242';
 
 const makeLine=(dailyRiders=210)=>({
  id:'rail-shared',mode:'elevated',status:'active',trainCount:1,stations:[[3,1],[11,1]],

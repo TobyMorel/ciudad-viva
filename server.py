@@ -3932,9 +3932,33 @@ def refill_market_suppliers():
     for supplier in state["supply"].get("market",{}).values():
         supplier["stock"]=min(supplier.get("maxStock",0),supplier.get("stock",0)+supplier.get("monthlyOutput",0))
 
+def is_factory_truck_order(order):
+    return order.get("originType")=="factory" or str(order.get("supplier","")).startswith("Fábrica local ")
+
+def begin_factory_truck_return(order,route=None):
+    if not is_factory_truck_order(order) or order.get("returnStatus") in ("en ruta","retornado"):return
+    outbound=order.get("roadRoute") or route or order.get("route") or []
+    if len(outbound)<2:return
+    outbound=[list(point) for point in outbound]
+    order["roadRoute"]=outbound
+    order["returnRoute"]=list(reversed(outbound))
+    order.update({"returnStatus":"en ruta","returnDistance":max(1,len(outbound)-1),
+                  "returnTravelledDistance":0,"returnDepartureDay":state["day"]})
+
+def advance_factory_truck_return(order):
+    if order.get("returnStatus")!="en ruta":return
+    route=order.get("returnRoute") or []
+    distance=max(1,int(order.get("returnDistance",len(route)-1)))
+    if state["day"]>order.get("returnDepartureDay",state["day"]):
+        factor=traffic_factor(route,order) if len(route)>1 else 1
+        order["returnTravelledDistance"]=min(distance,order.get("returnTravelledDistance",0)+6/max(1,factor))
+    if order.get("returnTravelledDistance",0)>=distance:
+        order.update({"returnStatus":"retornado","returnedDay":state["day"]})
+
 def process_market_orders():
     expire_aggregate_contract_lines()
     for order in state["supply"].get("marketOrders",[]):
+        advance_factory_truck_return(order)
         if order.get("status")!="en tránsito":continue
         route=route_between(tuple(order.get("source",(4,10))),(order["x"],order["y"]))
         if not route:
@@ -3969,6 +3993,7 @@ def process_market_orders():
                 firm["inputInventory"]=firm.get("inputInventory",0)+order["quantity"]
                 ev("Insumos recibidos",f"{order['supplier']} entregó {order['quantity']} unidades a {order['businessName']} tras {distance} tramos de ruta.")
             order["status"]="entregado";order["deliveredDay"]=state["day"]
+            begin_factory_truck_return(order,route)
             settle_aggregate_contract_line(order,True)
         else:
             order["status"]="cancelado";order["statusCause"]="Empresa cerrada antes de recibir la carga"
@@ -4242,7 +4267,7 @@ def simulate_business_month(workforce):
                     source_factory["business"]["cash"]+=revenue
             else:
                 industry["unitsImported"]+=quantity
-            order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"source":list(source),"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en tránsito","statusCause":"Preparación en proveedor"}
+            order={"id":uuid.uuid4().hex,"businessId":firm["id"],"businessName":firm.get("name",shop.get("name")),"supplier":name,"originType":"factory" if name.startswith("Fábrica local ") else "supplier","quantity":quantity,"unitCost":round(landed,2),"cost":cost,"orderedDay":state["day"],"supplierReadyDay":state["day"]+supplier.get("leadDays",1),"travelDistance":distance,"travelledDistance":0,"source":list(source),"x":shop["x"],"y":shop["y"],"route":route,"trafficFactor":1,"status":"en tránsito","statusCause":"Preparación en proveedor"}
             market_orders.append(order);needed-=quantity;cash_for_orders-=cost;purchases+=quantity;procurement_cost+=cost;chosen.append(name)
         cash_after_ops=cash_before_orders-procurement_cost
         debt=firm.get("creditDebt",0);interest=round(debt*firm.get("creditRate",.02));firm["lastInterest"]=interest
@@ -4777,11 +4802,15 @@ def queue_factory_exports():
 def process_factory_exports():
     supply=state.setdefault("supply",{});industry=state.setdefault("localIndustry",{});industry.setdefault("exportedUnits",0);industry.setdefault("exportRevenue",0)
     for order in supply.setdefault("factoryExportOrders",[]):
+        advance_factory_truck_return(order)
         if order.get("status")=="en tránsito":
             route=order.get("route") or [];order["travelledDistance"]=min(order.get("distance",1),order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
             if order["travelledDistance"]<order.get("distance",1):continue
-            if order.get("mode")=="air":order.update({"status":"en vuelo","arrivalDay":state["day"]+1});continue
+            if order.get("mode")=="air":
+                begin_factory_truck_return(order,order.get("route"));order.update({"status":"en vuelo","arrivalDay":state["day"]+1});continue
             order["status"]="exportado"
+        if order.get("status")=="exportado" and order.get("mode")=="land":
+            begin_factory_truck_return(order,order.get("route"))
         elif order.get("status") in ("en vuelo","en viaje") and state["day"]>=order.get("arrivalDay",state["day"]+1):order["status"]="exportado"
         if order.get("status")!="exportado" or order.get("settled"):continue
         factory=next((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("id")==order.get("businessId")),None)
@@ -4864,6 +4893,7 @@ def process_port_logistics():
         order.update({"status":"en puerto","arrivedDay":state["day"],"freightCost":int(order["quantity"])*2,"waitReason":"","railArrivalRecorded":True})
         ev("Carga ferroviaria recibida en puerto",f"{order['quantity']} unidades de {order['businessName']} llegaron por tren; patio {port['cargoStored']}/{port.get('cargoCapacity',500)}.")
     for order in orders:
+        if order.get("status")!="en viaje":advance_factory_truck_return(order)
         if order.get("status") not in statuses:continue
         port_id=order.get("portId")
         port=next((b for b in ports if b.get("id",f"port-{b['x']}-{b['y']}")==port_id),None)
@@ -4912,11 +4942,12 @@ def process_port_logistics():
             continue
         route=route_between((source["x"],source["y"]),(port["x"],port["y"]))
         if not route:order.update({"status":"esperando acceso","route":[]});continue
-        order["route"]=route;distance=max(1,len(route)-1);order["status"]="en tránsito"
+        order["route"]=route;order["roadRoute"]=[list(point) for point in route];distance=max(1,len(route)-1);order["status"]="en tránsito"
         order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
         if order["travelledDistance"]<distance:continue
         if port.get("cargoStored",0)+order["quantity"]>port.get("cargoCapacity",500):order["status"]="esperando patio";continue
         port["cargoStored"]=port.get("cargoStored",0)+order["quantity"];order.update({"status":"en puerto","arrivedDay":state["day"]})
+        if order.get("originType")=="factory" and order.get("mode")!="rail":begin_factory_truck_return(order,route)
         ev("Carga recibida en el puerto",f"{order['quantity']} unidades de {order['businessName']} llegaron por camión; patio {port['cargoStored']}/{port.get('cargoCapacity',500)}.")
     for port in ports:
         if port.get("cargoStored",0)<60 or state["day"]-port.get("lastShipDay",0)<10:continue

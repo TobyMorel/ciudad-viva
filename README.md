@@ -1,4 +1,8 @@
-# Ciudad Viva · Alfa 0.241
+# Ciudad Viva · Alfa 0.242
+
+**Mercancías y compras visibles en la ciudad:** las entregas de fábrica por carretera muestran los productos en la caja del camión durante la ida. Tras la entrega el camión vuelve vacío por su ruta hasta la fábrica; los envíos ferroviarios siguen viajando en tren. Los compradores que llegan caminando, en auto o en bici aparecen entrando al comercio y saliendo con bolsas. Las rutas y el progreso de carga se guardan en Online y Offline.
+
+**Capacidad ferroviaria compartida:** la carga usa solo el cupo diario que queda después de reservar espacio para los pasajeros. Si el corredor preferido está lleno, el envío busca otra línea elevada construida que tenga cupo. Sumar trenes amplía capacidad para ambos usos. Movilidad muestra carga libre y capacidad nominal. Reglas iguales en LAN y Offline.
 
 **Capacidad ferroviaria compartida:** la carga usa solo el cupo diario que queda después de reservar espacio para los pasajeros. Si el corredor preferido está lleno, el envío busca otra línea elevada construida que tenga cupo. Sumar trenes amplía capacidad para ambos usos. Movilidad muestra carga libre y capacidad nominal. Reglas iguales en LAN y Offline.
 
@@ -117,7 +121,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.241](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.241/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.242](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.242/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

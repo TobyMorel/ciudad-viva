@@ -1,0 +1,185 @@
+/* HUD composition inspired by the supplied Ciudad Viva screenshot. */
+#app {
+  height: 100dvh !important;
+  min-height: 0 !important;
+  grid-template-rows: 52px minmax(0, 1fr) !important;
+  overflow: hidden;
+  background: #244b3d;
+}
+.topbar {
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1vw, 18px);
+  min-width: 0;
+  height: 44px;
+  margin: 6px 12px 2px;
+  padding: 0 12px;
+  overflow: visible;
+  border: 1px solid #43806d;
+  border-radius: 24px;
+  background: linear-gradient(100deg, #103f40, #0d514b 58%, #103c3b);
+  color: #f5f5e9;
+  box-shadow: 0 4px 16px #112d2940, inset 0 1px 0 #b8d7b42b;
+}
+.topbar::before, .topbar::after { display: none; }
+.brand { flex: 0 0 auto; width: clamp(150px, 14vw, 220px); gap: 8px; }
+.brand .mark {
+  width: 31px; height: 31px; border: 0; border-radius: 0; background: transparent;
+  box-shadow: none; color: #ffd077;
+}
+.brand .mark i { background: #ffc766; border-radius: 2px 2px 0 0; }
+.brand b { color: #fff; font-size: 12px; letter-spacing: .14em; }
+.brand small { color: #c2d8ce; font-size: 7px; letter-spacing: .12em; }
+.city-title {
+  flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; padding-left: 14px;
+  border-left: 1px solid #9ac0b15c;
+}
+.city-title > div { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.city-title strong { color: #fff; font-size: 12px; white-space: nowrap; }
+.city-title span { color: #d5e7d9; font-size: 9px; white-space: nowrap; }
+.metrics {
+  flex: 1 1 auto; display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 0; min-height: 0 !important; height: 32px !important; max-height: 32px; margin: 0; padding: 0; overflow: hidden;
+  border: 0; background: transparent; box-shadow: none;
+}
+.metric {
+  display: grid; flex: 0 1 108px; grid-template-columns: 23px minmax(0, 1fr); grid-template-rows: 1fr;
+  align-items: center; gap: 6px; min-width: 0; min-height: 0 !important; width:auto; height: 31px !important; max-height:31px;
+  margin: 0; padding: 3px 8px !important; overflow: hidden; grid-template-rows:1fr !important;
+  border: 1px solid #8bbbae5e; border-radius: 18px; background: #ffffff12; box-shadow: inset 0 1px 0 #ffffff12;
+}
+.metric:before { display: none; }
+.metric .metric-icon {
+  display: grid; grid-column: 1; grid-row: 1; place-items: center; width: 22px; height: 22px; margin: 0;
+  border-radius: 50%; background: #d9eee4; color: #287c68; font-size: 12px;
+}
+.topbar .metrics .metric > span, .topbar .metrics .metric > small { display: none !important; }
+.metric b {
+  grid-column: 2; grid-row: 1; margin: 0; overflow: hidden; color: #f8fbef; font-size: 11px;
+  font-weight: 800; text-overflow: ellipsis; white-space: nowrap;
+}
+.metric:nth-child(5) { display: none; }
+.network { flex: 0 0 auto; order: 4; gap: 6px; margin-left: 0; color: #e1efe2; font-size: 9px; white-space: nowrap; }
+.network i { width: 7px; height: 7px; }
+.network button { display: none; }
+.header-tools { order: 5; display: flex; flex: 0 0 auto; gap: 5px; }
+.header-tools button {
+  display: grid; place-items: center; width: 31px; height: 31px; padding: 0;
+  border: 1px solid #9bc4b26b; border-radius: 50%; background: #ffffff0d; color: #eff7e9; font-size: 14px;
+}
+.layout {
+  position: relative; display: grid; grid-template-columns: 58px minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; overflow: hidden;
+  background: #315b43;
+}
+.left, .right { display: none !important; }
+.city-report-rail {
+  position: relative; z-index: 10; grid-column: 1 !important; grid-row: 1 !important;
+  display: flex !important; flex-direction: column; align-items: center; gap: 5px;
+  width: 48px !important; min-width: 0; height: auto; min-height: 0; margin: 14px 5px;
+  padding: 42px 4px 7px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+  border: 1px solid #b0d3bd55; border-radius: 28px;
+  background: linear-gradient(180deg, #7ba18b75, #3b684d8a); box-shadow: 0 7px 20px #16372838;
+  scrollbar-width: none;
+}
+.city-report-rail::-webkit-scrollbar { display: none; }
+.city-report-rail::before {
+  content: "›"; position: absolute; top: 8px; left: 50%; display: grid; place-items: center;
+  width: 26px; height: 26px; transform: translateX(-50%); border: 1px solid #d4e8d477;
+  border-radius: 50%; background: #315b4a91; color: #f2f8ed; font: 20px/1 system-ui;
+}
+.city-report-rail button {
+  display: grid; flex: 0 0 35px; place-items: center; width: 35px; min-height: 35px; padding: 1px;
+  overflow: hidden; border: 1px solid #a6d5bd8c; border-radius: 50%;
+  background: #143d45d9; color: #eef7eb; box-shadow: 0 2px 6px #15382d55;
+}
+.city-report-rail button img { display: block; width: 31px; height: 31px; border-radius: 50%; object-fit: cover; }
+.city-report-rail button small { display: none; }
+.city-report-rail button:hover, .city-report-rail button[aria-current="true"] {
+  border-color: #fff0af; background: #165c55; box-shadow: 0 0 0 2px #f8e7a544;
+}
+.world-wrap { grid-column: 2 !important; grid-row: 1 !important; min-width: 0; min-height: 0; overflow: hidden; }
+.world-toolbar {
+  z-index: 5; top: 14px; right: 218px; left: auto; width: max-content; max-width: calc(100% - 250px);
+  min-height: 34px; gap: 7px; padding: 4px 9px; border: 1px solid #e9eddf;
+  border-radius: 22px; background: #fffdf0ed; color: #31574f; box-shadow: 0 5px 16px #183a2d35;
+}
+.world-toolbar .map-city { display: none !important; }
+.world-toolbar .map-legend { gap: 8px; font-size: 8px; }
+.world-toolbar .map-legend .layer-label { display: none; }
+.world-toolbar button { width: 24px; height: 24px; border-radius: 50%; background: #f6f7ed; color: #386c60; font-size: 13px; }
+.world-toolbar .demolish-button { width: auto; padding: 0 8px; border-radius: 12px; }
+.growth-demand {
+  z-index: 6; top: 14px; right: 14px; width: 170px; padding: 8px 10px 7px;
+  border: 1px solid #e9eddf; border-radius: 15px; background: #fffdf0ed;
+  box-shadow: 0 5px 16px #183a2d35;
+}
+.growth-demand-title { margin-bottom: 5px; font-size: 8px; }
+.growth-demand-bars { gap: 7px; }
+.growth-demand-item { grid-template-rows: 13px 34px 10px 11px; gap: 2px; }
+.growth-demand-percent { font-size: 9px; }
+.growth-demand-track { width: 9px; }
+.growth-demand-item b, .growth-demand-item small { font-size: 7px; }
+.map-hint { display: none; }
+.city-alert-counter { right: 14px; bottom: 14px; z-index: 8; padding: 6px 9px; font-size: 8px; }
+.game-dock {
+  z-index: 12; left: 50%; right: auto; bottom: 18px; width: max-content; max-width: calc(100% - 90px);
+  transform: translateX(-50%); gap: 1px; padding: 4px 8px; border-radius: 24px;
+  box-shadow: 0 5px 17px #17362d3b, inset 0 1px 0 #fff;
+}
+.game-dock > button { flex-basis: 48px; gap: 0; }
+.game-dock .dock-icon { width: 29px; height: 29px; }
+.game-dock > button small { font-size: 7px; }
+.game-dock > #themeToggle, .game-dock > #soundToggle { flex-basis: 27px; }
+.game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 23px; height: 23px; }
+.game-dock .dock-divider { height: 25px; margin: 0 2px; }
+.game-dock .time-controls { gap: 1px; }
+.game-dock .time-controls > button { flex-basis: 30px; width: 30px; height: 30px; }
+.game-dock .time-controls > button.speed.selected, .game-dock #pauseBtn[data-paused="true"] { box-shadow: 0 0 0 2px #1cc99f, 0 0 8px #0ac09080; }
+footer { display: none !important; }
+@media (max-width: 1050px) {
+  #app { grid-template-rows: 50px minmax(0, 1fr) !important; }
+  .topbar { gap: 7px; margin: 5px 7px 2px; padding: 0 8px; }
+  .brand { width: auto; }
+  .brand small, .city-pin, .metric:nth-child(4) { display: none; }
+  .city-title { padding-left: 8px; }
+  .city-title > div { display: grid; gap: 0; }
+  .city-title span { max-width: 118px; overflow: hidden; text-overflow: ellipsis; font-size: 7px; }
+  .metrics { justify-content: flex-end; gap: 3px; }
+  .metric { flex-basis: 45px; min-width: 36px; height: 27px !important; gap: 3px; padding: 2px 4px !important; }
+  .metric .metric-icon { width: 18px; height: 18px; font-size: 10px; }
+  .metric b { font-size: 9px; }
+  .network { display: none; }
+  .layout { grid-template-columns: 46px minmax(0, 1fr) !important; }
+  .city-report-rail { width: 40px !important; margin: 10px 3px; padding: 38px 2px 5px; gap: 4px; }
+  .city-report-rail button { flex-basis: 31px; width: 31px; min-height: 31px; }
+  .city-report-rail button img { width: 28px; height: 28px; }
+  .world-toolbar { right: 174px; max-width: calc(100% - 190px); }
+  .growth-demand { right: 8px; width: 158px; }
+  .game-dock { bottom: 10px; max-width: calc(100% - 58px); }
+  .game-dock > button { flex-basis: 42px; }
+}
+@media (max-width: 650px) {
+  #app { grid-template-rows: 48px minmax(0, 1fr) !important; }
+  .topbar { height: 42px; }
+  .brand .mark { width: 24px; height: 24px; }
+  .brand b { font-size: 9px; letter-spacing: .08em; }
+  .city-title { gap: 0; margin-left: 0; }
+  .city-title strong { max-width: 73px; font-size: 9px; }
+  .metrics { gap: 2px; }
+  .metric { grid-template-columns: 17px minmax(0,1fr); flex-basis: 37px; min-width: 30px; height: 24px !important; padding: 2px 3px !important; }
+  .metric .metric-icon { width: 16px; height: 16px; font-size: 8px; }
+  .metric b { font-size: 8px; }
+  .header-tools { gap: 2px; }
+  .header-tools button { width: 25px; height: 25px; font-size: 11px; }
+  .layout { grid-template-columns: 40px minmax(0,1fr) !important; }
+  .city-report-rail { width: 36px !important; margin: 8px 2px; padding: 35px 1px 4px; }
+  .city-report-rail button { flex-basis: 29px; width: 29px; min-height: 29px; }
+  .city-report-rail button img { width: 26px; height: 26px; }
+  .world-toolbar { top: 8px; right: 8px; left: auto; max-width: calc(100% - 18px); padding: 3px 6px; }
+  .world-toolbar .map-legend { display: none; }
+  .growth-demand { top: 48px; right: 8px; width: 145px; }
+  .game-dock { bottom: 7px; max-width: calc(100% - 46px); padding: 3px 5px; }
+  .game-dock > button { flex-basis: 37px; }
+}

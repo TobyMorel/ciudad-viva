@@ -1,7 +1,46 @@
 {
-  "currentVersion": "0.188",
+  "currentVersion": "0.191",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.191",
+      "date": "2026-11-02",
+      "title": "Ajuste del encabezado compacto",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se compactaron las tarjetas de indicadores dentro del encabezado y se eliminaron sus desbordes en distintos tamaños de pantalla."
+      ],
+      "verification": "Sintaxis y JSON revisados.",
+      "pending": []
+    },
+    {
+      "version": "0.190",
+      "date": "2026-11-02",
+      "title": "HUD principal en una sola vista",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se integraron tesorería, población, empleo y servicios en la barra superior, junto con ciudad y fecha.",
+        "Se expandió el mapa, se redujo la barra de informes a una columna de iconos y se movieron las herramientas del mapa a controles flotantes."
+      ],
+      "verification": "Sintaxis y JSON revisados; vista previa de la composición ajustada.",
+      "pending": []
+    },
+    {
+      "version": "0.189",
+      "date": "2026-11-02",
+      "title": "Pantalla principal compacta inspirada en la referencia",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los indicadores municipales pasan al encabezado como chips compactos junto al nombre y la fecha de la ciudad.",
+        "El mapa ocupa el espacio principal; los informes quedan en una columna estrecha de iconos y los controles flotan en los bordes.",
+        "La demanda, la barra inferior y las herramientas del mapa adoptan una escala más compacta."
+      ],
+      "verification": "Sintaxis y registro de versiones revisados; vista previa visual en curso.",
+      "pending": []
+    },
     {
       "version": "0.188",
       "date": "2026-11-02",

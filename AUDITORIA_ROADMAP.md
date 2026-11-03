@@ -746,4 +746,4 @@ Inspiración ambiental: clima cambiante y estaciones de Cities: Skylines II. La 
 
 ## Alfa 0.213 - vegetación más densa y brisa visible (fase 15)
 
-Se elevó la densidad de árboles y arbustos renderizados alrededor de la cámara: de 0,17 a 0,28 en móviles, de 0,23 a 0,34 en vista cercana y de 0,10 a 0,15 al recorrer sectores amplios. Las copas ahora se inclinan con más amplitud y suman un balanceo independiente para que el viento se perciba en pantallas pequeñas. El movimiento continúa con el juego pausado y no cambia la simulación.
+Se elevó la densidad de árboles y arbustos renderizados alrededor de la cámara: de 0,17 a 0,44 en móviles, de 0,23 a 0,48 en vista cercana y de 0,10 a 0,22 al recorrer sectores amplios. Las copas ahora se inclinan hasta unos siete grados y suman un balanceo independiente de mayor amplitud para que el viento se perciba claramente en pantallas pequeñas. El movimiento continúa con el juego pausado y no cambia la simulación.

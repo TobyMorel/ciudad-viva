@@ -9,10 +9,10 @@
       "roadmapPhase": 15,
       "overallProgress": null,
       "changes": [
-        "Aumentó la densidad de árboles y arbustos visibles, también en pantallas pequeñas; el paisaje ahora cubre más suelo sin poblar calles ni agua.",
-        "El viento se nota más: los árboles se balancean con mayor amplitud y las copas tienen un leve movimiento propio, incluso con la simulación pausada."
+        "Aumentó otra vez la densidad de árboles y arbustos visibles en móviles, en la vista cercana y al recorrer sectores amplios; se mantiene fuera de calles y agua.",
+        "El balanceo del tronco es más amplio y las copas se mueven por separado para que el viento se perciba claramente en pantallas chicas, también al pausar."
       ],
-      "verification": "Revisión de los cambios de renderizado; la ejecución local no está disponible en esta sesión."
+      "verification": "Ajuste visual de la densidad y animación en el render 3D; caché del módulo renovada. Versión conservada en 0.213."
     },
     {
       "version": "0.212",

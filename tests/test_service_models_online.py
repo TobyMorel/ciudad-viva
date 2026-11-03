@@ -25,7 +25,7 @@ class ServiceConstruction(unittest.TestCase):
     def test_service_models_have_monotone_costs_and_road_radii(self):
         families=(("clinic","medicalCenter","generalHospital"),("policePost","policeStation","policeHQ"),
             ("firePost","fireStationPlus","fireCommand"),("wasteYard","wasteDepot","wasteComplex"))
-        self.assertEqual(len(server.SERVICE_MODELS),19)
+        self.assertEqual(len(server.SERVICE_MODELS),20)
         self.assertEqual(server.SERVICE_MODELS['tvHeadend']['tvConnections'],180)
         self.assertEqual(server.SERVICE_MODELS['wifiHub']['wifiConnections'],160)
         taxi=server.SERVICE_MODELS["taxiYard"]

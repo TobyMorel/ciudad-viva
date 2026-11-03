@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.203",
+  "currentVersion": "0.204",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.204",
+      "date": "2026-11-03",
+      "title": "Plazas y paseos urbanos",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se incorpora la Plaza barrial al catálogo de Bienestar: se habilita al instante por $2.400 y cuesta $90 por mes.",
+        "Los hogares conectados generan visitas de ocio a plazas cercanas; los grupos recorren las calles a pie o en auto y afectan el tráfico y las emisiones.",
+        "Cada plaza admite hasta 90 visitantes por jornada; el panel de Movilidad muestra visitas y caminantes, y los vecinos se ven en movimiento sobre el mapa."
+      ],
+      "verification": "Compilación Python y comprobaciones sintácticas de los motores Offline, interfaz y escena 3D; regresiones focalizadas de catálogo y habilitación inmediata.",
+      "pending": [
+        "La fase 22 sigue parcial: quedan transporte escolar colectivo, bicicletas, integración multimodal, carga, accidentes y capacidad vial detallada."
+      ]
+    },
     {
       "version": "0.203",
       "date": "2026-11-03",

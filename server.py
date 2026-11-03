@@ -1912,6 +1912,7 @@ SERVICE_MODELS={
  "generalHospital":{"kind":"civic","label":"Hospital general","cost":25500,"days":115,"radius":16,"jobs":40,"care":True,"beds":36,"ambulances":2},
  "socialShelter":{"kind":"civic","label":"Centro de acogida temporal","cost":14800,"days":92,"radius":8,"jobs":12,"beds":30,"socialCare":True,"monthlyCost":1180},
  "elderCare":{"kind":"civic","label":"Centro de acompañamiento domiciliario","cost":12600,"days":78,"radius":10,"jobs":10,"careSlots":36,"elderCare":True,"monthlyCost":1450},
+ "urbanPark":{"kind":"civic","label":"Plaza barrial","cost":2400,"days":0,"radius":8,"jobs":0,"recreation":True,"visitorCapacity":90,"monthlyCost":90},
  "cemetery":{"kind":"civic","label":"Cementerio municipal","cost":11800,"days":78,"radius":14,"jobs":8,"funeralType":"cemetery","graveCapacity":120,"monthlyCost":520},
  "crematorium":{"kind":"civic","label":"Crematorio municipal","cost":16400,"days":92,"radius":16,"jobs":10,"funeralType":"crematorium","annualCapacity":24,"monthlyCost":760},
  "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
@@ -2228,7 +2229,7 @@ def validate_bridge_site(x,y):
         ):
             raise ValueError("El corredor del puente ya está ocupado.")
 
-INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand"}
+INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand","urbanPark"}
 
 def place_instant_public_service(kind,x,y,service_id):
     model=SERVICE_MODELS[service_id]
@@ -2237,13 +2238,16 @@ def place_instant_public_service(kind,x,y,service_id):
     available=max(0,state["money"]-reserved)
     if available<model["cost"]:raise ValueError(f"Fondos disponibles insuficientes. Cuesta $ {model['cost']:,}; disponible $ {available:,}.".replace(",","."))
     state["money"]-=model["cost"]
-    monthly=round(model["cost"]*.065) if kind=="fireStation" else round(320+model["jobs"]*23)
+    monthly=model.get("monthlyCost",round(model["cost"]*.065) if kind=="fireStation" else round(320+model["jobs"]*23))
     building={"x":x,"y":y,"kind":kind,"name":model["label"],"serviceModel":service_id,"level":1,"occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":monthly,"quality":82}
     if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":state["day"]}
     if model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":state["day"]}
     if kind=="fireStation":building.update({"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"]})
     state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
-    ev("Servicio público habilitado",f"{model['label']} abrió al colocarse por $ {model['cost']:,}. Costo operativo $ {monthly:,}/mes; su respuesta requiere personal, redes y acceso vial.".replace(",","."))
+    if model.get("recreation"):
+        ev("Plaza barrial inaugurada",f"{model['label']} abrió por $ {model['cost']:,}; puede recibir hasta {model['visitorCapacity']} visitas por día y cuesta $ {monthly:,}/mes. Los vecinos llegan a pie o en auto por calles conectadas.".replace(",","."))
+    else:
+        ev("Servicio público habilitado",f"{model['label']} abrió al colocarse por $ {model['cost']:,}. Costo operativo $ {monthly:,}/mes; su respuesta requiere personal, redes y acceso vial.".replace(",","."))
     return building
 
 def route_between(start_coord, destination_coord):
@@ -3181,6 +3185,37 @@ def nonwork_service_trips(homes, centers, roads):
         trips.append(trip)
     return trips
 
+def leisure_trips(homes, parks, roads):
+    """Vecinos visitan plazas conectadas; los viajes se animan en el mapa."""
+    grouped={}
+    remaining={(park["x"],park["y"]):int(SERVICE_MODELS["urbanPark"]["visitorCapacity"]) for park in parks}
+    for home in homes:
+        choices=[]
+        for park in parks:
+            route=route_between((home["x"],home["y"]),(park["x"],park["y"]))
+            if not route:continue
+            distance=sum(1 for a,b in zip(route,route[1:]) if tuple(a) in roads and tuple(b) in roads)
+            if distance:choices.append((distance,park,route))
+        if not choices:continue
+        choices.sort(key=lambda row:(row[0],row[1]["x"],row[1]["y"]))
+        distance,park,route=choices[(home["x"]+home["y"]+state.get("day",1))%len(choices)]
+        visitors=min(remaining.get((park["x"],park["y"]),0),min(3,max(1,round(home.get("occupants",0)*.06))))
+        if visitors<=0:continue
+        remaining[(park["x"],park["y"]) ]-=visitors
+        residents=home.get("residents",[]);car_share=sum(bool(p.get("carAccess")) for p in residents)/max(1,len(residents))
+        mode="auto" if distance>3 and car_share>=.35 else "walk"
+        key=(home["x"],home["y"],park["x"],park["y"],mode)
+        trip=grouped.setdefault(key,{"from":[home["x"],home["y"]],"to":[park["x"],park["y"]],"route":route,"mode":mode,"distance":distance,"workers":0,"reason":"ocio","destinationName":park.get("name","Plaza barrial"),"roundTrip":True})
+        trip["workers"]+=visitors
+    trips=[]
+    for trip in grouped.values():
+        vehicles=math.ceil(trip["workers"]/1.4) if trip["mode"]=="auto" else 0
+        factor=traffic_factor(trip["route"]) if vehicles else 1
+        ride=round(trip["distance"]*(2.5 if vehicles else 4)*factor)
+        trip.update({"vehicles":vehicles,"dailyEmissionsKg":round(vehicles*trip["distance"]*.18*2,2),"walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":ride,"parkingMinutes":2 if vehicles else 0,"estimatedMinutes":ride+2,"trafficFactor":round(factor,2),"attendance":1})
+        trips.append(trip)
+    return trips
+
 def commute_model():
     """Asigna residentes identificables a una vacante y una ruta laboral cada uno."""
     global _commute_cache_key,_commute_cache
@@ -3213,7 +3248,7 @@ def commute_model():
         return _commute_cache
     weights={"shop":1.0,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"gasPlant":.85,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
     company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel","factory"))
-    public_sites=[b for b in sites if b["kind"] in ("civic","school","fireStation","depot","landfill","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant")]
+    public_sites=[b for b in sites if b.get("serviceModel")!="urbanPark" and b["kind"] in ("civic","school","fireStation","depot","landfill","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant")]
     public_jobs=max(0,state["jobs"]-company_jobs)
     public_weight=sum(weights[b["kind"]] for b in public_sites)
     caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","hotel","factory") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
@@ -3468,10 +3503,11 @@ def commute_model():
     model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
-    services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("status","operativo") in ("operativo","habilitado")],roads)
-    bus_nonwork=assign_bus_nonwork_passengers(state,shopping+services)
-    metro_service=metro_assign_passengers(state,shopping+services)
-    taxi_service=assign_taxi_passengers(state,shopping+services)
+    services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("serviceModel")!="urbanPark" and b.get("status","operativo") in ("operativo","habilitado")],roads)
+    recreation=leisure_trips(homes,[b for b in state["buildings"] if b.get("serviceModel")=="urbanPark" and b.get("status","operativo") in ("operativo","habilitado")],roads)
+    bus_nonwork=assign_bus_nonwork_passengers(state,shopping+services+recreation)
+    metro_service=metro_assign_passengers(state,shopping+services+recreation)
+    taxi_service=assign_taxi_passengers(state,shopping+services+recreation)
     for route in taxi_service['activeRoutes']:
         for aa,bb in zip(route,route[1:]):
             edge=tuple(sorted((tuple(aa),tuple(bb))))
@@ -3484,7 +3520,7 @@ def commute_model():
     model.update(metro_service)
     model['busNonworkPassengers']+=metro_service['intermodalTransfers']
     model['busNonworkFareRevenue']=round(sum(l.get('nonworkFareToday',0) for l in state.get('busRoutes',[])),2)
-    for trip in shopping+services:
+    for trip in shopping+services+recreation:
         commutes.append(trip)
         model["dailyEmissionsKg"]+=trip["dailyEmissionsKg"]
         model["vehicles"]+=trip["vehicles"]
@@ -3499,6 +3535,11 @@ def commute_model():
     model["serviceVisitors"]=sum(t["workers"] for t in services)
     model["serviceVehicles"]=sum(t["vehicles"]*2 for t in services)
     model["serviceEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in services),2)
+    model["leisureTrips"]=len(recreation)
+    model["leisureVisitors"]=sum(t["workers"] for t in recreation)
+    model["leisureVehicles"]=sum(t["vehicles"]*2 for t in recreation)
+    model["leisureWalkers"]=sum(t["workers"] for t in recreation if t["mode"]=="walk")
+    model["leisureEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in recreation),2)
     model["dailyTrips"] = sum(t["workers"] for t in commutes)
     model["routes"]=commutes
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]

@@ -10,7 +10,7 @@ try{
  await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline',{timeout:30000});await page.locator('.game-dock').waitFor({timeout:30000});
  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
  await page.evaluate(()=>{const key='ciudad-viva-offline-v1',city=JSON.parse(localStorage.getItem(key));city.money=1000000;city.paused=true;localStorage.setItem(key,JSON.stringify(city))});
- await page.reload({waitUntil:'domcontentloaded'});await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('money')?.textContent.includes('1.000.000'),{timeout:30000});await page.locator('.game-dock').waitFor({timeout:30000});
+ await page.reload({waitUntil:'commit',timeout:60000});await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('money')?.textContent.includes('1.000.000'),{timeout:30000});await page.locator('.game-dock').waitFor({timeout:30000});
  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
  const canvas=await page.locator('#city').boundingBox();
  async function centerTile(x,y){

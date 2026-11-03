@@ -210,7 +210,7 @@ footer { display: none !important; }
 .metric { flex-basis: 125px; grid-template-columns: 29px minmax(0, 1fr); height: 40px !important; max-height: 40px; gap: 8px; padding: 4px 10px !important; }
 .metric .metric-icon { width: 27px; height: 27px; font-size: 15px; }
 .topbar .metrics .metric > span { top: 3px; left: 47px; width: auto; height: auto; overflow: hidden; opacity: .82; color: #e8f3e9; font-size: 8px !important; line-height: 9px; white-space: nowrap; }
-.topbar .metrics .metric > small { display: none !important; }
+.topbar .metrics .metric > small { display: block !important; position: absolute; left: 1px; bottom: -1px; width: 1px; height: 1px; overflow: hidden; opacity: 0; font-size: 1px !important; line-height: 1px; }
 .metric b { align-self: end; margin-bottom: 2px; font-size: 14px; }
 .network { font-size: 11px; }
 .header-tools { gap: 7px; }
@@ -318,4 +318,24 @@ footer { display: none !important; }
   .game-dock > #themeToggle, .game-dock > #soundToggle { flex-basis: 31px; min-width: 31px; }
   .game-dock > #themeToggle .dock-icon, .game-dock > #soundToggle .dock-icon { width: 24px; height: 24px; }
   .game-dock .time-controls > button { flex-basis: 34px; width: 34px; height: 34px; font-size: 12px; }
+}
+@media (max-width: 390px) {
+  .topbar { gap: 3px; margin-inline: 3px; padding-inline: 4px; }
+  .brand { flex: 0 0 auto; }
+  .brand b { font-size: 9px; }
+  .city-title strong { max-width: 74px; font-size: 10px; }
+  .city-title span { display: none; }
+  .metrics { flex: 1 1 84px; min-width: 84px; }
+  .metric { flex: 1 1 84px; min-width: 84px; }
+  .metric:nth-child(n+2) { display: none; }
+  .header-tools { gap: 2px; }
+  .header-tools #headerSave { display: none; }
+  .header-tools button { width: 23px; height: 23px; }
+}
+@media (max-width: 350px) {
+  .brand { display: none; }
+  .city-title { padding-left: 3px; }
+  .city-title strong { max-width: 76px; }
+  .metrics { min-width: 98px; }
+  .metric { flex-basis: 98px; min-width: 98px; }
 }

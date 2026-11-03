@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.194",
+  "currentVersion": "0.195",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.195",
+      "date": "2026-11-02",
+      "title": "Corrección de errores y legibilidad adaptable",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se amplió la tarjeta de tesorería en móviles pequeños para evitar que el dinero se corte.",
+        "Se alinearon las referencias de recuperación offline con la versión publicada.",
+        "Se mantiene el menú agrandado con controles accesibles en pantallas angostas."
+      ],
+      "verification": "Publicación Pages completada; correcciones incorporadas tras revisar CI.",
+      "pending": []
+    },
     {
       "version": "0.194",
       "date": "2026-11-02",

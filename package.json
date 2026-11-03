@@ -13,6 +13,7 @@
   "private": true,
   "scripts": {
     "test:land-ui": "node tests/test_land_expansion_ui.mjs",
-    "test:offline-land": "node --test tests/test_new_settlement_offline.mjs"
+    "test:offline-land": "node --test tests/test_new_settlement_offline.mjs",
+    "test:distant-land-ui": "node tests/test_distant_land_ui.mjs"
   }
 }

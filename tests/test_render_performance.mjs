@@ -20,9 +20,10 @@ try{
   assert.ok(diagnostics.vegetationTrees>0,`${viewport.width}px: the map should have distant trees`);
   assert.ok(diagnostics.vegetationBatches>=2&&diagnostics.vegetationBatches<=4,`${viewport.width}px: distant vegetation uses ${diagnostics.vegetationBatches} batches`);
   assert.ok(diagnostics.pixelRatio<=viewport.maxRatio,`${viewport.width}px: pixel ratio exceeded its device cap`);
+  assert.equal(diagnostics.shadowMapEnabled,false,`${viewport.width}px: distant shadows should be disabled`);
   assert.ok(diagnostics.drawCalls>0&&diagnostics.triangles>0,`${viewport.width}px: no 3D scene was rendered`);
   assert.deepEqual(errors,[],`${viewport.width}px: render errors ${errors.join('; ')}`);
-  console.log('Render profile',JSON.stringify({width:viewport.width,dpr:2,pixelRatio:diagnostics.pixelRatio,fps:diagnostics.renderFps,drawCalls:diagnostics.drawCalls,triangles:diagnostics.triangles,trees:diagnostics.vegetationTrees,vegetationBatches:diagnostics.vegetationBatches}));
+  console.log('Render profile',JSON.stringify({width:viewport.width,dpr:2,pixelRatio:diagnostics.pixelRatio,softwareFps:diagnostics.renderFps,dynamicObjects:diagnostics.dynamicObjects,shadowMapEnabled:diagnostics.shadowMapEnabled,drawCalls:diagnostics.drawCalls,triangles:diagnostics.triangles,trees:diagnostics.vegetationTrees,vegetationBatches:diagnostics.vegetationBatches}));
   await page.close();
  }
-}finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
+}finally{await browser.close();server.kill('SIGTERM')}

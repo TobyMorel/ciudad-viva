@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.231
+# Ciudad Viva · Alfa 0.232
 
 **Expansión de la ciudad:** los sectores vecinos se pueden desbloquear aunque una partida antigua no conserve la lista auxiliar de fronteras. La prueba crea una clínica remota y verifica que calles, terreno y edificio sobrevivan al guardado y recarga. Offline y LAN siguen validando el desbloqueo en el servidor.
 
@@ -82,7 +82,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.231](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.231/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.232](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.232/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

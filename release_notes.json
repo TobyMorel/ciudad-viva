@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.231",
+  "currentVersion": "0.232",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.232",
+      "date": "2026-11-03",
+      "title": "Construcción remota sin interrupciones",
+      "roadmapPhase": 1,
+      "overallProgress": null,
+      "changes": [
+        "La UI calcula la frontera desde los sectores adquiridos y abre la ficha antes de redibujar el mapa.",
+        "El mezclador sonoro define su helper clamp; un error de audio ya no interrumpe los clics de construcción.",
+        "La prueba visual desbloquea un sector vecino, construye nueve tramos y una clínica junto a la red, y verifica el guardado al recargar.",
+        "El perfil de expansión simula cinco sectores, 40 calles y una clínica remota durante 360 cierres mensuales."
+      ]
+    },
     {
       "version": "0.231",
       "date": "2026-11-03",
@@ -10,7 +23,7 @@
       "overallProgress": null,
       "changes": [
         "La ficha de terreno habilita el desbloqueo a partir de los sectores municipales vecinos aunque falte la lista derivada de fronteras; el servidor conserva la validación de compra.",
-        "La regresión de interfaz desbloquea cinco sectores, construye 40 calles y una clínica en la periferia, guarda la ciudad y comprueba que siga allí tras recargar.",
+        "La regresión de interfaz desbloquea un sector vecino, construye nueve tramos conectados y una clínica periférica, guarda la ciudad y comprueba que siga allí tras recargar.",
         "El estrés de 30 años ahora incluye una ciudad nueva expandida con 40 tramos y una clínica remota, además de cuatro perfiles económicos."
       ]
     },

@@ -1,5 +1,5 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.231';
+import {createWorld} from './world3d.js?v=0.232';
 import {createOfflineWorkerAdapter} from './offline_client.js?v=0.227';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -91,6 +91,7 @@ function parkBirdNote(frequency,delay=0){
  if(!audioContext||!soundEnabled||document.hidden)return;
  try{const start=audioContext.currentTime+delay,osc=audioContext.createOscillator(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain();osc.type='sine';osc.frequency.setValueAtTime(frequency,start);osc.frequency.exponentialRampToValueAtTime(frequency*1.22,start+.16);osc.frequency.exponentialRampToValueAtTime(frequency*.94,start+.34);filter.type='lowpass';filter.frequency.value=2800;gain.gain.setValueAtTime(.0001,start);gain.gain.linearRampToValueAtTime(.0035,start+.025);gain.gain.exponentialRampToValueAtTime(.0001,start+.38);osc.connect(filter).connect(gain).connect(audioContext.destination);osc.start(start);osc.stop(start+.4)}catch{}
 }
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,Number(value)||0));
 function updateAmbientZones(state){
  if(!audioContext)return;
  ensureZoneBed();if(!zoneBedGain)return;

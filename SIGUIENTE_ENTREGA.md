@@ -1,4 +1,4 @@
-## Después de Alfa 0.231 · Respuesta con varias bases
+## Después de Alfa 0.232 · Respuesta con varias bases
 
 La interfaz comprueba que se pueda desbloquear un sector vecino, construir una clínica junto a una calle y conservarla tras recargar. El perfil de expansión mantiene cinco sectores, 40 tramos de vía y la clínica periférica durante 360 cierres mensuales, junto a cuatro perfiles económicos de referencia.
 

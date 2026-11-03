@@ -1,17 +1,27 @@
-from essential_services import evaluate_essential_services,advance_essential_service_day
 #!/usr/bin/env python3
 """Servidor LAN local de Ciudad Viva. Solo biblioteca estándar de Python."""
-import heapq, json, math, os, socket, sys, threading, time, uuid, webbrowser
+import heapq, json, math, mimetypes, os, socket, sys, threading, time, uuid, webbrowser
+from urllib.parse import parse_qs, unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from taxi_passengers import assign_taxi_passengers
 from bus_nonwork import assign_bus_nonwork_passengers, collect_bus_nonwork_fares
 from growth_demand import growth_demand
 from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro_day,metro_assign_passengers,settle_metro_month
+from essential_services import evaluate_essential_services,advance_essential_service_day
 
-ROOT = Path(__file__).resolve().parent
-SAVE = ROOT / "ciudad_guardada.json"
-LOCK = threading.RLock()
+ROOT = Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent)).resolve()
+if getattr(sys,"frozen",False):
+    data_home=Path(os.environ.get("LOCALAPPDATA") or (Path.home()/".local"/"share"))
+    SAVE_ROOT=Path(os.environ.get("CIUDAD_VIVA_DATA_DIR") or (data_home/"Ciudad Viva"))
+else:
+    SAVE_ROOT=ROOT
+SAVE_ROOT.mkdir(parents=True,exist_ok=True)
+SAVE=SAVE_ROOT/"ciudad_guardada.json"
+LOCK=threading.RLock()
+STATE_CONDITION=threading.Condition(LOCK)
+_PUBLIC_STATE_CACHE_REVISION=-1
+_PUBLIC_STATE_CACHE_VIEW=None
 ROOM_OPEN = False
 STATE_REVISION = 0
 ROOM_CODE = uuid.uuid4().hex[:6].upper()
@@ -1785,12 +1795,17 @@ state = new_settlement_state()
 def local_ips():
     ips=set()
     try:
-        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET): ips.add(info[4][0])
-        s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        try: s.connect(("192.0.2.1",80)); ips.add(s.getsockname()[0])
-        finally: s.close()
-    except OSError: pass
-    return sorted(ip for ip in ips if not ip.startswith("127."))
+        for info in socket.getaddrinfo(socket.gethostname(),None,socket.AF_INET):ips.add(info[4][0])
+    except OSError:pass
+    # Hamachi reserves 25.0.0.0/8; probing a UDP route reveals its virtual adapter.
+    for target in ("192.0.2.1","25.0.0.1"):
+        probe=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+        try:
+            probe.connect((target,80));ips.add(probe.getsockname()[0])
+        except OSError:pass
+        finally:probe.close()
+    usable=[ip for ip in ips if not ip.startswith("127.")]
+    return sorted(usable,key=lambda ip:(0 if ip.startswith("25.") else 1,tuple(int(part) for part in ip.split("."))))
 
 def ev(title, detail):
     state["events"].insert(0,{"day":state["day"],"title":title,"detail":detail})
@@ -6073,7 +6088,7 @@ def demolish_at(x,y):
         return
     raise ValueError("No hay ninguna construcción para demoler en esa parcela.")
 
-def public_state(player_id=None):
+def _build_public_state(player_id=None):
     state.setdefault("portMonthlyIncome",0);state.setdefault("lastPortMonthlyIncome",0)
     ensure_land_claims()
     state.setdefault("trafficSignalOverrides",{})
@@ -6176,6 +6191,24 @@ def public_state(player_id=None):
     view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
+def public_state(player_id=None):
+    """Reuse one authoritative snapshot for all clients at the same revision."""
+    global _PUBLIC_STATE_CACHE_REVISION,_PUBLIC_STATE_CACHE_VIEW
+    if _PUBLIC_STATE_CACHE_REVISION!=STATE_REVISION or _PUBLIC_STATE_CACHE_VIEW is None:
+        _PUBLIC_STATE_CACHE_VIEW=_build_public_state(None)
+        _PUBLIC_STATE_CACHE_REVISION=STATE_REVISION
+    view=dict(_PUBLIC_STATE_CACHE_VIEW)
+    now=time.time();cutoff=now-25
+    view["online"]=sum(1 for last in state.get("players",{}).values() if last>cutoff)
+    view["stateRevision"]=STATE_REVISION
+    view["timeOfDayMinutes"]=state.get("timeOfDayMinutes",360)
+    view["day"]=state.get("day",1)
+    view["speed"]=state.get("speed",1)
+    view["paused"]=state.get("paused",False)
+    view["municipalTeam"]=municipal_team_report(player_id)
+    view["isHost"]=player_id is not None and player_id==state.get("host")
+    return view
+
 def discovery_loop():
     """Anuncia y descubre salas en la subred; no usa servicios externos."""
     sock=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
@@ -6188,8 +6221,11 @@ def discovery_loop():
             now=time.time()
             if ROOM_OPEN and now-last>=3:
                 packet=json.dumps({"tag":"CiudadVivaLAN","name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"port":PORT}).encode()
-                try:sock.sendto(packet,("255.255.255.255",DISCOVERY_PORT))
-                except OSError:pass
+                destinations=["255.255.255.255"]
+                if any(ip.startswith("25.") for ip in local_ips()):destinations.append("25.255.255.255")
+                for destination in destinations:
+                    try:sock.sendto(packet,(destination,DISCOVERY_PORT))
+                    except OSError:pass
                 last=now
             try:data,address=sock.recvfrom(512)
             except socket.timeout:continue
@@ -6200,6 +6236,19 @@ def discovery_loop():
             with LOCK:DISCOVERED_ROOMS[(address[0],room.get("port"))]={"name":str(room.get("name","Ciudad Viva"))[:40],"code":str(room.get("code",""))[:8],"address":f"http://{address[0]}:{room.get('port')}/","seen":now}
     finally:sock.close()
 
+STATIC_ROOT_FILES={"index.html","offline_seed.json","release_notes.json"}
+STATIC_ROOT_EXTENSIONS={".css",".js",".mjs",".svg"}
+STATIC_ASSET_DIRECTORIES={"assets","vendor"}
+STATIC_ASSET_EXTENSIONS={".css",".js",".mjs",".svg",".png",".jpg",".jpeg",".webp",".gif",".ico",".woff",".woff2",".ttf",".otf",".mp3",".ogg",".wav",".json",".bin",".glb",".gltf",".wasm",".webmanifest"}
+
+def is_public_static_path(rel):
+    candidate=Path(rel)
+    if candidate.is_absolute() or any(part in (".","..") for part in candidate.parts):return False
+    parts=candidate.parts
+    if len(parts)==1:
+        return candidate.name in STATIC_ROOT_FILES or candidate.suffix.lower() in STATIC_ROOT_EXTENSIONS
+    return parts[0] in STATIC_ASSET_DIRECTORIES and candidate.suffix.lower() in STATIC_ASSET_EXTENSIONS
+
 class Handler(BaseHTTPRequestHandler):
     server_version="CiudadViva/0.88"
     def log_message(self,*args): pass
@@ -6208,7 +6257,27 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status); self.send_header("Content-Type",typ); self.send_header("Content-Length",str(len(data))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(data)
     def do_OPTIONS(self): self._send(405,{"error":"Método no permitido"})
     def do_GET(self):
-        path=self.path.split("?",1)[0]
+        path=unquote(self.path.split("?",1)[0])
+        if path=="/api/sync":
+            pid=self.headers.get("X-Player-Id","jugador-local")
+            try:requested=int(parse_qs(self.path.partition("?")[2]).get("revision",["0"])[0])
+            except (TypeError,ValueError):requested=0
+            with STATE_CONDITION:
+                if not ROOM_OPEN:self._send(409,{"error":"La sala todavía no fue creada por el anfitrión."});return
+                deadline=time.monotonic()+1.0
+                while ROOM_OPEN and STATE_REVISION==requested:
+                    remaining=deadline-time.monotonic()
+                    if remaining<=0:break
+                    STATE_CONDITION.wait(timeout=remaining)
+                if not ROOM_OPEN:self._send(409,{"error":"La sala fue cerrada por el anfitrión."});return
+                now=time.time();state.setdefault("players",{})[pid]=now
+                for player,last_seen in list(state["players"].items()):
+                    if last_seen<now-25:del state["players"][player]
+                if STATE_REVISION!=requested:
+                    payload=public_state(pid)
+                else:
+                    payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360)}
+            self._send(200,payload);return
         if path=="/api/state":
             pid=self.headers.get("X-Player-Id","jugador-local")
             with LOCK:
@@ -6225,12 +6294,13 @@ class Handler(BaseHTTPRequestHandler):
                 rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
             self._send(200,{"rooms":rooms});return
         rel="index.html" if path=="/" else path.lstrip("/")
-        if rel not in ("index.html","style.css","design.css","reference.css","reference-ui.js","game.js","offline.js","offline_client.js","offline_worker.js","offline_seed.json","release_notes.json","world3d.js","favicon.svg","vendor/three.module.js","vendor/three.core.js"):
+        if not is_public_static_path(rel):
             self._send(404,{"error":"No encontrado"}); return
         file=(ROOT/rel).resolve()
         if ROOT not in file.parents and file!=ROOT: self._send(403,{"error":"Ruta inválida"}); return
         if not file.is_file(): self._send(404,{"error":"No encontrado"}); return
-        typ="text/html; charset=utf-8" if file.suffix==".html" else "text/css; charset=utf-8" if file.suffix==".css" else "application/javascript; charset=utf-8" if file.suffix==".js" else "application/json; charset=utf-8" if file.suffix==".json" else "image/svg+xml" if file.suffix==".svg" else "application/octet-stream"
+        suffix=file.suffix.lower()
+        typ="text/html; charset=utf-8" if suffix==".html" else "text/css; charset=utf-8" if suffix==".css" else "application/javascript; charset=utf-8" if suffix in (".js",".mjs") else "application/json; charset=utf-8" if suffix==".json" else "image/svg+xml; charset=utf-8" if suffix==".svg" else mimetypes.guess_type(str(file))[0] or "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
         global state,STATE_REVISION
@@ -6239,7 +6309,8 @@ class Handler(BaseHTTPRequestHandler):
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
         with LOCK:
-            if path in ("/api/action","/api/load"): STATE_REVISION+=1
+            if path in ("/api/action","/api/load"):
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
             global ROOM_OPEN
             if path=="/api/room/create":
                 if self.client_address[0] not in ("127.0.0.1","::1"):
@@ -6247,7 +6318,7 @@ class Handler(BaseHTTPRequestHandler):
                 if ROOM_OPEN and state.get("host")!=pid:
                     self._send(409,{"error":"Ya hay una sala creada en este equipo."});return
                 ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
-                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{local_ips()[0]}:{PORT}/"});return
+                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{(local_ips() or ['127.0.0.1'])[0]}:{PORT}/"});return
             if path=="/api/room/join":
                 if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
                 if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
@@ -6895,25 +6966,32 @@ def simulation_loop():
             # La hora guardada es autoritativa; cada jornada nace al cruzar medianoche.
             if run_day:
                 tick_one_day()
-                STATE_REVISION+=1
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
 
-def main():
+def start_server(open_browser=False,background=False):
     global state
+    SAVE.parent.mkdir(parents=True,exist_ok=True)
     if SAVE.exists():
         try:
-            loaded=json.loads(SAVE.read_text(encoding="utf-8")); state={**initial_state(),**loaded,"players":{}}
-        except Exception: pass
+            loaded=json.loads(SAVE.read_text(encoding="utf-8"));state={**initial_state(),**loaded,"players":{}}
+        except Exception:pass
     srv=ThreadingHTTPServer(("0.0.0.0",PORT),Handler)
-    threading.Thread(target=simulation_loop,daemon=True).start()
-    threading.Thread(target=discovery_loop,daemon=True).start()
+    srv.daemon_threads=True
+    threading.Thread(target=simulation_loop,daemon=True,name="CiudadVivaSimulation").start()
+    threading.Thread(target=discovery_loop,daemon=True,name="CiudadVivaDiscovery").start()
     url=f"http://127.0.0.1:{PORT}/"
-    if "--no-browser" not in sys.argv: threading.Timer(.8,lambda:webbrowser.open(url)).start()
+    if open_browser:threading.Timer(.8,lambda:webbrowser.open(url)).start()
     print("Ciudad Viva está lista:",url)
     print("Direcciones LAN:")
-    for ip in local_ips(): print(f"  http://{ip}:{PORT}/")
+    for ip in local_ips():print(f"  http://{ip}:{PORT}/")
+    if background:threading.Thread(target=srv.serve_forever,daemon=True,name="CiudadVivaHTTP").start()
+    return srv
+
+def main():
+    srv=start_server(open_browser="--no-browser" not in sys.argv)
     print("Dejá esta ventana abierta mientras se juega. Ctrl+C para cerrar.")
-    try: srv.serve_forever()
-    except KeyboardInterrupt: pass
-    finally: srv.server_close()
+    try:srv.serve_forever()
+    except KeyboardInterrupt:pass
+    finally:srv.server_close()
 
 if __name__=="__main__": main()

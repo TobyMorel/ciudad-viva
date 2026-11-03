@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.224",
+  "currentVersion": "0.225",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.225",
+      "date": "2026-11-03",
+      "title": "Partidas LAN sincronizadas y anfitrión integrado",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "La sincronización online espera cambios de estado en vez de pedir el informe completo dos veces por segundo; las acciones de la sala despiertan a los demás clientes y comparten un informe cacheado por revisión.",
+        "El servidor local publica todos los módulos, estilos e imágenes que necesita la partida y prioriza la dirección Hamachi 25.x al compartir invitaciones.",
+        "La lista de salas también anuncia por la red virtual Hamachi, y los enlaces copiados abren la sala directamente con su código.",
+        "Se incorpora una app de Windows en una sola ventana: el servidor se inicia al abrir la ciudad y se cierra al salir."
+      ],
+      "verification": "La validación automática cubre los recursos servidos localmente y cuatro clientes concurrentes que sincronizan acciones por LAN. El paquete de Windows se genera y adjunta a esta versión cuando completa su flujo de compilación."
+    },
     {
       "version": "0.224",
       "date": "2026-11-03",

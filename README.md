@@ -74,12 +74,11 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-Requiere Python 3.9 o posterior y un navegador moderno con WebGL.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.225](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.225/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
+- **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 
-- Windows: doble clic en **Iniciar Ciudad Viva.bat**.
-- Linux/macOS: abrir **Iniciar Ciudad Viva.sh** desde el explorador; si no arranca, usar su opción “Ejecutar”.
-
-El iniciador abre el servidor local y el navegador. El servidor se necesita para compartir, guardar y cargar una ciudad LAN; Offline funciona desde `index.html` con almacenamiento del navegador. Para invitar, el anfitrión deja el iniciador abierto y comparte la dirección LAN indicada en la ventana Ciudad. El firewall y la red Wi-Fi deben permitir conexiones entre dispositivos.
+Para jugar por Hamachi, todos se conectan a la misma red virtual. El anfitrión crea la sala y comparte el enlace que copia el juego; el servidor prioriza su IP Hamachi `25.x.x.x`. Los invitados abren el enlace en el navegador. Hay que dejar la app del anfitrión abierta durante la partida y permitir conexiones privadas en el firewall. El juego sincroniza acciones por cambios de estado para que las cuatro personas vean cada jugada sin descargar el estado completo continuamente. GitHub Pages sigue siendo estático: no puede abrir un puerto LAN desde el navegador, por eso el anfitrión usa la app integrada.
 
 ## Cambios y próximas entregas
 

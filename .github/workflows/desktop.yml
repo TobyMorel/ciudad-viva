@@ -1,0 +1,48 @@
+name: App anfitrión Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server.py'
+      - 'desktop_app.py'
+      - 'desktop_app.spec'
+      - 'requirements-desktop.txt'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.json'
+      - 'assets/**'
+      - 'vendor/**'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-host-app:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar empaquetador y ventana integrada
+        run: pip install -r requirements-desktop.txt
+      - name: Empaquetar Ciudad Viva
+        run: pyinstaller --noconfirm --clean desktop_app.spec
+      - id: release_version
+        name: Leer versión de la partida
+        shell: pwsh
+        run: |
+          $version = python -c "import json; print(json.load(open('release_notes.json', encoding='utf-8'))['currentVersion'])"
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Adjuntar ejecutable al historial de versiones
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.release_version.outputs.version }}
+          name: Ciudad Viva Alfa ${{ steps.release_version.outputs.version }} · anfitrión LAN
+          body: |
+            Aplicación Windows con el servidor LAN integrado.
+            Abrila para iniciar la ciudad y crear una sala; el juego se cierra junto con el servidor al cerrar la ventana.
+          files: dist/CiudadViva.exe
+          prerelease: true
+          fail_on_unmatched_files: true

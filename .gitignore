@@ -9,3 +9,5 @@ Captura_Alfa_0_*.png
 
 node_modules/
 ui-captures/
+build/
+dist/

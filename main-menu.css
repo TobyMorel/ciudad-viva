@@ -54,7 +54,13 @@
   display: grid; grid-column: 1; grid-row: 1; place-items: center; width: 22px; height: 22px; margin: 0;
   border-radius: 50%; background: #d9eee4; color: #287c68; font-size: 12px;
 }
-.topbar .metrics .metric > span, .topbar .metrics .metric > small { display: none !important; }
+.topbar .metrics .metric { position: relative; }
+.topbar .metrics .metric > span, .topbar .metrics .metric > small {
+  position: absolute; left: 1px; display: block !important; width: 1px; height: 1px;
+  overflow: hidden; opacity: 0; font-size: 1px !important; line-height: 1px;
+}
+.topbar .metrics .metric > span { top: 1px; }
+.topbar .metrics .metric > small { bottom: 1px; }
 .metric b {
   grid-column: 2; grid-row: 1; margin: 0; overflow: hidden; color: #f8fbef; font-size: 11px;
   font-weight: 800; text-overflow: ellipsis; white-space: nowrap;

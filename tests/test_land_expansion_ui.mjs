@@ -10,6 +10,7 @@ try{
   page.on('dialog',dialog=>dialog.accept());
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.locator('#offlineMode').evaluate(el=>el.click());
+  await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline',{timeout:30000});
   await page.locator('.game-dock').waitFor({timeout:30000});
   await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').click();
   await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000')&&document.getElementById('population')?.textContent.trim()==='0');

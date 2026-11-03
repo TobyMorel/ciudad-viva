@@ -3544,7 +3544,12 @@ def commute_model():
     model["leisureTrips"]=len(recreation)
     model["leisureVisitors"]=sum(t["workers"] for t in recreation)
     model["leisureVehicles"]=sum(t["vehicles"]*2 for t in recreation)
-    model["leisureWalkers"]=sum(t["workers"] for t in recreation if t["mode"]=="walk")
+    model["leisureWalkers"]=sum(max(0,t["workers"]-t.get("busRiders",0)-t.get("metroRiders",0)-t.get("taxiRiders",0)) for t in recreation if t["mode"]=="walk")
+    model["leisureBusPassengers"]=sum(t.get("busRiders",0) for t in recreation)
+    model["leisureMetroPassengers"]=sum(max(0,t.get("metroRiders",0)-t.get("railRiders",0)) for t in recreation)
+    model["leisureRailPassengers"]=sum(t.get("railRiders",0) for t in recreation)
+    model["leisureTaxiPassengers"]=sum(t.get("taxiRiders",0) for t in recreation)
+    model["leisureTransitPassengers"]=model["leisureBusPassengers"]+model["leisureMetroPassengers"]+model["leisureRailPassengers"]+model["leisureTaxiPassengers"]
     model["leisureEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in recreation),2)
     model["dailyTrips"] = sum(t["workers"] for t in commutes)
     model["routes"]=commutes
@@ -6015,7 +6020,7 @@ def public_state(player_id=None):
     view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"eventVisitors":state.get("eventVisitorsThisMonth",0),"eventRetailSpend":state.get("eventRetailSpendThisMonth",0),"eventCleanupSpend":state.get("eventCleanupSpendThisMonth",0),"events":state.get("tourismEvents",[])[-6:],"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
     view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","bicycleCommuters","bicyclePassengers","returnBicycleCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolWalkers","schoolBicycles","schoolVehicles","schoolEmissionsKg","dailyTrips") if k in commute}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","bicycleCommuters","bicyclePassengers","returnBicycleCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolWalkers","schoolBicycles","schoolVehicles","schoolEmissionsKg","leisureTrips","leisureVisitors","leisureVehicles","leisureWalkers","leisureBusPassengers","leisureMetroPassengers","leisureRailPassengers","leisureTaxiPassengers","leisureTransitPassengers","leisureEmissionsKg","dailyTrips") if k in commute}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["metroRiders"]=commute.get("metroRiders",0)

@@ -1,4 +1,4 @@
-// Viajes de compras y servicios en colectivos existentes, sin crear población.
+// Viajes de compras, servicios y ocio en colectivos existentes, sin crear población.
 const WINDOW='midday';
 const distance=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]);
 function stops(line){const path=line.route||[];return(line.stops||[]).flatMap(stop=>{const at=stop?.at;if(!Array.isArray(at)||at.length!==2)return[];let i=stop.routeIndex;if(!Number.isInteger(i)||i<0||i>=path.length||distance(path[i],at)!==0)i=path.findIndex(p=>distance(p,at)===0);return i<0?[]:[{at,i}]})}
@@ -25,7 +25,7 @@ export function assignBusNonworkPassengers(state,trips){
  let total=0,transfers=0;
  for(const trip of trips){
   delete trip.busRiders;delete trip.busJourneys;
-  if(!['compras','servicios'].includes(trip.reason)||!['auto','walk'].includes(trip.mode)||(trip.workers||0)<=0)continue;
+  if(!['compras','servicios','ocio'].includes(trip.reason)||!['auto','walk'].includes(trip.mode)||(trip.workers||0)<=0)continue;
   let remaining=Math.trunc(trip.workers),comparison=trip.mode==='walk'?2+(trip.distance||0)*4:7+(trip.distance||0)*2.5*1.25;
   for(const option of offers(lines,trip)){
    if(remaining<=0)break;if(option.minutes>comparison*(option.legs.length===2?1.35:1.45))continue;

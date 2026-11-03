@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.207",
+  "currentVersion": "0.208",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.208",
+      "date": "2026-11-03",
+      "title": "Los viajes de ocio tambi\u00e9n conectan con el transporte p\u00fablico",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las visitas a las plazas pueden combinar viajes a pie, colectivo, subte, tren y taxi cuando la ruta, las paradas, el horario y la capacidad lo permiten.",
+        "La movilidad separa visitantes que caminan de quienes usan transporte p\u00fablico; los autos y sus emisiones bajan seg\u00fan los pasajeros que toman otros modos.",
+        "El mapa identifica a los viajeros que siguen a pie y muestra cu\u00e1ntos pasajeros de ocio atiende cada l\u00ednea municipal."
+      ],
+      "verification": "Comprobaci\u00f3n sint\u00e1ctica de los motores Online/Offline y de los m\u00f3dulos de colectivo, subte, tren y taxi."
+    },
     {
       "version": "0.207",
       "date": "2026-11-03",

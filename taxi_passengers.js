@@ -13,7 +13,7 @@ export function assignTaxiPassengers(state,trips){
       activeVehicles++;vehicleEmissionsKg+=(path.length-1)*.18*2;activeRoutes.push(path);
       for(const trip of trips){
         if(riders>=TAXI_DAILY_CAPACITY)break;
-        if(!['compras','servicios'].includes(trip.reason)||trip.mode!=='auto'||(trip.distance||0)<4||(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)<=(trip.taxiRiders||0))continue;
+        if(!['compras','servicios','ocio'].includes(trip.reason)||trip.mode!=='auto'||(trip.distance||0)<4||(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)<=(trip.taxiRiders||0))continue;
         const origin=trip.from||[],destination=trip.to||[];
         const matched=stops.some((a,i)=>Math.abs(a[0]-origin[0])+Math.abs(a[1]-origin[1])<=1&&stops.some((b,j)=>i!==j&&Math.abs(b[0]-destination[0])+Math.abs(b[1]-destination[1])<=1));
         if(!matched)continue;

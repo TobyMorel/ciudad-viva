@@ -125,7 +125,7 @@ export function metroAssignPassengers(s,trips){
  const intermodal=assignRailBusTransfers(s,trips,day);
  let total=intermodal.metroRiders+intermodal.railRiders,railTotal=intermodal.railRiders;
  for(const trip of trips){
-  if(!['compras','servicios'].includes(trip.reason)||!['auto','walk'].includes(trip.mode)||!Array.isArray(trip.from)||!Array.isArray(trip.to))continue;
+  if(!['compras','servicios','ocio'].includes(trip.reason)||!['auto','walk'].includes(trip.mode)||!Array.isArray(trip.from)||!Array.isArray(trip.to))continue;
   let remaining=Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.intermodalRiders||0));
   for(const line of s.metroLines||[]){
    if(!remaining||!line.operational)continue;const [a,b]=line.stations;

@@ -706,6 +706,14 @@ La fase 22 continúa parcial: faltan transporte escolar colectivo, integración 
 La plaza ya no hereda la base de hormig?n, el umbral ni el r?tulo de los edificios c?vicos. Se dibuja como suelo verde y pavimento peatonal con fuente baja, bancos, ?rboles y canteros. La selecci?n del lote la describe como lugar abierto de encuentro vecinal. La mec?nica de visitantes y paseos se conserva.
 
 
+
 ## Alfa 0.207 - vista previa 3D de la plaza
 
-El cat?logo Construir usa ahora el modelo abierto de la plaza barrial en su tarjeta 3D, en lugar de reutilizar el edificio c?vico gen?rico. Vista previa y objeto colocado coinciden.
+El catalogo Construir usa el modelo abierto de la plaza barrial en su tarjeta 3D, en lugar de reutilizar el edificio civico generico. Vista previa y objeto colocado coinciden.
+
+
+## Alfa 0.208 - viajes de ocio multimodales (fase 22)
+
+Las visitas a plazas buscan colectivos con paradas y cupos disponibles, lineas de subte/tren operativas y taxis cuando la distancia y el circuito corresponden. La eleccion se integra a la reserva de capacidad y cobro existentes; se descuentan los pasajeros trasladados de peatones, autos y emisiones. Los motores Online y Offline comparten la asignacion.
+
+La fase 22 sigue parcial: restan transporte escolar colectivo, logistica de carga, accidentes y capacidad vial detallada.

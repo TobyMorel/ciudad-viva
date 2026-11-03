@@ -76,7 +76,7 @@ def rail_transfer_fixture(workers=5):
         {"mode":"elevated","status":"active","x":23,"y":11,"name":"Terminal Sur"},
     ]
     first={"id":"metro-a","stations":[[3,9],[13,9]],"route":[[x,9] for x in range(3,14)],
-           "status":"active","trainCount":2,"fareCents":60,"powerRequiredKw":125}
+           "status":"active","trainCount":1,"fareCents":60,"powerRequiredKw":125}
     second={"id":"rail-b","mode":"elevated","stations":[[13,11],[23,11]],"route":[[x,10] for x in range(13,24)],
             "status":"active","trainCount":2,"fareCents":85,"powerRequiredKw":205}
     state={"day":1,"roads":roads,"roadAssets":[],"railStations":stations,"metroLines":[first,second],

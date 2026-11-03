@@ -41,7 +41,7 @@ function railTransferFixture(workers=5){
   {mode:'elevated',status:'active',x:13,y:11,name:'Intercambiador elevado'},
   {mode:'elevated',status:'active',x:23,y:11,name:'Terminal Sur'}
  ];
- const first={id:'metro-a',stations:[[3,9],[13,9]],route:Array.from({length:11},(_,i)=>[i+3,9]),status:'active',trainCount:2,fareCents:60,powerRequiredKw:125};
+ const first={id:'metro-a',stations:[[3,9],[13,9]],route:Array.from({length:11},(_,i)=>[i+3,9]),status:'active',trainCount:1,fareCents:60,powerRequiredKw:125};
  const second={id:'rail-b',mode:'elevated',stations:[[13,11],[23,11]],route:Array.from({length:11},(_,i)=>[i+13,10]),status:'active',trainCount:2,fareCents:85,powerRequiredKw:205};
  const state={day:1,roads,roadAssets:[],railStations,metroLines:[first,second],busRoutes:[],taxiRoutes:[],utilities:{},
   finance:{programBudgets:{mobilityFundingFactor:1}},

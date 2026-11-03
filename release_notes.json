@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.210",
+  "currentVersion": "0.211",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.211",
+      "date": "2026-11-03",
+      "title": "Las plazas reciben visitas visibles",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los vecinos que eligen una plaza como destino ahora aparecen recorriendo sus senderos en el mapa 3D.",
+        "La cantidad de caminantes se deriva de los viajes de ocio reales, se limita por plaza y se puede seleccionar para consultar la actividad y los visitantes del día."
+      ],
+      "verification": "Sintaxis del render 3D y consistencia del catálogo de versiones revisadas."
+    },
     {
       "version": "0.210",
       "date": "2026-11-03",

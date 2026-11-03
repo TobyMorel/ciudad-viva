@@ -731,3 +731,9 @@ Verificacion: sintaxis Python/JavaScript y validacion del JSON de versiones. La 
 Avisos genera pedidos concretos a partir de los indicadores reales de la ciudad: alumnos sin vacante o sin escuela alcanzable, hogares sin plaza cercana o con demanda recreativa superior a la capacidad, cobertura policial menor al 80% e insuficiencia de consultas/urgencias de salud. Cada reclamo aparece en una parcela habitada, explica la brecha y orienta a la categoria municipal que permite resolverla. La bandeja reserva espacio para un reclamo junto con la incidencia urgente mas importante, y los reclamos desaparecen de forma automatica cuando se corrige la necesidad. Funciona con los reportes compartidos por Online y Offline.
 
 Verificacion: sintaxis de JavaScript y validacion JSON de versiones y roadmap. Fase 32 permanece parcial: siguen pendientes consultas vecinales, transparencia completa y acuerdos ligados a reparaciones directas.
+
+## Alfa 0.211 - actividad visible en plazas (fase 22)
+
+Las visitas de ocio ya calculadas para cada plaza generan caminantes 3D que recorren sus senderos. El número de peatones visibles escala con visitantes reales, con un límite por espacio para cuidar el rendimiento. Al seleccionarlos se ve el nombre de la plaza, la cantidad diaria de visitantes y la actividad; las plazas sin visitas no muestran peatones ficticios.
+
+Inspiración: el sistema de destinos de ocio de Cities: Skylines II; adaptación propia sobre los viajes existentes de Ciudad Viva, sin reutilizar recursos del juego.

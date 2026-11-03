@@ -26,8 +26,12 @@ try{
   throw new Error(`No se pudo encuadrar parcela ${x},${y}: ${JSON.stringify(await page.evaluate(([a,b])=>window.__ciudadVivaProjectTile(a,b,0),[x,y]))}`);
  }
  for(let cy=2;cy<=6;cy++){
-  const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
-  const card=page.locator('.land-unlock-card');await card.waitFor();
+  const p=await centerTile(4,cy*8+4),screenPoint={x:canvas.x+p.x,y:canvas.y+p.y};
+  const runtime=await page.evaluate(([x,y])=>window.__ciudadVivaLandPlotDiagnostic(x,y),[4,cy*8+4]);
+  console.log(`parcela 0,${cy} antes del clic ${JSON.stringify({p,screenPoint,runtime})}`);
+  await page.mouse.click(screenPoint.x,screenPoint.y);
+  const card=page.locator('.land-unlock-card');
+  try{await card.waitFor({timeout:5000})}catch(error){const detail=await page.evaluate(([sx,sy,wx,wy])=>({element:document.elementFromPoint(sx,sy)?.outerHTML.slice(0,500),card:document.querySelector('.land-unlock-card')?.innerText||null,runtime:window.__ciudadVivaLandPlotDiagnostic(wx,wy),modeError:document.getElementById('modeError')?.textContent}),[screenPoint.x,screenPoint.y,4,cy*8+4]);throw new Error(`No apareció la ficha: ${JSON.stringify(detail)}; ${error.message}`)}
   const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);
   if(await button.count()===0){const cardText=await card.innerText(),landClaims=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.landClaims);throw new Error(`Sin botón para 0,${cy}; ficha=${JSON.stringify(cardText)}; guardado=${JSON.stringify(landClaims?.unlockedChunks)}`)}
   await button.waitFor();await button.evaluate(el=>el.click());

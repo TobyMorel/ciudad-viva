@@ -1364,7 +1364,7 @@ def collect_municipal_taxes():
         key=f"home-{home['x']}-{home['y']}";due=round(home.get("occupants",0)*2400*rates["property"]/120000)+accounts.get(key,0);cash=max(0,round(home.get("householdCash",0)));paid=min(cash,due)
         home["householdCash"]=cash-paid;accounts[key]=due-paid;home["propertyTaxDue"]=due;home["propertyTaxPaid"]=paid;home["propertyTaxArrears"]=due-paid
         property_due+=due;property_paid+=paid;late_homes+=int(due>paid)
-    for shop in (b for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto"):
+    for shop in (b for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto"):
         firm=shop["business"];key=firm.get("id",f"shop-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates["business"]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
         firm["cash"]=cash-paid;accounts[key]=due-paid;firm["municipalTaxDue"]=due;firm["municipalTaxPaid"]=paid;firm["municipalTaxArrears"]=due-paid
         previous_delinquency=firm.get("taxDelinquencyMonths",0);firm["taxDelinquencyMonths"]=previous_delinquency+1 if due>paid else 0
@@ -1376,7 +1376,7 @@ def collect_municipal_taxes():
         business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
     taxes["lastProcessedMonth"]=month
     household_income=sum(max(0,h.get("monthlyWageIncome",0)) for h in state.get("buildings",[]) if h.get("kind")=="home")
-    business_sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto")
+    business_sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto")
     collected=property_paid+business_paid;pressure=round(100*collected/max(1,household_income+business_sales+collected))
     report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":business_sales,"householdWageIncome":household_income,"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":collected,"pressure":pressure,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
     taxes["lastReport"]=report;taxes.setdefault("history",[]).append(report.copy());del taxes["history"][:-12]
@@ -1678,12 +1678,12 @@ def initial_state():
             building["capacity"]=max(building["occupants"],round(building["occupants"]*1.15))
         elif building["kind"]=="shop":
             building["business"]=new_business(building,42,5000)
-    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":5820,"population":620,"jobs":326,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0,"ruins":[]},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"metroLines":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":0,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
+    return {"version":60,"regionalMarket":{"history":[],"lastReport":{}},"regionalMarketReport":{},"privateInvestments":{"proposal":None,"history":[],"nextOfferDay":1,"reason":"Los inversores esperan ventas regionales sin cubrir y una parcela comercial conectada."},"urbanEvolution":{"lastProcessedYear":2026,"history":[],"lastBirthYear":2026},"urbanRenewalNeeds":[],"urbanRenewalWorks":[],"urbanRenewalHistory":[],"government":{"mandate":1,"startDay":1,"nextElectionDay":1441,"status":"en_mandato","elections":[],"crisisMonths":0,"crisisStatus":"estable","complaints":[],"complaintSequence":0,"agreements":[]},"roadMaintenancePct":100,"socialServices":new_social_services(),"name":"Puerto Claro","day":1,"timeOfDayMinutes":360,"speed":1,"paused":False,"money":48000,"monthlyIncome":6200,"monthlyExpenses":5820,"portMonthlyIncome":0,"lastPortMonthlyIncome":0,"population":620,"jobs":326,"employment":78,"services":76,"approval":64,"privateCapital":26000,"finance":new_finance(),"taxes":new_tax_state(),"roads":roads,"roadAssets":[],"buildings":buildings,"projects":[],"contractChangeHistory":[],"contractGuarantees":[],"heritageWorks":[],"heritageHistory":[],"adaptiveReuseWorks":[],"adaptiveReuseHistory":[],"recoveryNeeds":[],"recoveryContracts":[],"education":{"lastProcessedMonth":0},"health":{"lastAdvancedDay":None,"lastQueueDay":None,"lastImpactMonth":-1,"primaryBacklog":0,"waterSafetyHistory":{}},"fireService":{"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0,"ruins":[]},"trainingPrograms":[],"busRoutes":[],"taxiRoutes":[],"metroLines":[],"abandoned":[],"zones":[],"housingDemand":{"unmet":0,"lastGenerated":0,"lastFilled":0},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"waste":{"baseCollectionTonsDay":1.15,"baseLandfillCapacityTons":900,"landfillStoredTons":0,"uncollectedTons":0,"transferStoredTons":0,"containers":[],"lastCollectionTons":0,"lastWasteImpactDay":0,"lastRecycledTonsDay":0},"utilities":{"failures":[],"powerLines":[r.copy() for r in roads],"waterPipes":[r.copy() for r in roads],"sewerLines":[r.copy() for r in roads],"drainLines":[r.copy() for r in roads],"gasLines":[r.copy() for r in roads],"telecomLines":[r.copy() for r in roads],"baseGasCapacityM3Day":0,"baseWaterCapacityM3Day":180,"powerLossRate":.06,"waterLeakRate":.08},"supply":new_supply(),"events":[{"day":1,"title":"Puerto Claro inicia una nueva gestión","detail":"Tesorería disponible: $48.000. La conexión regional mantiene activo el comercio."},{"day":1,"title":"Demanda residencial moderada","detail":"Hay hogares buscando vivienda cerca de los empleos del centro."}],"lastMonth":0,"players":{},"host":None}
 
 def new_settlement_state():
     """Empty playable map: the only road is the westbound regional gate."""
     fresh=initial_state();gate=[[4,10]]
-    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":85000,"monthlyIncome":0,"monthlyExpenses":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Buscan parcelas verdes conectadas para financiar y construir sus viviendas."}]})
+    fresh.update({"newSettlement":True,"day":1,"timeOfDayMinutes":420,"money":85000,"monthlyIncome":0,"monthlyExpenses":0,"portMonthlyIncome":0,"lastPortMonthlyIncome":0,"population":0,"jobs":0,"employment":0,"services":0,"approval":72,"privateCapital":42000,"roads":gate,"roadAssets":[],"buildings":[],"projects":[],"abandoned":[],"zones":[],"commutes":[],"workplaces":[],"workforce":{},"housingDemand":{"unmet":36,"lastGenerated":36,"lastFilled":0,"startingInterest":36},"localIndustry":{"unitsProduced":0,"unitsSold":0,"unitsImported":0,"history":[]},"lastMonth":0,"events":[{"day":1,"title":"Puerto Claro: empieza una ciudad nueva","detail":"La ciudad está vacía. Solo hay un acceso conectado a la ruta regional; extendé una calle y habilitá parcelas. 36 personas ya buscan vivienda y la demanda seguirá si no encuentran cupo."},{"day":1,"title":"Acceso regional habilitado","detail":"La ruta del oeste trae familias interesadas. Buscan parcelas verdes conectadas para financiar y construir sus viviendas."}]})
     fresh["fireService"]={"incidents":[],"lastGeneratedMonth":-1,"dispatches":0,"resolved":0,"unanswered":0}
     fresh["police"]={"lastProcessedMonth":0,"recentIncidents":[]}
     fresh["utilities"]={**fresh["utilities"],"failures":[],"powerLines":gate.copy(),"waterPipes":gate.copy(),"sewerLines":gate.copy(),"drainLines":gate.copy(),"gasLines":gate.copy(),"telecomLines":gate.copy()}
@@ -3464,7 +3464,7 @@ def commute_model():
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
-        if site["kind"]=="shop":private_staffed+=effective
+        if site["kind"] in ("shop","factory","hotel"):private_staffed+=effective
         people=site_people[si]
         category,label,minimum,job_wage=workplace_profile(site)
         workplaces.append({"name":site.get("name",site["kind"].title()),"kind":site["kind"],"x":site["x"],"y":site["y"],"jobSlots":round(slots),"workersAssigned":len(people),"staffedJobs":round(effective),"payroll":sum(x["wage"] for x in people),"attendance":round(effective/max(1,len(people)),2),"meanMinutes":round(site_minutes[si]/len(people)) if people else None,"jobCategory":category,"jobCategoryLabel":label,"minimumSkill":minimum,"offeredWage":job_wage})
@@ -3544,7 +3544,7 @@ def commute_model():
         workplace["meanMinutes"]=round(minutes_by_site[si]/workers_by_site[si]) if workers_by_site.get(si) else None
         workplace["payroll"]=sum(emp.get("earnedWage",emp["wage"]) for emp in site_people[si])
         staffed+=effective
-        if workplace["kind"]=="shop":private_staffed+=effective
+        if workplace["kind"] in ("shop","factory","hotel"):private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
     model["transferCommuters"]=sum(trip["workers"] for trip in commutes if trip.get("reason")=="trabajo" and len(trip.get("busLineIds",[]))==2)
     model["carAccessWorkers"]=sum(1 for _,_,person in residents if person.get("carAccess"))
@@ -4765,7 +4765,7 @@ def process_port_logistics():
     for port in ports:
         if port.get("cargoStored",0)<60 or state["day"]-port.get("lastShipDay",0)<10:continue
         quantity=min(port.get("shipCapacity",180),port["cargoStored"]);port["cargoStored"]-=quantity;port["lastShipDay"]=state["day"];port["shipsDeparted"]=port.get("shipsDeparted",0)+1
-        fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee
+        fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee;state["portMonthlyIncome"]=state.get("portMonthlyIncome",0)+fee;record_direct_municipal_income(fee,"port")
         voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"cargoType":"mercadería","direction":"exportación","departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
         factory_orders=[o for o in orders if o.get("originType")=="factory" and o.get("portId")==port.get("id",f"port-{port['x']}-{port['y']}") and o.get("status")=="en puerto"]
         for order in factory_orders:order.update({"status":"en viaje","arrivalDay":voyage["arrivalDay"],"route":voyage["route"]})
@@ -4987,6 +4987,20 @@ def advance_maritime_steel_shipments():
         supply["steelImportedUnits"]=supply.get("steelImportedUnits",0)+qty
         ev("Acero desembarcado",f"{qty} unidades descargadas; {shipment['quantity']-shipment['deliveredUnits']} pendientes.")
 
+def record_direct_municipal_income(amount,source):
+    """Registra una recaudación directa en el mismo período que concilia el cierre mensual."""
+    amount=max(0,round(amount))
+    if not amount:return
+    period=(state.get("day",1)-2)//30
+    ledger=state.setdefault("dailyCashFlow",{"period":period,"raw":{},"scheduled":{},"paid":{},"income":0})
+    if ledger.get("period")!=period:
+        ledger={"period":period,"raw":{},"scheduled":{},"paid":{},"income":0}
+        state["dailyCashFlow"]=ledger
+    ledger["income"]=ledger.get("income",0)+amount
+    direct=ledger.setdefault("directIncome",{})
+    direct[source]=direct.get(source,0)+amount
+
+
 def settle_daily_municipal_cash(economic):
     """Anticipa cada día los flujos mensuales; el cierre concilia solo diferencias."""
     period=(state["day"]-2)//30
@@ -4999,9 +5013,9 @@ def settle_daily_municipal_cash(economic):
     waste=state.get("waste",{}).get("report",{})
     workplaces=economic.get("workplaces",[])
     monthly={
-        "income":max(0,state.get("monthlyIncome",0)+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
-        "services":max(0,state.get("monthlyExpenses",0)+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)),
-        "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))),
+        "income":max(0,state.get("monthlyIncome",0)+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
+        "services":max(0,state.get("monthlyExpenses",0)+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
+        "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("metroLines",[]) if r.get("operational"))),
         "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
         "debt":max(0,sum(loan.get("payment",0) for loan in state.get("finance",{}).get("municipalLoans",[]) if loan.get("status")=="active")),
     }
@@ -5121,12 +5135,13 @@ def tick_one_day():
         collect_bus_nonwork_fares(state)
         metro_balance=state.pop("metroMonthSettlement",{"income":0,"cost":0})
         business_income=round(economic["privateStaffedJobs"]*2)
-        taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))
+        taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
         taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
         transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_income+metro_balance["income"]
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+metro_balance["cost"]
         airport_income=state.get("airportMonthlyIncome",0)
-        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)
+        port_income=max(0,round(state.get("portMonthlyIncome",0)))
+        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)+port_income
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
         road_maintenance=road_maintenance_report().get("monthlyRequired",0)
         waste_report=calculate_waste_balance()
@@ -5137,7 +5152,7 @@ def tick_one_day():
         # Cobrar alquileres antes de planificar ayuda; la transferencia solo atiende deuda vigente.
         collect_adaptive_rents()
         aid_allocations=plan_housing_aid();aid_requested=sum(x["amount"] for x in aid_allocations)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
+        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+fire_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost,include_scenarios=False)["monthlyDebtService"]
         daily=state.get("dailyCashFlow",{})
@@ -5181,6 +5196,7 @@ def tick_one_day():
                 for loan in state.get("finance",{}).get("municipalLoans",[]):
                     if loan.get("status")=="active" and loan.get("delinquentMonths",0)>=2:state["services"]=max(5,state["services"]-1)
                 ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
+        state["lastPortMonthlyIncome"]=max(0,round(state.get("portMonthlyIncome",0)));state["portMonthlyIncome"]=0
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
@@ -5245,7 +5261,6 @@ def tick_one_day():
                 ev("Puente vial habilitado",f"Se abrió el cruce del río a la altura {p['y']+1}; dos tramos, mantenimiento $160/mes. La extensión de calles al este ya es posible.")
             elif p["kind"]=="road":
                 state["roads"].append([p["x"],p["y"]])
-                state["monthlyIncome"]+=85
                 maintenance=round(70*(1.2-c["quality"]))
                 state["monthlyExpenses"]+=maintenance
                 state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
@@ -6059,6 +6074,7 @@ def demolish_at(x,y):
     raise ValueError("No hay ninguna construcción para demoler en esa parcela.")
 
 def public_state(player_id=None):
+    state.setdefault("portMonthlyIncome",0);state.setdefault("lastPortMonthlyIncome",0)
     ensure_land_claims()
     state.setdefault("trafficSignalOverrides",{})
     ensure_supply_state()
@@ -6131,15 +6147,32 @@ def public_state(player_id=None):
     view["publicPayroll"]=sum(w.get("payroll",0) for w in commute["workplaces"] if w["kind"] in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant"))
     taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+sum(l.get("monthlyOperatingCost",0) for l in state.get("metroLines",[]) if l.get("operational"))
-    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]))+sum(l.get("monthlyFareRevenue",0) for l in state.get("metroLines",[]))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0))
+    transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))+sum(l.get("monthlyFareRevenue",0) for l in state.get("metroLines",[]) if l.get("operational"))
+    view["housingAidMonthlyCost"]=max(0,round(state.get("socialServices",{}).get("lastReport",{}).get("requested",0)))
+    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["fireReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0)+view["housingAidMonthlyCost"])
+    port_income=max(0,round(state.get("portMonthlyIncome",0)))
     view["transitMonthlyIncome"]=transit_income
+    view["portMonthlyIncome"]=port_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
     business_income=round(commute["privateStaffedJobs"]*2)
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
-    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+state.get("taxes",{}).get("lastReport",{}).get("collected",0))
+    tax_report=state.get("taxes",{}).get("lastReport",{})
+    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income)
     view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
+    view["municipalFinance"]["incomeBreakdown"]={
+        "baseAndResidents":round(state.get("monthlyIncome",0)),"privateEmployment":business_income,
+        "propertyTaxes":round(tax_report.get("propertyCollected",0)),"businessTaxes":round(tax_report.get("businessCollected",0)),
+        "transitFares":round(transit_income),"airportFees":round(state.get("airportMonthlyIncome",0)),
+        "tourismTax":round(tourism_tax),"recycling":round(view["recyclingIncome"]),"portExports":port_income}
+    view["municipalFinance"]["expenseBreakdown"]={
+        "buildingOperations":round(state.get("monthlyExpenses",0)),"publicPayroll":round(view["publicPayroll"]),
+        "police":round(view["policeReport"].get("monthlyOperatingCost",0)),"fire":round(view["fireReport"].get("monthlyOperatingCost",0)),
+        "transit":round(transit_cost),"utilities":round(state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)),
+        "waste":round(state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)),
+        "roads":round(road_maintenance_report().get("monthlyRequired",0)),
+        "health":round(view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)),
+        "education":round(view["educationReport"].get("monthlySuppliesCost",0)),"housingAid":view["housingAidMonthlyCost"]}
     view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
@@ -6753,17 +6786,7 @@ class Handler(BaseHTTPRequestHandler):
                     try:dispatch_utility_repair(data.get("id"),action=="repairUtilityEmergency")
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action=="utilityLine":
-                    network=data.get("network");x=int(data.get("x",-1));y=int(data.get("y",-1))
-                    if network not in ("power","water","sewer","drainage","gas","telecom") or [x,y] not in state["roads"]:self._send(409,{"error":"El tendido necesita un tramo de calle terminado y una red válida."});return
-                    utilities=ensure_utility_state();key={"power":"powerLines","water":"waterPipes","sewer":"sewerLines","drainage":"drainLines","gas":"gasLines","telecom":"telecomLines"}[network];cost={"power":165,"water":130,"sewer":145,"drainage":155,"gas":120,"telecom":105}[network]
-                    if [x,y] in utilities[key]:self._send(409,{"error":"Este tramo ya está conectado a esa red."});return
-                    connected=energized_utility_tiles(network)
-                    if not any((x+dx,y+dy) in connected for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):self._send(409,{"error":"El nuevo tramo debe prolongar una red conectada al sistema."});return
-                    reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"));available=max(0,state["money"]-reserved)
-                    if available<cost:self._send(409,{"error":f"Quedan $ {available}; el tendido cuesta $ {cost} además de los contratos."});return
-                    state["money"]-=cost;utilities[key].append([x,y]);network_name={"power":"eléctrica","water":"de agua","sewer":"cloacal","drainage":"pluvial","gas":"de gas","telecom":"de fibra óptica"}[network]
-                    maintenance={"power":1.2,"water":.8,"sewer":.9,"drainage":.7,"gas":1.1,"telecom":.6}[network]
-                    ev("Red de servicios ampliada",f"Se conectó un tramo {network_name} sobre la calle {x+1},{y+1}; mantenimiento aproximado $ {maintenance:.1f}/mes.")
+                    self._send(409,{"error":"Las calles nuevas ya incluyen todas las redes; no hace falta pagar tendidos adicionales."});return
                 elif action=="wasteContainer":
                     x=int(data.get("x",-1));y=int(data.get("y",-1));waste=ensure_waste_state()
                     if [x,y] not in state["roads"]:self._send(409,{"error":"El contenedor debe colocarse sobre una calle terminada."});return

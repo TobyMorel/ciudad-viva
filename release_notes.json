@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.222",
+  "currentVersion": "0.223",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.223",
+      "date": "2026-11-03",
+      "title": "Balance y transparencia de la economía",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "El cierre municipal ahora registra todos los ingresos de residentes, empleo privado, transporte, aeropuerto, turismo, reciclaje y exportaciones portuarias sin duplicar los cobros directos.",
+        "Los impuestos comerciales también gravan las ventas de las industrias, y el reporte separa ingresos y gastos por fuente.",
+        "El costo mensual de bomberos y de las líneas de metro aparece en la caja diaria, el cierre y el pronóstico.",
+        "Las calles dejan de generar una renta artificial de $85 al mes; el panel muestra el mantenimiento de calles y puentes.",
+        "Se retiraron los tendidos opcionales de redes: cada calle nueva ya conecta los servicios incluidos."
+      ],
+      "verification": "Balance revisado en los motores online y offline; el flujo de caja, el cierre mensual y el desglose usan las mismas fuentes."
+    },
     {
       "version": "0.222",
       "date": "2026-11-03",

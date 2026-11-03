@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.226",
+  "currentVersion": "0.227",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.227",
+      "date": "2026-11-03",
+      "title": "LOD lejano y resolución adaptativa",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "La vegetación detallada conserva su modelo al acercar la cámara; al alejar, árboles y arbustos usan lotes InstancedMesh, con viento y cuatro lotes de dibujo como máximo.",
+        "La resolución de render queda limitada a 1.25× en móvil y 1.5× en escritorio, con ajuste gradual según FPS; se agregan diagnósticos y una prueba Playwright para móvil y escritorio.",
+        "La auditoría de rendimiento documenta las opciones de Three.js, los ports de motores para navegador y los límites de WebAssembly en GitHub Pages."
+      ]
+    },
     {
       "version": "0.226",
       "date": "2026-11-03",

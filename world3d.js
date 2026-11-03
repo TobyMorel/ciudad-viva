@@ -14,7 +14,9 @@ function seeded(n){let x=Math.sin(n*127.1+78.233)*43758.5453;return x-Math.floor
 export function createWorld(canvas){
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
   const smallScreen=window.innerWidth<650;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  const minPixelRatio=smallScreen ? .78 : .8,maxPixelRatio=smallScreen ? 1.25 : 1.5;
+  let renderPixelRatio=clamp(window.devicePixelRatio||1,minPixelRatio,maxPixelRatio);
+  renderer.setPixelRatio(renderPixelRatio);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=.98;
@@ -63,7 +65,7 @@ export function createWorld(canvas){
   function plane(parent,w,d,color,x,y,z,options={}){const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),typeof color==='string'?mat(color,options):color);mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=true;parent.add(mesh);return mesh}
   function groundShadow(parent,x,z,r,opacity=.18){const mesh=new THREE.Mesh(new THREE.CircleGeometry(r,24),mat('#355746',{transparent:true,opacity,depthWrite:false}));mesh.rotation.x=-Math.PI/2;mesh.scale.y=.62;mesh.position.set(x+.2,-.105,z+.18);parent.add(mesh)}
   function line(parent,points,color='#ffdf90',opacity=1){const geometry=new THREE.BufferGeometry().setFromPoints(points.map(p=>new THREE.Vector3(...p)));const material=new THREE.LineBasicMaterial({color,transparent:opacity<1,opacity});material.userData.ephemeral=true;const m=new THREE.Line(geometry,material);parent.add(m);return m}
-  function clear(group){group.traverse(o=>{if(o.geometry&&!o.geometry.userData.shared)o.geometry.dispose();if(o.material&&o.material.userData?.ephemeral)o.material.dispose()});group.clear()}
+  function clear(group){group.traverse(o=>{if(o.isInstancedMesh)o.dispose();if(o.geometry&&!o.geometry.userData.shared)o.geometry.dispose();if(o.material&&o.material.userData?.ephemeral)o.material.dispose()});group.clear()}
 
   // La textura terrestre se genera en el navegador: no necesita descargar recursos.
   const texCanvas=document.createElement('canvas');texCanvas.width=768;texCanvas.height=768;const tc=texCanvas.getContext('2d');tc.fillStyle='#87b77a';tc.fillRect(0,0,768,768);
@@ -125,14 +127,78 @@ export function createWorld(canvas){
     for(let i=0;i<4;i++){const a=i*Math.PI/2+.5,rx=Math.cos(a)*.15*s,rz=Math.sin(a)*.15*s;rodBetween(g,[rx,.08*s,rz],[rx*1.8,.025*s,rz*1.8],.045*s,olive?'#777558':'#795d46',7)}
     for(let i=0;i<3;i++){const a=i*2.1+.4,dx=Math.cos(a)*.24*s,dz=Math.sin(a)*.24*s;sphere(g,.09*s,blossom?'#edb6c5':palette[(i+2)%palette.length],dx,(1.06+i%2*.14)*s,dz,1)}
   crown.castShadow=!smallScreen&&seeded(seed+333)>.65;if(!smallScreen&&species!==2)for(let i=0;i<3;i++){const a=i*2.4;sphere(g,.065*s,blossom?'#f4d5d2':'#b4c978',Math.cos(a)*.26*s,1.15*s+Math.sin(i*5)*.12*s,Math.sin(a)*.26*s,1)}parent.add(g);windTrees.push({mesh:g,phase:seeded(seed+401)*Math.PI*2,strength:.085+seeded(seed+402)*.035,crown,baseCrownY:(species===2?1.15:1.3)*s});return g}
-  const vegetationObstacles=new Set(),windTrees=[];let vegetationKey='';let windClock=0;function updateWind(delta){windClock+=Math.min(.1,Math.max(0,delta));for(const tree of windTrees){const wave=Math.sin(windClock*1.25+tree.phase);tree.mesh.rotation.z=wave*tree.strength;tree.crown.position.y=tree.baseCrownY+Math.sin(windClock*1.6+tree.phase+1)*.105}}
-  function updateVegetation(){const w=canvas.clientWidth,h=canvas.clientHeight,unit=(58/clamp(view.zoom,.55,4))/Math.max(1,h),chunkX=Math.floor((view.panX*unit+cameraAnchor.x*TILE)/16),chunkY=Math.floor((view.panY*unit+cameraAnchor.y*TILE)/16),signature=`${chunkX}:${chunkY}:${view.rotation}:${Math.round(view.zoom*4)}:${w}:${h}`;if(signature===vegetationKey)return;vegetationKey=signature;const corners=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>screenToTile(x,y)),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]),minX=Math.min(...xs)-3,maxX=Math.max(...xs)+3,minY=Math.min(...ys)-3,maxY=Math.max(...ys)+3,span=Math.max(maxX-minX,maxY-minY);clear(vegetationRoot);windTrees.length=0;const density=smallScreen?.44:span>58?.22:.48;for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){const id=(x+50000)*7919+(y+50000)*104729;if(vegetationObstacles.has(key(x,y))||waterTile(x,y)||seeded(id)>density)continue;const [cx,cz]=tilePos(x,y),dx=(seeded(id+1)-.5)*1.05,dz=(seeded(id+2)-.5)*1.05;if(seeded(id+3)<.84)tree(cx+dx,cz+dz,id);else{const g=new THREE.Group();g.position.set(cx+dx,0,cz+dz);const r=.16+seeded(id+4)*.18;sphere(g,r,seeded(id+5)>.5?'#a99a7b':'#729a65',0,r*.64,0,1).scale.y=.6;if(seeded(id+6)>.58)sphere(g,r*.7,'#93ad6c',r*.72,r*.56,.04,1);vegetationRoot.add(g)}}}
+  const vegetationObstacles=new Set(),windTrees=[],instancedWindTrees=[];
+  let vegetationKey='',windClock=0,instancedWindElapsed=0,vegetationLOD='detailed',vegetationInstances=0,vegetationTreeCount=0,vegetationBatchCount=0;
+  let farTreeTrunks=null,farTreeCrowns=null,farTreeCrownsSmall=null,farBushes=null;
+  const farTrunkGeometry=geometry('lod-tree-trunk',()=>new THREE.CylinderGeometry(.075,.12,.72,6));
+  const farCrownGeometry=geometry('lod-tree-crown',()=>new THREE.IcosahedronGeometry(1,1));
+  const farBushGeometry=geometry('lod-tree-bush',()=>new THREE.IcosahedronGeometry(1,0));
+  const farTrunkMaterial=mat('#775c45'),farCrownMaterial=mat('#68a45c'),farBushMaterial=mat('#729a65');
+  const instanceDummy=new THREE.Object3D(),instanceColor=new THREE.Color();
+  function setLODMatrix(mesh,index,x,y,z,sx,sy,sz,yaw,lean=0){
+    instanceDummy.position.set(x,y,z);instanceDummy.rotation.set(0,yaw,lean);instanceDummy.scale.set(sx,sy,sz);instanceDummy.updateMatrix();mesh.setMatrixAt(index,instanceDummy.matrix)
+  }
+  function updateLODTreeMatrices(tree,wave){
+    const {index,x,z,s,yaw,strength}=tree,lean=wave*strength;
+    setLODMatrix(farTreeTrunks,index,x,.36*s,z,s,s,s,yaw,lean);
+    setLODMatrix(farTreeCrowns,index,x,1.19*s,z,.39*s,.42*s,.39*s,yaw,lean*1.25);
+    setLODMatrix(farTreeCrownsSmall,index,x+.22*s,1.09*s,z+.035*s,.28*s,.3*s,.28*s,yaw,lean*1.5)
+  }
+  function addFarVegetation(trees,bushes){
+    const makeBatch=(geo,material,count,dynamic=false)=>{if(!count)return null;const mesh=new THREE.InstancedMesh(geo,material,count);mesh.castShadow=false;mesh.receiveShadow=false;mesh.instanceMatrix.setUsage(dynamic?THREE.DynamicDrawUsage:THREE.StaticDrawUsage);return mesh};
+    farTreeTrunks=makeBatch(farTrunkGeometry,farTrunkMaterial,trees.length,true);
+    farTreeCrowns=makeBatch(farCrownGeometry,farCrownMaterial,trees.length,true);
+    farTreeCrownsSmall=makeBatch(farCrownGeometry,farCrownMaterial,trees.length,true);
+    farBushes=makeBatch(farBushGeometry,farBushMaterial,bushes.length);
+    for(let i=0;i<trees.length;i++){
+      const item=trees[i],species=Math.floor(seeded(item.seed+8)*5),size=(.65+seeded(item.seed+55)*.55)*(species===2?.76:1),blossom=species===4&&seeded(item.seed+11)>.48,olive=species===3;
+      const palette=blossom?['#d58da9','#e5a9bb','#f1c3c8']:olive?['#719466','#94a36b','#8daa77']:species===1?['#3d8060','#568f5f','#79aa68']:['#4d8957','#67a45d','#8bb664'];
+      const record={...item,index:i,s:size,yaw:seeded(item.seed+92)*Math.PI*2,phase:seeded(item.seed+401)*Math.PI*2,strength:.055+seeded(item.seed+402)*.025};
+      instancedWindTrees.push(record);updateLODTreeMatrices(record,0);
+      farTreeTrunks.setColorAt(i,instanceColor.set(olive?'#716e52':'#775c45'));
+      farTreeCrowns.setColorAt(i,instanceColor.set(palette[1]));
+      farTreeCrownsSmall.setColorAt(i,instanceColor.set(palette[0]));
+    }
+    for(let i=0;i<bushes.length;i++){
+      const item=bushes[i],r=.16+seeded(item.seed+4)*.18;setLODMatrix(farBushes,i,item.x,r*.64,item.z,r,r*.64,r,seeded(item.seed+5)*Math.PI*2);
+      farBushes.setColorAt(i,instanceColor.set(seeded(item.seed+5)>.5?'#a99a7b':'#729a65'));
+    }
+    const batches=[farTreeTrunks,farTreeCrowns,farTreeCrownsSmall,farBushes].filter(Boolean);
+    for(const mesh of batches){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;mesh.computeBoundingSphere();vegetationRoot.add(mesh)}
+    vegetationBatchCount=batches.length
+  }
+  function updateWind(delta){
+    windClock+=Math.min(.1,Math.max(0,delta));
+    for(const tree of windTrees){const wave=Math.sin(windClock*1.25+tree.phase);tree.mesh.rotation.z=wave*tree.strength;tree.crown.position.y=tree.baseCrownY+Math.sin(windClock*1.6+tree.phase+1)*.105}
+    if(!instancedWindTrees.length)return;
+    instancedWindElapsed+=Math.min(.1,Math.max(0,delta));if(instancedWindElapsed<.085)return;instancedWindElapsed=0;
+    for(const tree of instancedWindTrees)updateLODTreeMatrices(tree,Math.sin(windClock*1.25+tree.phase));
+    for(const mesh of [farTreeTrunks,farTreeCrowns,farTreeCrownsSmall])if(mesh)mesh.instanceMatrix.needsUpdate=true
+  }
+  function updateVegetation(){
+    const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
+    const unit=(58/clamp(view.zoom,.55,4))/Math.max(1,h),chunkX=Math.floor((view.panX*unit+cameraAnchor.x*TILE)/16),chunkY=Math.floor((view.panY*unit+cameraAnchor.y*TILE)/16),signature=`${chunkX}:${chunkY}:${view.rotation}:${Math.round(view.zoom*4)}:${w}:${h}`;
+    if(signature===vegetationKey)return;vegetationKey=signature;
+    const corners=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>screenToTile(x,y)),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]),minX=Math.min(...xs)-3,maxX=Math.max(...xs)+3,minY=Math.min(...ys)-3,maxY=Math.max(...ys)+3,span=Math.max(maxX-minX,maxY-minY);
+    clear(vegetationRoot);windTrees.length=0;instancedWindTrees.length=0;farTreeTrunks=farTreeCrowns=farTreeCrownsSmall=farBushes=null;vegetationInstances=vegetationTreeCount=vegetationBatchCount=0;instancedWindElapsed=0;
+    const farLOD=span>62||view.zoom<.72;vegetationLOD=farLOD?'instanced-far':'detailed';
+    const density=farLOD?(smallScreen ? .38 : .42):(smallScreen ? .44 : .48),trees=[],bushes=[];
+    for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+      const id=(x+50000)*7919+(y+50000)*104729;if(vegetationObstacles.has(key(x,y))||waterTile(x,y)||seeded(id)>density)continue;
+      vegetationInstances++;const [cx,cz]=tilePos(x,y),dx=(seeded(id+1)-.5)*1.05,dz=(seeded(id+2)-.5)*1.05,px=cx+dx,pz=cz+dz,seed=id;
+      if(seeded(id+3)<.84){vegetationTreeCount++;if(farLOD)trees.push({x:px,z:pz,seed});else tree(px,pz,id)}
+      else if(farLOD)bushes.push({x:px,z:pz,seed});
+      else{const g=new THREE.Group();g.position.set(px,0,pz);const r=.16+seeded(id+4)*.18;sphere(g,r,seeded(id+5)>.5?'#a99a7b':'#729a65',0,r*.64,0,1).scale.y=.6;if(seeded(id+6)>.58)sphere(g,r*.7,'#93ad6c',r*.72,r*.56,.04,1);vegetationRoot.add(g)}
+    }
+    if(farLOD)addFarVegetation(trees,bushes)
+  }
   let poweredStreetlights=new Set();
   const routeActors=[],fireVisuals=[],signalBulbs=[],streetLights=[],signalTiles=new Set();
   const actorIdentity=a=>a.selection?`${a.selection.type}:${a.selection.title}:${(a.selection.people||[]).map(p=>p.id).join(',')}`:null;
   const tripSelection=(trip,modeLabel)=>({type:modeLabel,title:modeLabel==='Ciclistas'?'Ciclistas en camino':trip.reason==='educacion'?'Estudiantes en camino':trip.reason==='ocio'?'Vecinos de paseo':modeLabel==='Peatones'?'Personas caminando':'Vehículo particular',description:`Viaje de ${trip.reason==='trabajo'?'trabajo':trip.reason==='compras'?'compras':trip.reason==='educacion'?'estudio':trip.reason==='ocio'?'ocio':'servicios'} en la simulación actual.`,metrics:[[trip.mode==='bicycle'?'Ciclistas':trip.reason==='educacion'?'Estudiantes':'Pasajeros',Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)-(trip.taxiRiders||0))],...((trip.busRiders||trip.metroRiders||trip.intermodalRiders||trip.taxiRiders)?[['En transporte p\u00fablico',(trip.busRiders||0)+(trip.metroRiders||0)+(trip.intermodalRiders||0)+(trip.taxiRiders||0)]]:[]),[trip.mode==='bicycle'?'Bicicletas':'Veh\u00edculos',trip.mode==='bicycle'?(trip.workers||0):(trip.vehicles||0)],['Origen',trip.from?`${trip.from[0]+1}, ${trip.from[1]+1}`:'—'],['Destino',trip.destinationName|| (trip.to?`${trip.to[0]+1}, ${trip.to[1]+1}`:'—')],['Distancia',`${trip.distance||0} tramos`],['Tiempo estimado',`${trip.estimatedMinutes||0} min`]],people:trip.people||[]});
   const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
-  let view={zoom:1,panX:0,panY:0,rotation:0},cameraAnchor={x:14,y:10},lastFrame=0,simulationClock=0,simulationSpeed=1,simulationPaused=false,visualTimeOfDayMinutes=360,visualGameDay=1,visualSignature='',lastProjection='';
+  let view={zoom:1,panX:0,panY:0,rotation:0},cameraAnchor={x:14,y:10},lastFrame=0,simulationClock=0,simulationSpeed=1,simulationPaused=false,visualTimeOfDayMinutes=360,visualGameDay=1,visualSignature='',lastProjection='',fpsWindowStart=performance.now(),fpsWindowFrames=0,renderFps=0;
+  function adaptRenderResolution(now){fpsWindowFrames++;const elapsed=now-fpsWindowStart;if(elapsed<1800)return;renderFps=fpsWindowFrames*1000/elapsed;fpsWindowFrames=0;fpsWindowStart=now;let next=renderPixelRatio;if(renderFps<38)next=Math.max(minPixelRatio,renderPixelRatio*.88);else if(renderFps>56)next=Math.min(maxPixelRatio,renderPixelRatio+.05);if(Math.abs(next-renderPixelRatio)>.025){renderPixelRatio=Number(next.toFixed(2));renderer.setPixelRatio(renderPixelRatio);lastProjection=''}}
   function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;const dpr=renderer.getPixelRatio();if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr))renderer.setSize(w,h,false);const projection=`${w}:${h}:${view.zoom}`;if(projection===lastProjection)return;lastProjection=projection;const span=58/clamp(view.zoom,.55,4),aspect=w/h;camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix()}
   function updateCamera(){resize();const yaw=Math.PI/4+view.rotation*Math.PI/2,span=58/clamp(view.zoom,.55,4),units=span/Math.max(1,canvas.clientHeight);const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));const target=new THREE.Vector3(cameraAnchor.x*TILE,0,cameraAnchor.y*TILE).addScaledVector(right,-view.panX*units).addScaledVector(upGround,-view.panY*units),recycle=20000;for(const axis of ['x','z']){const delta=target[axis]-infiniteGroundOffset[axis];if(Math.abs(delta)>10000)infiniteGroundOffset[axis]+=Math.trunc(delta/recycle)*recycle;for(const ground of infiniteGround)ground.position[axis]=infiniteGroundOffset[axis]}sun.target.position.set(target.x,0,target.z);sun.position.set(target.x+3,31,target.z+28);camera.position.copy(target).add(new THREE.Vector3(Math.sin(yaw)*60,65,Math.cos(yaw)*60));camera.lookAt(target);camera.updateMatrixWorld()}
   const daySky=new THREE.Color('#bcd9df'),nightSky=new THREE.Color('#172633'),twilightSky=new THREE.Color('#cb9b79'),dayGround=new THREE.Color('#597d6e'),nightGround=new THREE.Color('#253b4c'),sunDay=new THREE.Color('#ffe4bb'),sunNight=new THREE.Color('#8096c4'),hemiNight=new THREE.Color('#9fbad0'),hemiDay=new THREE.Color('#fff5e5'),tempSky=new THREE.Color(),tempHemi=new THREE.Color(),tempGround=new THREE.Color();
@@ -1198,7 +1264,7 @@ export function createWorld(canvas){
   function animate(now){
     requestAnimationFrame(animate);
     const wallDelta=Math.min(.1,Math.max(0,(now-lastFrame)/1000));
-    lastFrame=now;updateWind(wallDelta);
+    lastFrame=now;adaptRenderResolution(now);updateWind(wallDelta);
     if(simulationPaused){resize();updateVegetation();renderer.render(scene,camera);return}
     simulationClock+=wallDelta*simulationSpeed;visualTimeOfDayMinutes=(visualTimeOfDayMinutes+wallDelta*simulationSpeed*15)%1440;visualGameDay+=wallDelta*simulationSpeed/96;updateLighting(visualTimeOfDayMinutes);resize();updateVegetation();
     const signalPhase=Math.floor(simulationClock/9)%2,signalAmber=simulationClock%9>=8;
@@ -1359,7 +1425,7 @@ export function createWorld(canvas){
   function paintBuildPreview({canvas:target,item}){if(!target||!item)return;const data=buildPreviewCache.get(JSON.stringify(item));if(!data)return;const ctx=target.getContext('2d');if(!ctx)return;target.width=previewWidth;target.height=previewHeight;ctx.putImageData(new ImageData(data,previewWidth,previewHeight),0,0)}
   window.addEventListener('resize',updateCamera);
   return {sync,screenToTile,screenToActor,setView,focusTile,projectTile,renderBuildPreviews,invalidate(){visualSignature=''},
-    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
+    getSceneDiagnostics:()=>({drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometryCount:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),renderFps:Number(renderFps.toFixed(1)),vegetationLOD,vegetationInstances,vegetationTrees:vegetationTreeCount,vegetationBatches:vegetationBatchCount,canvasWidth:canvas.width,canvasHeight:canvas.height,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
     getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
     getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),
     getFireParticleCounts:()=>({incidents:fireVisuals.length,flames:fireVisuals.reduce((n,f)=>n+f.flames.length,0),smoke:fireVisuals.reduce((n,f)=>n+f.smoke.length,0)}),

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.172
+# Ciudad Viva · Alfa 0.227
 
 **Servicios esenciales construibles y finitos:** luz, agua, gas, televisión por cable e internet/Wi-Fi requieren proveedores físicos conectados a la red vial. Las redes cableadas se tienden sobre calles, ya integradas en el catálogo. Una central eléctrica (900 kW), una planta potabilizadora (220 m³/día), una planta de gas (160 m³/día), una cabecera de televisión (180 conexiones) y una central Wi-Fi (160 conexiones) aportan cupos reales por edificio construido, terminado y conectado. Sin centrales no hay suministro gratuito, ni se iluminan farolas. Cuando un servicio está saturado, la nueva demanda no desplaza a los clientes anteriores. Las plantas de agua, gas y telecomunicaciones necesitan energía, mientras la central eléctrica puede iniciar la red sin requerir otra planta de agua previa.
 
@@ -74,7 +74,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.226](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.226/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.227](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.227/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 
@@ -391,3 +391,6 @@ Fase 15 sube de 60% a 65% por coherencia visual y legibilidad comprobables. Prog
 - Al cambiar ventanas, los nodos de controles regresan a sus contenedores originales. La lista LAN consulta `/api/rooms` si existe un iniciador y muestra sesiones anunciadas. En Vercel no es posible descubrir máquinas LAN desde un sitio estático bajo HTTPS; se ofrece estado vacío y unión manual, sin simular salas.
 - Verificación: sintaxis JS, pruebas Python 52/52, inspección visual móvil y escritorio de Construir, Ciudad, Economía y Tráfico. La prueba completa de Playwright terminó correctamente en 390 y 1440 px tras evitar el render 3D detrás de ventanas; también pasó la prueba visual de respuesta de servicios. Se verificaron por navegador la lista vacía LAN, el panel flotante de tráfico y el tema oscuro. Pasó también el stress económico de 30 años con cuatro perfiles y 360 cierres mensuales por perfil. La prueba entre dos computadoras físicas sigue pendiente.
 - Progreso global: no cuantificable todavía. El método por fase usa incrementos de 5 puntos con evidencia, pero no hay pesos estables y verificables para agregar las 34 fases. Fases 7 y 15: 70% cada una, ambas parciales. Hito actual F; próximo: completar simulación vial con tiempos autoritativos, accidentes y otros sistemas pendientes de F.
+
+
+**Rendimiento 3D:** [auditoría, cambios y mediciones](RENDIMIENTO_WEB.md).

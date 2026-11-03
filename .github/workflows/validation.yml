@@ -49,13 +49,13 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
         run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
-      - name: Stress económico 30 años (cuatro perfiles)
+      - name: Stress económico 30 años (cinco perfiles)
         if: ${{ !cancelled() && steps.syntax.outcome == 'success' && steps.online.outcome == 'success' }}
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.230
+          name: ciudad-viva-alfa-0.231
           path: |
             .
             !.git/**
@@ -125,7 +125,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.230-responsive
+          name: ciudad-viva-alfa-0.231-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

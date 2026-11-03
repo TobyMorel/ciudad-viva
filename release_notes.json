@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.230",
+  "currentVersion": "0.231",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.231",
+      "date": "2026-11-03",
+      "title": "Construcción confiable en sectores remotos",
+      "roadmapPhase": 1,
+      "overallProgress": null,
+      "changes": [
+        "La ficha de terreno habilita el desbloqueo a partir de los sectores municipales vecinos aunque falte la lista derivada de fronteras; el servidor conserva la validación de compra.",
+        "La regresión de interfaz desbloquea cinco sectores, construye 40 calles y una clínica en la periferia, guarda la ciudad y comprueba que siga allí tras recargar.",
+        "El estrés de 30 años ahora incluye una ciudad nueva expandida con 40 tramos y una clínica remota, además de cuatro perfiles económicos."
+      ]
+    },
     {
       "version": "0.230",
       "date": "2026-11-03",

@@ -1,4 +1,10 @@
-## Después de Alfa 0.230 · Patrullas y cobertura explicada
+## Después de Alfa 0.231 · Respuesta con varias bases
+
+La expansión remota ya puede desbloquearse desde sectores vecinos y construir servicios junto a calles conectadas. La validación de interfaz comprueba cinco sectores, 40 tramos de vía, una clínica periférica y persistencia tras recargar. El estrés mantiene esa ciudad durante 360 cierres mensuales, junto a cuatro perfiles económicos de referencia.
+
+Siguiente: comprobar patrullas con varias bases, móviles ocupados, rutas cortadas y elección de la unidad disponible más cercana. Mantener pendiente la validación LAN entre dos equipos físicos y no atribuir avance global sin ponderaciones comunes.
+
+## Alfa 0.230 · Patrullas y cobertura explicada
 
 Cada móvil policial queda reservado para una sola incidencia hasta completar el regreso; la capacidad mensual sigue limitada a dos despachos por vehículo. Ciudad → Seguridad muestra los móviles libres/ocupados y, por inmueble sin cobertura, explica si falta equipamiento, conexión vial, presupuesto o personal. La escena 3D identifica el móvil y reproduce el recorrido de ida y vuelta. LAN y Offline usan las mismas reglas.
 

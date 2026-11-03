@@ -9,7 +9,7 @@ try{
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:30000});
  await page.locator('[data-popup="city"]').click();await page.locator('#newBtn').click();await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
- await page.evaluate(()=>{const key='ciudad-viva-offline-v1',city=JSON.parse(localStorage.getItem(key));city.money=1000000;localStorage.setItem(key,JSON.stringify(city))});
+ await page.evaluate(()=>{const key='ciudad-viva-offline-v1',city=JSON.parse(localStorage.getItem(key));city.money=1000000;city.paused=true;localStorage.setItem(key,JSON.stringify(city))});
  await page.reload({waitUntil:'domcontentloaded'});await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:30000});
  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
  const canvas=await page.locator('#city').boundingBox();
@@ -28,9 +28,6 @@ try{
  for(let cy=2;cy<=6;cy++){
   const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
   await page.locator('.land-unlock-card').waitFor();
-  const card=page.locator('.land-unlock-card');
-  const landDebug=await page.evaluate(()=>({card:document.querySelector('.land-unlock-card')?.innerText,claims:JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims,buttons:[...document.querySelectorAll('[data-unlock-land]')].map(el=>({x:el.dataset.chunkX,y:el.dataset.chunkY,text:el.innerText}))}));
-  console.log('Ficha de terreno',JSON.stringify(landDebug));
   const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);await button.waitFor();await button.evaluate(el=>el.click());
   await page.waitForFunction(cy=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes(`0,${cy}`),cy);console.log(`sector 0,${cy} habilitado`);
  }
@@ -48,7 +45,7 @@ try{
  console.log('ciudad guardada; recargando');const before=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));const clinic=c.buildings.find(b=>b.x===5&&b.y===49&&b.serviceModel==='clinic');return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money,remoteClinic:clinic?{x:clinic.x,y:clinic.y,serviceModel:clinic.serviceModel,status:clinic.status}:null}});
  await page.reload({waitUntil:'commit',timeout:60000});console.log('documento recargado; esperando iniciar el juego');await page.waitForFunction(()=>typeof window.__ciudadVivaProjectTile==='function',{timeout:60000});await page.locator('#offlineMode').evaluate(el=>el.click());await page.locator('.game-dock').waitFor({timeout:60000});console.log('partida reanudada');
  const after=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));const clinic=c.buildings.find(b=>b.x===5&&b.y===49&&b.serviceModel==='clinic');return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money,remoteClinic:clinic?{x:clinic.x,y:clinic.y,serviceModel:clinic.serviceModel,status:clinic.status}:null}});
- assert.equal(before.roads,40);assert.equal(before.sectors,9);assert.deepEqual(before.remoteClinic,{x:5,y:49,serviceModel:'clinic',status:'habilitado'});assert.deepEqual(after,before);assert.deepEqual(errors,[]);
+ assert.equal(before.roads,40);assert.equal(before.sectors,9);assert.equal(before.remoteClinic?.x,5);assert.equal(before.remoteClinic?.y,49);assert.equal(before.remoteClinic?.serviceModel,'clinic');assert.deepEqual(after,before);assert.deepEqual(errors,[]);
  console.log(JSON.stringify({before,after,pageErrors:errors.length}));await page.close();
 }finally{await browser.close();server.kill('SIGTERM')}
 

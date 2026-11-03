@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.192",
+  "currentVersion": "0.193",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.193",
+      "date": "2026-11-02",
+      "title": "Alineación de indicadores compactos",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se ajustó el texto accesible de los chips para conservar la secuencia del título, cifra y balance sin añadir altura visible al encabezado."
+      ],
+      "verification": "Sintaxis y JSON revisados.",
+      "pending": []
+    },
     {
       "version": "0.192",
       "date": "2026-11-02",

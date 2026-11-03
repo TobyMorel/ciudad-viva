@@ -1,6 +1,8 @@
-# Ciudad Viva · Alfa 0.234
+# Ciudad Viva · Alfa 0.235
 
-**Árboles con modelos completos:** el zoom intermedio agrupa copas, ramas, raíces, brotes, sombras y animación de viento en lotes de GPU. Los árboles mantienen sus detalles y vuelven a sus modelos completos cuando la cámara se acerca.
+**Árboles detallados al desplazar el mapa:** el zoom intermedio conserva copas, ramas, raíces, brotes y especies en lotes instanciados, con animación de viento conjunta. Las copas completas siguen visibles al acercar.
+
+# Ciudad Viva · Alfa 0.234
 
 **Inicio de ciudad con fondos para infraestructura:** una nueva partida entrega $ 175.000 para construir calles y servicios esenciales antes de recibir ingresos. Se mantienen los precios de los edificios.
 

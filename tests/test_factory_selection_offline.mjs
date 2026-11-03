@@ -18,8 +18,9 @@ test('Fábrica elegida conserva la especialidad hormigonera en proyecto privado'
  await scene(city,async({request,view})=>{
   const before=await view();
   const result=await request({action:'place',kind:'factory',industryType:'concrete',x:10,y:11,contractor:'Constructora Delta'});
-  const job=result.projects.find(x=>x.kind==='factory'&&x.x===10&&x.y===11);
-  assert.ok(job);assert.equal(job.industryType,'concrete');assert.ok(job.label.includes('Hormig'));
+  const job=result.buildings.find(x=>x.kind==='factory'&&x.x===10&&x.y===11);
+  assert.ok(job);assert.equal(job.business.industryType,'concrete');assert.ok(job.name.includes('Hormig'));
+  assert.equal(job.status,'habilitado');assert.ok(!result.projects.some(x=>x.x===10&&x.y===11));
   assert.ok(result.privateCapital<before.privateCapital);
   await assert.rejects(request({action:'place',kind:'factory',industryType:'not-real',x:11,y:11,contractor:'Sur Obras'}),/Industria desconocida/);
  });

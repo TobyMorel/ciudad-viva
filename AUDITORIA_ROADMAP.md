@@ -672,3 +672,10 @@ La regresión `.map` del arranque offline quedó cubierta por inicialización/mi
 Se incorporan folios de sector y parcela, titularidad municipal/privada y separacion explicita entre dominio y permiso urbanistico. La compra de sectores registra fecha y costo; las partidas heredadas reciben su titulo sin asignar datos historicos desconocidos. El informe municipal de Suelo y la seleccion de cada parcela exponen titular, derecho, uso y folio.
 
 Verificacion base: 12 regresiones Python del asentamiento; 6 regresiones Node Offline (alta privada, migracion, zonificacion y persistencia); 10.000 sincronizaciones de un registro sintetico de 1.600 sectores, 50.000 edificios y 10.000 obras en 0,043 s. Verificacion Chromium posterior: `test_land_expansion_ui.mjs` valida la compra y el desbloqueo contiguo en 390 y 1440 px; `test_distant_land_ui.mjs` compra cinco sectores consecutivos, construye una calle hasta la parcela 4,49, guarda y reanuda con 9 sectores y 40 tramos, sin errores JavaScript. El test usa una tesoreria de prueba ampliada para recorrer toda la expansion. Las dos pruebas de navegacion pasaron localmente. Fase 1: 90%; siguen pendientes compraventa/transferencia de inmuebles privados, gestion de barrios, costos de suelo diferenciados y planificacion vial por proyectos.
+
+
+## Alfa 0.202 · compraventa de inmuebles privados (fase 1)
+
+La ficha de una vivienda, comercio, fábrica u hotel privado permite adquirirlo para el municipio. La tasación usa el valor base de reposición y ajusta por estado; la compra se rechaza si la caja libre, descontados los contratos públicos, no alcanza. Se actualizan titular y derecho del folio, se registra vendedor/comprador/fecha/precio y la actividad privada sigue operando. Online y Offline comparten reglas; los guardados conservan transferencias ya registradas.
+
+Validación focalizada: prueba Node Offline para débito, titularidad, registro de transferencia y rechazo de compra duplicada; sintaxis de JavaScript y compilación de Python. Fase 1: 93% orientativo. Quedan gestión de barrios, costos de suelo diferenciados y planificación vial por proyectos.

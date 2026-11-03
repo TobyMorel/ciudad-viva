@@ -20,13 +20,14 @@ test('Offline: especialidad industrial se reserva al contratar y paga caja opera
   for(const [x,y] of [[4,9],[6,9],[4,11]])s.zones.push({x,y,kind:'factory',status:'disponible'});
   await scenario(s,async({adapter})=>{
     let v=await adapter.request('/api/action',{action:'place',kind:'factory',x:4,y:9,contractor:'Sur Obras'});
-    assert.equal(v.projects.at(-1).industryType,'food');
-    assert.equal(v.projects.at(-1).operatingReserve,4200);
+    let site=v.buildings.find(b=>b.x===4&&b.y===9);assert.equal(site.business.industryType,'food');
+    assert.equal(site.business.cash,4200);
     v=await adapter.request('/api/action',{action:'place',kind:'factory',x:6,y:9,contractor:'Constructora Delta'});
-    assert.equal(v.projects.at(-1).industryType,'quarry');
+    site=v.buildings.find(b=>b.x===6&&b.y===9);assert.equal(site.business.industryType,'quarry');
     v=await adapter.request('/api/action',{action:'place',kind:'factory',x:4,y:11,contractor:'Estudio y Obra Norte'});
-    assert.equal(v.projects.at(-1).industryType,'concrete');
-    assert.equal(v.projects.length,3);
+    site=v.buildings.find(b=>b.x===4&&b.y===11);assert.equal(site.business.industryType,'concrete');
+    assert.equal(v.buildings.filter(b=>b.kind==='factory').length,3);
+    assert.ok(!v.projects.some(p=>p.kind==='factory'),'las fabricas quedan habilitadas sin animacion pendiente');
     assert.ok(v.privateCapital<100000-3*4200,'Las reservas operativas deben salir del capital privado');
   });
 });

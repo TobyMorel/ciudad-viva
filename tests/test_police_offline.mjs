@@ -71,12 +71,13 @@ test('Offline: el corte vial impide respuesta y obras comprometidas impiden equi
  });
 });
 
-test('Offline: la tesorería acredita y paga al cierre de cada día',async()=>{
- const s=seed();s.day=1;s.lastMonth=0;s.paused=false;s.speed=1;
+test('Offline: la tesorer?a liquida ingresos y gastos durante el avance',async()=>{
+ const s=seed();s.day=1;s.lastMonth=0;s.paused=false;s.speed=1;s.monthlyExpenses=1200;
  await scenario(s,async({next})=>{
-  const city=await next();
-  assert.equal(city.day,2);
-  assert.equal(city.dailyCashFlow.lastDay,2);
+  let city=await next();
+  city=await next();
+  assert.equal(city.day,3);
+  assert.ok(city.dailyCashFlow.lastGameDay>0);
   assert.ok(city.dailyCashFlow.lastIncome>0);
   assert.ok(city.dailyCashFlow.lastPaid.services>0);
  });

@@ -12,17 +12,17 @@ async function scenario(city,run){
  try{const adapter=await createOfflineAdapter();await run({view:()=>adapter.request('/api/state'),action:body=>adapter.request('/api/action',body)})}
  finally{globalThis.fetch=old.fetch;globalThis.localStorage=old.storage;Date.now=old.now}
 }
-test('Offline: secundaria conserva su costo y se construye sin materiales',async()=>{
+test('Offline: secundaria conserva su costo y se construye instant?neamente sin materiales',async()=>{
  const city=seed();city.money=250000;city.paused=true;
  await scenario(city,async({view,action})=>{
   const before=await view();
   const s=await action({action:'place',kind:'school',serviceModel:'secondarySchool',x:10,y:11,contractor:'Constructora Delta'});
-  const p=s.projects.find(p=>p.x===10&&p.y===11);
-  assert.equal(p.serviceModel,'secondarySchool');
-  assert.equal(p.label,'Escuela secundaria');
-  assert.ok(p.cost>=17800);
-  assert.equal(Object.values(p.materialsRequired).reduce((a,n)=>a+n,0),0,'la construcción no espera materiales');
+  const school=s.buildings.find(b=>b.kind==='school'&&b.x===10&&b.y===11);
+  assert.ok(school,`la escuela debe quedar habilitada de inmediato; edificios: ${JSON.stringify(s.buildings.filter(b=>b.kind==='school'))}`);
+  assert.equal(school.serviceModel,'secondarySchool');
+  assert.equal(school.name,'Escuela secundaria');
   assert.ok(s.money<before.money);
+  assert.equal(s.projects.some(p=>p.x===10&&p.y===11),false,'la construcci?n no espera materiales ni animaci?n');
   await assert.rejects(action({action:'place',kind:'school',serviceModel:'policePost',x:11,y:11,contractor:'Sur Obras'}),/incompatible/);
  });
 });

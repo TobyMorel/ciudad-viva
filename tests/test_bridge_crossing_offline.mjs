@@ -20,28 +20,18 @@ test('Offline: puente contratado abre ambos tramos tras inspección, nunca al so
     const action=payload=>adapter.request('/api/action',payload);
     const tender={action:'place',kind:'bridge',x:24,y:10,contractor:'Sur Obras'};
     await assert.rejects(action({...tender,x:25}),/celda oeste/);
-    const started=await action(tender),p=started.projects.find(p=>p.kind==='bridge');
-    assert.ok(p,'debe existir contrato público con plazo y cuadrilla');
-    assert.equal(p.workersAssigned,10);
-    assert.ok(p.duration>1);
-    assert.equal(started.money,city.money-p.paid);
-    assert.ok(!started.roads.some(([x])=>x===24||x===25),'aún no circulan vehículos sobre el agua');
+    const state=await action(tender);
+    assert.equal(state.projects.some(p=>p.kind==='bridge'),false,'el puente se construye instant?neamente');
+    assert.ok(state.money<city.money,'el puente descuenta su costo al colocarse');
+    assert.ok([[24,10],[25,10]].every(([x,y])=>state.roads.some(([rx,ry])=>rx===x&&ry===y)),'los dos tramos quedan habilitados en el acto');
     await assert.rejects(action(tender),/ocupado/);
     await assert.rejects(action({action:'placeRoad',x:24,y:10}),/sobre agua/);
-    adapter.setRealtimeClock(false);
-    await action({action:'pause'}); // La partida de prueba empieza en pausa.
-    let state=started;
-    for(let i=0;i<p.duration+35&&state.projects.some(q=>q.id===p.id);i++){
-      clock+=1000;
-      state=await adapter.request('/api/state');
-    }
-    assert.ok(!state.projects.some(q=>q.id===p.id),'la obra debe completar su inspección');
-    assert.ok([[24,10],[25,10]].every(([x,y])=>state.roads.some(([rx,ry])=>rx===x&&ry===y)));
+    assert.ok([[24,25]].flat().every(x=>state.roads.some(([rx])=>rx===x)));
     const bridgeAssets=state.roadAssets.filter(a=>a.bridge&&a.y===10);
     assert.deepEqual(bridgeAssets.map(a=>a.x).sort((a,b)=>a-b),[24,25]);
     assert.ok(bridgeAssets.every(a=>a.monthlyCost===80));
     const extended=await action({action:'placeRoad',x:26,y:10});
-    assert.ok(extended.roads.some(([x,y])=>x===26&&y===10),'habilita la conexión con la ribera este');
+    assert.ok(extended.roads.some(([x,y])=>x===26&&y===10),'habilita la conexi?n con la ribera este');
   }finally{
     globalThis.fetch=old.fetch;
     globalThis.localStorage=old.localStorage;

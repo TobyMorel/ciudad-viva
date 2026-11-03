@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.201",
+  "currentVersion": "0.202",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.202",
+      "date": "2026-11-03",
+      "title": "Compraventa de inmuebles privados",
+      "roadmapPhase": 1,
+      "overallProgress": null,
+      "changes": [
+        "El municipio puede comprar viviendas, comercios, fábricas y hoteles privados desde su ficha catastral.",
+        "La tasación se calcula con el valor base del inmueble y su estado; la operación solo usa caja libre después de compromisos.",
+        "El folio registra vendedor, comprador, día y precio, y conserva la titularidad municipal al guardar o sincronizar.",
+        "La actividad privada del inmueble continúa funcionando tras la transferencia."
+      ],
+      "verification": "Prueba Offline y prueba de integración de la API Online: débito, titularidad, historial, persistencia y rechazo de compra duplicada; sintaxis y comprobaciones del esquema de versiones.",
+      "pending": [
+        "Gestión de barrios, costos de suelo diferenciados y planificación vial por proyectos siguen pendientes de fase 1."
+      ]
+    },
     {
       "version": "0.201",
       "date": "2026-11-02",

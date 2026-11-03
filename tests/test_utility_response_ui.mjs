@@ -10,7 +10,7 @@ try{
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;city.utilities=city.utilities||{};city.utilities.failures=[{id:'ui-outage',network:'power',x:8,y:10,day:12,reason:'daño de red',repairCost:500,affectedBuildings:4,status:'avería',remainingDays:0}];localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
   await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
   await page.locator('[data-popup="city"]').click();await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
-  await page.locator('[data-city-section-button="utilities"]').evaluate(button=>button.click());
+  await page.locator('#cityReportRail [data-city-report=\"utilities\"]').evaluate(button=>button.click());
   const panel=page.locator('[data-city-section="utilities"]');await page.waitForFunction(()=>!document.querySelector('[data-city-section="utilities"]')?.hidden);
   const card=panel.locator('.workplace').filter({hasText:'calle 9, 11'}).first();await card.waitFor({state:'visible',timeout:10000});
   const result=await card.evaluate((el,viewportWidth)=>{const buttons=[...el.querySelectorAll('[data-repair-utility]')],rects=buttons.map(b=>{const r=b.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height,disabled:b.disabled,scroll:b.scrollWidth,client:b.clientWidth,title:b.title}});const overlap=rects.some((r,i)=>rects.slice(i+1).some(t=>Math.min(r.right,t.right)-Math.max(r.left,t.left)>3&&Math.min(r.bottom,t.bottom)-Math.max(r.top,t.top)>3));return {buttons:rects,overlap,text:el.textContent}},width);

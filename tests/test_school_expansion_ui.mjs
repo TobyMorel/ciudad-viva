@@ -10,7 +10,7 @@ try{
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;city.money=200000;city.buildings.push({kind:'school',serviceModel:'primarySchool',name:'Escuela del Parque',x:10,y:9,status:'habilitado',classrooms:4,jobSlots:12,monthlyCost:820,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
   await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
-  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('[data-city-section-button="education"]').evaluate(el=>el.click());
+  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#cityReportRail [data-city-report=\"education\"]').evaluate(el=>el.click());
   const card=page.locator('.school-capacity-card').filter({hasText:'Escuela del Parque'});await card.waitFor({state:'visible',timeout:15000});
   const layout=await card.evaluate(el=>{const r=el.getBoundingClientRect(),parts=[...el.children].map(c=>{const b=c.getBoundingClientRect();return{left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,scroll:c.scrollWidth,client:c.clientWidth,text:c.innerText}});return{left:r.left,right:r.right,width:r.width,scroll:el.scrollWidth,client:el.clientWidth,parts,text:el.innerText}});
   assert.ok(layout.left>=0&&layout.right<=width+2&&layout.scroll<=layout.client+3,`${name}: tarjeta escolar desbordada ${JSON.stringify(layout)}`);

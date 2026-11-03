@@ -1728,9 +1728,10 @@ def _register_private_land(target,claims,item,category):
     private=category=="project" or item.get("ownerType")=="private" or kind in {"home","shop","factory","hotel"}
     if not private:return
     x,y=item["x"],item["y"];key=f"{x},{y}";deed=claims["parcelDeeds"].get(key)
-    if deed and deed.get("ownerType")=="private":
-        business=item.get("business") or {};name=business.get("name") or item.get("ownerName") or item.get("name")
-        if name and deed.get("ownerName") in (None,"Promotor privado","Familia propietaria") :deed["ownerName"]=name
+    if deed:
+        if deed.get("ownerType")=="private":
+            business=item.get("business") or {};name=business.get("name") or item.get("ownerName") or item.get("name")
+            if name and deed.get("ownerName") in (None,"Promotor privado","Familia propietaria") :deed["ownerName"]=name
         return
     business=item.get("business") or {};owner_name=business.get("name") or item.get("ownerName") or item.get("name") or ("Familia propietaria" if kind=="home" else "Promotor privado")
     claims["parcelDeeds"][key]={"id":_land_key_id("P",x,y),"x":x,"y":y,"ownerType":"private","ownerId":business.get("id") or item.get("ownerId") or item.get("id"),"ownerName":str(owner_name),"rights":"dominio privado","registeredDay":int(target.get("day",1)),"acquiredDay":item.get("acquiredDay"),"landUse":kind,"source":"obra privada" if category=="project" else "inmueble privado","status":"inscripto"}
@@ -6346,6 +6347,21 @@ class Handler(BaseHTTPRequestHandler):
                         program.update({"status":"active","pauseReason":None});ev("Curso reanudado",f"{program['label']} retomará la formación en el próximo cierre mensual.")
                     else:
                         refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
+                elif action=="acquirePrivateProperty":
+                    if state.get("government",{}).get("status") in ("derrotado","destituido"):
+                        self._send(409,{"error":"El equipo dejó el gobierno. La partida está en modo observación."});return
+                    try:x=int(data.get("x",-1));y=int(data.get("y",-1))
+                    except (TypeError,ValueError):self._send(400,{"error":"Elegí un inmueble válido."});return
+                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("kind") in ("home","shop","factory","hotel")),None)
+                    if not building:self._send(409,{"error":"Solo se pueden comprar viviendas, comercios, fábricas u hoteles construidos."});return
+                    claims=ensure_land_claims();deed=claims.get("parcelDeeds",{}).get(f"{x},{y}")
+                    if not deed or deed.get("ownerType")!="private":self._send(409,{"error":"El inmueble ya no tiene titularidad privada."});return
+                    base={"home":4200,"shop":3600,"factory":9200,"hotel":13200}[building["kind"]];quality=max(.45,min(1.2,(float(building.get("quality") or 82)/82)));price=max(1,round(float(building.get("marketValue") or base)*quality))
+                    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+                    if available<price:self._send(409,{"error":f"Quedan $ {available:,} libres; la tasación es $ {price:,}.".replace(",",".")});return
+                    seller=deed.get("ownerName","Propietario privado");state["money"]-=price;history=deed.setdefault("transferHistory",[]);history.append({"day":int(state.get("day",1)),"price":price,"seller":seller,"buyer":f"Municipalidad de {state.get('cityName','Puerto Claro')}","type":"compraventa"});deed["transferHistory"]=history[-20:]
+                    deed.update({"ownerType":"municipal","ownerId":f"municipal-{x}-{y}","ownerName":f"Municipalidad de {state.get('cityName','Puerto Claro')}","rights":"dominio municipal","lastTransferDay":int(state.get("day",1)),"lastTransferPrice":price,"status":"inscripto"})
+                    ev("Inmueble adquirido por el municipio",f"{building.get('name','Inmueble')}: compra a {seller} por $ {price:,}. El negocio continúa bajo su operador actual.".replace(",","."))
                 elif action=="place":
                     if any(site.get("x")==data.get("x") and site.get("y")==data.get("y") for site in state.get("railStations",[])):
                         self._send(409,{"error":"La parcela está ocupada por una estación ferroviaria."});return

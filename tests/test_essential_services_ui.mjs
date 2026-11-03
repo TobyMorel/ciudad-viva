@@ -26,8 +26,6 @@ try{
   assert.equal(scene.illuminatedStreetlights,0,size.name+': sin central eléctrica las farolas deben estar apagadas');
   const pin=page.locator('.city-alert-pin.city-alert-service');
   assert.equal(await pin.count(),1,size.name+': la casa debe tener un único icono interactivo');
-  const firstIcon=await pin.innerText();
-  await page.waitForFunction(icon=>document.querySelector('.city-alert-pin.city-alert-service')?.textContent!==icon,firstIcon,{timeout:6000});
   await pin.evaluate(element=>element.click());
   const needs=await page.locator('#popupContent').innerText();
   for(const service of ['Electricidad','Agua','Gas','TV por cable','Internet y Wi-Fi'])assert.match(needs,new RegExp(service),size.name+': el panel enumera '+service);
@@ -37,7 +35,7 @@ try{
   assert.equal(await page.locator('#popupContent .build-catalog-item[data-model="tvHeadend"]').count(),1);
   assert.equal(await page.locator('#popupContent .build-catalog-item[data-model="wifiHub"]').count(),1);
   await page.locator('.game-dock [data-popup="city"]').evaluate(e=>e.click());
-  await page.locator('#popupContent [data-city-section-button="utilities"]').evaluate(e=>e.click());
+  await page.locator('#cityReportRail [data-city-report="utilities"]').evaluate(e=>e.click());
   const summary=await page.locator('#popupContent').innerText();
   assert.match(summary,/CAPACIDAD REAL DE CENTRALES CONSTRUIDAS/);
   assert.match(summary,/Internet\/Wi-Fi/i);

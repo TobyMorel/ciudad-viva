@@ -26,8 +26,13 @@ try{
   }
   throw new Error(`No se pudo encuadrar parcela ${x},${y}: ${JSON.stringify(await page.evaluate(([a,b])=>window.__ciudadVivaProjectTile(a,b,0),[x,y]))}`);
  }
- const lock=await centerTile(4,20);await page.mouse.click(canvas.x+lock.x,canvas.y+lock.y);
- const card=page.locator('.land-unlock-card');await card.waitFor({timeout:30000});
+ const lock=await centerTile(4,20),screenPoint={x:canvas.x+lock.x,y:canvas.y+lock.y};
+ const geometry=await page.evaluate(([x,y])=>({project:window.__ciudadVivaProjectTile(4,20,0),inverse:window.__ciudadVivaScreenTile(x,y),land:window.__ciudadVivaLandPlotDiagnostic(4,20)}),[lock.x,lock.y]);
+ console.log('parcela remota antes del clic',JSON.stringify({lock,screenPoint,geometry}));
+ await page.mouse.click(screenPoint.x,screenPoint.y);
+ const card=page.locator('.land-unlock-card');
+ try{await card.waitFor({timeout:12000})}catch(error){const detail=await page.evaluate(([sx,sy])=>({element:document.elementFromPoint(sx,sy)?.outerHTML.slice(0,500),card:document.querySelector('.land-unlock-card')?.innerText||null}),[screenPoint.x,screenPoint.y]);throw new Error(`No apareció la ficha: ${JSON.stringify(detail)}; ${error.message}`)}
+
  const copy=await card.innerText();assert.match(copy,/Zona construible bloqueada/);assert.match(copy,/SECTOR 0, 2/);
  const unlock=page.locator('[data-unlock-land][data-chunk-x="0"][data-chunk-y="2"]');await unlock.waitFor();
  await unlock.evaluate(el=>el.click());await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes('0,2'),undefined,{timeout:30000});

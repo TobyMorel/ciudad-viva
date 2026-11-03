@@ -817,7 +817,7 @@ export function createWorld(canvas){
     box(g,.55,.06,.42,'#9baf9d',-.52,.12,.62,{cast:false});
   }
   // Edificios ferroviarios físicos visibles desde la colocación de los cimientos.
-  function railStationModel(g,mode='metro',progress=1){
+  function railStationModel(g,mode='metro',progress=1,freightRoles=[]){
     const elevated=mode==='elevated',done=progress>=1;
     box(g,1.82,.12,1.8,'#c3c5b5',0,.045,0,{cast:false});
     if(elevated){
@@ -833,6 +833,16 @@ export function createWorld(canvas){
         box(g,1.84,.12,1.35,'#336c7a',0,2.53,0,{cast:true});
         box(g,1.24,.26,.09,'#f2ead0',0,2.34,.67);
         box(g,.44,.22,.04,'#2d6878',0,2.34,.731);
+        if(freightRoles.includes('industrial')){
+          box(g,.34,.22,.28,'#ba8454',-.47,1.91,-.18,{cast:true});
+          box(g,.31,.2,.26,'#6d9879',.43,1.9,-.19,{cast:true});
+        }
+        if(freightRoles.includes('port')){
+          box(g,.09,.78,.09,'#b6784a',.84,2.94,-.28,{cast:true});
+          box(g,.88,.08,.09,'#b6784a',.42,3.3,-.28,{cast:true});
+          box(g,.1,.46,.1,'#b6784a',.06,3.05,-.28,{cast:true});
+          box(g,.25,.13,.22,'#d3a05c',.06,2.77,-.28,{cast:true});
+        }
       }
     }else{
       // Subte: edificio de acceso y marquesina; el túnel real queda bajo tierra.
@@ -1134,7 +1144,7 @@ export function createWorld(canvas){
   function makePlane(){const g=new THREE.Group();box(g,.18,.17,.98,'#f0e8d4',0,.13,0,{cast:true});box(g,1.12,.07,.28,'#70969a',0,.14,.02,{cast:true});box(g,.37,.055,.2,'#bf6954',0,.17,.35);box(g,.09,.11,.2,'#6b7e83',0,.22,-.42);box(g,.16,.22,.22,'#75a9b0',0,.25,-.31);box(g,.1,.23,.1,'#b95345',-.07,.24,0);trafficRoot.add(g);vehicleFinish(g,'plane');return g}
 
   // La formación se dibuja como proyección translúcida sobre el trazado: no circula por la calle.
-  function makeElevatedTrain(){
+  function makeElevatedTrain(freight=false){
     const g=new THREE.Group();
     box(g,.72,.46,1.43,'#c7d8db',0,.42,0,{cast:true});
     box(g,.69,.13,1.36,'#386475',0,.72,0,{cast:true});
@@ -1145,7 +1155,11 @@ export function createWorld(canvas){
       box(g,.1,.2,.15,'#34424b',x,.12,z);
     box(g,.42,.2,.025,'#d5ecf0',0,.48,.73);
     box(g,.34,.07,.04,'#e2a857',0,.64,.73);
-    g.userData.railTrain=true;trafficRoot.add(g);vehicleFinish(g,'train');return g;
+    if(freight){
+      box(g,.32,.15,.34,'#c58a4d',0,.77,-.24,{cast:true});
+      box(g,.3,.13,.3,'#668d72',0,.77,.14,{cast:true});
+    }
+    g.userData.railFreightTrain=freight;g.userData.railTrain=true;trafficRoot.add(g);vehicleFinish(g,'train');return g;
   }
   function makeMetroProjection(){
     const g=new THREE.Group(),ghost=mat('#55c8d2',{transparent:true,opacity:.58,depthWrite:false,emissive:'#207688',emissiveIntensity:.24});
@@ -1180,7 +1194,7 @@ export function createWorld(canvas){
       (state.urbanEvolution?.deceased||[]).filter(d=>d.disposition==='en traslado').map(d=>[d.residentId,d.funeralTrip?.route,d.funeralTrip?.departDay,d.funeralTrip?.arrivalDay,d.funeralTrip?.facilityX,d.funeralTrip?.facilityY]),
       (state.busRoutes||[]).map(b=>[b.id,b.status,b.operational,b.effectiveBuses,b.buses,b.route,b.driverIds,b.originName,b.destinationName,b.ridersThisPass,b.capacity,b.headwayMinutes,b.stops,b.monthlyFareRevenue]),
       (state.taxiRoutes||[]).map(t=>[t.id,t.status,t.operational,t.route,t.stops,t.depotX,t.depotY,t.monthlyOperatingCost]),
-      (state.railStations||[]).map(site=>[site.id,site.x,site.y,site.mode,site.status,site.stage,Math.floor((site.elapsed||0)/Math.max(1,site.duration||1)*10)]),
+      (state.railStations||[]).map(site=>[site.id,site.x,site.y,site.mode,site.status,site.stage,site.freightRoles,Math.floor((site.elapsed||0)/Math.max(1,site.duration||1)*10)]),
       (state.metroLines||[]).map(m=>[m.id,m.mode,m.status,m.operational,m.trainCount,m.elapsed,m.duration,m.stations,m.route]),
       state.utilities?.powerLines,state.utilities?.waterPipes,state.utilities?.sewerLines,state.utilities?.drainLines,state.utilities?.gasLines,state.utilities?.telecomLines,
       (state.utilities?.report?.failures||[]).map(f=>[f.id,f.network,f.x,f.y,f.status,f.responseRoute,f.completedDay]),state.utilities?.report?.drainage?.floodedTiles,
@@ -1230,7 +1244,7 @@ export function createWorld(canvas){
       const [cx,cz]=tilePos(site.x,site.y),group=new THREE.Group();
       group.position.set(cx,0,cz);
       const completion=site.status==='active'?1:Math.min(.99,(site.elapsed||0)/Math.max(1,site.duration||1));
-      railStationModel(group,site.mode,completion);
+      railStationModel(group,site.mode,completion,site.freightRoles||[]);
       group.userData.railStationSite=true;
       group.userData.railSiteId=site.id;
       dynamicRoot.add(group);
@@ -1344,6 +1358,19 @@ export function createWorld(canvas){
     }
 
     // Solo hay trenes visuales cuando el motor autoritativo declara la línea operativa.
+    const freightLines=new Map((state.metroLines||[]).filter(line=>line.mode==='elevated').map(line=>[String(line.id),line]));
+    for(const order of (state.supply?.portOrders||[]).filter(item=>item.mode==='rail'&&item.status==='en tránsito ferroviario').slice(0,16)){
+      const line=freightLines.get(String(order.freightLineId)),railRoute=order.railRoute||[];
+      if(!line||railRoute.length<2||railRoute.some((point,index)=>!Array.isArray(point)||point.length!==2||!point.every(Number.isInteger)||index&&Math.abs(point[0]-railRoute[index-1][0])+Math.abs(point[1]-railRoute[index-1][1])!==1))continue;
+      const path=railRoute.map(([x,y])=>tilePos(x,y)),progress=clamp((order.travelledDistance||0)/Math.max(1,order.railDistance||railRoute.length-1),0,.999),spanDays=Math.max(1,(railRoute.length-1)/12),actor={
+        mesh:makeElevatedTrain(true),route:path,offset:0,speed:1.5,side:0,height:1.82,railTrain:true,
+        deliveryProgress:progress,actorKey:'rail-cargo-'+order.id,
+        selection:{type:'Carga ferroviaria',title:'Tren de carga · '+(order.businessName||'Fábrica'),description:'Carga industrial en ruta al puerto por una línea elevada operativa.',metrics:[['Mercadería',(order.quantity||0)+' u. de '+(order.product||'mercadería')],['Línea',line.name||'Tren elevado'],['Arribo previsto','Día '+(order.expectedPortDay||order.departureDay||state.day)]]}
+      };
+      if(line.operational){actor.deliveryStartDay=visualGameDay-progress*spanDays;actor.deliveryEndDay=actor.deliveryStartDay+spanDays}
+      routeActors.push(actor);
+    }
+
     for(const metro of (state.metroLines||[]).filter(l=>l.mode!=='elevated')){
       const plan=metroVisualPlan(metro);if(!plan||!plan.trains)continue;
       const path=plan.route.map(([x,y])=>tilePos(x,y));

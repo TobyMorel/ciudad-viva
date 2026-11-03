@@ -1,3 +1,9 @@
+## Después de Alfa 0.239 · Validación LAN y fase 22
+
+Alfa 0.239 conecta las fábricas con excedentes, las estaciones elevadas y el puerto. Los envíos ferroviarios requieren dos terminales físicas activas, una línea operativa y acceso vial local. Cada salida respeta un calendario de tres días, el aforo compartido del tren y de ambos patios terminales; la carga ocupa inventario del puerto, espera el barco y genera el flete municipal al llegar al mercado. La partida local y el servidor aplican las mismas reglas, el panel muestra sus cifras y la escena representa terminales y trenes de carga.
+
+Siguiente: validar la sesión LAN entre dos equipos físicos con Hamachi. En fase 22, continuar con capacidad física compartida entre pasajeros y mercancías en los corredores, y ampliar los recorridos de carga cuando haya infraestructura correspondiente. Este entorno no tiene acceso a equipos Hamachi para hacer esa prueba.
+
 ## Después de Alfa 0.238 · Carga ferroviaria y validación LAN
 
 Alfa 0.238 enlaza las colas de nueve franjas con los tiempos estimados Offline, de forma idempotente. Alfa 0.237 amplía el acceso peatonal desde el origen y destino hasta tres parcelas, manteniendo el intercambiador físico en un máximo de dos. Alfa 0.236 completó una mecánica pendiente de la fase 22: viajes reales de compras, servicios y ocio pueden transbordar entre dos líneas de subte y tren elevado. Se requieren líneas activas con energía, flota y aforo, estaciones construidas con calle adyacente y un intercambiador a dos parcelas o menos. Cada tramo reserva su capacidad; el segundo boleto tiene 25 % de descuento y ambos se liquidan una sola vez al hogar. Offline y LAN aplican las mismas reglas.

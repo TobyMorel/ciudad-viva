@@ -93,6 +93,7 @@ export function metroRefresh(s){
   const rail=line.mode==='elevated';
   line.headwayMinutes=Math.max(5,Math.ceil(d*(rail?3:4)/Math.max(1,n)));
   line.dailyCapacity=ready?n*(rail?RAIL_SEATS:METRO_SEATS)*3:0;
+  line.freightCapacityPerDay=ready&&rail?n*60:0;
   line.monthlyOperatingCost=ready?Math.round((rail?390:230)+(rail?110:85)*d+(rail?260:140)*n+(line.powerRequiredKw||0)*.7):0;
   line.energyKw=ready?line.powerRequiredKw||0:0;
  }

@@ -8,6 +8,7 @@ from taxi_passengers import assign_taxi_passengers
 from bus_nonwork import assign_bus_nonwork_passengers, collect_bus_nonwork_fares
 from growth_demand import growth_demand
 from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro_day,metro_assign_passengers,settle_metro_month
+from rail_freight import freight_route_for_factory_port,reserve_freight_capacity,next_freight_departure_day,rail_freight_report
 from essential_services import evaluate_essential_services,advance_essential_service_day
 
 ROOT = Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent)).resolve()
@@ -4719,12 +4720,18 @@ def move_households():
     update_older_adult_care()
 
 def queue_factory_exports():
-    """Vender excedentes reales de fábricas por puerto, aeropuerto o salida terrestre."""
+    """Elige corredor ferroviario o salida existente para excedentes industriales."""
+    metro_refresh(state)
     supply=state.setdefault("supply",{});orders=supply.setdefault("factoryExportOrders",[]);industry=state.setdefault("localIndustry",{})
+    supply.setdefault("portOrders",[])
+    active_status=("en tránsito","en tránsito ferroviario","en vuelo","en viaje","en puerto","pendiente",
+                   "esperando patio","esperando tren programado","esperando capacidad ferroviaria","esperando acceso ferroviario")
+    def local_access(a,b):return route_between((a["x"],a["y"]),(b["x"],b["y"]))
     for factory in state.get("buildings",[]):
         firm=factory.get("business",{});kind=firm.get("industryType")
         if factory.get("kind")!="factory" or firm.get("status")!="abierto" or kind not in ("food","quarry","concrete","sawmill","metalworks"):continue
-        if any(o.get("businessId")==firm.get("id") and o.get("status") in ("en tránsito","en vuelo","en viaje","en puerto","pendiente","esperando patio") for o in orders+supply.get("portOrders",[]) if o.get("originType")=="factory"):continue
+        if any(o.get("businessId")==firm.get("id") and o.get("status") in active_status
+               for o in orders+supply["portOrders"] if o.get("originType")=="factory"):continue
         if kind=="food":
             vendor=supply.setdefault("market",{}).get(f"Fábrica local {factory['x']+1}-{factory['y']+1}",{});stock=max(0,int(vendor.get("stock",0)));stock_key="stock";product=vendor.get("commodity","alimentos");base=max(1,float(vendor.get("unitCost",4)))
         else:
@@ -4732,19 +4739,40 @@ def queue_factory_exports():
             vendor=supply.setdefault("suppliers",{}).get(vendor_name,{});stock=max(0,int(firm.get(stock_key,0)));base=MATERIAL_PRICE[product]*SUPPLIERS[vendor_name]["price"]
         reserve=max(8,round(max(1,int(vendor.get("maxStock",180)))*.24));quantity=min(30,max(0,stock-reserve))
         if quantity<8:continue
-        x,y=factory["x"],factory["y"];ports=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo") and route_between((x,y),(b["x"],b["y"]))),key=lambda b:(len(route_between((x,y),(b["x"],b["y"])) or []),b["x"],b["y"]))
+        x,y=factory["x"],factory["y"]
+        ports=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo") and route_between((x,y),(b["x"],b["y"]))),key=lambda b:(len(route_between((x,y),(b["x"],b["y"])) or []),b["x"],b["y"]))
+        rail_options=[]
+        for port in state.get("buildings",[]):
+            if port.get("kind")!="port" or port.get("status") not in ("habilitado","operativo"):continue
+            route=freight_route_for_factory_port(state,factory,port,local_access)
+            if route:rail_options.append((route,port))
+        rail_options.sort(key=lambda item:(item[0]["distance"],str(item[0]["line"].get("id","")),item[1]["x"],item[1]["y"]))
         airports=sorted((b for b in state.get("buildings",[]) if b.get("kind")=="airport" and b.get("operational") and route_between((x,y),(b["x"],b["y"]))),key=lambda b:(len(route_between((x,y),(b["x"],b["y"])) or []),b["x"],b["y"]))
-        land_route=route_between((x,y),(23,10));mode="ship" if ports else "air" if airports else "land" if land_route else None
+        land_route=route_between((x,y),(23,10))
+        mode="rail" if rail_options else "ship" if ports else "air" if airports else "land" if land_route else None
         if not mode:continue
-        unit_price=max(1,round(base*.88));order={"id":uuid.uuid4().hex,"originType":"factory","businessId":firm.get("id"),"businessName":firm.get("name",factory.get("name","Fábrica local")),"factoryX":x,"factoryY":y,"product":product,"quantity":quantity,"unitPrice":unit_price,"orderedDay":state["day"],"status":"pendiente","mode":mode,"route":[]}
-        if mode=="ship":
-            port=ports[0];order.update({"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"destination":"Puerto","status":"pendiente"});supply.setdefault("portOrders",[]).append(order)
+        unit_price=max(1,round(base*.88))
+        order={"id":uuid.uuid4().hex,"originType":"factory","businessId":firm.get("id"),"businessName":firm.get("name",factory.get("name","Fábrica local")),"factoryX":x,"factoryY":y,"product":product,"quantity":quantity,"unitPrice":unit_price,"orderedDay":state["day"],"status":"pendiente","mode":mode,"route":[]}
+        if mode=="rail":
+            freight,port=rail_options[0];origin=freight["originStation"];terminal=freight["portStation"]
+            order.update({"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"destination":"Puerto",
+                          "status":"esperando tren programado","freightLineId":freight["line"]["id"],
+                          "freightOriginStation":[origin["x"],origin["y"]],"freightPortStation":[terminal["x"],terminal["y"]],
+                          "railRoute":freight["route"],"route":freight["route"],
+                          "originAccessRoute":freight["originAccessRoute"],"portAccessRoute":freight["portAccessRoute"],
+                          "railDistance":max(1,len(freight["route"])-1),"distance":freight["distance"],
+                          "scheduleIntervalDays":3,"scheduledDepartureDay":next_freight_departure_day(state["day"],3),
+                          "travelledDistance":0})
+            supply["portOrders"].append(order)
+        elif mode=="ship":
+            port=ports[0];order.update({"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"destination":"Puerto"});supply["portOrders"].append(order)
         else:
             destination=airports[0] if mode=="air" else {"x":23,"y":10};order["destination"]="Aeropuerto" if mode=="air" else "Mercado terrestre";order["destinationX"],order["destinationY"]=destination["x"],destination["y"];order["route"]=route_between((x,y),(destination["x"],destination["y"])) or [];order["distance"]=max(1,len(order["route"])-1);order["status"]="en tránsito";orders.append(order)
         vendor_stock_key="stock" if kind=="food" else product
         vendor[vendor_stock_key]=max(0,int(vendor.get(vendor_stock_key,0))-quantity)
         if kind!="food":firm[stock_key]=max(0,int(firm.get(stock_key,0))-quantity)
-        ev("Excedente industrial exportado",f"{factory.get('name','La fábrica')} despachó {quantity} unidades de {product} por {order['destination'].lower()}; el camión sigue una ruta conectada.")
+        transport="tren al puerto" if mode=="rail" else "puerto" if mode=="ship" else "avión" if mode=="air" else "salida terrestre"
+        ev("Excedente industrial en camino",f"{factory.get('name','La fábrica')} reservó {quantity} unidades de {product} para exportarlas por {transport}.")
 
 def process_factory_exports():
     supply=state.setdefault("supply",{});industry=state.setdefault("localIndustry",{});industry.setdefault("exportedUnits",0);industry.setdefault("exportRevenue",0)
@@ -4758,17 +4786,75 @@ def process_factory_exports():
         if order.get("status")!="exportado" or order.get("settled"):continue
         factory=next((b for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("id")==order.get("businessId")),None)
         if not factory:order["status"]="cancelado";continue
-        revenue=int(order.get("quantity",0))*int(order.get("unitPrice",1));firm=factory["business"];firm["cash"]=int(firm.get("cash",0)+revenue);firm["lastExportUnits"]=firm.get("lastExportUnits",0)+order["quantity"];firm["lastExportRevenue"]=firm.get("lastExportRevenue",0)+revenue;industry["exportedUnits"]+=order["quantity"];industry["exportRevenue"]+=revenue;order.update({"settled":True,"completedDay":state["day"],"revenue":revenue});ev("Exportación industrial recibida",f"{order['quantity']} unidades de {order.get('product','mercadería')} llegaron al mercado exterior por {order.get('destination','red regional').lower()}; ingreso empresarial $ {revenue}.")
+        gross=int(order.get("quantity",0))*int(order.get("unitPrice",1))
+        freight_fee=min(gross,max(0,int(order.get("freightCost",0)))) if order.get("mode")=="rail" else 0
+        revenue=gross-freight_fee;firm=factory["business"]
+        firm["cash"]=int(firm.get("cash",0)+revenue);firm["lastExportUnits"]=firm.get("lastExportUnits",0)+order["quantity"];firm["lastExportRevenue"]=firm.get("lastExportRevenue",0)+revenue
+        industry["exportedUnits"]+=order["quantity"];industry["exportRevenue"]+=revenue
+        if freight_fee:
+            state["money"]=state.get("money",0)+freight_fee
+            line=next((l for l in state.get("metroLines",[]) if str(l.get("id"))==str(order.get("freightLineId"))),None)
+            if line:line["freightRevenue"]=line.get("freightRevenue",0)+freight_fee;line["freightDeliveredUnits"]=line.get("freightDeliveredUnits",0)+order.get("quantity",0)
+            record_direct_municipal_income(freight_fee,"rail_freight")
+        order.update({"settled":True,"completedDay":state["day"],"grossRevenue":gross,"freightCost":freight_fee,"revenue":revenue})
+        ev("Exportación industrial recibida",f"{order['quantity']} unidades de {order.get('product','mercadería')} llegaron al mercado exterior por {order.get('destination','red regional').lower()}; ingreso neto $ {revenue}.")
 
 def process_port_logistics():
-    """Exportaciones reales de comercios: camión por calles, patio limitado y barco por demanda."""
+    """Traslada carga al puerto por carretera o por tren, limita patios y despacha barcos."""
+    metro_refresh(state)
     supply=state["supply"];ports=[b for b in state["buildings"] if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo")]
     orders=supply.setdefault("portOrders",[]);voyages=supply.setdefault("portVoyages",[])
+    statuses=("pendiente","en tránsito","esperando acceso","esperando patio","esperando tren programado",
+              "esperando capacidad ferroviaria","esperando acceso ferroviario","en tránsito ferroviario")
+    def local_access(a,b):return route_between((a["x"],a["y"]),(b["x"],b["y"]))
     for order in orders:
-        if order.get("status") not in ("pendiente","en tránsito","esperando acceso","esperando patio"):continue
-        port=next((b for b in ports if b.get("id")==order.get("portId")),None)
+        if order.get("status") not in statuses:continue
+        port_id=order.get("portId")
+        port=next((b for b in ports if b.get("id",f"port-{b['x']}-{b['y']}")==port_id),None)
         source=next((b for b in state["buildings"] if b.get("kind") in ("shop","factory") and b.get("business",{}).get("id")==order.get("businessId")),None)
         if not port or not source:order["status"]="cancelado";continue
+        if order.get("mode")=="rail":
+            freight=freight_route_for_factory_port(state,source,port,local_access,order.get("freightLineId"))
+            if not freight:
+                if order.get("status")!="en tránsito ferroviario":order.update({"status":"esperando acceso ferroviario","waitReason":"Faltan terminales elevadas activas y conectadas."})
+                continue
+            line=freight["line"];origin=freight["originStation"];terminal=freight["portStation"]
+            order.update({"railRoute":freight["route"],"route":freight["route"],"railDistance":max(1,len(freight["route"])-1),
+                          "freightOriginStation":[origin["x"],origin["y"]],"freightPortStation":[terminal["x"],terminal["y"]],
+                          "originAccessRoute":freight["originAccessRoute"],"portAccessRoute":freight["portAccessRoute"]})
+            for site,role in ((origin,"industrial"),(terminal,"port")):
+                roles=site.setdefault("freightRoles",[])
+                if role not in roles:roles.append(role)
+                site["freightTerminal"]=True
+            if order.get("railArrived"):
+                if port.get("cargoStored",0)+order["quantity"]>port.get("cargoCapacity",500):
+                    order.update({"status":"esperando patio","waitReason":"Patio portuario sin espacio."});continue
+                port["cargoStored"]=port.get("cargoStored",0)+order["quantity"]
+                order.update({"status":"en puerto","arrivedDay":state["day"],"freightCost":int(order["quantity"])*2,"waitReason":""})
+                if not order.get("railArrivalRecorded"):
+                    line["freightCarriedUnits"]=line.get("freightCarriedUnits",0)+order["quantity"];order["railArrivalRecorded"]=True
+                ev("Carga ferroviaria recibida en puerto",f"{order['quantity']} unidades de {order['businessName']} llegaron por tren; patio {port['cargoStored']}/{port.get('cargoCapacity',500)}.")
+                continue
+            if order.get("status")!="en tránsito ferroviario":
+                if state["day"]<int(order.get("scheduledDepartureDay",state["day"])):
+                    order.update({"status":"esperando tren programado","waitReason":"Próxima salida día "+str(order.get("scheduledDepartureDay"))});continue
+                if not reserve_freight_capacity(line,origin,terminal,order.get("quantity",0),state["day"]):
+                    interval=max(1,int(order.get("scheduleIntervalDays",3)));order.update({"status":"esperando capacidad ferroviaria","scheduledDepartureDay":next_freight_departure_day(state["day"],interval),"waitReason":"Aforo de la formación o terminal ocupado."});continue
+                order.update({"status":"en tránsito ferroviario","departureDay":state["day"],"travelledDistance":0,
+                              "waitReason":"","expectedPortDay":state["day"]+max(1,math.ceil(order["railDistance"]/12))})
+                continue
+            if not line.get("operational"):continue
+            if state["day"]>order.get("departureDay",state["day"]):order["travelledDistance"]=min(order["railDistance"],order.get("travelledDistance",0)+12)
+            if order.get("travelledDistance",0)<order["railDistance"]:continue
+            order["railArrived"]=True
+            if port.get("cargoStored",0)+order["quantity"]>port.get("cargoCapacity",500):
+                order.update({"status":"esperando patio","waitReason":"Patio portuario sin espacio."});continue
+            port["cargoStored"]=port.get("cargoStored",0)+order["quantity"]
+            order.update({"status":"en puerto","arrivedDay":state["day"],"freightCost":int(order["quantity"])*2,"waitReason":""})
+            if not order.get("railArrivalRecorded"):
+                line["freightCarriedUnits"]=line.get("freightCarriedUnits",0)+order["quantity"];order["railArrivalRecorded"]=True
+            ev("Carga ferroviaria recibida en puerto",f"{order['quantity']} unidades de {order['businessName']} llegaron por tren; patio {port['cargoStored']}/{port.get('cargoCapacity',500)}.")
+            continue
         route=route_between((source["x"],source["y"]),(port["x"],port["y"]))
         if not route:order.update({"status":"esperando acceso","route":[]});continue
         order["route"]=route;distance=max(1,len(route)-1);order["status"]="en tránsito"
@@ -4782,9 +4868,16 @@ def process_port_logistics():
         quantity=min(port.get("shipCapacity",180),port["cargoStored"]);port["cargoStored"]-=quantity;port["lastShipDay"]=state["day"];port["shipsDeparted"]=port.get("shipsDeparted",0)+1
         fee=round(quantity*.6);port["feeIncome"]=port.get("feeIncome",0)+fee;state["money"]+=fee;state["portMonthlyIncome"]=state.get("portMonthlyIncome",0)+fee;record_direct_municipal_income(fee,"port")
         voyage={"id":uuid.uuid4().hex,"portId":port.get("id",f"port-{port['x']}-{port['y']}"),"quantity":quantity,"cargoType":"mercadería","direction":"exportación","departureDay":state["day"],"arrivalDay":state["day"]+2,"status":"en ruta","route":[[23,port["y"]],[24,port["y"]],[25,port["y"]],[26,port["y"]],[27,port["y"]]],"businessNames":[]}
-        factory_orders=[o for o in orders if o.get("originType")=="factory" and o.get("portId")==port.get("id",f"port-{port['x']}-{port['y']}") and o.get("status")=="en puerto"]
-        for order in factory_orders:order.update({"status":"en viaje","arrivalDay":voyage["arrivalDay"],"route":voyage["route"]})
+        factory_candidates=[o for o in orders if o.get("originType")=="factory" and o.get("portId")==port.get("id",f"port-{port['x']}-{port['y']}") and o.get("status")=="en puerto"]
+        factory_orders=[];manifest_remaining=quantity
+        for order in factory_candidates:
+            cargo_quantity=max(0,int(order.get("quantity",0)))
+            if cargo_quantity<=0 or cargo_quantity>manifest_remaining:continue
+            factory_orders.append(order);manifest_remaining-=cargo_quantity
+        for order in factory_orders:order.update({"status":"en viaje","arrivalDay":voyage["arrivalDay"],"route":voyage["route"],"voyageId":voyage["id"]})
         voyage["factoryOrderIds"]=[o["id"] for o in factory_orders]
+        voyage["railOrderIds"]=[o["id"] for o in factory_orders if o.get("mode")=="rail"]
+        voyage["transportMode"]="ferrocarril y barco" if voyage["railOrderIds"] else "camión y barco"
         supply.setdefault("factoryExportOrders",[]).extend(o for o in factory_orders if o not in supply.get("factoryExportOrders",[]))
         voyages.append(voyage);ev("Buque de carga zarpó",f"Un buque partió con {quantity} unidades exportadas; tasa portuaria $ {fee} ingresó a tesorería.")
     for voyage in voyages:
@@ -6203,7 +6296,8 @@ def _build_public_state(player_id=None):
     view["airports"]=[{**p,"accessConnected":bool(route_between((4,10),(p["x"],p["y"]))) } for p in state["buildings"] if p.get("kind")=="airport"]
     view["hotels"]=[b for b in state["buildings"] if b.get("kind")=="hotel"]
     view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"eventVisitors":state.get("eventVisitorsThisMonth",0),"eventRetailSpend":state.get("eventRetailSpendThisMonth",0),"eventCleanupSpend":state.get("eventCleanupSpendThisMonth",0),"events":state.get("tourismEvents",[])[-6:],"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
-    view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
+    view["railFreight"]=rail_freight_report(view)
+    view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","en tránsito ferroviario","en viaje","en puerto","esperando acceso","esperando patio","esperando tren programado","esperando capacidad ferroviaria","esperando acceso ferroviario") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status") in ("esperando acceso","esperando acceso ferroviario") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
     view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","bicycleCommuters","bicyclePassengers","returnBicycleCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolBusPassengers","schoolWalkers","schoolBicycles","schoolVehicles","schoolEmissionsKg","leisureTrips","leisureVisitors","leisureVehicles","leisureWalkers","leisureBusPassengers","leisureMetroPassengers","leisureRailPassengers","leisureTaxiPassengers","leisureTransitPassengers","leisureEmissionsKg","dailyTrips") if k in commute}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
@@ -6251,13 +6345,14 @@ def _build_public_state(player_id=None):
     business_income=round(commute["privateStaffedJobs"]*2)
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
     tax_report=state.get("taxes",{}).get("lastReport",{})
-    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income)
+    rail_freight_income=round(state.get("dailyCashFlow",{}).get("directIncome",{}).get("rail_freight",0))
+    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income+rail_freight_income)
     view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
     view["municipalFinance"]["incomeBreakdown"]={
         "baseAndResidents":round(state.get("monthlyIncome",0)),"privateEmployment":business_income,
         "propertyTaxes":round(tax_report.get("propertyCollected",0)),"businessTaxes":round(tax_report.get("businessCollected",0)),
         "transitFares":round(transit_income),"airportFees":round(state.get("airportMonthlyIncome",0)),
-        "tourismTax":round(tourism_tax),"recycling":round(view["recyclingIncome"]),"portExports":port_income}
+        "tourismTax":round(tourism_tax),"recycling":round(view["recyclingIncome"]),"portExports":port_income,"railFreight":rail_freight_income}
     view["municipalFinance"]["expenseBreakdown"]={
         "buildingOperations":round(state.get("monthlyExpenses",0)),"publicPayroll":round(view["publicPayroll"]),
         "police":round(view["policeReport"].get("monthlyOperatingCost",0)),"fire":round(view["fireReport"].get("monthlyOperatingCost",0)),

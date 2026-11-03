@@ -155,6 +155,7 @@ def metro_refresh(state):
         rail=line.get("mode")=="elevated"
         line["headwayMinutes"]=max(5,math.ceil(d*(3 if rail else 4)/max(1,n)))
         line["dailyCapacity"]=n*(RAIL_SEATS if rail else METRO_SEATS)*3 if ready else 0
+        line["freightCapacityPerDay"]=n*60 if ready and rail else 0
         line["monthlyOperatingCost"]=round((390 if rail else 230)+(110 if rail else 85)*d+(260 if rail else 140)*n+line.get("powerRequiredKw",0)*.7) if ready else 0
         line["energyKw"]=line.get("powerRequiredKw",0) if ready else 0
 

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.238",
+  "currentVersion": "0.239",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.239",
+      "date": "2026-11-03",
+      "title": "Trenes de carga y exportación al puerto",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las fábricas con excedentes pueden reservar capacidad en líneas elevadas activas y mover mercadería al puerto por terminales físicas cercanas.",
+        "Las salidas se programan cada tres días; el aforo depende de las formaciones y de las terminales, y el patio portuario conserva inventario hasta que zarpa el buque.",
+        "El flete cuesta $2 por unidad, se registra como ingreso municipal y el productor cobra el saldo cuando la exportación llega al mercado.",
+        "El panel ferroviario muestra carga en espera, carga en tren, entregas e ingresos; las terminales muestran equipo de carga 3D y cada envío activo tiene un tren visible.",
+        "Online y Offline comparten los mismos requisitos, calendario, límites de capacidad y liquidación."
+      ],
+      "verification": "La publicación activa la validación existente de motores, regresiones, partida larga y UI responsive de 390/1440 px; la prueba LAN entre equipos físicos continúa pendiente."
+    },
     {
       "version": "0.238",
       "date": "2026-11-03",

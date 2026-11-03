@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.239
+
+**Trenes de carga y exportación al puerto:** las fábricas pueden enviar excedentes por líneas elevadas activas con estaciones junto a la planta y al puerto. Hay salidas programadas, capacidad por tren y terminal, inventario portuario y un flete municipal liquidado cuando llega el barco. La interfaz identifica la carga pendiente y los trenes en ruta.
+
 # Ciudad Viva · Alfa 0.238
 
 **Las colas ya afectan los viajes Offline:** cada trayecto motorizado recibe su demora por franja y actualiza el tiempo estimado. Releer la partida no acumula la demora dos veces.

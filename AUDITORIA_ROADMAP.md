@@ -765,3 +765,8 @@ Se sustituyó la casa de volúmenes rectangulares simples por una silueta extrui
 ## Alfa 0.218 — obras de vivienda, comercio e industria más rápidas (fase 15)
 
 Se redujo a la mitad el plazo de proyectos nuevos de viviendas, comercios y fábricas en los motores Online y Offline. Las obras ya activas reducen a la mitad el plazo restante una sola vez, manteniendo progreso, hitos y cobros. La interpolación visual ahora respeta el ancla del nuevo calendario, y el catálogo muestra la estimación actualizada. El reloj x4 conserva su aceleración sobre el plazo reducido.
+
+
+## Alfa 0.219 — HUD y controles móviles más legibles (fase 15)
+
+La cabecera en móviles separa marca y acciones de una fila de indicadores; tesorería mantiene un bloque destacado y los demás datos quedan disponibles en una tira desplazable. La barra de informes comienza al inicio del mapa y conserva espacio para recorrer todas las categorías. Los mensajes de vecinos limitan su altura y desplazan su lista internamente. La barra inferior usa objetivos táctiles mayores y respeta las áreas seguras del dispositivo.

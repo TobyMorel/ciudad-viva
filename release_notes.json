@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.218",
+  "currentVersion": "0.219",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.219",
+      "date": "2026-11-03",
+      "title": "Interfaz móvil más clara y cómoda",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Se reorganizó la cabecera móvil en dos filas para que la tesorería y los indicadores se distingan y puedan desplazarse sin quedar comprimidos.",
+        "La barra de informes empieza junto al mapa y ocupa el alto disponible; los mensajes de vecinos tienen un límite compacto y su lista se desplaza por dentro.",
+        "Se ampliaron los botones e iconos de la barra inferior y se añadieron márgenes para las áreas seguras del teléfono."
+      ],
+      "verification": "Interfaz móvil reorganizada y publicada como parte de Ciudad Viva Alfa 0.219."
+    },
     {
       "version": "0.218",
       "date": "2026-11-03",

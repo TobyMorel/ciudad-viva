@@ -27,8 +27,10 @@ try{
  }
  for(let cy=2;cy<=6;cy++){
   const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
-  await page.locator('.land-unlock-card').waitFor();
-  const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);await button.waitFor();await button.evaluate(el=>el.click());
+  const card=page.locator('.land-unlock-card');await card.waitFor();
+  const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);
+  if(await button.count()===0){const cardText=await card.innerText(),landClaims=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.landClaims);throw new Error(`Sin botón para 0,${cy}; ficha=${JSON.stringify(cardText)}; sectores=${JSON.stringify(landClaims?.unlockedChunks)}`)}
+  await button.waitFor();await button.evaluate(el=>el.click());
   await page.waitForFunction(cy=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes(`0,${cy}`),cy);console.log(`sector 0,${cy} habilitado`);
  }
  await page.locator('[data-popup="build"]').click();await page.locator('.tool[data-tool="road"]').evaluate(el=>el.click());

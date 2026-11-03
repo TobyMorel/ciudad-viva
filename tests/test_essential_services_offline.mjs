@@ -16,13 +16,14 @@ test('ciudad nueva: ni servicios gratuitos ni farolas iluminadas',()=>{
 });
 test('conectar centrales físicas aumenta capacidad sin inventar una conexión de consumo',()=>{
  const city=full();
+ Object.assign(city.utilities,{powerLines:[],waterPipes:[],gasLines:[],telecomLines:[]});
  city.buildings.push(provider('powerPlant',8),provider('waterPlant',9),provider('gasPlant',10),provider('civic',11,'tvHeadend'),provider('civic',12,'wifiHub'));
  const grid=evaluateEssentialServices(city);
  assert.equal(grid.power.capacity,900);assert.equal(grid.water.capacity,220);assert.equal(grid.gas.capacity,160);
  assert.equal(grid.tv.capacity,180);assert.equal(grid.wifi.capacity,160);
  assert.deepEqual(city.buildings[0].missingServices,[]);
  assert.ok(city.utilities.poweredStreetlightTiles.length>0);
- city.utilities.telecomLines=[[4,10]];
+ city.utilities.failures=[{network:'telecom',x:4,y:10,status:'avería'}];
  evaluateEssentialServices(city);
  assert.deepEqual(city.buildings[0].missingServices,['tv','wifi']);
  assert.equal(city.buildings[0].missingServiceReasons.wifi,'Red vial o cable desconectado');

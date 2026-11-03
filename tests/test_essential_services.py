@@ -18,6 +18,7 @@ class EssentialsTest(unittest.TestCase):
         self.assertTrue(all(row['capacity']==0 for row in grid.values()))
     def test_sources_are_real_and_telecom_failure_disconnects_road(self):
         city=fixture()
+        city['utilities'].update(powerLines=[],waterPipes=[],gasLines=[],telecomLines=[])
         city['buildings'].extend([provider('powerPlant',8),provider('waterPlant',9),provider('gasPlant',10),
                                  provider('civic',11,'tvHeadend'),provider('civic',12,'wifiHub')])
         grid=evaluate_essential_services(city)

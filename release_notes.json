@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.227",
+  "currentVersion": "0.228",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.228",
+      "date": "2026-11-03",
+      "title": "Sombras ligeras al alejar el mapa",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "La vegetación lejana se dibuja en cuatro lotes InstancedMesh como máximo; mantiene el movimiento del viento y reserva los modelos completos para el acercamiento.",
+        "Al alejar la cámara se apagan las sombras dinámicas de escritorio; al volver a acercarse se restauran. La resolución adaptativa sigue limitada a 1.25× en móvil y 1.5× en escritorio.",
+        "Los diagnósticos y la prueba automática revisan el zoom lejano en móvil y escritorio, el límite de resolución, las instancias y el estado WebGL."
+      ]
+    },
     {
       "version": "0.227",
       "date": "2026-11-03",

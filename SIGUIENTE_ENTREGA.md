@@ -1,4 +1,8 @@
-## Después de Alfa 0.242 · Recorridos físicos de mercancías y compras
+## Después de Alfa 0.243 · Interfaz móvil
+
+La interfaz móvil reorganiza los indicadores para que no se monten, corrige el desplazamiento vertical de la barra lateral y muestra los ocho accesos principales en dos filas. Pausa, velocidades, tema y sonido permanecen accesibles en el menú táctil; los avisos de vecinos se desplazan dentro de un panel acotado.
+
+## Alfa 0.242 · Recorridos físicos de mercancías y compras
 
 Alfa 0.242 representa el ciclo de los pedidos de fábrica que viajan por carretera: los camiones cargados siguen la ruta del envío hasta comercios, puertos o aeropuertos y vuelven vacíos según el progreso guardado en Online y Offline. La carga ferroviaria continúa en sus trenes. Los viajes de compras muestran a los peatones entrando al local y saliendo con bolsas, también cuando llegaron en auto o bicicleta.
 

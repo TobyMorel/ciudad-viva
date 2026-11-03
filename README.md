@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.242
+# Ciudad Viva · Alfa 0.243
+
+**Interfaz móvil ajustada para teléfonos como el Samsung A54:** el panel superior mantiene visibles tesorería y los indicadores de la ciudad, la barra lateral empieza junto al mapa y los ocho accesos inferiores quedan organizados en una cuadrícula táctil con pausa y velocidad accesibles.
 
 **Mercancías y compras visibles en la ciudad:** las entregas de fábrica por carretera muestran los productos en la caja del camión durante la ida. Tras la entrega el camión vuelve vacío por su ruta hasta la fábrica; los envíos ferroviarios siguen viajando en tren. Los compradores que llegan caminando, en auto o en bici aparecen entrando al comercio y saliendo con bolsas. Las rutas y el progreso de carga se guardan en Online y Offline.
 

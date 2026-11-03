@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.242",
+  "currentVersion": "0.243",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.243",
+      "date": "2026-11-03",
+      "title": "Interfaz móvil rediseñada",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La barra de herramientas lateral ahora empieza al nivel del mapa y reserva espacio para no quedar detrás del menú inferior.",
+        "Los cinco indicadores financieros y de ciudad caben en la cabecera del teléfono sin montarse ni requerir desplazamiento horizontal.",
+        "Los ocho accesos principales se ordenan en dos filas; tema, sonido, pausa y velocidades quedan disponibles debajo.",
+        "El contador de avisos y los mensajes de vecinos quedan separados del menú inferior y conservan botones legibles en una pantalla estrecha."
+      ],
+      "verification": "Revisión visual con Chromium a 393 × 873 y comprobación de la bandeja de mensajes en 390 × 844 y escritorio. La validación física en un Samsung A54 queda pendiente."
+    },
     {
       "version": "0.242",
       "date": "2026-11-03",

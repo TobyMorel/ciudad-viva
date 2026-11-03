@@ -82,5 +82,41 @@ class PoliceUrbanOnline(unittest.TestCase):
             server.police_service_report(self.staff,advance=True)
             self.assertEqual(mission["status"],"atendido")
 
+
+    def test_patrol_vehicle_is_reserved_through_return_and_monthly_limit_persists(self):
+        self.s["day"]=1
+        self.s.setdefault("police",{})["recentIncidents"]=[]
+        uncovered=server.police_service_report(self.staff)
+        self.assertGreater(uncovered["coverageGapCount"],0)
+        self.assertEqual(uncovered["coverageGaps"][0]["reasonCode"],"sin_base")
+        path=[(12,12),(12,13),(13,13)]
+        with patch.object(server,"route_between",return_value=[(4,10),(12,12)]), patch.object(server,"service_route_within",return_value=path):
+            server.invest_police_unit("openPoliceUnit",self.center["x"],self.center["y"])
+            sites=[b for b in self.s["buildings"] if b.get("kind") in ("home","shop")][:3]
+            self.assertEqual(len(sites),3)
+            missions=[{"id":f"pending-{i}","x":b["x"],"y":b["y"],"day":1,"month":0,
+                       "status":"sin respuesta","location":b.get("name","Barrio")} for i,b in enumerate(sites)]
+            self.s["police"]["recentIncidents"]=missions
+            report=server.police_service_report(self.staff,advance=True)
+            dispatched=[m for m in missions if m["status"]=="en respuesta"]
+            self.assertEqual(len(dispatched),1,"Un móvil no puede atender dos incidentes a la vez.")
+            self.assertEqual(dispatched[0]["vehicleIndex"],0)
+            self.assertEqual(report["units"][0]["busyVehicles"],1)
+            self.assertEqual(report["coverageGapCount"],0)
+            self.s["day"]=2
+            report=server.police_service_report(self.staff,advance=True)
+            self.assertEqual(missions[0]["status"],"atendido")
+            self.assertEqual(missions[1]["status"],"sin respuesta","El móvil sigue volviendo a la base.")
+            self.assertEqual(report["units"][0]["busyVehicles"],1)
+            self.s["day"]=3
+            report=server.police_service_report(self.staff,advance=True)
+            self.assertEqual(missions[1]["status"],"en respuesta")
+            self.assertEqual(missions[1]["vehicleIndex"],0)
+            self.assertEqual(missions[2]["status"],"sin respuesta")
+            self.assertIn("agotaron",missions[2]["responseCause"])
+            self.s["day"]=4
+            server.police_service_report(self.staff,advance=True)
+            self.assertEqual(missions[2]["status"],"sin respuesta","Un móvil conserva el límite de dos despachos en el mes.")
+
 if __name__=="__main__":
     unittest.main()

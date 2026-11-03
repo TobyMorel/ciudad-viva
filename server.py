@@ -5583,12 +5583,52 @@ def police_service_report(workplaces=None,advance=False):
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
     police=state.setdefault("police",{})
     month=(state.get("day",1)-1)//30
+    current_day=max(1,int(state.get("day",1)))
+    funding=max(0,min(1,float(state.get("finance",{}).get("programBudgets",{}).get("servicesFundingFactor",1))))
+    recent=police.get("recentIncidents",[])
     units=[]
     for b in state.get("buildings",[]):
         if b.get("kind")!="civic" or not b.get("policeUnit") or b.get("status") not in ("operativo","habilitado") or not (service_model(b) or {}).get("police"):continue
-        u=b["policeUnit"];personnel=police_staff_reserved(b,workplaces);units.append({"building":b,"name":b.get("name","Base de seguridad"),
-            "vehicles":max(0,int(u.get("vehicles",0))),"active":personnel//3,"staff":personnel,
-            "priority":u.get("priority","mixto"),"remaining":personnel//3*2,"responded":0})
+        u=b["policeUnit"];personnel=police_staff_reserved(b,workplaces);active=personnel//3
+        dispatched=sum(1 for mission in recent
+            if mission.get("stationX")==b.get("x") and mission.get("stationY")==b.get("y") and mission.get("route")
+            and (int(mission.get("dispatchDay") or mission.get("day") or 0)-1)//30==month)
+        units.append({"building":b,"name":b.get("name","Base de seguridad"),
+            "vehicles":max(0,int(u.get("vehicles",0))),"active":active,"staff":personnel,
+            "priority":u.get("priority","mixto"),"remaining":max(0,active*2-dispatched),
+            "responded":0,"busySlots":set()})
+    for mission in recent:
+        if mission.get("status") not in ("en respuesta","atendido") or not mission.get("route"):continue
+        unit=next((u for u in units if u["building"].get("x")==mission.get("stationX") and u["building"].get("y")==mission.get("stationY")),None)
+        if unit is None:continue
+        end_day=mission.get("returnDay")
+        if type(end_day)!=int:
+            end_day=mission.get("arrivalDay")
+            if type(end_day)!=int:end_day=mission.get("resolvedDay",mission.get("day",current_day))
+            end_day=int(end_day)+1
+        if current_day>=end_day:continue
+        slot=mission.get("vehicleIndex")
+        if type(slot)!=int or slot<0 or (unit["active"]>0 and slot>=unit["active"]):
+            slot=next((i for i in range(unit["active"]) if i not in unit["busySlots"]),len(unit["busySlots"]))
+        unit["busySlots"].add(slot)
+
+    def available_vehicle(unit):
+        if unit["remaining"]<=0:return None
+        return next((i for i in range(unit["active"]) if i not in unit["busySlots"]),None)
+
+    def unavailable_reason(choices):
+        if not units:return "No hay una comisaría equipada con móvil."
+        if not choices:return "Ninguna base tiene una ruta vial de respuesta dentro de 40 minutos."
+        if funding<.5:return "El presupuesto de servicios está por debajo del 50% requerido para operar patrullas."
+        active=[unit for _,unit,_ in choices if unit["active"]>0]
+        if active:
+            if all(unit["remaining"]<=0 for unit in active):
+                return "Las patrullas accesibles agotaron sus dos despachos mensuales por móvil."
+            return "Las patrullas accesibles están atendiendo otros incidentes."
+        if any(unit["vehicles"]>0 for _,unit,_ in choices):
+            return "Falta personal para poner en servicio un móvil en la base accesible."
+        return "La base accesible no tiene un móvil equipado."
+
     sites=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop") and b.get("status") not in ("cerrado","abandonado")]
     rows=[]
     for b in sites:
@@ -5601,19 +5641,46 @@ def police_service_report(workplaces=None,advance=False):
         choices.sort(key=lambda pair:(pair[0],pair[1]["name"]))
         protected=bool(choices and any(u["active"]>0 for _,u,_ in choices))
         rows.append({"building":b,"choices":choices,"protected":protected})
+    coverage_gaps=[]
+    for row in rows:
+        if row["protected"]:continue
+        choices=row["choices"]
+        if not units:
+            code="sin_base";reason="No hay una comisaría equipada con móvil."
+        elif not choices:
+            code="sin_ruta";reason="Ninguna base tiene una ruta vial de respuesta dentro de 40 minutos."
+        elif funding<.5:
+            code="sin_presupuesto";reason="El presupuesto de servicios está por debajo del 50% requerido para operar patrullas."
+        elif any(unit["vehicles"]>0 for _,unit,_ in choices):
+            code="sin_dotacion";reason="Falta personal para poner en servicio un móvil en la base accesible."
+        else:
+            code="sin_movil";reason="La base accesible no tiene un móvil equipado."
+        nearest=choices[0] if choices else None
+        building=row["building"]
+        coverage_gaps.append({"name":building.get("name","Sector"),"kind":"Comercio" if building.get("kind")=="shop" else "Vivienda",
+            "x":building.get("x"),"y":building.get("y"),"reasonCode":code,"reason":reason,
+            "nearestBase":nearest[1]["name"] if nearest else None,"nearestMinutes":nearest[0] if nearest else None})
+    coverage_gaps.sort(key=lambda item:(item["y"] if type(item["y"])==int else 0,item["x"] if type(item["x"])==int else 0,item["kind"]))
     if advance:
-        for mission in police.get("recentIncidents",[]):
+        for mission in recent:
             if mission.get("status")=="en respuesta" and state.get("day",1)>=mission.get("arrivalDay",state.get("day",1)+1):
                 mission["status"]="atendido";mission["resolvedDay"]=state["day"]
-                ev("Patrulla llegó al incidente",f"{mission.get('station','La policía')} intervino en {mission.get('location','el barrio')} después de recorrer su ruta vial.")
+                ev("Patrulla llegó al incidente",f'{mission.get("station","La policía")} intervino en {mission.get("location","el barrio")} después de recorrer su ruta vial.')
             elif mission.get("status")=="sin respuesta":
                 row=next((r for r in rows if r["building"]["x"]==mission.get("x") and r["building"]["y"]==mission.get("y")),None)
-                choices=[(minutes,unit,path) for minutes,unit,path in (row["choices"] if row else []) if unit["remaining"]>0 and unit["active"]>0]
+                choices=[(minutes,unit,path) for minutes,unit,path in (row["choices"] if row else []) if available_vehicle(unit) is not None]
                 if choices:
                     minutes,unit,path=min(choices,key=lambda it:(it[0],it[1]["name"]))
-                    unit["remaining"]-=1;unit["responded"]+=1
-                    mission.update({"status":"en respuesta","dispatchDay":state["day"],"arrivalDay":state["day"]+1,"station":unit["name"],"stationX":unit["building"]["x"],"stationY":unit["building"]["y"],"responseMinutes":minutes,"route":path})
-                    ev("Patrulla despachada",f"{unit['name']} salió hacia {mission.get('location','el barrio')}.")
+                    slot=available_vehicle(unit)
+                    if slot is not None:
+                        unit["busySlots"].add(slot);unit["remaining"]-=1;unit["responded"]+=1
+                        mission.update({"status":"en respuesta","dispatchDay":state["day"],"arrivalDay":state["day"]+1,
+                            "returnDay":state["day"]+2,"vehicleIndex":slot,"station":unit["name"],
+                            "stationX":unit["building"]["x"],"stationY":unit["building"]["y"],
+                            "responseMinutes":minutes,"route":path,"responseCause":None})
+                        ev("Patrulla despachada",f'{unit["name"]} envió el móvil {slot+1} hacia {mission.get("location","el barrio")}.')
+                else:
+                    mission["responseCause"]=unavailable_reason(row["choices"] if row else [])
     if advance and month>police.get("lastProcessedMonth",state.get("lastMonth",0)):
         police["lastProcessedMonth"]=month
         incidents=[];unanswered=responded=damage=0
@@ -5622,27 +5689,34 @@ def police_service_report(workplaces=None,advance=False):
             road_quality=next((float(a.get("quality",82)) for a in state.get("roadAssets",[]) if a.get("x")==b["x"] and a.get("y")==b["y"]),82)
             power=float(b.get("utilityAccess",{}).get("powerServedPct",100))
             threshold=14+(10 if road_quality<40 else 0)+(8 if power<60 else 0)+(7 if kind=="shop" else 0)
-            options=[(mins,u,path) for mins,u,path in row["choices"] if u["remaining"]>0 and u["active"]>0]
-            if any(u["priority"] in ("mixto","comercial" if kind=="shop" else "residencial") for _,u,_ in options):threshold=max(3,threshold-7)
+            options=[(mins,u,path) for mins,u,path in row["choices"] if available_vehicle(u) is not None]
+            if any(u["priority"] in ("mixto","comercial" if kind=="shop" else "residencial") for _,u,_ in row["choices"] if u["active"]>0):threshold=max(3,threshold-7)
             token=(month*37+b["x"]*19+b["y"]*43+(11 if kind=="shop" else 0))%100
             if token>=threshold:continue
             response=None
             if options:
                 minutes,unit,path=min(options,key=lambda it:(it[0],it[1]["name"]))
-                unit["remaining"]-=1;unit["responded"]+=1
-                response={"station":unit["name"],"minutes":minutes,"stationX":unit["building"]["x"],"stationY":unit["building"]["y"],"route":path}
-                responded+=1
-            else:
+                slot=available_vehicle(unit)
+                if slot is not None:
+                    unit["busySlots"].add(slot);unit["remaining"]-=1;unit["responded"]+=1
+                    response={"station":unit["name"],"minutes":minutes,"stationX":unit["building"]["x"],
+                        "stationY":unit["building"]["y"],"vehicleIndex":slot,"route":path}
+                    responded+=1
+            if not response:
                 unanswered+=1
                 if kind=="shop" and b.get("business",{}).get("status")=="abierto":
                     firm=b["business"];lost=min(3,max(0,int(firm.get("inventory",0))))
                     firm["inventory"]=max(0,int(firm.get("inventory",0))-lost);damage+=lost
             incidents.append({"id":f"seg-{month}-{kind}-{b['x']}-{b['y']}","month":month,
-                "day":state["day"],"arrivalDay":state["day"]+1,"location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
+                "day":state["day"],"dispatchDay":state["day"] if response else None,
+                "arrivalDay":state["day"]+1 if response else None,"returnDay":state["day"]+2 if response else None,
+                "location":b.get("name","Barrio"),"kind":"Comercio" if kind=="shop" else "Espacio residencial",
                 "x":b["x"],"y":b["y"],"status":"en respuesta" if response else "sin respuesta",
                 "responseMinutes":response["minutes"] if response else None,
                 "station":response["station"] if response else None,"stationX":response["stationX"] if response else None,
-                "stationY":response["stationY"] if response else None,"route":response["route"] if response else None})
+                "stationY":response["stationY"] if response else None,"vehicleIndex":response["vehicleIndex"] if response else None,
+                "route":response["route"] if response else None,
+                "responseCause":None if response else unavailable_reason(row["choices"])})
         history=police.get("recentIncidents",[])+incidents
         police["recentIncidents"]=[i for i in history if i.get("status") in ("sin respuesta","en respuesta")]+[i for i in history if i.get("status")=="atendido"][-16:]
         police["lastIncidents"]=len(incidents);police["lastResponded"]=responded;police["lastUnanswered"]=unanswered;police["lastInventoryLoss"]=damage
@@ -5655,14 +5729,18 @@ def police_service_report(workplaces=None,advance=False):
     base=sum(u["vehicles"]*390 for u in units)
     variable=max(0,int(police.get("lastResponded",0)))*70
     return {"month":month,"sites":len(sites),"coveredSites":coverage,"coveragePct":round(100*coverage/max(1,len(sites))),
+        "coverageGapCount":len(coverage_gaps),"coverageGaps":coverage_gaps[:12],
         "lastIncidents":police.get("lastIncidents",0),"lastResponded":police.get("lastResponded",0),
         "lastUnanswered":police.get("lastUnanswered",0),"totalResponded":police.get("totalResponded",0),
         "totalUnanswered":police.get("totalUnanswered",0),"lostInventoryUnits":police.get("lastInventoryLoss",0),
         "monthlyOperatingCost":base+variable,
         "units":[{"name":u["name"],"x":u["building"]["x"],"y":u["building"]["y"],
-            "vehicles":u["vehicles"],"activeVehicles":u["active"],"staff":u["staff"],
+            "vehicles":u["vehicles"],"activeVehicles":u["active"],"busyVehicles":sum(1 for slot in u["busySlots"] if slot<u["active"]),
+            "availableVehicles":max(0,u["active"]-sum(1 for slot in u["busySlots"] if slot<u["active"])),
+            "dispatchesRemaining":max(0,u["remaining"]),"staff":u["staff"],
             "priority":u["priority"],"responded":u["responded"]} for u in units],
         "recentIncidents":[i for i in police.get("recentIncidents",[]) if i.get("status") in ("sin respuesta","en respuesta")]+[i for i in police.get("recentIncidents",[]) if i.get("status")=="atendido"][-8:]}
+
 
 def health_service_report(workplaces=None,advance=False):
     health=state.setdefault("health",{"lastAdvancedDay":None,"lastImpactMonth":-1,"waterSafetyHistory":{}})

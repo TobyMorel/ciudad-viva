@@ -1,3 +1,9 @@
+# Ciudad Viva · Alfa 0.230
+
+**Patrullas urbanas con disponibilidad real:** una unidad asigna cada móvil a un incidente y lo reserva durante la ida y el regreso. Cada vehículo conserva un máximo de dos respuestas al mes; no puede duplicarse en misiones simultáneas.
+
+**Cobertura explicada:** Seguridad muestra qué viviendas y comercios quedan sin patrulla accesible y si falta una base equipada, una ruta vial, presupuesto o personal. El mapa identifica el móvil asignado y dibuja su ruta hasta el incidente y de vuelta. Las reglas son equivalentes en Offline y LAN.
+
 # Ciudad Viva · Alfa 0.229
 
 **Servicios esenciales construibles y finitos:** luz, agua, gas, televisión por cable e internet/Wi-Fi requieren proveedores físicos conectados a la red vial. Las redes cableadas se tienden sobre calles, ya integradas en el catálogo. Una central eléctrica (900 kW), una planta potabilizadora (220 m³/día), una planta de gas (160 m³/día), una cabecera de televisión (180 conexiones) y una central Wi-Fi (160 conexiones) aportan cupos reales por edificio construido, terminado y conectado. Sin centrales no hay suministro gratuito, ni se iluminan farolas. Cuando un servicio está saturado, la nueva demanda no desplaza a los clientes anteriores. Las plantas de agua, gas y telecomunicaciones necesitan energía, mientras la central eléctrica puede iniciar la red sin requerir otra planta de agua previa.
@@ -74,7 +80,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.227](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.227/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.230](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.230/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

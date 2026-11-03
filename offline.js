@@ -647,67 +647,106 @@ function advanceOfflineZonedDevelopment(){
     event('Equipamiento de seguridad urbana',(b.name||'Centro')+': inversión $ '+cost+'. Los móviles necesitan tres trabajadores cada uno y acceso por calles.');
   }
   function offlinePoliceReport(workplaces=state.workplaces||[],advance=false){
-    const p=state.police=state.police||{},month=Math.floor(((state.day||1)-1)/30);
+    const p=state.police=state.police||{},month=Math.floor(((state.day||1)-1)/30),currentDay=Math.max(1,Math.trunc(state.day||1));
+    const funding=Math.max(0,Math.min(1,state.finance?.programBudgets?.servicesFundingFactor??1));
+    const recent=p.recentIncidents||[];
     const units=state.buildings.filter(b=>b.kind==='civic'&&b.policeUnit&&offlineServiceModel(b)?.police&&['operativo','habilitado'].includes(b.status)).map(b=>{
-      const staff=offlinePoliceStaffReserved(b,workplaces);
+      const staff=offlinePoliceStaffReserved(b,workplaces),active=Math.floor(staff/3),dispatches=recent.filter(m=>{
+        const dispatchDay=m.dispatchDay??(m.route?.length>1?m.day:null);
+        return m.stationX===b.x&&m.stationY===b.y&&m.route?.length>1&&dispatchDay!=null&&Math.floor((dispatchDay-1)/30)===month;
+      }).length;
       return {building:b,name:b.name||'Base de seguridad',vehicles:Math.max(0,Math.trunc(b.policeUnit.vehicles||0)),
-        active:staff/3,staff,priority:b.policeUnit.priority||'mixto',remaining:staff/3*2,responded:0};
+        active,staff,priority:b.policeUnit.priority||'mixto',remaining:Math.max(0,active*2-dispatches),responded:0,busySlots:new Set()};
     });
+    for(const mission of recent){
+      if(!['en respuesta','atendido'].includes(mission.status)||!mission.route?.length)continue;
+      const unit=units.find(u=>u.building.x===mission.stationX&&u.building.y===mission.stationY);if(!unit)continue;
+      let endDay=mission.returnDay;
+      if(!Number.isInteger(endDay))endDay=(mission.arrivalDay??mission.resolvedDay??mission.day??currentDay)+1;
+      if(currentDay>=endDay)continue;
+      let slot=mission.vehicleIndex;
+      if(!Number.isInteger(slot)||slot<0||(unit.active>0&&slot>=unit.active))slot=Array.from({length:unit.active},(_,i)=>i).find(i=>!unit.busySlots.has(i))??unit.busySlots.size;
+      unit.busySlots.add(slot);
+    }
+    const availableVehicle=unit=>unit.remaining>0?Array.from({length:unit.active},(_,i)=>i).find(i=>!unit.busySlots.has(i))??null:null;
+    const unavailableReason=choices=>{
+      if(!units.length)return 'No hay una comisaría equipada con móvil.';
+      if(!choices.length)return 'Ninguna base tiene una ruta vial de respuesta dentro de 40 minutos.';
+      if(funding<.5)return 'El presupuesto de servicios está por debajo del 50% requerido para operar patrullas.';
+      const active=choices.map(r=>r.unit).filter(unit=>unit.active>0);
+      if(active.length){
+        if(active.every(unit=>unit.remaining<=0))return 'Las patrullas accesibles agotaron sus dos despachos mensuales por móvil.';
+        return 'Las patrullas accesibles están atendiendo otros incidentes.';
+      }
+      if(choices.some(r=>r.unit.vehicles>0))return 'Falta personal para poner en servicio un móvil en la base accesible.';
+      return 'La base accesible no tiene un móvil equipado.';
+    };
     const sites=state.buildings.filter(b=>['home','shop'].includes(b.kind)&&!['cerrado','abandonado'].includes(b.status));
     const rows=sites.map(b=>{
-      const choices=units.map(unit=>{const path=offlineServiceRoad(unit.building,b);return {unit,path,minutes:path?Math.round(Math.max(0,path.length-1)*2.5+4):Infinity}})
+      const choices=units.map(unit=>{const path=offlineServiceRoad(unit.building,b);return{unit,path,minutes:path?Math.round(Math.max(0,path.length-1)*2.5+4):Infinity}})
         .filter(row=>row.minutes<=40).sort((a,b)=>a.minutes-b.minutes||a.unit.name.localeCompare(b.unit.name));
       return {building:b,choices,protected:choices.some(row=>row.unit.active>0)};
     });
-    if(advance)for(const mission of p.recentIncidents||[]){
+    const coverageGaps=rows.filter(row=>!row.protected).map(row=>{
+      const choices=row.choices;let reasonCode,reason;
+      if(!units.length){reasonCode='sin_base';reason='No hay una comisaría equipada con móvil.'}
+      else if(!choices.length){reasonCode='sin_ruta';reason='Ninguna base tiene una ruta vial de respuesta dentro de 40 minutos.'}
+      else if(funding<.5){reasonCode='sin_presupuesto';reason='El presupuesto de servicios está por debajo del 50% requerido para operar patrullas.'}
+      else if(choices.some(r=>r.unit.vehicles>0)){reasonCode='sin_dotacion';reason='Falta personal para poner en servicio un móvil en la base accesible.'}
+      else{reasonCode='sin_movil';reason='La base accesible no tiene un móvil equipado.'}
+      const nearest=choices[0],b=row.building;
+      return{name:b.name||'Sector',kind:b.kind==='shop'?'Comercio':'Vivienda',x:b.x,y:b.y,reasonCode,reason,
+        nearestBase:nearest?.unit.name||null,nearestMinutes:Number.isFinite(nearest?.minutes)?nearest.minutes:null};
+    }).sort((a,b)=>a.y-b.y||a.x-b.x||a.kind.localeCompare(b.kind));
+    if(advance)for(const mission of recent){
       if(mission.status==='en respuesta'&&state.day>=(mission.arrivalDay||state.day+1)){mission.status='atendido';mission.resolvedDay=state.day;event('Patrulla llegó al incidente',(mission.station||'La policía')+' intervino en '+(mission.location||'el barrio')+'.')}
       else if(mission.status==='sin respuesta'){
-        const row=rows.find(r=>r.building.x===mission.x&&r.building.y===mission.y),choice=row?.choices.find(r=>r.unit.remaining>0&&r.unit.active>0);
-        if(choice){const u=choice.unit;u.remaining--;u.responded++;Object.assign(mission,{status:'en respuesta',dispatchDay:state.day,arrivalDay:state.day+1,station:u.name,stationX:u.building.x,stationY:u.building.y,responseMinutes:choice.minutes,route:choice.path});event('Patrulla despachada',u.name+' salió hacia '+(mission.location||'el barrio')+'.')}
+        const row=rows.find(r=>r.building.x===mission.x&&r.building.y===mission.y),choice=row?.choices.find(r=>availableVehicle(r.unit)!==null);
+        if(choice){
+          const u=choice.unit,slot=availableVehicle(u);
+          if(slot!==null){u.busySlots.add(slot);u.remaining--;u.responded++;Object.assign(mission,{status:'en respuesta',dispatchDay:state.day,arrivalDay:state.day+1,returnDay:state.day+2,vehicleIndex:slot,station:u.name,stationX:u.building.x,stationY:u.building.y,responseMinutes:choice.minutes,route:choice.path,responseCause:null});event('Patrulla despachada',u.name+' envió el móvil '+(slot+1)+' hacia '+(mission.location||'el barrio')+'.')}
+        }else mission.responseCause=unavailableReason(row?.choices||[]);
       }
     }
     if(advance&&month>(p.lastProcessedMonth??state.lastMonth??0)){
-      p.lastProcessedMonth=month;
-      const incidents=[];let unanswered=0,responded=0,damage=0;
+      p.lastProcessedMonth=month;const incidents=[];let unanswered=0,responded=0,damage=0;
       for(const row of rows){
-        const b=row.building,kind=b.kind;
-        const quality=state.roadAssets?.find(a=>a.x===b.x&&a.y===b.y)?.quality??82;
-        const power=b.utilityAccess?.powerServedPct??100;
+        const b=row.building,kind=b.kind,quality=state.roadAssets?.find(a=>a.x===b.x&&a.y===b.y)?.quality??82,power=b.utilityAccess?.powerServedPct??100;
         let threshold=14+(quality<40?10:0)+(power<60?8:0)+(kind==='shop'?7:0);
-        const options=row.choices.filter(r=>r.unit.remaining>0&&r.unit.active>0);
-        if(options.some(r=>['mixto',kind==='shop'?'comercial':'residencial'].includes(r.unit.priority)))threshold=Math.max(3,threshold-7);
-        const token=(month*37+b.x*19+b.y*43+(kind==='shop'?11:0))%100;
-        if(token>=threshold)continue;
+        if(row.choices.some(r=>r.unit.active>0&&['mixto',kind==='shop'?'comercial':'residencial'].includes(r.unit.priority)))threshold=Math.max(3,threshold-7);
+        const token=(month*37+b.x*19+b.y*43+(kind==='shop'?11:0))%100;if(token>=threshold)continue;
+        const options=row.choices.filter(r=>availableVehicle(r.unit)!==null);
         let response=null;
         if(options.length){
-          const best=options[0];best.unit.remaining--;best.unit.responded++;
-          response={station:best.unit.name,minutes:best.minutes,stationX:best.unit.building.x,stationY:best.unit.building.y,route:best.path};responded++;
-        }else{
-          unanswered++;
-          if(kind==='shop'&&b.business?.status==='abierto'){
-            const firm=b.business,lost=Math.min(3,Math.max(0,Math.trunc(firm.inventory||0)));
-            firm.inventory=Math.max(0,Math.trunc(firm.inventory||0)-lost);damage+=lost;
-          }
+          options.sort((a,b)=>a.minutes-b.minutes||a.unit.name.localeCompare(b.unit.name));
+          const best=options[0],slot=availableVehicle(best.unit);
+          if(slot!==null){best.unit.busySlots.add(slot);best.unit.remaining--;best.unit.responded++;response={station:best.unit.name,minutes:best.minutes,stationX:best.unit.building.x,stationY:best.unit.building.y,vehicleIndex:slot,route:best.path};responded++}
         }
-        incidents.push({id:`seg-${month}-${kind}-${b.x}-${b.y}`,month,day:state.day,location:b.name||'Barrio',
-          kind:kind==='shop'?'Comercio':'Espacio residencial',x:b.x,y:b.y,arrivalDay:state.day+1,status:response?'en respuesta':'sin respuesta',
-          responseMinutes:response?.minutes??null,station:response?.station??null,stationX:response?.stationX??null,stationY:response?.stationY??null,route:response?.route??null});
+        if(!response){
+          unanswered++;
+          if(kind==='shop'&&b.business?.status==='abierto'){const firm=b.business,lost=Math.min(3,Math.max(0,Math.trunc(firm.inventory||0)));firm.inventory=Math.max(0,Math.trunc(firm.inventory||0)-lost);damage+=lost}
+        }
+        incidents.push({id:`seg-${month}-${kind}-${b.x}-${b.y}`,month,day:state.day,dispatchDay:response?state.day:null,arrivalDay:response?state.day+1:null,returnDay:response?state.day+2:null,
+          location:b.name||'Barrio',kind:kind==='shop'?'Comercio':'Espacio residencial',x:b.x,y:b.y,status:response?'en respuesta':'sin respuesta',
+          responseMinutes:response?.minutes??null,station:response?.station??null,stationX:response?.stationX??null,stationY:response?.stationY??null,
+          vehicleIndex:response?.vehicleIndex??null,route:response?.route??null,responseCause:response?null:unavailableReason(row.choices)});
       }
-      const history=[...(p.recentIncidents||[]),...incidents];p.recentIncidents=[...history.filter(i=>['sin respuesta','en respuesta'].includes(i.status)),...history.filter(i=>i.status==='atendido').slice(-16)];
+      const history=[...recent,...incidents];p.recentIncidents=[...history.filter(i=>['sin respuesta','en respuesta'].includes(i.status)),...history.filter(i=>i.status==='atendido').slice(-16)];
       p.lastIncidents=incidents.length;p.lastResponded=responded;p.lastUnanswered=unanswered;p.lastInventoryLoss=damage;
       p.totalResponded=(p.totalResponded||0)+responded;p.totalUnanswered=(p.totalUnanswered||0)+unanswered;
-      if(unanswered>=2)state.approval=Math.max(0,(state.approval||0)-1);
-      if(unanswered>=4)state.services=Math.max(0,(state.services||0)-1);
+      if(unanswered>=2)state.approval=Math.max(0,(state.approval||0)-1);if(unanswered>=4)state.services=Math.max(0,(state.services||0)-1);
       if(incidents.length)event('Operativo mensual de seguridad',incidents.length+' incidentes de convivencia y comercio; '+responded+' patrullas despachadas, '+unanswered+' sin dotación. Pérdidas físicas de comercios: '+damage+' unidades.');
     }
     const coverage=rows.filter(r=>r.protected).length,base=units.reduce((n,u)=>n+u.vehicles*390,0),variable=Math.max(0,p.lastResponded||0)*70;
-    return {month,sites:sites.length,coveredSites:coverage,coveragePct:Math.round(100*coverage/Math.max(1,sites.length)),
-      lastIncidents:p.lastIncidents||0,lastResponded:p.lastResponded||0,lastUnanswered:p.lastUnanswered||0,
-      totalResponded:p.totalResponded||0,totalUnanswered:p.totalUnanswered||0,lostInventoryUnits:p.lastInventoryLoss||0,
-      monthlyOperatingCost:base+variable,
-      units:units.map(u=>({name:u.name,x:u.building.x,y:u.building.y,vehicles:u.vehicles,activeVehicles:u.active,staff:u.staff,priority:u.priority,responded:u.responded})),
+    return{month,sites:sites.length,coveredSites:coverage,coveragePct:Math.round(100*coverage/Math.max(1,sites.length)),
+      coverageGapCount:coverageGaps.length,coverageGaps:coverageGaps.slice(0,12),
+      lastIncidents:p.lastIncidents||0,lastResponded:p.lastResponded||0,lastUnanswered:p.lastUnanswered||0,totalResponded:p.totalResponded||0,totalUnanswered:p.totalUnanswered||0,
+      lostInventoryUnits:p.lastInventoryLoss||0,monthlyOperatingCost:base+variable,
+      units:units.map(u=>({name:u.name,x:u.building.x,y:u.building.y,vehicles:u.vehicles,activeVehicles:u.active,busyVehicles:[...u.busySlots].filter(slot=>slot<u.active).length,
+        availableVehicles:Math.max(0,u.active-[...u.busySlots].filter(slot=>slot<u.active).length),dispatchesRemaining:Math.max(0,u.remaining),staff:u.staff,priority:u.priority,responded:u.responded})),
       recentIncidents:[...(p.recentIncidents||[]).filter(i=>['sin respuesta','en respuesta'].includes(i.status)),...(p.recentIncidents||[]).filter(i=>i.status==='atendido').slice(-8)]};
   }
+
   function calculateOfflineHealthReport(workplaces=state.workplaces||[],advance=false){const h=state.health=state.health||{lastAdvancedDay:null,lastQueueDay:null,lastImpactMonth:-1,primaryBacklog:0,waterSafetyHistory:{}},homes=(state.buildings||[]).filter(b=>b.kind==='home'&&(b.occupants||0)>0),history=h.waterSafetyHistory=h.waterSafetyHistory||{},staff=new Map(workplaces.filter(w=>w.kind==='civic').map(w=>[`${w.x},${w.y}`,w])),heat=state.climate?.heatForecast||{},population=Math.max(1,homes.reduce((n,b)=>n+(b.occupants||0),0)),heatPerDay=heat.active?(heat.actualHealthCases??heat.expectedHealthCases??0)/Math.max(1,heat.durationDays||5):0;if(advance&&h.lastAdvancedDay!==state.day){for(const home of homes){const key=`${home.x},${home.y}`,a=home.utilityAccess||{},value=Math.min(a.waterServedPct||0,a.wastewaterTreatedPct||0)/100,rows=history[key]||Array(30).fill(value);rows.push(value);history[key]=rows.slice(-30)}h.lastAdvancedDay=state.day}
     const centers=(state.buildings||[]).filter(b=>b.kind==='civic'&&!['cerrado','abandonado'].includes(b.status)&&offlineServiceModel(b)?.care).map(b=>{const w=staff.get(`${b.x},${b.y}`)||{},a=b.utilityAccess||{},factor=Math.min(a.powerServedPct||0,a.waterServedPct||0,a.wastewaterTreatedPct||0)/100*Math.max(0,Math.min(1,state.finance?.programBudgets?.servicesFundingFactor??1)),jobs=Math.max(0,(w.staffedJobs||0)-offlinePoliceStaffReserved(b,workplaces)),clinicJobs=b.hospitalWard?Math.min(jobs,4):jobs,primary=clinicJobs*2.2*factor,urgent=clinicJobs*.35*factor;return{building:b,name:b.name||'Centro de salud',staff:jobs,factor,primary,urgent,primaryLeft:primary,urgentLeft:urgent,patients:0,travel:[]}}),areas=[];let demand=0,urgentNeed=0,served=0,urgentServed=0;
     for(const home of homes){const key=`${home.x},${home.y}`,a=home.utilityAccess||{},rows=history[key]||[Math.min(a.waterServedPct||0,a.wastewaterTreatedPct||0)/100],safe=rows.slice(-30).reduce((n,x)=>n+x,0)/Math.max(1,rows.slice(-30).length),waterRisk=1-safe,sewerRisk=1-(a.wastewaterTreatedPct||0)/100,people=home.occupants||0,need=people*.045*(1+waterRisk*.45+sewerRisk*.25),urgent=people*.004+heatPerDay*people/population;demand+=need;urgentNeed+=urgent;const options=centers.map(c=>{const route=offlineServiceRoad(c.building,home);return{c,minutes:route?Math.round(Math.max(0,route.length-1)*2.5+4):Infinity}}).filter(x=>x.minutes<=45).sort((x,y)=>x.minutes-y.minutes||x.c.building.x-y.c.building.x||x.c.building.y-y.c.building.y);let got=0,acute=0,minutes=null;if(options.length){const {c}=options[0];minutes=options[0].minutes;got=Math.min(need,c.primaryLeft);c.primaryLeft-=got;c.patients++;c.travel.push(minutes);acute=Math.min(urgent,c.urgentLeft);c.urgentLeft-=acute;c.primaryServed=(c.primaryServed||0)+got;c.urgentServed=(c.urgentServed||0)+acute}served+=got;urgentServed+=acute;areas.push({name:home.name||`Barrio ${home.x+1},${home.y+1}`,population:people,travelMinutes:minutes,waterRiskPct:Math.round(waterRisk*100),primaryDemand:+need.toFixed(1),primaryServed:+got.toFixed(1),waiting:+Math.max(0,need-got).toFixed(1),urgentDemand:+urgent.toFixed(1),urgentUnserved:+Math.max(0,urgent-acute).toFixed(1)})}

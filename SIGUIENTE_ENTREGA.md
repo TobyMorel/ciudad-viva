@@ -1,4 +1,10 @@
-## Después de Alfa 0.171 · Infraestructura real antes que paneles
+## Después de Alfa 0.230 · Patrullas y cobertura explicada
+
+Cada móvil policial queda reservado para una sola incidencia hasta completar el regreso; la capacidad mensual sigue limitada a dos despachos por vehículo. Ciudad → Seguridad muestra los móviles libres/ocupados y, por inmueble sin cobertura, explica si falta equipamiento, conexión vial, presupuesto o personal. La escena 3D identifica el móvil y reproduce el recorrido de ida y vuelta. LAN y Offline usan las mismas reglas.
+
+Siguiente: terminar la validación de fase 1 construyendo edificios en sectores remotos y midiendo una partida extensa. La prueba actual ya desbloquea varios sectores, construye 40 tramos de calle y conserva el guardado al recargar. Después, verificar despacho policial con varias bases, rutas y móviles ocupados. Mantener pendiente la validación LAN entre dos equipos físicos y no atribuir avance global sin ponderaciones comunes.
+
+## Antecedente · Alfa 0.171 · Infraestructura real antes que paneles
 
 **Regla de diseño:** ningún nuevo sistema de movilidad puede ponerse en funcionamiento sin objetos 3D físicos que el jugador deba construir en terreno habilitado. En Alfa 0.171, subtes y trenes elevados ya requieren estaciones terminadas y el jugador conecta las dos estaciones directamente en el mapa. Movilidad sirve para estadísticas y diagnósticos, no para contratar infraestructura.
 

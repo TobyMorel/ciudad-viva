@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.229",
+  "currentVersion": "0.230",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.230",
+      "date": "2026-11-03",
+      "title": "Patrullas con disponibilidad real",
+      "roadmapPhase": 9,
+      "overallProgress": null,
+      "changes": [
+        "Cada móvil queda asignado a un solo incidente y reservado durante el trayecto de ida y el regreso; conserva un máximo de dos despachos mensuales.",
+        "Seguridad informa qué viviendas y comercios carecen de cobertura y si la causa es una base sin equipar, una ruta insuficiente, falta de presupuesto o de personal.",
+        "La ficha muestra móviles libres y ocupados, el motivo de una incidencia sin respuesta y el número de móvil que circula por la ruta 3D. Offline y LAN comparten las reglas."
+      ]
+    },
     {
       "version": "0.229",
       "date": "2026-11-03",
@@ -2753,12 +2765,12 @@
   ],
   "upcoming": [
     {
-      "title": "Fase 1 - navegacion y construccion en sectores alejados",
-      "detail": "Validar en navegador la compra, visualizacion, acceso y construccion en coordenadas distantes, con partidas grandes; despues continuar con la respuesta policial visible de fase 9."
+      "title": "Fase 1 · edificios en sectores remotos y partidas grandes",
+      "detail": "La prueba responsive ya compra sectores alejados, construye calles hasta y=49 y guarda/reabre la ciudad. Falta comprobar construcción de edificios remotos y rendimiento con una partida extensa."
     },
     {
-      "title": "Fase 9 · respuesta policial visible",
-      "detail": "Asignar una patrulla física disponible a un robo, recorrer una ruta vial única, registrar llegada y resolución; avisar qué cobertura falta si no hay unidad accesible."
+      "title": "Fase 9 · respuesta policial con varias unidades",
+      "detail": "Cada patrulla ya reserva un móvil hasta su regreso y muestra la causa de falta de cobertura. Próximo: comprobar varias bases, más de un móvil y congestión de incidentes en ciudad grande."
     },
     {
       "title": "Crecimiento urbano y expansión extensa",
@@ -2862,11 +2874,12 @@
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
       "progress": 75,
-      "summary": "Centros de salud, policía, bomberos, higiene urbana, educación por niveles, protección social, mortalidad natural y servicios funerarios con ruta/cupo.",
+      "summary": "Centros de salud, policía, bomberos, higiene urbana, educación por niveles, protección social, mortalidad natural y despachos físicos con capacidad, rutas y cobertura explicada.",
       "pending": [
         "Verificar plazas, contratación docente y cobertura por distrito en una partida poblada tras ampliar una escuela.",
         "Educación técnica, formación docente y protección social con efectos presupuestarios completos en hogares.",
-        "Despacho físico de patrullas y respuesta completa a incidentes; ampliar la especialización y cobertura del personal."
+        "Validar respuesta policial bajo carga, con móviles ocupados, rutas de regreso y cobertura de sectores remotos.",
+        "Ampliar especialización y cobertura del personal; completar despacho interactivo de incidentes."
       ]
     },
     {

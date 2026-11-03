@@ -82,3 +82,40 @@ test('Offline: la tesorer?a liquida ingresos y gastos durante el avance',async()
   assert.ok(city.dailyCashFlow.lastPaid.services>0);
  });
 });
+
+test('Offline: un móvil queda reservado en la ida y vuelta y no supera dos despachos mensuales',async()=>{
+ const s=seed();s.day=1;s.lastMonth=0;s.paused=true;s.speed=1;
+ await scenario(s,async({request,view,next,reload})=>{
+  let city=await view();
+  assert.ok(city.policeReport.coverageGapCount>0);
+  assert.equal(city.policeReport.coverageGaps[0].reasonCode,'sin_base');
+  const center=city.buildings.find(b=>b.serviceModel==='policePost');
+  await request({action:'openPoliceUnit',x:center.x,y:center.y});
+  city=await view();
+  const sites=city.buildings.filter(b=>['home','shop'].includes(b.kind)).slice(0,3);
+  assert.equal(sites.length,3);
+  const ids=sites.map((_,i)=>'pending-'+i);
+  await reload(c=>{
+   c.day=1;c.lastMonth=0;c.paused=false;
+   c.police={...(c.police||{}),lastProcessedMonth:0,recentIncidents:sites.map((b,i)=>({id:ids[i],x:b.x,y:b.y,day:1,month:0,status:'sin respuesta',location:b.name||'Barrio'}))};
+   return c;
+  });
+  let report=(await next()).policeReport;
+  let missions=report.recentIncidents;
+  let active=missions.filter(m=>m.status==='en respuesta');
+  assert.equal(active.length,1,'El mismo móvil no se duplica en dos rutas.');
+  assert.equal(active[0].vehicleIndex,0);
+  assert.equal(report.units[0].busyVehicles,1);
+  assert.ok(active[0].route.every((p,i,a)=>i===0||Math.abs(p[0]-a[i-1][0])+Math.abs(p[1]-a[i-1][1])===1),'La patrulla sigue una ruta vial contigua.');
+  report=(await next()).policeReport;missions=report.recentIncidents;
+  assert.equal(missions.find(m=>m.id===ids[0]).status,'atendido');
+  assert.equal(missions.find(m=>m.id===ids[1]).status,'sin respuesta','La patrulla queda ocupada durante el regreso.');
+  report=(await next()).policeReport;missions=report.recentIncidents;
+  assert.equal(missions.find(m=>m.id===ids[1]).status,'en respuesta');
+  assert.equal(missions.find(m=>m.id===ids[1]).vehicleIndex,0);
+  assert.equal(missions.find(m=>m.id===ids[2]).status,'sin respuesta');
+  assert.match(missions.find(m=>m.id===ids[2]).responseCause,/agotaron/);
+  report=(await next()).policeReport;missions=report.recentIncidents;
+  assert.equal(missions.find(m=>m.id===ids[2]).status,'sin respuesta','Dos despachos consumen el cupo mensual del móvil.');
+ });
+});

@@ -986,10 +986,10 @@ export function createWorld(canvas){
     for(const incident of missions){
       const outward=incident.route.map(([x,y])=>tilePos(x,y));
       const roundTrip=[...outward,...outward.slice(0,-1).reverse()];
-      add('Policía',makePoliceCar(),roundTrip,{title:`Patrulla · ${incident.location||'incidente'}`,
-        description:incident.status==='atendido'?'La patrulla resolvió el incidente y vuelve a su comisaría.':'La patrulla viaja al incidente por calles conectadas.',
-        metrics:[['Estado',incident.status],['Origen',incident.station||'Comisaría']]},`pol-${incident.id}`,
-        {side:-.18,deliveryStartDay:incident.dispatchDay??incident.day,deliveryEndDay:(incident.arrivalDay??day)+1});
+      add('Policía',makePoliceCar(),roundTrip,{title:`Patrulla · móvil ${Number.isInteger(incident.vehicleIndex)?incident.vehicleIndex+1:1} · ${incident.location||'incidente'}`,
+        description:incident.status==='atendido'?'El móvil resolvió el incidente y vuelve a su comisaría.':'El móvil viaja al incidente por su ruta vial reservada.',
+        metrics:[['Estado',incident.status],['Móvil',Number.isInteger(incident.vehicleIndex)?incident.vehicleIndex+1:1],['Origen',incident.station||'Comisaría']]},`pol-${incident.id}`,
+        {side:-.18+Math.max(0,Number(incident.vehicleIndex)||0)*.24,deliveryStartDay:incident.dispatchDay??incident.day,deliveryEndDay:incident.returnDay??((incident.arrivalDay??day)+1)});
     }
     const fireHistory=[...(state.fireReport?.activeIncidents||[]),...(state.fireReport?.recentIncidents||[])];
     const fireMissions=fireHistory.filter((i,index)=>fireHistory.findIndex(other=>other.id===i.id)===index&&i.responseRoute?.length>1&&i.stationX!=null&&(

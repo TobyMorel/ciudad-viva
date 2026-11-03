@@ -8,7 +8,7 @@ try{
  const page=await browser.newPage({viewport:{width:1280,height:800}});page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline',{timeout:30000});await page.locator('.game-dock').waitFor({timeout:30000});
- await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').click();await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
+ await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('85.000'));
  await page.evaluate(()=>{const key='ciudad-viva-offline-v1',city=JSON.parse(localStorage.getItem(key));city.money=1000000;city.paused=true;localStorage.setItem(key,JSON.stringify(city))});
  await page.reload({waitUntil:'domcontentloaded'});await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('money')?.textContent.includes('1.000.000'),{timeout:30000});await page.locator('.game-dock').waitFor({timeout:30000});
  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
@@ -26,12 +26,8 @@ try{
   throw new Error(`No se pudo encuadrar parcela ${x},${y}: ${JSON.stringify(await page.evaluate(([a,b])=>window.__ciudadVivaProjectTile(a,b,0),[x,y]))}`);
  }
  for(let cy=2;cy<=6;cy++){
-  const p=await centerTile(4,cy*8+4),screenPoint={x:canvas.x+p.x,y:canvas.y+p.y};
-  const runtime=await page.evaluate(([x,y])=>window.__ciudadVivaLandPlotDiagnostic(x,y),[4,cy*8+4]);
-  console.log(`parcela 0,${cy} antes del clic ${JSON.stringify({p,screenPoint,runtime})}`);
-  await page.mouse.click(screenPoint.x,screenPoint.y);
-  const card=page.locator('.land-unlock-card');
-  try{await card.waitFor({timeout:5000})}catch(error){const detail=await page.evaluate(([sx,sy,wx,wy])=>({element:document.elementFromPoint(sx,sy)?.outerHTML.slice(0,500),card:document.querySelector('.land-unlock-card')?.innerText||null,runtime:window.__ciudadVivaLandPlotDiagnostic(wx,wy),modeError:document.getElementById('modeError')?.textContent}),[screenPoint.x,screenPoint.y,4,cy*8+4]);throw new Error(`No apareció la ficha: ${JSON.stringify(detail)}; ${error.message}`)}
+  const p=await centerTile(4,cy*8+4);await page.mouse.click(canvas.x+p.x,canvas.y+p.y);
+  const card=page.locator('.land-unlock-card');await card.waitFor();
   const button=page.locator(`[data-unlock-land][data-chunk-x="0"][data-chunk-y="${cy}"]`);
   if(await button.count()===0){const cardText=await card.innerText(),landClaims=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'))?.landClaims);throw new Error(`Sin botón para 0,${cy}; ficha=${JSON.stringify(cardText)}; guardado=${JSON.stringify(landClaims?.unlockedChunks)}`)}
   await button.waitFor();await button.evaluate(el=>el.click());

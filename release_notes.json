@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.195",
+  "currentVersion": "0.196",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.196",
+      "date": "2026-11-02",
+      "title": "Ajuste final de la interfaz móvil",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se corrigió el espacio interno de la tarjeta de tesorería en teléfonos pequeños.",
+        "La etiqueta accesible de tesorería ya no se superpone con el importe ni sale de su tarjeta."
+      ],
+      "verification": "Publicación Pages completada; corrección ajustada a partir del reporte responsive de CI.",
+      "pending": []
+    },
     {
       "version": "0.195",
       "date": "2026-11-02",

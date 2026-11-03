@@ -293,7 +293,8 @@ footer { display: none !important; }
   .city-title span { max-width: 88px; font-size: 8px; }
   .metrics { gap: 2px; }
   .metric { flex: 0 1 39px; grid-template-columns: minmax(0,1fr); min-width: 28px; height: 30px !important; padding: 2px !important; }
-  .metric .metric-icon, .topbar .metrics .metric > span { display: none !important; }
+  .metric .metric-icon { display: none !important; }
+  .topbar .metrics .metric > span { display: block !important; left: 1px; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0; font-size: 1px !important; line-height: 1px; }
   .metric b { grid-column: 1; justify-self: center; align-self: center; margin: 0; font-size: 9px; }
   .metric:nth-child(n+4) { display: none; }
   .header-tools { gap: 2px; }

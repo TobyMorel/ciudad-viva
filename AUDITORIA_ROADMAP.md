@@ -755,3 +755,8 @@ El mapa admite pellizco con dos dedos para acercar/alejar y desplazar la vista d
 ## Alfa 0.216 - calles con redes integradas (fase 6)
 
 La conectividad de servicios usa el componente conectado de calles como ducto compartido para electricidad, agua, gas, saneamiento, drenaje y telecomunicaciones. Las líneas existentes se preservan y pueden complementar la red vial. Una falla de red sigue aislando su casilla afectada.
+
+
+## Alfa 0.217 — viviendas 3D más detalladas y nítidas (fase 15)
+
+Se sustituyó la casa de volúmenes rectangulares simples por una silueta extruida con biseles y estilos de fachada diferenciados. Los tejados incorporan tejas instanciadas, caballete, canaletas, tragaluces y chimenea; las viviendas modernas usan parapeto, azotea y paneles. Ventanas, puertas, cornisas y jardines tienen más elementos de relieve. Se elevó la resolución de salida y se habilitaron sombras de mayor definición también en pantallas pequeñas.

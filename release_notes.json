@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.216",
+  "currentVersion": "0.217",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.217",
+      "date": "2026-11-03",
+      "title": "Viviendas 3D más detalladas y nítidas",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Se reemplazaron las fachadas básicas por viviendas con siluetas arquitectónicas biseladas, cornisas, zócalos y variantes de estilo.",
+        "Los tejados a dos aguas incluyen tejas individuales, caballete, aleros, canaletas, tragaluces y chimenea; las casas contemporáneas reciben azotea, paneles y parapeto.",
+        "Ventanas con marcos, cristales, montantes, contraventanas y jardineras; puertas con vidrios, herrajes y pórtico.",
+        "Se aumentó la resolución del render y la calidad de sombras para que los bordes y detalles se perciban con mayor nitidez."
+      ],
+      "verification": "Sintaxis validada y GitHub Pages publicado; la validación automática repite fallos previos no relacionados con el render 3D."
+    },
     {
       "version": "0.216",
       "date": "2026-11-03",

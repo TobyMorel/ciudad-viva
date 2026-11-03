@@ -1,6 +1,6 @@
 ## Después de Alfa 0.231 · Respuesta con varias bases
 
-La expansión remota ya puede desbloquearse desde sectores vecinos y construir servicios junto a calles conectadas. La validación de interfaz comprueba cinco sectores, 40 tramos de vía, una clínica periférica y persistencia tras recargar. El estrés mantiene esa ciudad durante 360 cierres mensuales, junto a cuatro perfiles económicos de referencia.
+La interfaz comprueba que se pueda desbloquear un sector vecino, construir una clínica junto a una calle y conservarla tras recargar. El perfil de expansión mantiene cinco sectores, 40 tramos de vía y la clínica periférica durante 360 cierres mensuales, junto a cuatro perfiles económicos de referencia.
 
 Siguiente: comprobar patrullas con varias bases, móviles ocupados, rutas cortadas y elección de la unidad disponible más cercana. Mantener pendiente la validación LAN entre dos equipos físicos y no atribuir avance global sin ponderaciones comunes.
 

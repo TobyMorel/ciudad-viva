@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.197",
+  "currentVersion": "0.198",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.198",
+      "date": "2026-11-02",
+      "title": "Ajuste del ancho de tesorería",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Se ajustó el ancho de la etiqueta de tesorería en pantallas intermedias para mantenerla dentro de su tarjeta."
+      ],
+      "verification": "Publicación Pages completada; ajuste visual verificado por el chequeo responsive.",
+      "pending": []
+    },
     {
       "version": "0.197",
       "date": "2026-11-02",

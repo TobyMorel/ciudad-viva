@@ -268,7 +268,7 @@ footer { display: none !important; }
   .metrics { justify-content: flex-end; gap: 3px; }
   .metric { flex: 0 1 83px; grid-template-columns: 22px minmax(0, 1fr); min-width: 55px; height: 36px !important; padding: 3px 5px !important; }
   .metric .metric-icon { width: 21px; height: 21px; font-size: 12px; }
-  .topbar .metrics .metric > span { top: -2px; left: 32px; font-size: 8px !important; }
+  .topbar .metrics .metric > span { top: -2px; left: 32px; font-size: 8px !important; transform: scaleX(.8); transform-origin: left center; }
   .metric b { font-size: 11px; }
   .metric:nth-child(4) { display: none; }
   .network { display: none; }

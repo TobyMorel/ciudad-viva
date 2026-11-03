@@ -72,25 +72,25 @@ export function createWorld(canvas){
   const grassTex=new THREE.CanvasTexture(texCanvas);grassTex.colorSpace=THREE.SRGBColorSpace;grassTex.wrapS=grassTex.wrapT=THREE.RepeatWrapping;grassTex.repeat.set(2000,2000);grassTex.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
   let infiniteGroundOffset={x:0,z:0};const infiniteGround=[plane(staticRoot,40000,40000,mat('#8dbb7b'),0,-.24,0),plane(staticRoot,40000,40000,new THREE.MeshStandardMaterial({map:grassTex,roughness:1}),0,-.16,0)];
   const gatewayTunnel=new THREE.Group();gatewayTunnel.position.set(4*TILE,0,10.5*TILE);staticRoot.add(gatewayTunnel);
-  // La boca cubre los cuatro tramos de carretera exterior (x=0..3) y llega a la entrada urbana.
-  const tunnelLength=4.4,tunnelCenter=-1.9,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
+  // La boca recorre desde el inicio de la carretera exterior hasta la misma entrada urbana.
+  const tunnelStart=-4*TILE,tunnelEnd=.30,tunnelLength=tunnelEnd-tunnelStart,tunnelCenter=(tunnelStart+tunnelEnd)/2,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
   box(gatewayTunnel,tunnelLength,.07,1.98,'#4c5754',tunnelCenter,1.82,0,{cast:false});
   for(const z of [-1.08,1.08]){box(gatewayTunnel,tunnelLength,2,.28,'#978f7c',tunnelCenter,.91,z,{cast:true});box(gatewayTunnel,tunnelLength,.13,.34,'#c0b59a',tunnelCenter,1.88,z,{cast:false})}
   box(gatewayTunnel,.24,2.25,2.16,'#172629',.12,1.05,0,{cast:false});
   const archPts=[];for(let i=0;i<=16;i++){const a=Math.PI-i*Math.PI/16;archPts.push(new THREE.Vector3(.12,1.12+Math.sin(a)*1.08,Math.cos(a)*1.08))}const tunnelArch=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPts),48,.16,12,false),mat('#c2b69a'));tunnelArch.castShadow=true;tunnelArch.receiveShadow=true;gatewayTunnel.add(tunnelArch);
   for(const z of [-.84,.84]){box(gatewayTunnel,.26,1.1,.28,'#c2b69a',.12,.55,z,{cast:true});box(gatewayTunnel,.35,.15,.35,'#d0c3a6',.12,1.12,z,{cast:false})}
-  for(const x of [-3.85,-2.95,-2.05,-1.15,-.45])for(const z of [-1.16,1.16])box(gatewayTunnel,.32,.16,.36,'#b3a990',x,1.91,z,{cast:false});
-  roundedBox(gatewayTunnel,4.48,.2,.23,'#d1c4a4',tunnelCenter,2.26,1.11,.06,{cast:true});
-  for(const x of [-4.05,-3.52,-2.99,-2.46,-1.93,-1.4,-.87,-.34]){
+  for(let x=tunnelStart+.4;x<tunnelEnd-.45;x+=.9)for(const z of [-1.16,1.16])box(gatewayTunnel,.32,.16,.36,'#b3a990',x,1.91,z,{cast:false});
+  roundedBox(gatewayTunnel,tunnelLength+.08,.2,.23,'#d1c4a4',tunnelCenter,2.26,1.11,.06,{cast:true});
+  for(let x=tunnelStart+.35;x<tunnelEnd-.1;x+=.53){
     roundedBox(gatewayTunnel,.07,.42,.22,'#c7b99b',x,1.98,1.16,.025);
     roundedBox(gatewayTunnel,.16,.07,.18,'#e0d5ba',x,2.23,1.16,.025);
   }
-  for(const x of [-3.58,-2.08,-.58]){
+  for(let x=tunnelStart+.8;x<tunnelEnd-.3;x+=1.55){
     rodBetween(gatewayTunnel,[x,1.72,-.78],[x,1.72,.78],.025,'#5f716b',7);
     roundedBox(gatewayTunnel,.24,.13,.21,'#536c68',x,1.68,-.76,.035);
     sphere(gatewayTunnel,.09,'#ffe6a5',x,1.75,-.76,2);
   }
-  for(const z of [-.85,.85])for(const x of [-3.62,-2.12,-.62]){
+  for(const z of [-.85,.85])for(let x=tunnelStart+.8;x<tunnelEnd-.3;x+=1.55){
     roundedBox(gatewayTunnel,.28,.38,.1,'#a7b19e',x,.42,z,.035);
     for(let j=0;j<3;j++)sphere(gatewayTunnel,.105,['#5e9568','#84ad73','#b7c67d'][j],x+(j-1)*.07,.65,z,1);
   }
@@ -141,10 +141,25 @@ export function createWorld(canvas){
     for(const [dx,dy] of [[1,0],[0,1]]){if(!roads.has(key(x+dx,y+dy)))continue;const horizontal=dx===1,sx=cx+dx,zs=cz+dy;box(root,horizontal?2.08:1.37,.055,horizontal?1.37:2.08,COLORS.walk,sx,.006,zs,{cast:false});box(root,horizontal?2.08:1.03,.052,horizontal?1.03:2.08,asphalt,sx,.052,zs,{cast:false});for(const step of [-.55,.55])box(root,horizontal?.27:.025,.008,horizontal?.025:.27,COLORS.line,sx+(horizontal?step:0),.083,zs+(horizontal?0:step),{cast:false})}
     if(degree===2&&n&&s||degree===2&&e&&w){for(const step of [-.31,.31])box(root,e&&w?.27:.025,.009,e&&w?.025:.27,COLORS.line,cx+(e&&w?step:0),.084,cz+(n&&s?step:0),{cast:false})}
     if(degree>=3){for(const [dx,dy,on] of [[0,-1,n],[0,1,s],[-1,0,w],[1,0,e]]){if(!on)continue;for(let j=-2;j<=2;j++){const shift=j*.16;box(root,dx?.14:.09,.009,dy?.14:.09,'#f6f1de',cx+(dx?.53*dx:shift),.085,cz+(dy?.53*dy:shift),{cast:false})}}}
-    if(signals){const approaches=[{on:n,ox:.62,oz:-.62,yaw:Math.PI,axis:1},{on:s,ox:-.62,oz:.62,yaw:0,axis:1},{on:e,ox:.62,oz:.62,yaw:Math.PI/2,axis:0},{on:w,ox:-.62,oz:-.62,yaw:-Math.PI/2,axis:0}];for(const a of approaches){if(!a.on)continue;const g=new THREE.Group();g.position.set(cx+a.ox,0,cz+a.oz);g.rotation.y=a.yaw;root.add(g);cylinder(g,.025,.035,.8,'#42515a',0,.42,0,12);box(g,.13,.43,.13,'#263944',0,.88,0);box(g,.18,.06,.11,'#344a4e',0,1.13,.035);const red=sphere(g,.038,'#f04f45',0,.99,.085,2),amber=sphere(g,.034,'#806b3c',0,.88,.085,2),green=sphere(g,.038,'#397352',0,.77,.085,2);red.material=mat('#813d3a',{emissive:'#ee453d',emissiveIntensity:.08});amber.material=mat('#806b3c',{emissive:'#ffd15d',emissiveIntensity:.06});green.material=mat('#397352',{emissive:'#68ec8e',emissiveIntensity:.08});
-      roundedBox(g,.17,.075,.15,'#53676b',0,.18,0,.035);
-      for(const yy of [.99,.88,.77])roundedBox(g,.075,.075,.055,yy>.9?'#d86b5d':yy>.8?'#d4aa52':'#63ad79',0,yy,.14,.025);
-      signalBulbs.push({red,amber,green,axis:a.axis})}}
+    if(signals){
+      const approaches=[];
+      if(n||s)approaches.push({axis:1,ox:n?.62:-.62,oz:n?-.62:.62,yaw:n?Math.PI:0});
+      if(e||w)approaches.push({axis:0,ox:e?.62:-.62,oz:e?.62:-.62,yaw:e?Math.PI/2:-Math.PI/2});
+      for(const a of approaches){
+        const g=new THREE.Group();g.position.set(cx+a.ox,0,cz+a.oz);g.rotation.y=a.yaw;root.add(g);
+        cylinder(g,.025,.035,.8,'#42515a',0,.42,0,12);box(g,.13,.43,.13,'#263944',0,.88,0);
+        const red=[],amber=[],green=[];
+        for(const faceZ of [.085,-.085]){
+          const r=sphere(g,.038,'#f04f45',0,.99,faceZ,2),y=sphere(g,.034,'#806b3c',0,.88,faceZ,2),gr=sphere(g,.038,'#397352',0,.77,faceZ,2);
+          r.material=mat('#813d3a',{emissive:'#ee453d',emissiveIntensity:.08});y.material=mat('#806b3c',{emissive:'#ffd15d',emissiveIntensity:.06});gr.material=mat('#397352',{emissive:'#68ec8e',emissiveIntensity:.08});
+          red.push(r);amber.push(y);green.push(gr);
+          roundedBox(g,.17,.075,.06,'#53676b',0,1.13,faceZ*1.45,.035);
+          for(const yy of [.99,.88,.77])roundedBox(g,.075,.075,.035,yy>.9?'#d86b5d':yy>.8?'#d4aa52':'#63ad79',0,yy,faceZ*1.55,.025);
+        }
+        roundedBox(g,.17,.075,.15,'#53676b',0,.18,0,.035);
+        signalBulbs.push({red,amber,green,axis:a.axis});
+      }
+    }
     // Una farola cada dos tramos en cada dirección. El brazo apunta al asfalto,
     // nunca sobre la acera; la orientación alterna solo el lado de montaje.
     if((x+y)%2===0){const horizontal=e||w,side=(x+y)%2?1:-1,px=horizontal?cx:cx+side*.59,pz=horizontal?cz+side*.59:cz,headX=horizontal?cx:px-side*.27,headZ=horizontal?pz-side*.27:cz;box(root,.065,1.34,.065,'#4b5755',px,.69,pz);const arm=box(root,.06,.045,.48,'#4b5755',(px+headX)/2,1.34,(pz+headZ)/2);if(!horizontal)arm.rotation.y=Math.PI/2;const bulb=sphere(root,.115,'#ffe4a6',headX,1.3,headZ,2);bulb.material=mat('#ffe4a6',{emissive:'#ffc76b',emissiveIntensity:0});const light=new THREE.PointLight('#ffca70',0,8,2);light.position.set(headX,1.2,headZ);root.add(light);const pool=new THREE.Mesh(new THREE.CircleGeometry(1.45,20),new THREE.MeshBasicMaterial({color:'#ffd17a',transparent:true,opacity:0,depthWrite:false,toneMapped:false}));pool.rotation.x=-Math.PI/2;pool.position.set(headX,.072,headZ);root.add(pool);streetLights.push({light,bulb,pool,x,y})
@@ -1186,8 +1201,15 @@ export function createWorld(canvas){
     lastFrame=now;updateWind(wallDelta);
     if(simulationPaused){resize();updateVegetation();renderer.render(scene,camera);return}
     simulationClock+=wallDelta*simulationSpeed;visualTimeOfDayMinutes=(visualTimeOfDayMinutes+wallDelta*simulationSpeed*15)%1440;visualGameDay+=wallDelta*simulationSpeed/96;updateLighting(visualTimeOfDayMinutes);resize();updateVegetation();
-    const signalPhase=Math.floor(simulationClock/2.5)%2;
-    for(const signal of signalBulbs){const green=signal.axis===signalPhase;signal.red.material=mat(green?'#813d3a':'#f04f45',{emissive:'#ee453d',emissiveIntensity:green?.08:.9});signal.amber.material=mat('#806b3c',{emissive:'#ffd15d',emissiveIntensity:.06});signal.green.material=mat(green?'#53ca79':'#397352',{emissive:'#68ec8e',emissiveIntensity:green?.9:.08})}
+    const signalPhase=Math.floor(simulationClock/9)%2,signalAmber=simulationClock%9>=8;
+    for(const signal of signalBulbs){
+      const green=signal.axis===signalPhase,amber=green&&signalAmber;
+      for(let i=0;i<signal.red.length;i++){
+        signal.red[i].material=mat(green?'#813d3a':'#f04f45',{emissive:'#ee453d',emissiveIntensity:green?.08:.9});
+        signal.amber[i].material=mat('#806b3c',{emissive:'#ffd15d',emissiveIntensity:amber?.9:.06});
+        signal.green[i].material=mat(green?'#53ca79':'#397352',{emissive:'#68ec8e',emissiveIntensity:green?.9:.08});
+      }
+    }
     const cursors=[];
     for(const a of routeActors){
       if(a.deliveryProgress!==undefined)continue;
@@ -1198,16 +1220,22 @@ export function createWorld(canvas){
       const isWalker=a.selection?.type==='Peatones'||a.selection?.type==='Residente'||a.selection?.type==='Visitante de plaza',p=a.route[index],q=a.route[index+1],dx=q[0]-p[0],dz=q[1]-p[1];
       let progress=direction===1?f:1-f;
       const nextTile=direction===1?a.route[index+1]:a.route[index],gridX=Math.round(nextTile[0]/TILE-.5),gridY=Math.round(nextTile[1]/TILE-.5);
-      const signalKey=key(gridX,gridY),axis=Math.abs(dx)>Math.abs(dz)?0:1;
-      const waiting=!isWalker&&!a.metroProjection&&!a.railTrain&&signalTiles.has(signalKey)&&axis!==signalPhase;
+      const signalKey=key(gridX,gridY),axis=Math.abs(dx)>Math.abs(dz)?0:1,roadVehicle=!isWalker&&!a.metroProjection&&!a.railTrain&&!a.selection?.type?.includes('Avión')&&!a.selection?.type?.includes('Buque');
+      const waiting=roadVehicle&&signalTiles.has(signalKey)&&axis!==signalPhase;
       if(waiting)progress=Math.min(progress,.76);
-      const from=direction===1?a.route[index]:a.route[index+1],to=direction===1?a.route[index+1]:a.route[index];
-      const laneKey=`${Math.round(from[0]/TILE-.5)},${Math.round(from[1]/TILE-.5)}>${Math.round(to[0]/TILE-.5)},${Math.round(to[1]/TILE-.5)}:${Math.sign(a.side||.18)*direction}`;
-      cursors.push({a,index,f,progress,direction,p,q,dx,dz,isWalker,waiting,vehicle:!isWalker&&!a.metroProjection&&!a.railTrain&&a.selection?.type!=='Avión de pasajeros',laneKey});
+      const from=direction===1?a.route[index]:a.route[index+1],to=direction===1?a.route[index+1]:a.route[index],laneClass=Math.abs(a.side||.18)>.6?'ciclista':'motor';
+      const laneKey=`${Math.round(from[0]/TILE-.5)},${Math.round(from[1]/TILE-.5)} > ${Math.round(to[0]/TILE-.5)},${Math.round(to[1]/TILE-.5)}:${laneClass}`;
+      const routeKey=roadVehicle?(a.trafficRouteKey||(a.trafficRouteKey=a.route.map(point=>Math.round(point[0]*100)+','+Math.round(point[1]*100)).join(';'))):'',routeQueueKey=roadVehicle?routeKey+':'+direction+':'+laneClass:'';
+      cursors.push({a,index,f,progress,direction,p,q,dx,dz,isWalker,waiting,vehicle:roadVehicle,laneKey,routeQueueKey,count});
     }
     // Mantén una distancia de seguridad entre vehículos que avanzan por el mismo carril.
-    applyTrafficQueue(cursors,.43);
-    for(const c of cursors){const {a,index,direction,p,q,dx,dz,isWalker}=c;let f=direction===1?c.progress:1-c.progress;const count=a.route.length-1,next=a.route[Math.min(count,index+2)],ndx=next[0]-q[0],ndz=next[1]-q[1],turn=f>.75&&index<count-1?(f-.75)/.25:0,bend=turn&&Math.abs(ndx*dz-ndz*dx)>0?turn*turn*(3-2*turn)*.16:0,side=a.railTrain?0:isWalker?a.side:-Math.abs(a.side||.18)*direction,targetX=p[0]+dx*f+dz/TILE*side+ndx/TILE*bend,targetZ=p[1]+dz*f-dx/TILE*side+ndz/TILE*bend;
+    applyTrafficQueue(cursors,.5);
+    for(const c of cursors){
+      const {a,direction,isWalker}=c,count=a.route.length-1;let index=c.index,progress=c.progress;
+      while(progress<0&&index-direction>=0&&index-direction<count){index-=direction;progress+=1}
+      if(progress<0)progress=0;
+      const p=a.route[index],q=a.route[index+1],dx=q[0]-p[0],dz=q[1]-p[1];let f=direction===1?progress:1-progress;
+      const next=a.route[direction===1?Math.min(count,index+2):Math.max(0,index-1)],ndx=direction===1?next[0]-q[0]:next[0]-p[0],ndz=direction===1?next[1]-q[1]:next[1]-p[1],turn=progress>.75&&(direction===1?index<count-1:index>0)?(progress-.75)/.25:0,bend=turn&&Math.abs(ndx*dz-ndz*dx)>0?turn*turn*(3-2*turn)*.16:0,side=a.railTrain?0:isWalker?a.side:-Math.max(.29,Math.abs(a.side||.18))*direction,targetX=p[0]+dx*f+dz/TILE*side+ndx/TILE*bend,targetZ=p[1]+dz*f-dx/TILE*side+ndz/TILE*bend;
       a.mesh.position.set(targetX,a.height||0,targetZ);const angle=Math.atan2(dx*direction+ndx/TILE*bend,dz*direction+ndz/TILE*bend),delta=Math.atan2(Math.sin(angle-a.mesh.rotation.y),Math.cos(angle-a.mesh.rotation.y));a.mesh.rotation.y+=delta*.22;
     }
     for(const a of routeActors){

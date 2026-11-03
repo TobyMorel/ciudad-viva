@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.223",
+  "currentVersion": "0.224",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.224",
+      "date": "2026-11-03",
+      "title": "Economía visible y tránsito más seguro",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "El panel Economía abre con el detalle mensual de cada ingreso y gasto, con sus totales por categoría.",
+        "Cada cruce señalizado muestra dos semáforos de doble cara, uno por eje; las luces usan fases más largas y los vehículos esperan cuando su eje está en rojo.",
+        "Las colas mantienen la distancia entre autos del mismo carril y recorrido incluso al pasar de un tramo a otro; los carriles opuestos quedan separados.",
+        "El túnel de entrada ahora comienza al inicio de la carretera exterior y conserva su boca urbana."
+      ],
+      "verification": "Los importes ya calculados por la partida se presentan de forma visible; señalización, espera en rojo, colas y geometría del túnel se actualizan en la escena 3D."
+    },
     {
       "version": "0.223",
       "date": "2026-11-03",

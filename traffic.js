@@ -20,16 +20,46 @@ export function roadCapacity(a,b,roadAssets=[]){
   return (arterial?2.4:1.2)*Math.max(.35,Math.min(1,quality/82));
 }
 
-export function applyTrafficQueue(cursors,gap=.43){
+export function applyTrafficQueue(cursors,gap=.5){
   const lanes=new Map();
-  for(const cursor of cursors){if(!cursor.vehicle||!cursor.laneKey)continue;if(!lanes.has(cursor.laneKey))lanes.set(cursor.laneKey,[]);lanes.get(cursor.laneKey).push(cursor)}
+  for(const cursor of cursors){
+    if(!cursor.vehicle||!cursor.laneKey)continue;
+    if(!lanes.has(cursor.laneKey))lanes.set(cursor.laneKey,[]);
+    lanes.get(cursor.laneKey).push(cursor);
+  }
   for(const lane of lanes.values()){
     lane.sort((a,b)=>b.progress-a.progress);
-    for(let i=1;i<lane.length;i++)lane[i].progress=Math.min(lane[i].progress,Math.max(0,lane[i-1].progress-gap));
+    for(let i=1;i<lane.length;i++){
+      const leader=lane[i-1],follower=lane[i];
+      follower.progress=Math.min(follower.progress,leader.progress-gap);
+      if(follower.progress<0&&(follower.index-follower.direction<0||follower.index-follower.direction>=follower.count))follower.progress=0;
+    }
+  }
+  // Conserva el espacio de seguridad al pasar de un tramo al siguiente del mismo recorrido.
+  const routes=new Map();
+  for(const cursor of cursors){
+    if(!cursor.vehicle||!cursor.routeQueueKey)continue;
+    cursor.queueProgress=cursor.direction===1?cursor.index+cursor.progress:cursor.count-cursor.index-1+cursor.progress;
+    if(!routes.has(cursor.routeQueueKey))routes.set(cursor.routeQueueKey,[]);
+    routes.get(cursor.routeQueueKey).push(cursor);
+  }
+  for(const route of routes.values()){
+    route.sort((a,b)=>b.queueProgress-a.queueProgress);
+    for(let i=1;i<route.length;i++){
+      const leader=route[i-1],follower=route[i],allowed=leader.queueProgress-gap;
+      if(follower.queueProgress>allowed){
+        const retreat=follower.queueProgress-allowed;
+        follower.progress-=retreat;
+        follower.queueProgress=allowed;
+        if(follower.progress<0&&(follower.index-follower.direction<0||follower.index-follower.direction>=follower.count)){
+          follower.queueProgress-=follower.progress;
+          follower.progress=0;
+        }
+      }
+    }
   }
   return cursors;
 }
-
 export function trafficFactorForRoute(route,segmentFlow,roads,roadAssets=[]){
   if(!route||route.length<2)return 1;
   const roadSet=roads instanceof Set?roads:new Set((roads||[]).map(([x,y])=>`${x},${y}`));

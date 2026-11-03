@@ -1,4 +1,4 @@
-import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.223';
+import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.224';
 import {gameMinutesForElapsedSeconds} from './simulation_time.js';
 import {assignTaxiPassengers} from './taxi_passengers.js';
 import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js';

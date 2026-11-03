@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.217",
+  "currentVersion": "0.218",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.218",
+      "date": "2026-11-03",
+      "title": "Construcción privada más rápida",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Se redujo a la mitad el plazo de construcción de viviendas, comercios y fábricas, tanto en Online como en Offline.",
+        "Las obras de esos tipos que ya estaban en curso acortan una sola vez su plazo restante y conservan el avance alcanzado.",
+        "La animación 3D y su indicador usan el nuevo plazo; x2 y x4 siguen acelerando el reloj del juego sobre esa duración más corta.",
+        "El tiempo estimado del catálogo se actualizó para reflejar los plazos nuevos."
+      ],
+      "verification": "Sintaxis y datos revisados; despliegue en GitHub Pages ejecutado por GitHub Actions."
+    },
     {
       "version": "0.217",
       "date": "2026-11-03",

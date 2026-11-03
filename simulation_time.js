@@ -26,7 +26,14 @@ export function trafficWindowLabel(key){return({early:'Mañana temprana',morning
 
 export function visualProjectProgress(project,minutes){
   const base=Number(project.progress)||0;if(project.status!=='contratada')return base;
-  const duration=Math.max(1,Number(project.duration)||1),start=Number(project.initialProgress)||0,elapsed=Math.max(0,Number(project.elapsed)||0);
+  const elapsed=Math.max(0,Number(project.elapsed)||0);
+  if(project.scheduleBaseProgress!=null&&project.scheduleBaseMinute!=null){
+    const start=Math.max(0,Math.min(1,Number(project.scheduleBaseProgress)||0)),baseElapsed=Number(project.scheduleBaseElapsed)||0;
+    const duration=Math.max(1,Number(project.scheduleRemainingDays)||Number(project.duration)||1);
+    const fraction=Math.max(0,elapsed-baseElapsed+((Number(minutes)||0)-Number(project.scheduleBaseMinute||0))/MINUTES_PER_DAY);
+    return Math.min(.999,start+(1-start)*fraction/duration);
+  }
+  const duration=Math.max(1,Number(project.duration)||1),start=Number(project.initialProgress)||0;
   const fraction=Math.max(0,elapsed+((Number(minutes)||0)-(Number(project.contractedMinute)||0))/MINUTES_PER_DAY);
   const visual=start+(1-start)*fraction/duration;
   return Math.min(.999,project.contractedMinute==null?Math.max(base,visual):visual);

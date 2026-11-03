@@ -760,3 +760,8 @@ La conectividad de servicios usa el componente conectado de calles como ducto co
 ## Alfa 0.217 — viviendas 3D más detalladas y nítidas (fase 15)
 
 Se sustituyó la casa de volúmenes rectangulares simples por una silueta extruida con biseles y estilos de fachada diferenciados. Los tejados incorporan tejas instanciadas, caballete, canaletas, tragaluces y chimenea; las viviendas modernas usan parapeto, azotea y paneles. Ventanas, puertas, cornisas y jardines tienen más elementos de relieve. Se elevó la resolución de salida y se habilitaron sombras de mayor definición también en pantallas pequeñas.
+
+
+## Alfa 0.218 — obras de vivienda, comercio e industria más rápidas (fase 15)
+
+Se redujo a la mitad el plazo de proyectos nuevos de viviendas, comercios y fábricas en los motores Online y Offline. Las obras ya activas reducen a la mitad el plazo restante una sola vez, manteniendo progreso, hitos y cobros. La interpolación visual ahora respeta el ancla del nuevo calendario, y el catálogo muestra la estimación actualizada. El reloj x4 conserva su aceleración sobre el plazo reducido.

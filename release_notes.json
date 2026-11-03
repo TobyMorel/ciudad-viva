@@ -1,7 +1,18 @@
 {
-  "currentVersion": "0.225",
+  "currentVersion": "0.226",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.226",
+      "date": "2026-11-03",
+      "title": "Sincronización LAN con caché aislada",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "La caché de informes se limita a respuestas de red versionadas; las llamadas directas al modelo recalculan la economía para no reutilizar datos obsoletos.",
+        "Se conserva la propagación inmediata de acciones para los cuatro jugadores y la prueba automatizada de carga de recursos y concurrencia."
+      ]
+    },
     {
       "version": "0.225",
       "date": "2026-11-03",

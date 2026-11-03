@@ -6191,13 +6191,19 @@ def _build_public_state(player_id=None):
     view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
     return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
-def public_state(player_id=None):
-    """Reuse one authoritative snapshot for all clients at the same revision."""
+def public_state(player_id=None,use_cache=False):
+    """Build a fresh view for direct model calls; cache only versioned network snapshots."""
     global _PUBLIC_STATE_CACHE_REVISION,_PUBLIC_STATE_CACHE_VIEW
-    if _PUBLIC_STATE_CACHE_REVISION!=STATE_REVISION or _PUBLIC_STATE_CACHE_VIEW is None:
-        _PUBLIC_STATE_CACHE_VIEW=_build_public_state(None)
-        _PUBLIC_STATE_CACHE_REVISION=STATE_REVISION
-    view=dict(_PUBLIC_STATE_CACHE_VIEW)
+    if use_cache:
+        if _PUBLIC_STATE_CACHE_REVISION!=STATE_REVISION or _PUBLIC_STATE_CACHE_VIEW is None:
+            _PUBLIC_STATE_CACHE_VIEW=_build_public_state(None)
+            _PUBLIC_STATE_CACHE_REVISION=STATE_REVISION
+        view=dict(_PUBLIC_STATE_CACHE_VIEW)
+    else:
+        # Direct callers may mutate model state without advancing the network revision.
+        _PUBLIC_STATE_CACHE_REVISION=-1
+        _PUBLIC_STATE_CACHE_VIEW=None
+        view=_build_public_state(None)
     now=time.time();cutoff=now-25
     view["online"]=sum(1 for last in state.get("players",{}).values() if last>cutoff)
     view["stateRevision"]=STATE_REVISION
@@ -6274,7 +6280,7 @@ class Handler(BaseHTTPRequestHandler):
                 for player,last_seen in list(state["players"].items()):
                     if last_seen<now-25:del state["players"][player]
                 if STATE_REVISION!=requested:
-                    payload=public_state(pid)
+                    payload=public_state(pid,use_cache=True)
                 else:
                     payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360)}
             self._send(200,payload);return
@@ -6285,7 +6291,7 @@ class Handler(BaseHTTPRequestHandler):
                 state["players"][pid]=time.time()
                 for key,last in list(state["players"].items()):
                     if last<time.time()-25: del state["players"][key]
-                self._send(200,public_state(pid))
+                self._send(200,public_state(pid,use_cache=True))
             return
         if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None}); return
         if path=="/api/rooms":
@@ -6323,7 +6329,7 @@ class Handler(BaseHTTPRequestHandler):
                 if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
                 if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
                     self._send(403,{"error":"Código de sala incorrecto."});return
-                state["players"][pid]=time.time();self._send(200,public_state(pid));return
+                state["players"][pid]=time.time();self._send(200,public_state(pid,use_cache=True));return
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
@@ -6334,42 +6340,42 @@ class Handler(BaseHTTPRequestHandler):
                 if action=="unlockLand":
                     try:unlock_land_chunk(data.get("chunkX"),data.get("chunkY"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="toggleTrafficSignal":
                     try:toggle_traffic_signal(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="placeRoad":
                     try:place_road_instantly(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action in POLICE_COSTS or action=="setPolicePriority":
                     try:invest_police_unit(action,int(data.get("x",-1)),int(data.get("y",-1)),data.get("priority"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action in HOSPITAL_COSTS:
                     try:invest_hospital_care(action,int(data.get("x",-1)),int(data.get("y",-1)))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="expandSchool":
                     try:contract_school_expansion(int(data.get("x",-1)),int(data.get("y",-1)),str(data.get("contractor","")))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="scheduleTourismEvent":
                     try:schedule_tourism_event(data.get("kind"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="renegotiateTradeContract":
                     try:renegotiate_aggregate_forward_contract(data.get("id"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="repairContractGuarantee":
                     guarantee=next((g for g in state.get("contractGuarantees",[]) if g.get("id")==str(data.get("id")) and g.get("status")=="reclamo"),None)
                     if not guarantee:self._send(409,{"error":"La garantía no tiene un reclamo reparable."});return
                     if not contractor_has_capacity(guarantee["contractor"]) or contractor_free_workers(guarantee["contractor"])<3:self._send(409,{"error":"La constructora no tiene cupo y tres trabajadores libres para reparar. La retención continúa bloqueada."});return
                     guarantee.update({"status":"reparacion","repairStartedDay":state["day"],"repairCompleteDay":state["day"]+5,"workersAssigned":3})
                     ev("Reparación contractual iniciada",f"{guarantee['contractor']} movilizó tres trabajadores por cinco días para corregir {guarantee['label']}; la retención sigue bloqueada.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 elif action in ("approveContractChange","rejectContractChange"):
                     project=next((p for p in state.get("projects",[]) if p.get("id")==str(data.get("id"))),None);change=project.get("changeOrder") if project else None
                     if not project or project.get("status")!="cambio_pendiente" or not change or change.get("status")!="pendiente":self._send(409,{"error":"La orden de cambio ya se resolvió o la obra no está esperando decisión."});return
@@ -6383,7 +6389,7 @@ class Handler(BaseHTTPRequestHandler):
                         project["qualityPenalty"]=int(project.get("qualityPenalty",0))+int(change.get("qualityPenalty",12));change.update({"status":"rechazada","decidedDay":state["day"]});detail=f"Se mantiene el contrato original; la inspección final tendrá {project['qualityPenalty']} puntos menos de calidad por el trabajo sin refuerzo."
                     project["status"]="contratada";state.setdefault("contractChangeHistory",[]).append({"projectId":project["id"],"label":project.get("label"),"contractor":project.get("contractor"),**change});state["contractChangeHistory"]=state["contractChangeHistory"][-40:]
                     ev("Orden de cambio " + change["status"],f"{project.get('label','La obra')}: {change['cause']}. {detail}.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 elif action=="assignMunicipalRole":
                     role=str(data.get("role",""));target=str(data.get("playerId",""))
                     if role not in MUNICIPAL_ROLES:
@@ -6399,23 +6405,23 @@ class Handler(BaseHTTPRequestHandler):
                     assigned=next((item for item in municipal_team_report(pid)["members"] if item["id"]==target),None)
                     label=MUNICIPAL_ROLES[role]["label"]
                     ev("Referente municipal actualizado",f"{label}: {assigned['label'] if assigned else 'decisiones compartidas'}. El equipo comparte todas las decisiones.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="recordGovernmentAgreement":
                     try:record_government_agreement(data.get("complaintId"),pid)
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="setInvestmentDelegation":
                     book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)})
                     enabled=bool(data.get("enabled"));cap=data.get("maxPermit",500)
                     try:cap=max(0,min(1500,int(cap)))
                     except (TypeError,ValueError):self._send(400,{"error":"Tope de permiso inválido."});return
-                    book["delegation"]={"enabled":enabled,"maxPermit":cap};ev("Política de inversión actualizada",("Delegación automática hasta permiso $ %s."%cap).replace(",","." ) if enabled else "Las nuevas propuestas requieren aprobación manual.");self._send(200,public_state(pid));return
+                    book["delegation"]={"enabled":enabled,"maxPermit":cap};ev("Política de inversión actualizada",("Delegación automática hasta permiso $ %s."%cap).replace(",","." ) if enabled else "Las nuevas propuestas requieren aprobación manual.");self._send(200,public_state(pid,use_cache=True));return
                 if action=="declinePrivateInvestment":
                     book=state.setdefault("privateInvestments",{"proposal":None,"history":[],"nextOfferDay":state.get("day",1)})
                     offer=book.get("proposal")
                     if not offer or offer.get("status")!="disponible" or offer.get("id")!=str(data.get("investmentId")):
                         self._send(409,{"error":"La propuesta de inversión ya no está disponible."});return
-                    offer["status"]="rechazada";offer["decisionDay"]=state["day"];book.setdefault("history",[]).append(dict(offer));book["history"]=book["history"][-24:];book["proposal"]=None;book["nextOfferDay"]=state["day"]+90;book["reason"]="El municipio rechazó la última propuesta; nuevos inversores evaluarán la demanda más adelante.";ev("Inversión privada rechazada",f"Se descartó la propuesta de comercio en parcela {offer['x']+1},{offer['y']+1}; la ciudad no gastó fondos ni ocupó el terreno.");self._send(200,public_state(pid));return
+                    offer["status"]="rechazada";offer["decisionDay"]=state["day"];book.setdefault("history",[]).append(dict(offer));book["history"]=book["history"][-24:];book["proposal"]=None;book["nextOfferDay"]=state["day"]+90;book["reason"]="El municipio rechazó la última propuesta; nuevos inversores evaluarán la demanda más adelante.";ev("Inversión privada rechazada",f"Se descartó la propuesta de comercio en parcela {offer['x']+1},{offer['y']+1}; la ciudad no gastó fondos ni ocupó el terreno.");self._send(200,public_state(pid,use_cache=True));return
                 if action=="startAdaptiveReuse":
                     ensure_supply_state();x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""))
                     building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)
@@ -6429,18 +6435,18 @@ class Handler(BaseHTTPRequestHandler):
                     if len(active)+len(heritage)+len(reuse)>=spec["capacity"] or used+4>spec["workers"]:self._send(409,{"error":f"{contractor} no tiene una cuadrilla libre de cuatro trabajadores."});return
                     investment=4200;permit=200
                     if state.get("privateCapital",0)<investment:self._send(409,{"error":f"El proyecto privado requiere $ {investment:,} de capital disponible.".replace(",",".")});return
-                    state["privateCapital"]-=investment;state["money"]+=permit;state["supply"]["contractorCash"][contractor]+=investment;duration=max(20,round(24*spec["days"]/30));work={"id":f"reuse-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name","Local cerrado"),"contractor":contractor,"investment":investment,"permitFee":permit,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"Desmontaje y diagnóstico","rent":24,"quality":round(spec["quality"]*100),"startDay":state["day"],"status":"en obra"};state.setdefault("adaptiveReuseWorks",[]).append(work);ev("Permiso de reconversión aprobado",f"{work['name']} pasa de local cerrado a vivienda: inversión privada $ {investment:,}, permiso municipal $ {permit}, cuatro trabajadores y {duration} días. Se requiere inspección de agua, saneamiento y seguridad.".replace(",","."));self._send(200,public_state(pid));return
+                    state["privateCapital"]-=investment;state["money"]+=permit;state["supply"]["contractorCash"][contractor]+=investment;duration=max(20,round(24*spec["days"]/30));work={"id":f"reuse-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name","Local cerrado"),"contractor":contractor,"investment":investment,"permitFee":permit,"workers":4,"durationDays":duration,"elapsedDays":0,"progress":0,"stage":"Desmontaje y diagnóstico","rent":24,"quality":round(spec["quality"]*100),"startDay":state["day"],"status":"en obra"};state.setdefault("adaptiveReuseWorks",[]).append(work);ev("Permiso de reconversión aprobado",f"{work['name']} pasa de local cerrado a vivienda: inversión privada $ {investment:,}, permiso municipal $ {permit}, cuatro trabajadores y {duration} días. Se requiere inspección de agua, saneamiento y seguridad.".replace(",","."));self._send(200,public_state(pid,use_cache=True));return
                 if action=="heritageProtect":
                     ensure_heritage_state()
                     x=int(data.get("x",-1));y=int(data.get("y",-1));level=str(data.get("level",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible")),None)
                     if not building or level not in ("protección parcial","protección integral"):self._send(409,{"error":"Elegí un inmueble histórico y un nivel de protección válido."});return
                     if building.get("heritageLevel")=="protección integral":self._send(409,{"error":"El inmueble ya tiene protección integral."});return
                     building["heritageLevel"]=level;building["protectedDay"]=state.get("day",1);ev("Inmueble histórico protegido",f"{building.get('name')}: {level}. Se conserva su uso y se habilita una rehabilitación patrimonial financiada.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="startUrbanRenewal":
                     try:start_urban_renewal(data.get("needId"),str(data.get("contractor","")))
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="heritageRestore":
                     ensure_supply_state()
                     x=int(data.get("x",-1));y=int(data.get("y",-1));contractor=str(data.get("contractor",""));building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("heritageEligible") and b.get("heritageLevel") in ("protección parcial","protección integral")),None)
@@ -6466,7 +6472,7 @@ class Handler(BaseHTTPRequestHandler):
                     state["money"]-=cost;supply.setdefault("contractorCash",CONTRACTOR_CASH.copy())[contractor]=supply.setdefault("contractorCash",CONTRACTOR_CASH.copy()).get(contractor,0)+labor_cost
                     lead=SUPPLIERS[supplier_name]["days"];days=max(15,round(24*spec["days"]/30));work={"id":f"heritage-{x}-{y}-{state['day']}","x":x,"y":y,"name":building.get("name"),"contractor":contractor,"supplier":supplier_name,"materials":dict(HERITAGE_MATERIALS),"materialCost":materials_cost,"laborCost":labor_cost,"cost":cost,"workers":4,"deliveryDay":state["day"]+lead,"deliveryDays":lead,"durationDays":days,"elapsedDays":0,"progress":0,"stage":"Esperando materiales","startDay":state["day"],"status":"en obra"}
                     state.setdefault("heritageWorks",[]).append(work);ev("Rehabilitación patrimonial contratada",f"{building.get('name')}: cuatro trabajadores, materiales {supplier_name} (llegan en {lead} días) y {days} días de obra. Inversión $ {cost:,}.".replace(",","."))
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="adjustTax":
                     taxes=ensure_tax_state();kind=str(data.get("kind",""));delta=int(data.get("delta",0))
                     if kind=="property":key="propertyRateBp";low,high,step=20,140,10
@@ -6476,11 +6482,11 @@ class Handler(BaseHTTPRequestHandler):
                     old=taxes.get(key,60 if kind=="property" else 200);new=max(low,min(high,old+delta))
                     if new==old:self._send(409,{"error":"La alícuota ya está en su límite."});return
                     taxes[key]=new;ev("Política tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="adjustHousingAidBudget":
                     social=state.setdefault("socialServices",new_social_services());delta=int(data.get("delta",0));old=max(0,int(social.get("housingAidBudget",0)));new=max(0,min(5000,old+delta))
                     if delta not in (-250,250) or new==old:self._send(409,{"error":"El cupo cambia en pasos de $250, entre $0 y $5.000 por mes."});return
-                    social["housingAidBudget"]=new;ev("Cupo de ayuda de alquiler actualizado",f"El programa podrá destinar hasta $ {new:,} por cierre mensual a mora de alquiler comprobada; el pago depende de la caja de servicios.".replace(",","."));self._send(200,public_state(pid));return
+                    social["housingAidBudget"]=new;ev("Cupo de ayuda de alquiler actualizado",f"El programa podrá destinar hasta $ {new:,} por cierre mensual a mora de alquiler comprobada; el pago depende de la caja de servicios.".replace(",","."));self._send(200,public_state(pid,use_cache=True));return
                 if action=="municipalDebtReserve":
                     ensure_finance_state();finance=state["finance"];direction=str(data.get("direction",""));amount=int(data.get("amount",0))
                     if direction not in ("deposit","withdraw") or amount not in (500,1000,2500):self._send(409,{"error":"Elegí un movimiento válido de $500, $1.000 o $2.500."});return
@@ -6493,12 +6499,12 @@ class Handler(BaseHTTPRequestHandler):
                         if reserve<amount:self._send(409,{"error":f"El fondo de deuda solo tiene $ {reserve:,}.".replace(",",".")});return
                         finance["debtReserve"]=reserve-amount;state["money"]+=amount;label="devueltos a caja"
                     finance.setdefault("debtReserveHistory",[]).append({"day":state.get("day",1),"amount":amount if direction=="deposit" else -amount,"reason":"Aporte al fondo de deuda" if direction=="deposit" else "Retiro del fondo de deuda"});del finance["debtReserveHistory"][:-24]
-                    ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid));return
+                    ev("Fondo de deuda actualizado",f"$ {amount:,} {label}. Fondo protegido: $ {finance['debtReserve']:,}.".replace(",","."));self._send(200,public_state(pid,use_cache=True));return
                 if action=="adjustRoadMaintenance":
                     delta=int(data.get("delta",0));old=max(0,min(200,int(state.get("roadMaintenancePct",100))));new=max(0,min(200,old+delta))
                     if delta not in (-25,25) or new==old:self._send(409,{"error":"El plan cambia en pasos de 25%, entre 0% y 200%."});return
                     state["roadMaintenancePct"]=new;ev("Plan municipal de mantenimiento actualizado",f"Mantenimiento preventivo de calles y edificios públicos: {new}% de la necesidad mensual estimada. El presupuesto de redes determina cuánto trabajo se ejecuta y la condición cambia por uso.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="adjustProgramBudget":
                     ensure_finance_state();budgets=state["finance"]["programBudgets"];program=str(data.get("program",""));delta=int(data.get("delta",0))
                     keys={"services":"servicesPct","mobility":"mobilityPct","networks":"networksPct"}
@@ -6507,15 +6513,15 @@ class Handler(BaseHTTPRequestHandler):
                     if new==old:self._send(409,{"error":"El presupuesto ya está en su límite."});return
                     budgets[key]=new;label={"services":"servicios públicos","mobility":"transporte","networks":"redes y residuos"}[program]
                     ev("Presupuesto municipal actualizado",f"Asignación mensual de {label}: {new}% del costo vigente. Se liquida al próximo cierre; lo que no alcance queda como obligación del programa.")
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="setProgramPriority":
                     try:priority=set_municipal_program_priority(str(data.get("program","")))
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="refinanceMunicipalLoan":
                     try:refinance_municipal_loan(str(data.get("id","")))
                     except ValueError as error:self._send(409,{"error":str(error)});return
-                    self._send(200,public_state(pid));return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="municipalLoan":
                     ensure_finance_state();amount=int(data.get("amount",0));term=int(data.get("termMonths",48));report=municipal_finance_report(include_scenarios=False)
                     if amount not in (5000,10000,20000) or term not in (24,48):self._send(409,{"error":"Elegí un monto y plazo disponibles."});return
@@ -6523,7 +6529,7 @@ class Handler(BaseHTTPRequestHandler):
                     rate=.01;monthly=amount*rate*(1+rate)**term/((1+rate)**term-1);gross=max(1,report["monthlyIncome"]);existing=report["monthlyDebtService"]
                     if monthly+existing>gross*.35:self._send(409,{"error":"La cuota superaría el 35% de los ingresos mensuales de referencia."});return
                     loan={"id":f"mun-{uuid.uuid4().hex[:10]}","label":"Crédito de inversión municipal","principal":amount,"balance":amount,"annualRate":.12,"monthlyRate":rate,"termMonths":term,"monthsRemaining":term,"payment":round(monthly),"createdDay":state["day"],"status":"active","delinquentMonths":0,"totalScheduled":round(monthly*term)}
-                    state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid));return
+                    state["finance"]["municipalLoans"].append(loan);state["money"]+=amount;ev("Crédito municipal contratado",f"Ingresaron $ {amount:,} a caja. Cuota fija $ {loan['payment']:,}/mes durante {term} meses; costo total estimado $ {loan['totalScheduled']:,}.".replace(",","."));self._send(200,public_state(pid,use_cache=True));return
                 if action=="speed": state["speed"]=max(1,min(4,int(data.get("value",1))))
                 elif action=="pause": state["paused"]=not state["paused"]
                 elif action=="demolishAt":
@@ -6633,7 +6639,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="road":
                         try:place_road_instantly(x,y)
                         except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
-                        self._send(200,public_state(pid));return
+                        self._send(200,public_state(pid,use_cache=True));return
                     if not land_tile_unlocked(x,y):self._send(409,{"error":"La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir."});return
                     if kind=="bridge":
                         try:validate_bridge_site(x,y)
@@ -6689,7 +6695,7 @@ class Handler(BaseHTTPRequestHandler):
                             fire_service_report(commute_model().get("workplaces",[]),dispatch_only=True)
                         if service_id in ("policePost","policeStation","policeHQ"):
                             police_service_report(commute_model().get("workplaces",[]),advance=True)
-                        self._send(200,public_state(pid));return
+                        self._send(200,public_state(pid,use_cache=True));return
                     c=CONTRACTORS[contractor]; total=round(spec["cost"]*c["price"]); duration=construction_duration_days(kind,spec["days"],c["days"])
                     # Proyectos privados pagan al contratista desde capital privado; fondos ingresan por hitos a medida que llegan.
                     p={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":x,"y":y,"contractor":contractor,"cost":total,"duration":duration,"elapsed":0,"progress":0,"paid":0,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":c["profile"],"contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state["day"],"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":material_plan(kind),"materialsUsed":{key:0 for key in MATERIAL_NAMES}}
@@ -6935,12 +6941,12 @@ class Handler(BaseHTTPRequestHandler):
                     room_host=state.get("host",pid);active_players=state.get("players",{})
                     state=new_settlement_state();state["host"]=room_host;state["players"]=active_players
                 else: self._send(400,{"error":"Acción desconocida"}); return
-                self._send(200,public_state(pid)); return
+                self._send(200,public_state(pid,use_cache=True)); return
             if path=="/api/save":
                 SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","host")},ensure_ascii=False,indent=2),encoding="utf-8"); self._send(200,{"ok":True,"file":SAVE.name}); return
             if path=="/api/load":
                 if not SAVE.exists(): self._send(404,{"error":"No hay ciudad guardada todavía"}); return
-                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360)); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid)); return
+                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360)); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid,use_cache=True)); return
         self._send(404,{"error":"No encontrado"})
 
 REAL_SECONDS_PER_GAME_HOUR=4

@@ -743,3 +743,7 @@ Inspiración: el sistema de destinos de ocio de Cities: Skylines II; adaptación
 Las copas de los árboles visibles se mecen con una oscilación lenta y discreta. El movimiento continúa al pausar la simulación y se aplica solo a los árboles cargados alrededor de la cámara; al regenerar vegetación, se reconstruye la lista de copas activas.
 
 Inspiración ambiental: clima cambiante y estaciones de Cities: Skylines II. La brisa es una animación visual local y no modifica el clima ni los indicadores de la ciudad.
+
+## Alfa 0.213 - vegetación más densa y brisa visible (fase 15)
+
+Se elevó la densidad de árboles y arbustos renderizados alrededor de la cámara: de 0,17 a 0,28 en móviles, de 0,23 a 0,34 en vista cercana y de 0,10 a 0,15 al recorrer sectores amplios. Las copas ahora se inclinan con más amplitud y suman un balanceo independiente para que el viento se perciba en pantallas pequeñas. El movimiento continúa con el juego pausado y no cambia la simulación.

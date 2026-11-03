@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.212",
+  "currentVersion": "0.213",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.213",
+      "date": "2026-11-03",
+      "title": "Más verde y árboles que se mecen a la vista",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Aumentó la densidad de árboles y arbustos visibles, también en pantallas pequeñas; el paisaje ahora cubre más suelo sin poblar calles ni agua.",
+        "El viento se nota más: los árboles se balancean con mayor amplitud y las copas tienen un leve movimiento propio, incluso con la simulación pausada."
+      ],
+      "verification": "Revisión de los cambios de renderizado; la ejecución local no está disponible en esta sesión."
+    },
     {
       "version": "0.212",
       "date": "2026-11-03",

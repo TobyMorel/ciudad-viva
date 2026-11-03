@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.219",
+  "currentVersion": "0.220",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.220",
+      "date": "2026-11-03",
+      "title": "Nueva partida vuelve al mapa",
+      "roadmapPhase": 15,
+      "overallProgress": null,
+      "changes": [
+        "Al confirmar Nueva partida, se cierran las pantallas superpuestas y se vuelve a la vista del mapa.",
+        "La herramienta activa regresa a Inspeccionar; también se cierran el panel de tráfico, el diseño de recorridos, los mensajes abiertos y el diálogo de materiales."
+      ],
+      "verification": "El inicio de una nueva ciudad limpia los paneles abiertos y redibuja el mapa tras recibir el estado de la partida."
+    },
     {
       "version": "0.219",
       "date": "2026-11-03",

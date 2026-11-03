@@ -770,3 +770,8 @@ Se redujo a la mitad el plazo de proyectos nuevos de viviendas, comercios y fáb
 ## Alfa 0.219 — HUD y controles móviles más legibles (fase 15)
 
 La cabecera en móviles separa marca y acciones de una fila de indicadores; tesorería mantiene un bloque destacado y los demás datos quedan disponibles en una tira desplazable. La barra de informes comienza al inicio del mapa y conserva espacio para recorrer todas las categorías. Los mensajes de vecinos limitan su altura y desplazan su lista internamente. La barra inferior usa objetivos táctiles mayores y respeta las áreas seguras del dispositivo.
+
+
+## Alfa 0.220 — Nueva partida regresa al mapa (fase 15)
+
+Al confirmar el reinicio de ciudad, se cierran los paneles, diálogos y capas auxiliares, se restablece la herramienta Inspeccionar y se muestra el mapa con el estado nuevo.

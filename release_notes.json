@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.208",
+  "currentVersion": "0.209",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.209",
+      "date": "2026-11-03",
+      "title": "Transporte escolar en colectivo",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los grupos de estudiantes ahora pueden viajar en lineas municipales de colectivo cuando la ruta y el tiempo puerta a puerta son convenientes.",
+        "La ida y la vuelta reservan asientos en sus horarios y sentidos correspondientes; si el cupo no alcanza, el resto conserva su viaje a pie, en bicicleta o en auto.",
+        "Los pasajeros escolares en colectivo se identifican en Movilidad y dejan de contarse como peatones, ciclistas y autos particulares."
+      ],
+      "verification": "Validacion sintactica de los motores Online/Offline y del renderizador 3D."
+    },
     {
       "version": "0.208",
       "date": "2026-11-03",
@@ -2716,10 +2729,10 @@
     {
       "phase": 22,
       "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
-      "progress": 45,
-      "summary": "Autos, peatones y red de colectivos con flota, paradas, horarios y transbordos parciales",
+      "progress": 49,
+      "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio",
       "pending": [
-        "Trenes, metro, carga, accidentes y todos los viajes no laborales."
+        "Integrar completamente metro y tren en todos los viajes; sumar logistica de carga, accidentes y capacidad vial detallada."
       ]
     },
     {

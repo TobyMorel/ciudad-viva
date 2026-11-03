@@ -716,4 +716,11 @@ El catalogo Construir usa el modelo abierto de la plaza barrial en su tarjeta 3D
 
 Las visitas a plazas buscan colectivos con paradas y cupos disponibles, lineas de subte/tren operativas y taxis cuando la distancia y el circuito corresponden. La eleccion se integra a la reserva de capacidad y cobro existentes; se descuentan los pasajeros trasladados de peatones, autos y emisiones. Los motores Online y Offline comparten la asignacion.
 
-La fase 22 sigue parcial: restan transporte escolar colectivo, logistica de carga, accidentes y capacidad vial detallada.
+La fase 22 sigue parcial: restan integracion completa de metro y tren, logistica de carga, accidentes y capacidad vial detallada.
+
+
+## Alfa 0.209 - transporte escolar en colectivo (fase 22)
+
+Los grupos de estudiantes buscan lineas municipales activas que conecten hogar y escuela en ambos sentidos. Cada grupo reserva asientos para la ida en hora pico de la manana y para el regreso en hora pico de la tarde; se exige capacidad suficiente en ambas direcciones. Cuando el cupo es parcial, el remanente conserva su modo previo: caminata, bicicleta o auto. Solo el remanente genera peatones, ciclistas, vehiculos y emisiones. Movilidad informa los pasajeros escolares en colectivo y el mapa evita duplicarlos como viajeros particulares. Disponible en Online y Offline.
+
+Verificacion: sintaxis Python/JavaScript y validacion del JSON de versiones. La fase 22 permanece parcial: faltan integracion completa de metro/tren, logistica de carga, accidentes y capacidad vial detallada.

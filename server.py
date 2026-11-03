@@ -3068,6 +3068,37 @@ def choose_bus_itinerary(emp):
                         offers.append({"lines":[first,second],"headways":[first_headway,second_headway],"legFares":leg_fares,"access":access_from+access_to,"ride":ride,"transferMinutes":round(transfer),"transferStop":stop.get("name","Parada de intercambio"),"fare":fare,"travelRoute":first["route"][start:leave+1]+second["route"][board:end+1],"minutes":minutes})
     return min(offers,key=lambda item:(item["minutes"],len(item["lines"]),tuple(str(line["id"]) for line in item["lines"]))) if offers else None
 
+def choose_school_bus_leg(origin,destination,window,returning=False,alternative_minutes=None):
+    """Find a real school-bus ride on an existing line, with seats for that direction."""
+    choices=[]
+    for line in state.get("busRoutes",[]):
+        if not line.get("operational") or line.get("status")!="active":continue
+        path=line.get("route",[])
+        if len(path)<2:continue
+        if line.get("manualRoute"):
+            stops=[s for s in line.get("stops",[]) if isinstance(s.get("at"),(list,tuple)) and len(s["at"])==2]
+            nodes=[]
+            for stop in stops:
+                idx=stop.get("routeIndex")
+                if not isinstance(idx,int) or idx<0 or idx>=len(path) or tuple(path[idx])!=tuple(stop["at"]):
+                    idx=next((i for i,p in enumerate(path) if tuple(p)==tuple(stop["at"])),None)
+                if idx is not None:nodes.append((tuple(stop["at"]),idx))
+        else:nodes=[(tuple(p),i) for i,p in enumerate(path)]
+        starts=[(abs(origin[0]-p[0])+abs(origin[1]-p[1]),i) for p,i in nodes if abs(origin[0]-p[0])+abs(origin[1]-p[1])<=1]
+        ends=[(abs(destination[0]-p[0])+abs(destination[1]-p[1]),i) for p,i in nodes if abs(destination[0]-p[0])+abs(destination[1]-p[1])<=1]
+        if not starts or not ends:continue
+        windows=line.get("capacityByWindow",{});counts=line.get("returnRidersByWindow",{}) if returning else line.get("ridersByWindow",{})
+        capacity=max(0,int(windows.get(window,0))-int(counts.get(window,0)))
+        if not capacity:continue
+        headway=line.get("headwayByWindow",{}).get(window,line.get("headwayMinutes",60))
+        for access_start,start in starts:
+            for access_end,end in ends:
+                if start==end:continue
+                ride=abs(end-start);minutes=(access_start+access_end)*4+headway/2+ride*1.8
+                if alternative_minutes is not None and minutes>=alternative_minutes*1.25:continue
+                choices.append((minutes,str(line.get("id")),line,capacity))
+    return min(choices,key=lambda item:(item[0],item[1])) if choices else None
+
 def add_return_commutes(employees,commutes):
     """Reserva capacidad vespertina por separado y publica el regreso al hogar."""
     lines={line["id"]:line for line in state.get("busRoutes",[])}
@@ -3443,23 +3474,39 @@ def commute_model():
         mode="bicycle" if journey.get("person",{}).get("age",0)>=13 and 2<=distance<=7 and stable_skill(journey.get("person",{}).get("id",""),"bicicleta")%100<42 else "auto" if distance>3 and journey.get("carAccess") else "walk"
         key=(tuple(home),tuple(school),mode)
         school_groups.setdefault(key,{"from":home,"to":school,"route":route,"distance":distance,"mode":mode,"students":[]})["students"].append(journey["person"])
-    school_walkers=school_bicycles=school_vehicles=school_emissions=0
+    school_walkers=school_bicycles=school_bus_passengers=school_vehicles=school_emissions=0
     for (home,school,mode),group in school_groups.items():
-        students=group["students"];count=math.ceil(len(students)/1.4) if mode=="auto" else 0
-        school_trip_emissions=round(count*group["distance"]*.36,2);minutes=2+round(group["distance"]*(4 if mode=="walk" else 1.8 if mode=="bicycle" else 2.5))+(2 if count else 0)
-        trip={"from":list(home),"to":list(school),"route":group["route"],"distance":group["distance"],"workers":len(students),"vehicles":count,"mode":mode,"reason":"educacion","destinationName":next((w["name"] for w in workplaces if w["kind"]=="school" and (w["x"],w["y"])==school),"Escuela"),"roundTrip":True,"departureWindow":"07:00–09:00","departureWindowKey":"morningPeak","walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":minutes-2-(2 if count else 0),"parkingMinutes":2 if count else 0,"estimatedMinutes":minutes,"dailyEmissionsKg":school_trip_emissions,"trafficFactor":1,"attendance":max(.25,1-max(0,minutes-15)/240),"people":students}
-        commutes.append(trip);school_walkers+=len(students) if mode=="walk" else 0;school_bicycles+=len(students) if mode=="bicycle" else 0;school_vehicles+=count*2;school_emissions+=school_trip_emissions
+        students=group["students"]
+        alternative=2+group["distance"]*(4 if mode=="walk" else 1.8 if mode=="bicycle" else 2.5)+(2 if mode=="auto" else 0)
+        outbound=choose_school_bus_leg(home,school,"morningPeak",False,alternative)
+        inbound=choose_school_bus_leg(school,home,"eveningPeak",True,alternative)
+        bus_riders=min(len(students),outbound[3],inbound[3]) if outbound and inbound else 0
+        if bus_riders:
+            out_line=outbound[2];return_line=inbound[2]
+            out_line["ridersThisPass"]=out_line.get("ridersThisPass",0)+bus_riders
+            out_counts=out_line.setdefault("ridersByWindow",{});out_counts["morningPeak"]=out_counts.get("morningPeak",0)+bus_riders
+            return_line["returnRidersThisPass"]=return_line.get("returnRidersThisPass",0)+bus_riders
+            return_counts=return_line.setdefault("returnRidersByWindow",{});return_counts["eveningPeak"]=return_counts.get("eveningPeak",0)+bus_riders
+        residual=len(students)-bus_riders
+        count=math.ceil(residual/1.4) if mode=="auto" else 0
+        school_trip_emissions=round(count*group["distance"]*.36,2)
+        base_minutes=2+round(group["distance"]*(4 if mode=="walk" else 1.8 if mode=="bicycle" else 2.5))+(2 if count else 0)
+        minutes=round((bus_riders*outbound[0]+(len(students)-bus_riders)*base_minutes)/max(1,len(students))) if bus_riders and outbound else base_minutes
+        trip={"from":list(home),"to":list(school),"route":group["route"],"distance":group["distance"],"workers":len(students),"vehicles":count,"mode":mode,"reason":"educacion","destinationName":next((w["name"] for w in workplaces if w["kind"]=="school" and (w["x"],w["y"])==school),"Escuela"),"roundTrip":True,"departureWindow":"07:00-09:00","departureWindowKey":"morningPeak","walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":minutes-2-(2 if count else 0),"parkingMinutes":2 if count else 0,"estimatedMinutes":minutes,"dailyEmissionsKg":school_trip_emissions,"trafficFactor":1,"attendance":max(.25,1-max(0,minutes-15)/240),"busRiders":bus_riders,"schoolBusLineId":outbound[2].get("id") if bus_riders else None,"schoolReturnLineId":inbound[2].get("id") if bus_riders else None,"schoolBusMinutes":round(outbound[0]) if bus_riders else None,"people":students}
+        commutes.append(trip)
+        school_walkers+=residual if mode=="walk" else 0;school_bicycles+=residual if mode=="bicycle" else 0
+        school_bus_passengers+=bus_riders;school_vehicles+=count*2;school_emissions+=school_trip_emissions;bus_commuters+=bus_riders
         if mode in ("auto","bicycle"):
             for aa,bb in zip(group["route"],group["route"][1:]):
                 aa=tuple(aa);bb=tuple(bb)
                 if aa in roads and bb in roads:
-                    edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+(count/75 if mode=="auto" else len(students)*.12)
-        walking+=len(students) if mode=="walk" else 0;bicycle_commuters+=len(students) if mode=="bicycle" else 0;auto_commuters+=len(students) if mode=="auto" else 0
+                    edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+(count/75 if mode=="auto" else residual*.12)
+        walking+=residual if mode=="walk" else 0;bicycle_commuters+=residual if mode=="bicycle" else 0;auto_commuters+=residual if mode=="auto" else 0
         vehicles+=count;emissions+=school_trip_emissions;weighted_minutes+=len(students)*minutes;distance_total+=len(students)*group["distance"]
     total_eligible=len(residents);without_access=sum(1 for _,home,person in residents if person.get("status")!="empleado" and not any((hi,si) in routes for si in range(len(sites)) for hi,h in enumerate(homes) if h is home))
     model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"busCommuters":bus_commuters,"bicycleCommuters":bicycle_commuters,"bicyclePassengers":bicycle_commuters+school_bicycles,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
     _commute_cache_key=key;_commute_cache=model
-    model.update({"commuters":model["commuters"]+sum(len(g["students"]) for g in school_groups.values()),"schoolTrips":len(school_groups),"schoolPassengers":sum(len(g["students"]) for g in school_groups.values()),"schoolWalkers":school_walkers,"schoolBicycles":school_bicycles,"schoolVehicles":school_vehicles,"schoolEmissionsKg":round(school_emissions,2)})
+    model.update({"commuters":model["commuters"]+sum(len(g["students"]) for g in school_groups.values()),"schoolTrips":len(school_groups),"schoolPassengers":sum(len(g["students"]) for g in school_groups.values()),"schoolBusPassengers":school_bus_passengers,"schoolWalkers":school_walkers,"schoolBicycles":school_bicycles,"schoolVehicles":school_vehicles,"schoolEmissionsKg":round(school_emissions,2)})
     # Now that segment flows are cached, congestion can include both commuters and trucks.
     minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
     queue_report=advance_traffic_queues(commutes,roads)
@@ -3506,6 +3553,7 @@ def commute_model():
     returning=add_return_commutes(employees,commutes)
     model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
     model["bicyclePassengers"]+=returning.get("returnBicycleCommuters",0)
+    model["returnBusCommuters"]+=model.get("schoolBusPassengers",0)
     model["dailyEmissionsKg"]=round(model["dailyEmissionsKg"]+returning["returnEmissionsKg"],2)
     shopping=nonwork_shopping_trips(homes,[s for s in sites if s.get("kind")=="shop"],roads)
     services=nonwork_service_trips(homes,[b for b in state["buildings"] if b.get("kind")=="civic" and b.get("serviceModel")!="urbanPark" and b.get("status","operativo") in ("operativo","habilitado")],roads)
@@ -3768,9 +3816,9 @@ def advance_traffic_queues(commutes,roads):
     return_window={"early":"afternoon","morningPeak":"eveningPeak","midday":"late"}
     for trip in commutes:
         if trip.get("mode") in ("auto","bicycle"):
-            window=trip.get("departureWindowKey") or "dayNoon";add_route(trip.get("route"),window,trip.get("vehicles",0) if trip.get("mode")=="auto" else trip.get("workers",0)*.12)
+            window=trip.get("departureWindowKey") or "dayNoon";add_route(trip.get("route"),window,trip.get("vehicles",0) if trip.get("mode")=="auto" else max(0,trip.get("workers",0)-trip.get("busRiders",0))*.12)
             # La ida permite anticipar el regreso del mismo grupo en su franja laboral.
-            if trip.get("reason") in ("trabajo","educacion") and window in return_window:add_route(list(reversed(trip.get("route",[]))),return_window[window],trip.get("vehicles",0) if trip.get("mode")=="auto" else trip.get("workers",0)*.12)
+            if trip.get("reason") in ("trabajo","educacion") and window in return_window:add_route(list(reversed(trip.get("route",[]))),return_window[window],trip.get("vehicles",0) if trip.get("mode")=="auto" else max(0,trip.get("workers",0)-trip.get("busRiders",0))*.12)
     for line in state.get("busRoutes",[]):
         if not line.get("operational"):continue
         schedule=line.get("departuresByWindow") or bus_service_schedule(line).get("departuresByWindow",{})
@@ -6020,7 +6068,7 @@ def public_state(player_id=None):
     view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"eventVisitors":state.get("eventVisitorsThisMonth",0),"eventRetailSpend":state.get("eventRetailSpendThisMonth",0),"eventCleanupSpend":state.get("eventCleanupSpendThisMonth",0),"events":state.get("tourismEvents",[])[-6:],"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
     view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","bicycleCommuters","bicyclePassengers","returnBicycleCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolWalkers","schoolBicycles","schoolVehicles","schoolEmissionsKg","leisureTrips","leisureVisitors","leisureVehicles","leisureWalkers","leisureBusPassengers","leisureMetroPassengers","leisureRailPassengers","leisureTaxiPassengers","leisureTransitPassengers","leisureEmissionsKg","dailyTrips") if k in commute}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","bicycleCommuters","bicyclePassengers","returnBicycleCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolBusPassengers","schoolWalkers","schoolBicycles","schoolVehicles","schoolEmissionsKg","leisureTrips","leisureVisitors","leisureVehicles","leisureWalkers","leisureBusPassengers","leisureMetroPassengers","leisureRailPassengers","leisureTaxiPassengers","leisureTransitPassengers","leisureEmissionsKg","dailyTrips") if k in commute}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["metroRiders"]=commute.get("metroRiders",0)

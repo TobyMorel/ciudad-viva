@@ -5,6 +5,7 @@ Las estaciones exigen una construcción física terminada en una parcela libre.
 import math
 from rail_bus_intermodal import assign_rail_bus_transfers,assign_rail_rail_transfers
 from rail_sites import place_rail_station,advance_rail_stations
+from rail_freight import freight_capacity_metrics
 
 METRO_TRAIN_COST=2400
 METRO_SEATS=80
@@ -156,6 +157,7 @@ def metro_refresh(state):
         line["headwayMinutes"]=max(5,math.ceil(d*(3 if rail else 4)/max(1,n)))
         line["dailyCapacity"]=n*(RAIL_SEATS if rail else METRO_SEATS)*3 if ready else 0
         line["freightCapacityPerDay"]=n*60 if ready and rail else 0
+        line.update(freight_capacity_metrics(line))
         line["monthlyOperatingCost"]=round((390 if rail else 230)+(110 if rail else 85)*d+(260 if rail else 140)*n+line.get("powerRequiredKw",0)*.7) if ready else 0
         line["energyKw"]=line.get("powerRequiredKw",0) if ready else 0
 
@@ -231,6 +233,7 @@ def metro_assign_passengers(state,trips):
             trip["dailyEmissionsKg"]=round(trip["vehicles"]*trip.get("distance",0)*.18*2,2)
     for line in state.get("metroLines",[]):
         line["fareDue"]=round(sum(sum(v.values()) for v in line["fareByDay"].values())/100,2)
+        line.update(freight_capacity_metrics(line))
     return {"metroRiders":total-rail_total,"railRiders":rail_total,
             "metroLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")!="elevated"),
             "railLinesOperational":sum(l.get("operational",False) for l in state.get("metroLines",[]) if l.get("mode")=="elevated"),

@@ -8,7 +8,7 @@ from taxi_passengers import assign_taxi_passengers
 from bus_nonwork import assign_bus_nonwork_passengers, collect_bus_nonwork_fares
 from growth_demand import growth_demand
 from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro_day,metro_assign_passengers,settle_metro_month
-from rail_freight import freight_route_for_factory_port,reserve_freight_capacity,next_freight_departure_day,rail_freight_report
+from rail_freight import freight_route_for_factory_port,freight_routes_for_factory_port,reserve_freight_route,next_freight_departure_day,rail_freight_report
 from essential_services import evaluate_essential_services,advance_essential_service_day
 
 ROOT = Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent)).resolve()
@@ -4807,6 +4807,16 @@ def process_port_logistics():
     statuses=("pendiente","en tránsito","esperando acceso","esperando patio","esperando tren programado",
               "esperando capacidad ferroviaria","esperando acceso ferroviario","en tránsito ferroviario")
     def local_access(a,b):return route_between((a["x"],a["y"]),(b["x"],b["y"]))
+    def apply_freight_route(order,freight):
+        origin=freight["originStation"];terminal=freight["portStation"]
+        order.update({"freightLineId":freight["line"]["id"],"railRoute":freight["route"],"route":freight["route"],
+                      "railDistance":max(1,len(freight["route"])-1),"freightOriginStation":[origin["x"],origin["y"]],
+                      "freightPortStation":[terminal["x"],terminal["y"]],"originAccessRoute":freight["originAccessRoute"],
+                      "portAccessRoute":freight["portAccessRoute"]})
+        for site,role in ((origin,"industrial"),(terminal,"port")):
+            roles=site.setdefault("freightRoles",[])
+            if role not in roles:roles.append(role)
+            site["freightTerminal"]=True
     for order in orders:
         if order.get("status") not in statuses:continue
         port_id=order.get("portId")
@@ -4814,18 +4824,18 @@ def process_port_logistics():
         source=next((b for b in state["buildings"] if b.get("kind") in ("shop","factory") and b.get("business",{}).get("id")==order.get("businessId")),None)
         if not port or not source:order["status"]="cancelado";continue
         if order.get("mode")=="rail":
-            freight=freight_route_for_factory_port(state,source,port,local_access,order.get("freightLineId"))
-            if not freight:
+            fixed_route=order.get("status")=="en tránsito ferroviario" or order.get("railArrived")
+            if fixed_route:
+                current=freight_route_for_factory_port(state,source,port,local_access,order.get("freightLineId"))
+                freight_options=[current] if current else []
+            else:
+                freight_options=freight_routes_for_factory_port(state,source,port,local_access)
+                preferred=str(order.get("freightLineId",""))
+                freight_options.sort(key=lambda item:(str(item["line"].get("id",""))!=preferred,item["distance"],str(item["line"].get("id",""))))
+            if not freight_options:
                 if order.get("status")!="en tránsito ferroviario":order.update({"status":"esperando acceso ferroviario","waitReason":"Faltan terminales elevadas activas y conectadas."})
                 continue
-            line=freight["line"];origin=freight["originStation"];terminal=freight["portStation"]
-            order.update({"railRoute":freight["route"],"route":freight["route"],"railDistance":max(1,len(freight["route"])-1),
-                          "freightOriginStation":[origin["x"],origin["y"]],"freightPortStation":[terminal["x"],terminal["y"]],
-                          "originAccessRoute":freight["originAccessRoute"],"portAccessRoute":freight["portAccessRoute"]})
-            for site,role in ((origin,"industrial"),(terminal,"port")):
-                roles=site.setdefault("freightRoles",[])
-                if role not in roles:roles.append(role)
-                site["freightTerminal"]=True
+            freight=freight_options[0];apply_freight_route(order,freight);line=freight["line"]
             if order.get("railArrived"):
                 if port.get("cargoStored",0)+order["quantity"]>port.get("cargoCapacity",500):
                     order.update({"status":"esperando patio","waitReason":"Patio portuario sin espacio."});continue
@@ -4838,8 +4848,10 @@ def process_port_logistics():
             if order.get("status")!="en tránsito ferroviario":
                 if state["day"]<int(order.get("scheduledDepartureDay",state["day"])):
                     order.update({"status":"esperando tren programado","waitReason":"Próxima salida día "+str(order.get("scheduledDepartureDay"))});continue
-                if not reserve_freight_capacity(line,origin,terminal,order.get("quantity",0),state["day"]):
-                    interval=max(1,int(order.get("scheduleIntervalDays",3)));order.update({"status":"esperando capacidad ferroviaria","scheduledDepartureDay":next_freight_departure_day(state["day"],interval),"waitReason":"Aforo de la formación o terminal ocupado."});continue
+                freight=reserve_freight_route(freight_options,order.get("quantity",0),state["day"])
+                if not freight:
+                    interval=max(1,int(order.get("scheduleIntervalDays",3)));order.update({"status":"esperando capacidad ferroviaria","scheduledDepartureDay":next_freight_departure_day(state["day"],interval),"waitReason":"Los pasajeros tienen prioridad; el corredor o el terminal no tiene cupo libre para esta carga."});continue
+                apply_freight_route(order,freight);line=freight["line"]
                 order.update({"status":"en tránsito ferroviario","departureDay":state["day"],"travelledDistance":0,
                               "waitReason":"","expectedPortDay":state["day"]+max(1,math.ceil(order["railDistance"]/12))})
                 continue

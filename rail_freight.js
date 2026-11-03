@@ -1,11 +1,17 @@
 // Terminales físicos y aforo diario de carga para trenes elevados.
 const distance=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
 const validRoute=route=>Array.isArray(route)&&route.length>=5&&route.every((p,i)=>Array.isArray(p)&&p.length===2&&p.every(Number.isInteger)&&(!i||Math.abs(p[0]-route[i-1][0])+Math.abs(p[1]-route[i-1][1])===1));
-export function freightRouteForFactoryPort(state,factory,port,roadRoute,lineId=null){
- if(!factory||factory.kind!=='factory'||!port||port.kind!=='port')return null;
+export function freightCapacityMetrics(line){
+ const raw=line?.freightCapacityPerDay,nominal=Math.max(0,Math.trunc(raw==null?Math.max(0,Math.trunc(line?.trainCount||0))*60:Number(raw)||0));
+ const passengerCapacity=Math.max(0,Math.trunc(line?.dailyCapacity||0)),passengers=Math.max(0,Math.trunc(line?.dailyRiders||0));
+ const occupied=passengerCapacity?Math.min(passengers,passengerCapacity):0;
+ const available=passengerCapacity?Math.floor(nominal*(passengerCapacity-occupied)/passengerCapacity+1e-9):nominal;
+ return{freightCapacityPerDay:nominal,freightAvailableCapacityPerDay:Math.max(0,available),passengerLoadPct:passengerCapacity?Math.round(occupied/passengerCapacity*100):0};
+}
+export function freightRoutesForFactoryPort(state,factory,port,roadRoute){
+ if(!factory||factory.kind!=='factory'||!port||port.kind!=='port')return [];
  const sites=(state.railStations||[]).filter(s=>s.mode==='elevated'&&s.status==='active'),candidates=[];
  for(const line of state.metroLines||[]){
-  if(lineId!=null&&String(line.id)!==String(lineId))continue;
   if(line.mode!=='elevated'||line.status!=='active'||!line.operational)continue;
   const points=line.stations||[],route=line.route||[];if(points.length!==2||!validRoute(route))continue;
   const ends=points.map(p=>sites.find(s=>s.x===p[0]&&s.y===p[1]));if(!ends[0]||!ends[1]||ends[0]===ends[1])continue;
@@ -18,12 +24,16 @@ export function freightRouteForFactoryPort(state,factory,port,roadRoute,lineId=n
   }
  }
  candidates.sort((a,b)=>a.distance-b.distance||String(a.line.id).localeCompare(String(b.line.id))||a.originStation.x-b.originStation.x||a.originStation.y-b.originStation.y);
- return candidates[0]||null;
+ return candidates;
+}
+export function freightRouteForFactoryPort(state,factory,port,roadRoute,lineId=null){
+ const routes=freightRoutesForFactoryPort(state,factory,port,roadRoute).filter(route=>lineId==null||String(route.line.id)===String(lineId));
+ return routes[0]||null;
 }
 export function reserveFreightCapacity(line,originStation,portStation,quantity,day){
  quantity=Math.max(0,Math.trunc(Number(quantity)||0));day=Math.trunc(Number(day)||0);
  if(!quantity||!line||!originStation||!portStation)return false;
- const lineCapacity=Math.max(0,Math.trunc(line.freightCapacityPerDay||Math.max(0,Math.trunc(line.trainCount||0))*60));
+ const lineCapacity=freightCapacityMetrics(line).freightAvailableCapacityPerDay;
  const terminals=[originStation,portStation],usages=terminals.map(site=>({
   capacity:Math.max(0,Math.trunc(site.freightCapacityPerDay||120)),
   used:site.freightUsageDay===day?Math.max(0,Math.trunc(site.freightUsedToday||0)):0
@@ -33,6 +43,10 @@ export function reserveFreightCapacity(line,originStation,portStation,quantity,d
  if(line.freightUsageDay!==day){line.freightUsageDay=day;line.freightUsedToday=0}line.freightUsedToday+=quantity;
  terminals.forEach((site,i)=>{if(site.freightUsageDay!==day){site.freightUsageDay=day;site.freightUsedToday=0}site.freightUsedToday+=quantity;if(!site.freightCapacityPerDay)site.freightCapacityPerDay=usages[i].capacity});
  return true;
+}
+export function reserveFreightRoute(routes,quantity,day){
+ for(const route of routes||[])if(reserveFreightCapacity(route.line,route.originStation,route.portStation,quantity,day))return route;
+ return null;
 }
 export function nextFreightDepartureDay(day,interval=3){
  interval=Math.max(1,Math.trunc(Number(interval)||1));const nextDay=Math.max(1,Math.trunc(Number(day)||1))+1;
@@ -55,7 +69,10 @@ export function railFreightReport(state){
  return {
   terminals:(state.railStations||[]).filter(s=>s.freightTerminal).length,
   operationalLines:lines.filter(l=>l.operational).length,
-  dailyCapacity:lines.filter(l=>l.operational).reduce((n,l)=>n+Math.max(0,Math.trunc(l.freightCapacityPerDay||Math.max(0,Math.trunc(l.trainCount||0))*60)),0),
+  dailyCapacity:lines.filter(l=>l.operational).reduce((n,l)=>n+freightCapacityMetrics(l).freightCapacityPerDay,0),
+  availableCapacityPerDay:lines.filter(l=>l.operational).reduce((n,l)=>n+freightCapacityMetrics(l).freightAvailableCapacityPerDay,0),
+  passengerRiders:lines.filter(l=>l.operational).reduce((n,l)=>n+Math.max(0,Math.trunc(l.dailyRiders||0)),0),
+  passengerLoadPct:Math.round(lines.filter(l=>l.operational).reduce((r,l)=>r+Math.min(Math.max(0,Math.trunc(l.dailyRiders||0)),Math.max(0,Math.trunc(l.dailyCapacity||0))),0)/Math.max(1,lines.filter(l=>l.operational).reduce((n,l)=>n+Math.max(0,Math.trunc(l.dailyCapacity||0)),0))*100),
   waitingUnits:orders.filter(o=>o.mode==='rail'&&(waiting.has(o.status)||o.status==='en puerto')).reduce((n,o)=>n+Math.max(0,Math.trunc(o.quantity||0)),0),
   inTransitUnits:orders.filter(o=>o.mode==='rail'&&o.status==='en tránsito ferroviario').reduce((n,o)=>n+Math.max(0,Math.trunc(o.quantity||0)),0),
   deliveredUnits:lines.reduce((n,l)=>n+Math.max(0,Math.trunc(l.freightDeliveredUnits||0)),0),

@@ -1,3 +1,9 @@
+## Después de Alfa 0.240 · Aforo compartido y fase 22
+
+Alfa 0.240 hace que las mercancías usen solo la capacidad diaria que queda después de pasajeros en los corredores elevados. Si una ruta queda llena, el envío intenta otra línea física activa antes de esperar; cada salida reserva cupo en el corredor y en ambos terminales. Movilidad muestra el cupo libre y nominal. LAN y Offline aplican las mismas reglas.
+
+Siguiente: permitir que la carga cambie de línea en estaciones de intercambio construidas y validar la sala LAN entre dos equipos. La prueba Hamachi física sigue fuera del entorno disponible.
+
 ## Después de Alfa 0.239 · Validación LAN y fase 22
 
 Alfa 0.239 conecta las fábricas con excedentes, las estaciones elevadas y el puerto. Los envíos ferroviarios requieren dos terminales físicas activas, una línea operativa y acceso vial local. Cada salida respeta un calendario de tres días, el aforo compartido del tren y de ambos patios terminales; la carga ocupa inventario del puerto, espera el barco y genera el flete municipal al llegar al mercado. La partida local y el servidor aplican las mismas reglas, el panel muestra sus cifras y la escena representa terminales y trenes de carga.

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.239",
+  "currentVersion": "0.240",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.240",
+      "date": "2026-11-03",
+      "title": "Aforo ferroviario compartido entre pasajeros y carga",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los pasajeros tienen prioridad en el aforo diario del tren elevado; la carga industrial puede reservar solo la capacidad que queda libre en el corredor.",
+        "Si el corredor preferido está lleno, el envío prueba otros corredores físicos activos y reserva el primero con espacio para carga y terminales.",
+        "Una línea con mucha demanda de viajeros reduce sus envíos de mercancía y puede posponerlos; sumar trenes aumenta la capacidad disponible para ambos usos.",
+        "Movilidad muestra pasajeros, carga libre después de pasajeros y capacidad nominal; el motivo de espera explica cuándo el corredor o el terminal está lleno.",
+        "LAN y Offline calculan y reservan el mismo cupo compartido."
+      ],
+      "verification": "Las regresiones de ambos motores comprueban reparto del aforo, reserva acumulada, alternativa entre corredores y ausencia de espacio para carga con pasajeros al máximo; Chromium comprueba la lectura responsive del panel a 390 y 1440 px."
+    },
     {
       "version": "0.239",
       "date": "2026-11-03",
@@ -3112,9 +3127,9 @@
       "phase": 22,
       "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
       "progress": 49,
-      "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio",
+    "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio; carga industrial viaja por tren al puerto y comparte capacidad con pasajeros.",
       "pending": [
-        "Integrar completamente metro y tren en todos los viajes; sumar logistica de carga, accidentes y capacidad vial detallada."
+      "Integrar completamente metro y tren en todos los viajes; ampliar carga ferroviaria con transbordos entre corredores; resolver accidentes y capacidad vial detallada."
       ]
     },
     {

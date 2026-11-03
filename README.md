@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.239
+# Ciudad Viva · Alfa 0.240
+
+**Capacidad ferroviaria compartida:** la carga usa solo el cupo diario que queda después de reservar espacio para los pasajeros. Si el corredor preferido está lleno, el envío busca otra línea elevada construida que tenga cupo. Sumar trenes amplía capacidad para ambos usos. Movilidad muestra carga libre y capacidad nominal. Reglas iguales en LAN y Offline.
 
 **Trenes de carga y exportación al puerto:** las fábricas pueden enviar excedentes por líneas elevadas activas con estaciones junto a la planta y al puerto. Hay salidas programadas, capacidad por tren y terminal, inventario portuario y un flete municipal liquidado cuando llega el barco. La interfaz identifica la carga pendiente y los trenes en ruta.
 
@@ -115,7 +117,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.232](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.232/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.240](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.240/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

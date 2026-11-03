@@ -1,10 +1,10 @@
-import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.239';
+import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.240';
 import {gameMinutesForElapsedSeconds} from './simulation_time.js';
-import {assignTaxiPassengers} from './taxi_passengers.js?v=0.239';
-import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.239';
+import {assignTaxiPassengers} from './taxi_passengers.js?v=0.240';
+import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.240';
 import {growthDemand} from './growth_demand.js';
-import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.239';
-import {freightRouteForFactoryPort,reserveFreightCapacity,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.239';
+import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.240';
+import {freightRouteForFactoryPort,freightRoutesForFactoryPort,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.240';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';
 export function taxAdjustedBusinessCreditLimit(baseLimit,taxArrears=0,consecutiveMissedTaxMonths=0){const base=Math.max(0,Math.trunc(baseLimit||0));if((consecutiveMissedTaxMonths||0)>=3)return 0;return Math.max(0,base-Math.max(0,Math.trunc(taxArrears||0)))}
 export function taxPressurePenalty(pressure){return Math.min(5,Math.max(0,Math.floor((Math.max(0,Math.trunc(pressure||0))-5)/5)))}
@@ -1469,22 +1469,22 @@ function advanceOfflineZonedDevelopment(){
     metroRefresh(state);
     const ports=(state.buildings||[]).filter(b=>b.kind==='port'&&['habilitado','operativo'].includes(b.status)),orders=state.supply.portOrders||(state.supply.portOrders=[]),voyages=state.supply.portVoyages||(state.supply.portVoyages=[]);
     const activeStatuses=new Set(['pendiente','en tránsito','esperando acceso','esperando patio','esperando tren programado','esperando capacidad ferroviaria','esperando acceso ferroviario','en tránsito ferroviario']);
+    const applyFreightRoute=(order,freight)=>{const origin=freight.originStation,terminal=freight.portStation;Object.assign(order,{freightLineId:freight.line.id,railRoute:freight.route,route:freight.route,railDistance:Math.max(1,freight.route.length-1),freightOriginStation:[origin.x,origin.y],freightPortStation:[terminal.x,terminal.y],originAccessRoute:freight.originAccessRoute,portAccessRoute:freight.portAccessRoute});for(const [site,role] of [[origin,'industrial'],[terminal,'port']]){site.freightRoles=site.freightRoles||[];if(!site.freightRoles.includes(role))site.freightRoles.push(role);site.freightTerminal=true}};
     for(const order of orders){
       if(!activeStatuses.has(order.status))continue;
       const port=ports.find(b=>(b.id||'port-'+b.x+'-'+b.y)===order.portId);
       const source=order.originType==='factory'?(state.buildings||[]).find(b=>b.kind==='factory'&&b.business?.id===order.businessId):(state.buildings||[]).find(b=>b.kind==='shop'&&b.business?.id===order.businessId);
       if(!port||!source){order.status='cancelado';continue}
       if(order.mode==='rail'){
-        const freight=freightRouteForFactoryPort(state,source,port,offlineRoadRoute,order.freightLineId);
-        if(!freight){
+        const fixedRoute=order.status==='en tránsito ferroviario'||order.railArrived;
+        let freightOptions;
+        if(fixedRoute){const current=freightRouteForFactoryPort(state,source,port,offlineRoadRoute,order.freightLineId);freightOptions=current?[current]:[]}
+        else{freightOptions=freightRoutesForFactoryPort(state,source,port,offlineRoadRoute);const preferred=String(order.freightLineId||'');freightOptions.sort((a,b)=>(String(a.line.id)!==preferred)-(String(b.line.id)!==preferred)||a.distance-b.distance||String(a.line.id).localeCompare(String(b.line.id)))}
+        if(!freightOptions.length){
           if(order.status!=='en tránsito ferroviario')Object.assign(order,{status:'esperando acceso ferroviario',waitReason:'Faltan terminales elevadas activas y conectadas.'});
           continue;
         }
-        const line=freight.line,origin=freight.originStation,terminal=freight.portStation;
-        Object.assign(order,{railRoute:freight.route,route:freight.route,railDistance:Math.max(1,freight.route.length-1),freightOriginStation:[origin.x,origin.y],freightPortStation:[terminal.x,terminal.y],originAccessRoute:freight.originAccessRoute,portAccessRoute:freight.portAccessRoute});
-        for(const [site,role] of [[origin,'industrial'],[terminal,'port']]){
-          site.freightRoles=site.freightRoles||[];if(!site.freightRoles.includes(role))site.freightRoles.push(role);site.freightTerminal=true;
-        }
+        let freight=freightOptions[0];applyFreightRoute(order,freight);let line=freight.line;
         if(order.railArrived){
           if((port.cargoStored||0)+order.quantity>(port.cargoCapacity||500)){Object.assign(order,{status:'esperando patio',waitReason:'Patio portuario sin espacio.'});continue}
           port.cargoStored=(port.cargoStored||0)+order.quantity;
@@ -1495,10 +1495,12 @@ function advanceOfflineZonedDevelopment(){
         }
         if(order.status!=='en tránsito ferroviario'){
           if(state.day<(order.scheduledDepartureDay||state.day)){Object.assign(order,{status:'esperando tren programado',waitReason:'Próxima salida día '+order.scheduledDepartureDay});continue}
-          if(!reserveFreightCapacity(line,origin,terminal,order.quantity,state.day)){
+          freight=reserveFreightRoute(freightOptions,order.quantity,state.day);
+          if(!freight){
             const interval=Math.max(1,Math.trunc(order.scheduleIntervalDays||3));
-            Object.assign(order,{status:'esperando capacidad ferroviaria',scheduledDepartureDay:nextFreightDepartureDay(state.day,interval),waitReason:'Aforo de la formación o terminal ocupado.'});continue;
+            Object.assign(order,{status:'esperando capacidad ferroviaria',scheduledDepartureDay:nextFreightDepartureDay(state.day,interval),waitReason:'Los pasajeros tienen prioridad; el corredor o el terminal no tiene cupo libre para esta carga.'});continue;
           }
+          applyFreightRoute(order,freight);line=freight.line;
           Object.assign(order,{status:'en tránsito ferroviario',departureDay:state.day,travelledDistance:0,waitReason:'',expectedPortDay:state.day+Math.max(1,Math.ceil(order.railDistance/12))});
           continue;
         }
@@ -1714,7 +1716,8 @@ function advanceOfflineZonedDevelopment(){
           if(p.elapsed>=p.duration){complete(p);state.projects=state.projects.filter(x=>x.id!==p.id)}
         }
         const month=Math.floor((state.day-1)/30);
-        receiveMarketDeliveries();processOfflinePortLogistics();processOfflineFactoryExports();
+        // Asignar pasajeros antes de reservar el cupo compartido de carga.
+        simulateOfflineNonworkTransit();receiveMarketDeliveries();processOfflinePortLogistics();processOfflineFactoryExports();
         if(month>(state.lastMonth||0)){
           offlinePoliceReport(state.workplaces||[],true);
           processOfflineTraining();
@@ -1743,7 +1746,6 @@ function advanceOfflineZonedDevelopment(){
           advanceOfflineZonedDevelopment();state.lastPortMonthlyIncome=Math.max(0,Math.round(state.portMonthlyIncome||0));state.portMonthlyIncome=0;state.lastMonth=month;updateGovernmentCycle();event('Balance mensual',`La tesorería cerró el mes. Nómina de referencia $ ${wages.toLocaleString('es-AR')}.`);
         }
       }
-      simulateOfflineNonworkTransit();
       if(['derrotado','destituido'].includes(state.government?.status))state.paused=true;else processGovernmentElection();
     }
     settleOfflineDailyCash();

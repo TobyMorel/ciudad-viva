@@ -1,5 +1,6 @@
 import {placeRailStation,advanceRailStations} from './rail_sites.js';
-import {assignRailBusTransfers,assignRailRailTransfers} from './rail_bus_intermodal.js?v=0.237';
+import {assignRailBusTransfers,assignRailRailTransfers} from './rail_bus_intermodal.js?v=0.240';
+import {freightCapacityMetrics} from './rail_freight.js?v=0.240';
 // Metro municipal: paridad con metro.py, estaciones en edificios existentes.
 export const METRO_TRAIN_COST=2400, METRO_SEATS=80, METRO_FARE_CENTS=60;
 const STAGES=['Estudios y permisos','Excavación y sostenimiento','Vías y estaciones','Inspección y habilitación'];
@@ -94,6 +95,7 @@ export function metroRefresh(s){
   line.headwayMinutes=Math.max(5,Math.ceil(d*(rail?3:4)/Math.max(1,n)));
   line.dailyCapacity=ready?n*(rail?RAIL_SEATS:METRO_SEATS)*3:0;
   line.freightCapacityPerDay=ready&&rail?n*60:0;
+  Object.assign(line,freightCapacityMetrics(line));
   line.monthlyOperatingCost=ready?Math.round((rail?390:230)+(rail?110:85)*d+(rail?260:140)*n+(line.powerRequiredKw||0)*.7):0;
   line.energyKw=ready?line.powerRequiredKw||0:0;
  }
@@ -145,7 +147,7 @@ export function metroAssignPassengers(s,trips){
    trip.vehicles=Math.ceil(cars/1.4);trip.dailyEmissionsKg=Math.round(trip.vehicles*(trip.distance||0)*.18*2*100)/100;
   }
  }
- for(const line of s.metroLines||[])line.fareDue=Math.round(Object.values(line.fareByDay).reduce((n,d)=>n+Object.values(d).reduce((a,b)=>a+b,0),0))/100;
+ for(const line of s.metroLines||[]){line.fareDue=Math.round(Object.values(line.fareByDay).reduce((n,d)=>n+Object.values(d).reduce((a,b)=>a+b,0),0))/100;Object.assign(line,freightCapacityMetrics(line))}
  return{metroRiders:total-railTotal,railRiders:railTotal,metroLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode!=='elevated').length,railLinesOperational:(s.metroLines||[]).filter(l=>l.operational&&l.mode==='elevated').length,intermodalTransfers:busIntermodal.transfers+railIntermodal.transfers,busRailTransfers:busIntermodal.transfers,railTransfers:railIntermodal.transfers};
 }
 export function settleMetroMonth(s){

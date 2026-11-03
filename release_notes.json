@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.202",
+  "currentVersion": "0.203",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.203",
+      "date": "2026-11-03",
+      "title": "Estudiantes en movimiento",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La asistencia asignada por edad, vacantes, personal y acceso vial ahora genera viajes reales entre los hogares y las escuelas.",
+        "Los grupos escolares viajan a pie o en auto según la distancia y el acceso del hogar a un vehículo; sus autos suman flujo, colas y emisiones.",
+        "Peatones y vehículos escolares recorren el mapa y se pueden seleccionar para consultar estudiantes, escuela, distancia y duración.",
+        "Movilidad muestra cuántos estudiantes asisten, cuántos caminan y cuántos viajes escolares se hacen en auto."
+      ],
+      "verification": "181 pruebas Python y 125 Offline; pruebas Playwright de movilidad y ampliación escolar; sintaxis y compilación de ambos motores.",
+      "pending": [
+        "La fase 22 sigue parcial: quedan viajes de ocio, transporte escolar colectivo, bicicletas, integración multimodal, carga, accidentes y capacidad vial detallada."
+      ]
+    },
     {
       "version": "0.202",
       "date": "2026-11-03",

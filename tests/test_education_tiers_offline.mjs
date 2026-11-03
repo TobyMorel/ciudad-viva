@@ -40,5 +40,10 @@ test('Offline: universidad distingue edades y limita plazas a su dotación',asyn
   assert.ok(school.enrolled<=school.seatCapacity);
   assert.ok(school.enrolled<=school.teacherCapacity);
   if(school.teachers===0)assert.equal(school.enrolled,0);
+  const schoolTrips=(s.commutes||[]).filter(trip=>trip.reason==='educacion');
+  assert.equal(s.traffic.schoolPassengers,s.educationReport.enrolled);
+  assert.equal(s.traffic.schoolTrips,schoolTrips.length);
+  assert.equal(schoolTrips.reduce((n,trip)=>n+trip.workers,0),school.enrolled);
+  assert.ok(schoolTrips.every(trip=>trip.roundTrip&&trip.route.length>1&&trip.people.every(person=>person.status==='estudiante')));
  });
 });

@@ -3396,9 +3396,31 @@ def commute_model():
         people=site_people[si]
         category,label,minimum,job_wage=workplace_profile(site)
         workplaces.append({"name":site.get("name",site["kind"].title()),"kind":site["kind"],"x":site["x"],"y":site["y"],"jobSlots":round(slots),"workersAssigned":len(people),"staffedJobs":round(effective),"payroll":sum(x["wage"] for x in people),"attendance":round(effective/max(1,len(people)),2),"meanMinutes":round(site_minutes[si]/len(people)) if people else None,"jobCategory":category,"jobCategoryLabel":label,"minimumSkill":minimum,"offeredWage":job_wage})
+    education=education_service_report(workplaces,include_students=True)
+    school_groups={}
+    for journey in education.get("studentJourneys",[]):
+        home=journey["home"];school=journey["school"];route=journey["route"];distance=max(0,len(route)-1)
+        if distance<1:continue
+        mode="auto" if distance>3 and journey.get("carAccess") else "walk"
+        key=(tuple(home),tuple(school),mode)
+        school_groups.setdefault(key,{"from":home,"to":school,"route":route,"distance":distance,"mode":mode,"students":[]})["students"].append(journey["person"])
+    school_walkers=school_vehicles=school_emissions=0
+    for (home,school,mode),group in school_groups.items():
+        students=group["students"];count=math.ceil(len(students)/1.4) if mode=="auto" else 0
+        school_trip_emissions=round(count*group["distance"]*.36,2);minutes=2+round(group["distance"]*(4 if mode=="walk" else 2.5))+(2 if count else 0)
+        trip={"from":list(home),"to":list(school),"route":group["route"],"distance":group["distance"],"workers":len(students),"vehicles":count,"mode":mode,"reason":"educacion","destinationName":next((w["name"] for w in workplaces if w["kind"]=="school" and (w["x"],w["y"])==school),"Escuela"),"roundTrip":True,"departureWindow":"07:00–09:00","departureWindowKey":"morningPeak","walkAccessMinutes":2,"waitingMinutes":0,"rideMinutes":minutes-2-(2 if count else 0),"parkingMinutes":2 if count else 0,"estimatedMinutes":minutes,"dailyEmissionsKg":school_trip_emissions,"trafficFactor":1,"attendance":max(.25,1-max(0,minutes-15)/240),"people":students}
+        commutes.append(trip);school_walkers+=len(students) if mode=="walk" else 0;school_vehicles+=count*2;school_emissions+=school_trip_emissions
+        if mode=="auto":
+            for aa,bb in zip(group["route"],group["route"][1:]):
+                aa=tuple(aa);bb=tuple(bb)
+                if aa in roads and bb in roads:
+                    edge=tuple(sorted((aa,bb)));segment_flow[edge]=segment_flow.get(edge,0)+count/75
+        walking+=len(students) if mode=="walk" else 0;auto_commuters+=len(students) if mode=="auto" else 0
+        vehicles+=count;emissions+=school_trip_emissions;weighted_minutes+=len(students)*minutes;distance_total+=len(students)*group["distance"]
     total_eligible=len(residents);without_access=sum(1 for _,home,person in residents if person.get("status")!="empleado" and not any((hi,si) in routes for si in range(len(sites)) for hi,h in enumerate(homes) if h is home))
     model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"busCommuters":bus_commuters,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
     _commute_cache_key=key;_commute_cache=model
+    model.update({"commuters":model["commuters"]+sum(len(g["students"]) for g in school_groups.values()),"schoolTrips":len(school_groups),"schoolPassengers":sum(len(g["students"]) for g in school_groups.values()),"schoolWalkers":school_walkers,"schoolVehicles":school_vehicles,"schoolEmissionsKg":round(school_emissions,2)})
     # Now that segment flows are cached, congestion can include both commuters and trucks.
     minutes_sum=0;effective_by_site={};minutes_by_site={};workers_by_site={}
     queue_report=advance_traffic_queues(commutes,roads)
@@ -3696,7 +3718,7 @@ def advance_traffic_queues(commutes,roads):
         if trip.get("mode")=="auto":
             window=trip.get("departureWindowKey") or "dayNoon";add_route(trip.get("route"),window,trip.get("vehicles",0))
             # La ida permite anticipar el regreso del mismo grupo en su franja laboral.
-            if trip.get("reason")=="trabajo" and window in return_window:add_route(list(reversed(trip.get("route",[]))),return_window[window],trip.get("vehicles",0))
+            if trip.get("reason") in ("trabajo","educacion") and window in return_window:add_route(list(reversed(trip.get("route",[]))),return_window[window],trip.get("vehicles",0))
     for line in state.get("busRoutes",[]):
         if not line.get("operational"):continue
         schedule=line.get("departuresByWindow") or bus_service_schedule(line).get("departuresByWindow",{})
@@ -5553,7 +5575,7 @@ def health_service_report(workplaces=None,advance=False):
         "clinics":[{"name":c["name"],"x":c["building"]["x"],"y":c["building"]["y"],"staff":c["staff"],"primaryCapacity":round(c["primaryCapacity"],1),"urgentCapacity":round(c["urgentCapacity"],1),"utilityPct":round(c["utility"]*100),"averageTravelMinutes":round(sum(c["travelMinutes"])/max(1,len(c["travelMinutes"]))) if c["travelMinutes"] else None,"patients":c["patients"]} for c in clinics],
         "neighborhoods":area_rows[:6],"unreachableResidents":sum(a["population"] for a in areas if a["travelMinutes"] is None),"delayedWaterRiskPct":round(delayed_risk/population*100),"monthlySupplyCost":monthly_supplies,"primaryBacklog":round(health.get("primaryBacklog",0),1)}
 
-def education_service_report(workplaces=None,advance=False):
+def education_service_report(workplaces=None,advance=False,include_students=False):
     """Alumnado individual con edad, cupos, dotación, presupuesto y acceso vial real."""
     workplaces=workplaces if workplaces is not None else commute_model().get("workplaces",[])
     pupils=[]
@@ -5592,12 +5614,17 @@ def education_service_report(workplaces=None,advance=False):
         options.sort(key=lambda item:(item[0],item[1]["building"]["x"],item[1]["building"]["y"]))
         options[0][1]["nearby"]+=1
         chosen=next((s for _,s in options if len(s["assigned"])<s["capacity"]),None)
-        if chosen:chosen["assigned"].append((person,next(t for t,s in options if s is chosen)))
-    rows=[];served=0;supplies=0
+        if chosen:chosen["assigned"].append((person,next(t for t,s in options if s is chosen),home))
+    rows=[];served=0;supplies=0;student_journeys=[]
     for school in schools:
         enrolled=len(school["assigned"]);served+=enrolled;model=school["model"]
         supplies+=enrolled*(model["supplies"] if model else .35)
-        times=[t for _,t in school["assigned"]]
+        times=[t for _,t,_ in school["assigned"]]
+        if include_students:
+            for person,_,home in school["assigned"]:
+                route=route_between((home["x"],home["y"]),(school["building"]["x"],school["building"]["y"]))
+                if route:
+                    student_journeys.append({"home":[home["x"],home["y"]],"school":[school["building"]["x"],school["building"]["y"]],"schoolName":school["building"].get("name","Escuela municipal"),"route":route,"person":{"id":person.get("id"),"name":person.get("name") or f"Vecino #{str(person.get('id',''))[-5:]}","age":person.get("age"),"status":"estudiante"},"carAccess":any(p.get("carAccess") for p in home.get("residents",[]))})
         rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],
                      "serviceModel":school["building"].get("serviceModel"),"ageMin":school["ageMin"],"ageMax":school["ageMax"],
                      "radius":school["radius"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),
@@ -5610,7 +5637,7 @@ def education_service_report(workplaces=None,advance=False):
         education["lastProcessedMonth"]=month
         for school in schools:
             model=school["model"];level=model["studyLevel"] if model else "primaria";gain=model["skillGain"] if model else 2
-            for person,_ in school["assigned"]:
+            for person,_,_ in school["assigned"]:
                 progress=person.setdefault("educationProgress",{"months":0,"level":"inicial"})
                 progress["months"]=progress.get("months",0)+1
                 levels=progress.setdefault("monthsByLevel",{})
@@ -5622,8 +5649,10 @@ def education_service_report(workplaces=None,advance=False):
                             person["skills"][skill]=min(100,person["skills"].get(skill,25)+gain)
         ev("Ciclo escolar",f"{served} cursan; {within-served} esperan plaza y {len(pupils)-within} no tienen centro de su nivel conectado.")
     total=len(pupils)
-    return {"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,
+    report={"schoolAgePopulation":total,"withinReach":within,"enrolled":served,"waiting":within-served,"unreachable":total-within,
             "coveragePct":round(served/max(1,total)*100),"schools":rows,"monthlySuppliesCost":round(supplies)}
+    if include_students:report["studentJourneys"]=student_journeys
+    return report
 
 def road_incident_report(traffic=None,advance=False):
     """Choques en tramos congestionados/deteriorados; cierres y rescate no son instantáneos."""
@@ -5939,7 +5968,7 @@ def public_state(player_id=None):
     view["tourism"]={"visitors":state.get("airportVisitorsThisMonth",0),"eventVisitors":state.get("eventVisitorsThisMonth",0),"eventRetailSpend":state.get("eventRetailSpendThisMonth",0),"eventCleanupSpend":state.get("eventCleanupSpendThisMonth",0),"events":state.get("tourismEvents",[])[-6:],"overnightGuests":sum(b.get("monthlyGuests",0) for b in view["hotels"]),"guestNights":sum(b.get("monthlyGuestNights",0) for b in view["hotels"]),"hotelRevenue":sum(b.get("business",{}).get("lastRevenue",0) for b in view["hotels"]),"municipalTax":sum(b.get("business",{}).get("lastTourismTax",0) for b in view["hotels"]),"openHotels":sum(b.get("business",{}).get("status")=="abierto" for b in view["hotels"])}
     view["ports"]=[{**p,"inTransit":sum(o.get("status") in ("pendiente","en tránsito","esperando acceso","esperando patio") for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}")),"waitingAccess":sum(o.get("status")=="esperando acceso" for o in state["supply"].get("portOrders",[]) if o.get("portId")==p.get("id",f"port-{p['x']}-{p['y']}"))} for p in state["buildings"] if p.get("kind")=="port"]
     commute=commute_model()
-    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","dailyTrips")}
+    view["traffic"]={k:commute[k] for k in ("commuters","walkingCommuters","autoCommuters","vehicles","dailyEmissionsKg","workersWithoutRoadAccess","meanDistance","meanMinutes","effectiveEmployment","effectiveWorkers","staffedJobs","privateStaffedJobs","shoppingTrips","shoppingPassengers","shoppingVehicles","shoppingEmissionsKg","serviceTrips","serviceVisitors","serviceVehicles","serviceEmissionsKg","schoolTrips","schoolPassengers","schoolWalkers","schoolVehicles","schoolEmissionsKg","dailyTrips") if k in commute}
     for key in ("returnCommuters","returnBusCommuters","returnAutoCommuters","returnWalkingCommuters","returnTransferCommuters","returnMeanMinutes","returnVehicles"):view["traffic"][key]=commute.get(key,0)
     view["traffic"]["busCommuters"]=commute.get("busCommuters",0)
     view["traffic"]["metroRiders"]=commute.get("metroRiders",0)

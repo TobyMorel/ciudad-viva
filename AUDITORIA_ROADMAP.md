@@ -133,7 +133,7 @@ Esta revisión compara la implementación presente con las 34 fases del roadmap.
 | 11–15 | Parcial: estado compartido LAN y UI; aprobación básica | Elecciones, destitución, roles municipales, crisis y metas equilibradas |
 | 16–20 | Parcial en empresas y cadenas de comercio; resto pendiente | Derecho de suelo, industria, licitaciones complejas y alquileres |
 | 21 | Parcial: perfiles, migración con cohorte de edad, habilidades, búsqueda y cursos | Desigualdad territorial, movilidad social e ingresos a largo plazo |
-| 22 | Parcial: viajes a pie/auto/bus, flotas, paradas, cocheras físicas, rutas, transbordos, tarifa integrada y regreso separado con capacidad por sentido | Viajes de ocio, integración multimodal, trenes, metro, carga, accidentes y capacidad vial detallada |
+| 22 | Parcial: viajes laborales, escolares, civicos y de compras a pie/auto/bus; flotas, paradas, cocheras, rutas, transbordos y regreso separado con capacidad por sentido | Viajes de ocio, transporte escolar colectivo, bicicletas, integracion multimodal, carga, accidentes y capacidad vial detallada |
 | 23 | Parcial: terminal en obra por etapas, exportaciones comerciales por camión, patio limitado, buque visible, tasa e inserción laboral; Online/Offline | Importaciones, tipos de carga, calado/dragado, grúas y atraque, ferrocarril, competencia y pérdidas operativas |
 | 24 | Parcial: contrato por etapas, capacidad de terminal/pista, empleados, demanda, viabilidad de ruta, pasajeros, gasto visitante, tasas e integración Online/Offline | Rutas persistentes/múltiples, horarios, carga aérea, demoras meteorológicas, ruido zonal, emergencia y viajes terrestres dedicados |
 | 25 | Parcial: hotel privado con inversión/obra por etapas, empleo, huéspedes derivados de vuelos, ocupación, tarifas, costos, impuestos y cierre causal en Online/Offline | Eventos/temporadas, atractivos, otros orígenes, impactos de vivienda/congestión/servicios y análisis distrital |
@@ -679,3 +679,11 @@ Verificacion base: 12 regresiones Python del asentamiento; 6 regresiones Node Of
 La ficha de una vivienda, comercio, fábrica u hotel privado permite adquirirlo para el municipio. La tasación usa el valor base de reposición y ajusta por estado; la compra se rechaza si la caja libre, descontados los contratos públicos, no alcanza. Se actualizan titular y derecho del folio, se registra vendedor/comprador/fecha/precio y la actividad privada sigue operando. Online y Offline comparten reglas; los guardados conservan transferencias ya registradas.
 
 Validación focalizada: prueba Node Offline para débito, titularidad, registro de transferencia y rechazo de compra duplicada; sintaxis de JavaScript y compilación de Python. Fase 1: 93% orientativo. Quedan gestión de barrios, costos de suelo diferenciados y planificación vial por proyectos.
+
+
+
+## Alfa 0.203 - estudiantes en movimiento (fase 22)
+
+La matrícula efectiva genera viajes de hogar a escuela: cada estudiante debe tener edad válida, plaza asignada y una ruta vial conectada. Los grupos del mismo hogar y escuela comparten trayecto; distancia y acceso familiar al auto determinan si caminan o viajan en vehículo. Los autos escolares suman flujo y cola en la ida y la vuelta, y sus emisiones se incorporan al balance. El mapa anima peatones y autos seleccionables con la lista de estudiantes, la escuela y el tiempo estimado. Movilidad muestra alumnos, caminantes y viajes vehiculares.
+
+Validación: matrícula y viajes Online/Offline, rutas conectadas, nueve franjas de cola, pruebas de navegador, sintaxis JavaScript y compilación Python. Fase 22 permanece parcial: faltan ocio, colectivo escolar, bicicletas, carga y otros destinos multimodales.

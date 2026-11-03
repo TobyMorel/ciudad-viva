@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.238
+
+**Las colas ya afectan los viajes Offline:** cada trayecto motorizado recibe su demora por franja y actualiza el tiempo estimado. Releer la partida no acumula la demora dos veces.
+
 # Ciudad Viva · Alfa 0.237
 
 **Acceso peatonal a transbordos ferroviarios:** las terminales pueden quedar a tres parcelas del origen o destino; el intercambio físico entre estaciones sigue limitado a dos. Así más barrios pueden aprovechar dos líneas sin perder la condición de estaciones construidas y conectadas.

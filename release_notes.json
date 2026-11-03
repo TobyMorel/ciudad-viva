@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.237",
+  "currentVersion": "0.238",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.238",
+      "date": "2026-11-03",
+      "title": "Las colas viales afectan los tiempos Offline",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las nueve franjas de tráfico guardan demora por tramo y la aplican al tiempo estimado de cada viaje motorizado Offline.",
+        "Recalcular el informe en la misma jornada no duplica la demora del recorrido."
+      ],
+      "verification": "La regresión de tráfico Offline verifica el reporte de nueve franjas, la demora de los viajes y la persistencia de colas."
+    },
     {
       "version": "0.237",
       "date": "2026-11-03",

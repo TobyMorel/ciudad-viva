@@ -2,8 +2,8 @@
 export const BEGINNER_TUTORIAL_STEPS = Object.freeze([
  {id:'welcome',title:'¡Hola, alcaldesa o alcalde!',body:'Esta es tu ciudad. Vamos a aprender de a poquito. No hace falta saber nada. Podés jugar, equivocarte y volver a intentar.',action:'Este botón dice Construir. Ahí están las herramientas. Tocá Siguiente para empezar.',target:'.game-dock [data-popup="build"]'},
  {id:'roads',title:'1. Dibujá las calles',body:'Las calles son los caminos de la ciudad. Las casas, las obras y los camiones necesitan estar conectados por caminos.',action:'Elegí Construir calle y tocá o arrastrá sobre el mapa para hacer un camino unido a la entrada de la ciudad.',tool:'road',target:'.tool[data-tool="road"]',check:'roads'},
- {id:'power',title:'2. Llevá electricidad',body:'La luz no aparece sola. Una central eléctrica produce energía, y las calles conectadas la llevan a los edificios.',action:'Elegí Central eléctrica y colocala en un terreno libre junto a una calle conectada. La obra necesita terminar para dar luz.',tool:'powerPlant',target:'.tool[data-tool="powerPlant"]',check:'power'},
- {id:'water',title:'3. Llevá agua',body:'Las personas necesitan agua limpia. Una planta potabilizadora la prepara para los edificios unidos por calles.',action:'Elegí Planta potabilizadora. Colocala junto a una calle y dejá que termine su construcción.',tool:'waterPlant',target:'.tool[data-tool="waterPlant"]',check:'water'},
+ {id:'power',title:'2. Llevá electricidad',body:'La luz no aparece sola. Una central eléctrica produce energía, y las calles conectadas la llevan a los edificios.',action:'Elegí Central eléctrica y colocala en un terreno libre junto a una calle conectada. Al colocarla, podrá dar energía si está conectada.',tool:'powerPlant',target:'.tool[data-tool="powerPlant"]',check:'power'},
+ {id:'water',title:'3. Llevá agua',body:'Las personas necesitan agua limpia. Una planta potabilizadora la prepara para los edificios unidos por calles.',action:'Elegí Planta potabilizadora. Colocala junto a una calle. Si tiene conexión, ya podrá llevar agua.',tool:'waterPlant',target:'.tool[data-tool="waterPlant"]',check:'water'},
  {id:'sewer',title:'4. Limpiá el agua usada',body:'Después de usar el agua, hay que tratarla. La planta depuradora ayuda a que la ciudad tenga saneamiento.',action:'Elegí Planta depuradora y construí una cerca de las calles. Recordá que las obras cuestan dinero.',tool:'wastewaterPlant',target:'.tool[data-tool="wastewaterPlant"]',check:'sewer'},
  {id:'homes',title:'5. Pintá un lugar para vivir',body:'El verde de Zona residencial significa: aquí pueden aparecer casas. No es lo mismo que una plaza o un parque.',action:'Elegí Zona residencial y arrastrá por parcelas vacías junto a una calle. Las casas privadas llegarán si hay demanda y servicios.',tool:'zoneHome',target:'.tool[data-tool="zoneHome"]',check:'homes'},
  {id:'park',title:'6. Poné una plaza linda',body:'Una plaza es un lugar para jugar, pasear y descansar. Ayuda al bienestar del barrio; no reemplaza las casas ni la electricidad.',action:'Buscá Plaza barrial y colocala cerca de las viviendas, con acceso a una calle.',tool:'civic',model:'urbanPark',target:'.tool[data-tool="civic"][data-model="urbanPark"]',check:'park'},
@@ -64,7 +64,7 @@ export function setupBeginnerTutorial({getState}){
   if(!active||!voiceEnabled||!canSpeak())return;
   const step=BEGINNER_TUTORIAL_STEPS[stepIndex];
   try{
-   const speech=new SpeechSynthesisUtterance([step.title,step.body,step.action].join('. '));
+   const speech=new SpeechSynthesisUtterance([$('#tutorialTitle').textContent,$('#tutorialDescription').textContent,$('#tutorialAction').textContent].join('. '));
    speech.lang='es-AR';speech.rate=.88;speech.pitch=1.08;
    const voices=window.speechSynthesis.getVoices();
    speech.voice=voices.find(v=>v.lang.toLowerCase()==='es-ar')||

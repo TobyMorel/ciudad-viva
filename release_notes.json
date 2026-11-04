@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.259",
+  "currentVersion": "0.260",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.260",
+      "date": "2026-11-04",
+      "title": "Tutorial de primeros pasos guiado, narrado y con foco en el mapa",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Se incorpora una guía interactiva de 13 pasos para empezar a jugar: calles, energía, agua, saneamiento, zonas residenciales, plazas, demanda, comercios, industria, presupuesto, obras y servicios municipales.",
+        "Cada paso señala el botón correspondiente con un recuadro visible, abre el catálogo cuando es necesario y guía desde la herramienta hasta el mapa sin construir automáticamente ni alterar partidas.",
+        "La narración usa síntesis de voz del navegador en español, con botones para repetir y silenciar. La guía se puede cerrar y volver a iniciar desde el botón Guía.",
+        "El progreso distingue zonas residenciales de plazas y comprueba los objetivos en el estado de la ciudad; se agregan pruebas de contenido y de interfaz móvil y escritorio."
+      ],
+      "verification": "CI comprueba la versión, sintaxis, reglas del tutorial y recorrido visual en Playwright. La voz depende de las voces en español disponibles en el dispositivo."
+    },
     {
       "version": "0.259",
       "date": "2026-11-04",

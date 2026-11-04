@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.260
+
+**Tutorial para empezar (0.260):** al crear una ciudad aparece una guía opcional de 13 pasos en español. Señala los botones reales del juego, explica cómo hacer calles, conectar los servicios, zonificar viviendas y comercios, colocar plazas, leer la demanda y controlar los gastos. Tiene narración con voces del navegador, controles para escuchar de nuevo o silenciar, y un botón **Guía** en el menú inferior para reiniciarla.
+
 # Ciudad Viva · Alfa 0.259
 
 **Compatibilidad de partidas LAN antiguas (0.259):** el nuevo motor compartido reconoce snapshots creados por el servidor anterior y completa las propiedades necesarias usando el esquema más reciente de Offline. Los edificios, las calles y la tesorería guardados tienen prioridad; además se mantiene la copia de seguridad previa a la migración.

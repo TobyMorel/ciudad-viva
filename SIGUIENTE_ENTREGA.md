@@ -1,6 +1,6 @@
 ## Alfa 0.250 · Online LAN
 
-Las actualizaciones de red grandes se comprimen y las respuestas antiguas ya no pueden reemplazar un estado más reciente del mapa y la UI. Se comprobó una sala local con cuatro jugadores y cuatro acciones simultáneas visibles para todos. Falta medir la latencia de extremo a extremo en una red Hamachi real con cuatro equipos.
+Las actualizaciones de red grandes se comprimen y las respuestas antiguas ya no pueden reemplazar un estado más reciente del mapa y la UI. Al reconectarse, el indicador de la sala recupera su estado en la siguiente respuesta. Se comprobó una sala local con cuatro jugadores y cuatro acciones simultáneas visibles para todos. Falta medir la latencia de extremo a extremo en una red Hamachi real con cuatro equipos.
 
 ## Alfa 0.249 · Demanda y barra superior
 

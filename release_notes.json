@@ -10,6 +10,7 @@
       "overallProgress": null,
       "changes": [
         "Las respuestas atrasadas de otras acciones o del sondeo ya no pueden hacer retroceder el estado visible del mapa o la interfaz en una sala compartida.",
+        "Al reconectarse tras una interrupción, el indicador de la sala vuelve a mostrar el anfitrión o los invitados sin exigir otro cambio de ciudad.",
         "El servidor comprime las actualizaciones HTTP grandes; una ciudad inicial pasa de unos 762 KB a unos 79 KB por respuesta compatible.",
         "Cuatro jugadores pueden pintar zonas simultáneamente y todos reciben las cuatro acciones en el mapa."
       ],

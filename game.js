@@ -600,6 +600,7 @@ async function poll(generation=modeGeneration){
     }
    }
   }
+  if(gameMode==='online')ui.netLabel.textContent=S.isHost?'Anfitrión · sala compartida':`Invitado · sala LAN · ${S.online} conectados`;
  }catch(e){
   if(generation!==modeGeneration)return;
   retryDelay=1000;ui.netLabel.textContent='Sala desconectada';

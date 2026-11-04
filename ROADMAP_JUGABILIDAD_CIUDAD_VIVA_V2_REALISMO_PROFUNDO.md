@@ -710,6 +710,14 @@ Ejemplo: se pronostican tormentas → desagües ya están saturados → ocurre a
 - **Ciudad inclusiva:** brechas menores entre distritos.
 - **Ciudad próspera:** actividad económica y buen nivel de vida sin endeudamiento descontrolado.
 
+### Estado de trabajo · Alfa 0.244
+
+- [x] Objetivos voluntarios de ciudad funcional, conectada, resiliente, inclusiva y próspera con indicadores y umbrales visibles.
+- [x] El objetivo elegido avanza en cierres mensuales sostenidos, conserva historial al completarse y puede pausarse o cambiarse.
+- [x] Seguimiento compartido entre participantes LAN y persistencia en partidas Online y Offline; no modifica elecciones ni desbloquea herramientas.
+- [ ] Especializaciones emergentes por estructura económica y trayectorias de desarrollo urbano de largo plazo.
+- [ ] Ampliar objetivos ambientales, de transporte y revitalización y validar su equilibrio en partidas largas.
+
 ### Criterios de aceptación
 
 - [ ] Es posible construir una ciudad saludable sin perseguir una única estrategia dominante.

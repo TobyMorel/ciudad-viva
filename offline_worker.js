@@ -1,4 +1,4 @@
-import {createOfflineAdapter} from './offline.js?v=0.242';
+import {createOfflineAdapter} from './offline.js?v=0.244';
 
 const SAVE_KEY='ciudad-viva-offline-v1';
 const memory=new Map();

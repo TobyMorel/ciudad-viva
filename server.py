@@ -925,6 +925,71 @@ def start_urban_renewal(need_id,contractor):
     ev("Rehabilitación urbana contratada",f"{need['name']}: inversión privada $ {cost:,}, permiso municipal $100, cuatro trabajadores, materiales de {contractor} y {duration} días de obra.".replace(",","."))
     return work
 
+
+CITY_DEVELOPMENT_MONTHS=6
+CITY_DEVELOPMENT_GOALS=[
+ {"id":"functional","title":"Ciudad funcional","description":"Sostener servicios, empleo y una base de población.","criteria":[("services","Cobertura de servicios",65,"%","min"),("employment","Empleo formal",55,"%","min"),("population","Población residente",50,"personas","min")]},
+ {"id":"connected","title":"Ciudad conectada","description":"Conectar los hogares y destinos urbanos con el acceso regional.","criteria":[("homeAccess","Hogares con acceso vial",90,"%","min"),("destinationAccess","Servicios y actividad con acceso vial",85,"%","min")]},
+ {"id":"resilient","title":"Ciudad resiliente","description":"Mantener servicios e infraestructura en condiciones de respuesta.","criteria":[("services","Cobertura de servicios",80,"%","min"),("roadCondition","Condición vial media",75,"%","min"),("openFailures","Cortes activos de servicios",0,"","max"),("openRecovery","Reparaciones críticas pendientes",0,"","max")]},
+ {"id":"inclusive","title":"Ciudad inclusiva","description":"Reducir brechas entre los barrios habitados.","criteria":[("population","Población residente",25,"personas","min"),("minimumSupport","Apoyo mínimo entre barrios",45,"%","min"),("districtGap","Brecha social máxima entre barrios",20,"puntos","max")]},
+ {"id":"prosperous","title":"Ciudad próspera","description":"Combinar empleo formal, caja mensual positiva y actividad privada.","criteria":[("monthlyBalance","Saldo mensual base",0,"$","min"),("employment","Empleo formal",65,"%","min"),("activeBusinesses","Comercios y fábricas activos",2,"locales","min")]}
+]
+_CITY_BUILDING_KINDS={"home","shop","factory","hotel","civic","school","fireStation","depot","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant","landfill"}
+def _city_dev_state():
+ d=state.setdefault("government",{}).setdefault("cityDevelopment",{})
+ d.setdefault("focus",None);d.setdefault("streakMonths",0);d.setdefault("completed",[]);d.setdefault("lastReviewedDay",None)
+ return d
+def _city_dev_readings():
+ buildings=state.get("buildings",[]);homes=[b for b in buildings if b.get("kind")=="home"];dest=[b for b in buildings if b.get("kind") in _CITY_BUILDING_KINDS]
+ connected={(b.get("x"),b.get("y")):building_road_access(b) for b in dest}
+ ch=sum(connected.get((b.get("x"),b.get("y")),False) for b in homes);cd=sum(connected.values())
+ districts=government_districts();inh=[x for x in districts if x.get("population",0)>0];supports=[x.get("support",0) for x in inh];vals=[v for d in inh for v in (d.get("employment",0),d.get("housing",0),d.get("support",0))]
+ roads=state.get("roads",[]);assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[]) if isinstance(a,dict)}
+ resolved={"resuelta","resuelto","reparada","reparado","cerrada","cerrado","completada","completado","estabilizada","estabilizado","cancelada","cancelado"}
+ failures=state.get("utilities",{}).get("failures",[]);needs=state.get("recoveryNeeds",[])
+ activebiz=sum(1 for b in buildings if b.get("kind") in ("shop","factory","hotel") and str(b.get("business",{}).get("status",b.get("status",""))).lower() in ("abierto","operativo","en actividad"))
+ inc=float(state.get("monthlyIncome",0) or 0);exp=float(state.get("monthlyExpenses",0) or 0)
+ return {"services":max(0,min(100,float(state.get("services",0) or 0))),"employment":max(0,min(100,float(state.get("employment",0) or 0))),"population":sum(int(d.get("population",0) or 0) for d in districts),
+ "homeAccess":round(100*ch/len(homes)) if homes else 0,"destinationAccess":round(100*cd/len(dest)) if dest else 0,
+ "roadCondition":round(sum(float(assets.get((r[0],r[1]),{}).get("quality",82)) for r in roads)/len(roads),1) if roads else 0,
+ "openFailures":sum(str(f.get("status","abierta")).lower() not in resolved for f in failures if isinstance(f,dict)),
+ "openRecovery":sum(str(n.get("status","abierta")).lower() not in resolved for n in needs if isinstance(n,dict)),
+ "minimumSupport":min(supports) if supports else 0,"districtGap":round(max(vals)-min(vals),1) if vals else 100,"monthlyBalance":round(inc-exp),"activeBusinesses":activebiz}
+def _city_dev_snapshot(readings=None):
+ d=_city_dev_state();readings=readings or _city_dev_readings();done={x.get("id"):x for x in d.get("completed",[]) if isinstance(x,dict)};goals=[]
+ for spec in CITY_DEVELOPMENT_GOALS:
+  checks=[]
+  for key,label,target,unit,cmp in spec["criteria"]:
+   value=readings.get(key,0);met=value>=target if cmp=="min" else value<=target
+   checks.append({"label":label,"value":round(value,1) if isinstance(value,float) else value,"target":target,"unit":unit,"comparison":cmp,"met":bool(met)})
+  active=d.get("focus")==spec["id"];finished=spec["id"] in done;streak=int(d.get("streakMonths",0)) if active else 0
+  goals.append({"id":spec["id"],"title":spec["title"],"description":spec["description"],"checks":checks,"checksMet":sum(c["met"] for c in checks),"checksTotal":len(checks),"qualified":all(c["met"] for c in checks),"active":active,"completed":finished,"completedDay":done.get(spec["id"],{}).get("completedDay"),"streakMonths":CITY_DEVELOPMENT_MONTHS if finished else streak,"requiredMonths":CITY_DEVELOPMENT_MONTHS,"progress":100 if finished else round(100*streak/CITY_DEVELOPMENT_MONTHS),"canFocus":not finished})
+ return {"focus":d.get("focus"),"goals":goals,"completed":len(done),"total":len(CITY_DEVELOPMENT_GOALS),"reviewDay":d.get("lastReviewedDay"),"optional":True}
+def city_development_report():
+ d=_city_dev_state()
+ if not isinstance(d.get("review"),dict):d["review"]=_city_dev_snapshot()
+ return d["review"]
+def update_city_development():
+ d=_city_dev_state();day=int(state.get("day",1))
+ if d.get("lastReviewedDay")==day:return
+ readings=_city_dev_readings();goal=next((x for x in CITY_DEVELOPMENT_GOALS if x["id"]==d.get("focus")),None);done={x.get("id") for x in d.get("completed",[]) if isinstance(x,dict)}
+ if goal and goal["id"] not in done:
+  ok=all(readings.get(k,0)>=t if cmp=="min" else readings.get(k,0)<=t for k,_,t,_,cmp in goal["criteria"])
+  d["streakMonths"]=int(d.get("streakMonths",0))+1 if ok else 0
+  if d["streakMonths"]>=CITY_DEVELOPMENT_MONTHS:
+   d.setdefault("completed",[]).append({"id":goal["id"],"completedDay":day,"mandate":int(state.get("government",{}).get("mandate",1))});d["completed"]=d["completed"][-len(CITY_DEVELOPMENT_GOALS):];d["focus"]=None;d["streakMonths"]=0
+   ev("Meta de desarrollo cumplida",f"La ciudad sostuvo el objetivo «{goal['title']}» durante {CITY_DEVELOPMENT_MONTHS} cierres mensuales. No altera elecciones ni desbloquea herramientas.")
+ d["lastReviewedDay"]=day;d["review"]=_city_dev_snapshot(readings)
+def set_city_development_focus(goal_id):
+ ensure_government_state();d=_city_dev_state();goal_id=None if goal_id in (None,"","none","pause") else str(goal_id)
+ if state["government"].get("status")!="en_mandato":raise ValueError("El equipo ya no está en funciones.")
+ if goal_id is not None and goal_id not in {x["id"] for x in CITY_DEVELOPMENT_GOALS}:raise ValueError("La meta de desarrollo no existe.")
+ if goal_id and any(x.get("id")==goal_id for x in d.get("completed",[])):raise ValueError("Esa meta de desarrollo ya fue cumplida.")
+ if d.get("focus")==goal_id:return
+ d["focus"]=goal_id;d["streakMonths"]=0;d["lastReviewedDay"]=int(state.get("day",1));d["review"]=_city_dev_snapshot()
+ if goal_id:
+  title=next(x["title"] for x in CITY_DEVELOPMENT_GOALS if x["id"]==goal_id);ev("Objetivo de ciudad seleccionado",f"El municipio seguirá la meta voluntaria «{title}». Requiere seis cierres mensuales estables y no afecta elecciones ni desbloqueos.")
+ else:ev("Seguimiento de meta pausado","El equipo dejó de seguir su objetivo voluntario de desarrollo; puede elegir otro cuando quiera.")
 def ensure_government_state():
     day=max(1,int(state.get("day",1)))
     government=state.setdefault("government",{})
@@ -939,6 +1004,7 @@ def ensure_government_state():
     government.setdefault("complaintSequence",0)
     government.setdefault("agreements",[])
     government.setdefault("responsibilities",{})
+    dev=government.setdefault("cityDevelopment",{});dev.setdefault("focus",None);dev.setdefault("streakMonths",0);dev.setdefault("completed",[]);dev.setdefault("lastReviewedDay",None)
     if "plan" not in government:government["plan"]=new_mandate_plan()
 
 def municipal_team_report(player_id=None):
@@ -1069,6 +1135,7 @@ def update_government_cycle():
         if complaint and complaint.get("status")=="resuelto":agreement.update({"status":"cumplido","completedDay":state["day"]});ev("Acuerdo municipal cumplido",f"{agreement['district']}: se resolvió {agreement['issueTitle'].lower()} antes del vencimiento.")
         elif state["day"]>=agreement.get("deadlineDay",0):agreement.update({"status":"vencido","overdueDay":state["day"]});ev("Acuerdo municipal vencido",f"{agreement['district']}: venció el plazo para {agreement['issueTitle'].lower()}; queda pendiente en el registro público.")
     g["complaints"]=g["complaints"][-36:]
+    update_city_development()
     reports=government_plan_report()
     for goal in reports["goals"]:
         stored=next((x for x in g["plan"]["goals"] if x["id"]==goal["id"]),None)
@@ -1106,7 +1173,7 @@ def government_report():
         if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
     plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
     vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"cityDevelopment":city_development_report(),"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
 
 def process_government_election():
     ensure_government_state();g=state["government"]
@@ -6664,6 +6731,10 @@ class Handler(BaseHTTPRequestHandler):
                     assigned=next((item for item in municipal_team_report(pid)["members"] if item["id"]==target),None)
                     label=MUNICIPAL_ROLES[role]["label"]
                     ev("Referente municipal actualizado",f"{label}: {assigned['label'] if assigned else 'decisiones compartidas'}. El equipo comparte todas las decisiones.")
+                    self._send(200,public_state(pid,use_cache=True));return
+                if action=="setCityDevelopmentFocus":
+                    try:set_city_development_focus(data.get("goalId"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="recordGovernmentAgreement":
                     try:record_government_agreement(data.get("complaintId"),pid)

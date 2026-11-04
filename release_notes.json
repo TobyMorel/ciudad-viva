@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.243",
+  "currentVersion": "0.244",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.244",
+      "date": "2026-11-04",
+      "title": "Metas voluntarias de desarrollo urbano",
+      "roadmapPhase": 14,
+      "overallProgress": null,
+      "changes": [
+        "La pantalla de Gobierno incorpora cinco objetivos opcionales: ciudad funcional, conectada, resiliente, inclusiva y próspera.",
+        "Cada objetivo explica sus indicadores y umbrales; el avance requiere seis cierres mensuales estables y se puede pausar o cambiar libremente.",
+        "Las metas son compartidas en LAN, persisten en la partida Offline y no afectan elecciones ni bloquean herramientas.",
+        "La fase 14 del roadmap registra objetivos sostenidos; las especializaciones urbanas emergentes siguen pendientes."
+      ],
+      "verification": "Pruebas HTTP Online y Offline: selección, persistencia, pausa, rechazo de metas inválidas, independencia electoral y cumplimiento tras seis cierres mensuales. Sintaxis y diseño móvil verificados; Cambios muestra la fase 14 al 30% y sus pendientes."
+    },
     {
       "version": "0.243",
       "date": "2026-11-03",
@@ -39,7 +53,7 @@
       "changes": [
         "Las fábricas pueden enviar carga al puerto por hasta dos líneas elevadas activas, conectadas por estaciones físicas a dos parcelas o menos.",
         "Cada tramo usa su propia formación, calendario de tres días, cupo compartido con pasajeros y capacidad de terminal; el transbordo espera una salida programada.",
-    "Si la continuación se llena mientras la carga espera, puede tomar otra línea construida desde el intercambiador y reservar el cupo disponible.",
+        "Si la continuación se llena mientras la carga espera, puede tomar otra línea construida desde el intercambiador y reservar el cupo disponible.",
         "El envío conserva su itinerario y registra en cada línea las unidades transportadas; el ETA incluye viaje y espera del siguiente corredor.",
         "Movilidad informa las estaciones de intercambio y el tren 3D muestra la etapa del recorrido. Offline y LAN aplican las mismas reglas."
       ],
@@ -3091,10 +3105,12 @@
     {
       "phase": 14,
       "title": "Progresión, especialización y metas de ciudad",
-      "progress": 15,
-      "summary": "Metas municipales de mandato y objetivos parciales de ciudad",
+      "progress": 30,
+      "summary": "Cinco metas voluntarias de ciudad con indicadores explicados, continuidad de seis cierres mensuales y seguimiento compartido Online/Offline.",
       "pending": [
-        "Progresión y especialización sostenidas con objetivos integrados."
+        "Especializaciones urbanas emergentes y trayectorias de desarrollo a largo plazo.",
+        "Ampliar objetivos ambientales, de transporte y revitalización con efectos integrados.",
+        "Validar el equilibrio de metas durante partidas largas y distintas escalas de ciudad."
       ]
     },
     {

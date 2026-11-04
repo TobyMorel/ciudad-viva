@@ -776,7 +776,7 @@ footer { display: none !important; }
   }
 }
 
-/* Alfa 0.243 · disposición completa para móviles en vertical. */
+/* Alfa 0.244 · disposición completa para móviles en vertical. */
 @media (max-width: 650px) {
   .city-report-rail {
     top: 0 !important;

@@ -1,4 +1,10 @@
-## Después de Alfa 0.243 · Interfaz móvil
+## Alfa 0.244 · Metas voluntarias de desarrollo de ciudad
+
+La fase 14 ahora ofrece cinco objetivos optativos: ciudad funcional, conectada, resiliente, inclusiva y próspera. Cada ficha muestra sus condiciones reales y requiere seis cierres mensuales estables. El equipo puede pausar o cambiar el seguimiento sin penalización; completar objetivos no desbloquea herramientas ni modifica las elecciones. El foco y el progreso se comparten y guardan en LAN y Offline.
+
+**Siguiente en fase 14:** especializaciones emergentes y trayectorias de desarrollo urbano a largo plazo; ampliar objetivos ambientales y de transporte. Mantener las funciones fundamentales disponibles y validar el equilibrio en ciudades pequeñas y grandes.
+
+## Alfa 0.243 · Interfaz móvil
 
 La interfaz móvil reorganiza los indicadores para que no se monten, corrige el desplazamiento vertical de la barra lateral y muestra los ocho accesos principales en dos filas. Pausa, velocidades, tema y sonido permanecen accesibles en el menú táctil; los avisos de vecinos se desplazan dentro de un panel acotado.
 

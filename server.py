@@ -1886,10 +1886,15 @@ def slot_catalog():
         try:
             old=json.loads(SAVE.read_text(encoding="utf-8"))
             legacy={"id":uuid.uuid4().hex,"name":"Partida anterior","city":str(old.get("name","Puerto Claro"))[:48],"day":int(old.get("day",1)),"updatedAt":int(SAVE.stat().st_mtime)}
-            (folder/(legacy["id"]+".json")).write_text(json.dumps(old,ensure_ascii=False),encoding="utf-8")
-            slots=[legacy];index.write_text(json.dumps(slots,ensure_ascii=False),encoding="utf-8")
+            write_slot_json(folder/(legacy["id"]+".json"),old)
+            slots=[legacy];write_slot_json(index,slots)
         except (ValueError,OSError,TypeError):pass
     return slots
+
+def write_slot_json(path,value):
+    temporary=path.with_suffix(path.suffix+".tmp")
+    temporary.write_text(json.dumps(value,ensure_ascii=False),encoding="utf-8")
+    temporary.replace(path)
 
 def save_slot(slot_id=None,name=None):
     global ACTIVE_SLOT_ID
@@ -1902,8 +1907,8 @@ def save_slot(slot_id=None,name=None):
     existing.update({"city":str(state.get("name","Puerto Claro"))[:48],"day":int(state.get("day",1)),"updatedAt":int(time.time())})
     folder=SAVE_ROOT/"partidas";folder.mkdir(parents=True,exist_ok=True)
     snapshot={k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed","roomName")}
-    (folder/(slot_id+".json")).write_text(json.dumps(snapshot,ensure_ascii=False),encoding="utf-8")
-    (folder/"indice.json").write_text(json.dumps(slots,ensure_ascii=False),encoding="utf-8")
+    write_slot_json(folder/(slot_id+".json"),snapshot)
+    write_slot_json(folder/"indice.json",slots)
     ACTIVE_SLOT_ID=slot_id
     return existing
 

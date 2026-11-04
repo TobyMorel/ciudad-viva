@@ -95,7 +95,7 @@ class PrivateConstructionFreightTests(unittest.TestCase):
         self.assertEqual(orders,[])
         self.assertTrue(p["privateMaterialsIncluded"])
         self.assertTrue(all(amount==0 for amount in p["materialsRequired"].values()))
-        self.assertLess(s["privateCapital"],old_capital)
+        self.assertEqual(s["privateCapital"],old_capital,"El promotor externo no usa el fondo privado local")
         self.assertTrue(all(sum(stock.get(k,0) for stock in s["supply"]["contractors"].values())==0
                             for k in server.MATERIAL_NAMES),"No aparecen materiales en el patio al contratar")
 

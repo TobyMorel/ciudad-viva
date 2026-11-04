@@ -124,7 +124,7 @@ class NewSettlement(unittest.TestCase):
         self.assertTrue(project.get("privateMaterialsIncluded"))
         self.assertTrue(all(not amount for amount in project["materialsRequired"].values()))
         self.assertEqual(server.state["supply"]["orders"],[])
-        self.assertLess(server.state["privateCapital"],before)
+        self.assertEqual(server.state["privateCapital"],before,"El promotor externo financia la obra fuera del fondo privado local")
 
     def test_zoned_home_development_reacts_on_daily_tick(self):
         server.state["roads"]=[[4,10],[5,10]]

@@ -24,6 +24,7 @@ class LANMultiplayerTests(unittest.TestCase):
             "save_root": server.SAVE_ROOT,
             "rooms": server.DISCOVERED_ROOMS,
             "cursors": server.PLAYER_CURSORS,
+            "cursor_revision": server.CURSOR_REVISION,
             "cache_revision": server._PUBLIC_STATE_CACHE_REVISION,
             "cache_view": server._PUBLIC_STATE_CACHE_VIEW,
         }
@@ -35,6 +36,7 @@ class LANMultiplayerTests(unittest.TestCase):
         server.ROOM_CODE = "TEST42"
         server.DISCOVERED_ROOMS = {}
         server.PLAYER_CURSORS = {}
+        server.CURSOR_REVISION = 0
         server._PUBLIC_STATE_CACHE_REVISION = -1
         server._PUBLIC_STATE_CACHE_VIEW = None
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -55,6 +57,7 @@ class LANMultiplayerTests(unittest.TestCase):
         server.SAVE_ROOT = self.old["save_root"]
         server.DISCOVERED_ROOMS = self.old["rooms"]
         server.PLAYER_CURSORS = self.old["cursors"]
+        server.CURSOR_REVISION = self.old["cursor_revision"]
         server._PUBLIC_STATE_CACHE_REVISION = self.old["cache_revision"]
         server._PUBLIC_STATE_CACHE_VIEW = self.old["cache_view"]
         self.tempdir.cleanup()
@@ -156,6 +159,51 @@ class LANMultiplayerTests(unittest.TestCase):
         returned = self.request("/api/cursors", "guest")["cursors"][0]
         self.assertEqual((returned["x"], returned["y"]), (13.0, 9.0))
         self.assertEqual(returned["view"], "")
+
+    def test_cursor_updates_bypass_simulation_lock(self):
+        """Simulated slow city operations must not delay cursor presence."""
+        self.request("/api/room/create", "host", {"name": "Ana"})
+        self.request("/api/room/join", "guest", {"code": "TEST42", "name": "Bruno"})
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            with server.LOCK:
+                sender = pool.submit(self.request, "/api/cursors", "host",
+                                     {"x": 5.75, "y": 7.25, "view": ""}, 3)
+                self.assertTrue(sender.result(timeout=1)["ok"])
+                reader = pool.submit(self.request, "/api/cursors", "guest", None, 3)
+                cursors = reader.result(timeout=1)["cursors"]
+                self.assertEqual((cursors[0]["x"], cursors[0]["y"]), (5.75, 7.25))
+
+    def test_server_sent_cursor_updates_arrive_without_polling(self):
+        self.request("/api/room/create", "host", {"name": "Ana"})
+        self.request("/api/room/join", "guest", {"code": "TEST42", "name": "Bruno"})
+        request = Request(self.base + "/api/cursors/stream?player=guest")
+        with urlopen(request, timeout=4) as response:
+            self.assertEqual(response.headers.get_content_type(), "text/event-stream")
+            self.assertEqual(response.readline().strip(), b"retry: 500")
+            self.assertEqual(response.readline().strip(), b"")
+            first = response.readline()
+            self.assertTrue(first.startswith(b"data: "))
+            self.assertEqual(json.loads(first[6:])["cursors"], [])
+            self.assertEqual(response.readline().strip(), b"")
+            start = time.monotonic()
+            self.request("/api/cursors", "host", {"x": 16.8, "y": 8.4,
+                                                   "view": "Movilidad"})
+            event = response.readline()
+            self.assertLess(time.monotonic() - start, 2.0)
+            self.assertTrue(event.startswith(b"data: "))
+            cursors = json.loads(event[6:])["cursors"]
+            self.assertEqual(len(cursors), 1)
+            self.assertEqual(cursors[0]["view"], "Movilidad")
+            self.assertEqual((cursors[0]["x"], cursors[0]["y"]), (16.8, 8.4))
+
+    def test_ui_activity_without_initial_map_position_is_reported(self):
+        self.request("/api/room/create", "host", {"name": "Ana"})
+        self.request("/api/room/join", "guest", {"code": "TEST42", "name": "Bruno"})
+        self.request("/api/cursors", "host", {"view": "Tráfico"})
+        cursor = self.request("/api/cursors", "guest")["cursors"][0]
+        self.assertIsNone(cursor["x"])
+        self.assertIsNone(cursor["y"])
+        self.assertEqual(cursor["view"], "Tráfico")
 
     def test_large_state_is_compressed_for_browser_clients(self):
         self.request("/api/room/create", "host", {})

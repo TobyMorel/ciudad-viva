@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.255
+# Ciudad Viva · Alfa 0.256
+
+**Presencia LAN en tiempo real (0.256):** el servidor transmite inmediatamente las posiciones del mouse por un canal SSE independiente de la simulación, en vez de esperar sondeos HTTP y bloqueos prolongados; hay un sondeo de respaldo si se corta. El nombre y la parcela siguen junto a cada cursor, pero el texto de actividad aparece al lado de cada jugador conectado, arriba del chat. Para usar el nuevo servidor, el anfitrión debe actualizar el ejecutable Windows.
 
 **Cursores multijugador más fluidos (0.255):** en las salas LAN, los cursores remotos se actualizan más seguido y se interpolan entre muestras para reducir los saltos. Al abrir un panel (por ejemplo, Movilidad o Tráfico), el cursor del jugador queda en su última posición y muestra la pantalla que está consultando. Los cursores de los demás se ocultan localmente mientras tenés abierta una ventana para que no tapen el contenido.
 

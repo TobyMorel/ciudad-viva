@@ -28,6 +28,9 @@ STATE_REVISION = 0
 ROOM_CODE = uuid.uuid4().hex[:6].upper()
 DISCOVERED_ROOMS = {}
 PLAYER_CURSORS = {}
+# Independent presence channel: simulation actions can hold LOCK for seconds.
+CURSOR_CONDITION = threading.Condition(threading.RLock())
+CURSOR_REVISION = 0
 ACTIVE_SLOT_ID = None
 DISCOVERY_PORT = 8766
 PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
@@ -1920,6 +1923,19 @@ def load_slot(slot_id):
     if not isinstance(slot_id,str) or not any(item["id"]==slot_id for item in slot_catalog()):raise ValueError("Esa partida guardada no existe.")
     try:return json.loads((SAVE_ROOT/"partidas"/(slot_id+".json")).read_text(encoding="utf-8"))
     except (ValueError,OSError):raise ValueError("No se pudo abrir esa partida guardada.")
+
+def cursor_member(player_id):
+    # Atomic dictionary reads avoid waiting for the main simulation mutex.
+    return ROOM_OPEN and player_id in state.get("players",{})
+
+def cursor_snapshot(player_id):
+    """Requires CURSOR_CONDITION, not the simulation LOCK."""
+    now=time.time();names=state.get("playerNames",{});players=state.get("players",{})
+    return [{"id":other,"name":names.get(other,"Jugador"),"x":point.get("x"),"y":point.get("y"),"view":point.get("view","")}
+            for other,point in PLAYER_CURSORS.items()
+            if other!=player_id and now-point["at"]<(12 if point.get("view") else 3)
+            and players.get(other,0)>now-25]
+
 
 def player_list():
     now=time.time();names=state.get("playerNames",{})
@@ -6691,6 +6707,7 @@ def is_public_static_path(rel):
 
 class Handler(BaseHTTPRequestHandler):
     server_version="CiudadViva/0.88"
+    protocol_version="HTTP/1.1"  # Persistent, low-latency SSE cursor stream.
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         if status==200 and isinstance(body,dict) and getattr(self,"_action_context",None):
@@ -6714,11 +6731,36 @@ class Handler(BaseHTTPRequestHandler):
         path=unquote(self.path.split("?",1)[0])
         if path=="/api/cursors":
             pid=self.headers.get("X-Player-Id","jugador-local")
-            with LOCK:
-                if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para ver los cursores."});return
-                now=time.time();names=state.get("playerNames",{})
-                cursors=[{"id":other,"name":names.get(other,"Jugador"),"x":point["x"],"y":point["y"],"view":point.get("view","")} for other,point in PLAYER_CURSORS.items() if other!=pid and now-point["at"]<(12 if point.get("view") else 3) and state["players"].get(other,0)>now-25]
-            self._send(200,{"cursors":cursors});return
+            if not cursor_member(pid):self._send(409,{"error":"Entrá a la sala para ver los cursores."});return
+            with CURSOR_CONDITION:
+                payload={"cursors":cursor_snapshot(pid),"revision":CURSOR_REVISION}
+            self._send(200,payload);return
+        if path=="/api/cursors/stream":
+            pid=parse_qs(self.path.partition("?")[2]).get("player",[""])[0]
+            if not cursor_member(pid):self._send(409,{"error":"Entrá a la sala para ver los cursores."});return
+            self.send_response(200)
+            self.send_header("Content-Type","text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control","no-cache, no-transform")
+            self.send_header("X-Accel-Buffering","no")
+            self.send_header("Connection","keep-alive")
+            self.end_headers()
+            try:
+                self.connection.setsockopt(socket.IPPROTO_TCP,socket.TCP_NODELAY,1)
+                self.wfile.write(b"retry: 500\n\n")
+                self.wfile.flush()
+                revision=-1
+                while cursor_member(pid):
+                    with CURSOR_CONDITION:
+                        if revision==CURSOR_REVISION:
+                            CURSOR_CONDITION.wait(timeout=1)
+                        revision=CURSOR_REVISION
+                        payload={"cursors":cursor_snapshot(pid),"revision":revision}
+                    data=json.dumps(payload,ensure_ascii=False,separators=(",",":")).encode("utf-8")
+                    self.wfile.write(b"data: "+data+b"\n\n")
+                    self.wfile.flush()
+            except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError,OSError):
+                pass
+            return
         if path=="/api/sync":
             pid=self.headers.get("X-Player-Id","jugador-local")
             try:requested=int(parse_qs(self.path.partition("?")[2]).get("revision",["0"])[0])
@@ -6768,27 +6810,29 @@ class Handler(BaseHTTPRequestHandler):
         typ="text/html; charset=utf-8" if suffix==".html" else "text/css; charset=utf-8" if suffix==".css" else "application/javascript; charset=utf-8" if suffix in (".js",".mjs") else "application/json; charset=utf-8" if suffix==".json" else "image/svg+xml; charset=utf-8" if suffix==".svg" else mimetypes.guess_type(str(file))[0] or "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
-        global state,STATE_REVISION,ACTIVE_SLOT_ID,ROOM_OPEN
+        global state,STATE_REVISION,ACTIVE_SLOT_ID,ROOM_OPEN,CURSOR_REVISION
         try: data=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
         except Exception: self._send(400,{"error":"JSON inválido"}); return
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
-        with LOCK:
-            if path=="/api/cursors":
-                if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para mover el cursor."});return
-                view=" ".join(str(data.get("view") or "").strip().split())[:60]
+        if path=="/api/cursors":
+            if not cursor_member(pid):self._send(409,{"error":"Entrá a la sala para mover el cursor."});return
+            view=" ".join(str(data.get("view") or "").strip().split())[:60]
+            with CURSOR_CONDITION:
                 previous=PLAYER_CURSORS.get(pid)
                 try:
                     x=float(data["x"]);y=float(data["y"])
                     if not math.isfinite(x) or not math.isfinite(y) or abs(x)>1000 or abs(y)>1000:raise ValueError()
                 except (KeyError,TypeError,ValueError):
-                    # Leaving the canvas or opening a UI does not remove the last position.
-                    if previous:
-                        previous["view"]=view or "Fuera del mapa 3D"
-                        previous["at"]=time.time()
-                    self._send(200,{"ok":True});return
-                PLAYER_CURSORS[pid]={"x":round(x,3),"y":round(y,3),"view":view,"at":time.time()}
-                self._send(200,{"ok":True});return
+                    x=previous.get("x") if previous else None
+                    y=previous.get("y") if previous else None
+                else:
+                    x=round(x,3);y=round(y,3)
+                PLAYER_CURSORS[pid]={"x":x,"y":y,"view":view,"at":time.time()}
+                CURSOR_REVISION+=1
+                CURSOR_CONDITION.notify_all()
+            self._send(200,{"ok":True});return
+        with LOCK:
             if path in ("/api/action","/api/load"):
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
             if path=="/api/room/create":
@@ -6808,7 +6852,10 @@ class Handler(BaseHTTPRequestHandler):
                     chosen=save_slot(name=str(data["newSlotName"]).strip() or "Nueva partida")
                     state["roomName"]=chosen["name"]
                 ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
-                PLAYER_CURSORS.clear()
+                with CURSOR_CONDITION:
+                    PLAYER_CURSORS.clear()
+                    CURSOR_REVISION+=1
+                    CURSOR_CONDITION.notify_all()
                 state.setdefault("playerNames",{})[pid]=clean_player_name(data.get("name"))
                 state["chatMessages"]=[];state["actionFeed"]=[]
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()

@@ -1,8 +1,8 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.255';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.255';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.255';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.255';
+import {createWorld} from './world3d.js?v=0.256';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.256';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.256';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.256';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -33,7 +33,7 @@ const pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36
 let placementQueue=Promise.resolve();
 let S=null,gameMode=null,offlineAdapter=null,modeGeneration=0,disconnectToast=false,selectedActor=null,tool='inspect',toolVariant=null,toolIndustry=null,hoverServiceTile=null,selected=null,zoom=window.innerWidth<650?1.08:2.05,panX=0,panY=0,rotation=0,drag=null,toastTimer,orderProjectId=null;
 const sharedCursorLayer=document.createElement('div'),sharedCursorNodes=new Map(),sharedCursorPositions=new Map();sharedCursorLayer.className='shared-cursor-layer';sharedCursorLayer.setAttribute('aria-hidden','true');document.body.append(sharedCursorLayer);
-let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,lastCursorView='',cursorOverCanvas=false,cursorAnimationFrame=0,lastCursorFrame=0;
+let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,lastCursorView='',cursorOverCanvas=false,cursorAnimationFrame=0,lastCursorFrame=0,cursorStream=null,cursorRevision=-1;
 // Render in map coordinates so camera movements do not add a second visual delay.
 function renderSharedCursors(){
  const bounds=canvas.getBoundingClientRect(),seen=new Set();
@@ -43,14 +43,12 @@ function renderSharedCursors(){
   let marker=sharedCursorNodes.get(cursor.id);
   if(!marker){
    marker=document.createElement('div');marker.className='shared-cursor';
-   const arrow=document.createElement('span'),label=document.createElement('b'),name=document.createElement('span'),status=document.createElement('small');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';name.className='shared-cursor-label';status.className='shared-cursor-status';status.hidden=true;label.append(name,status);marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker);
+   const arrow=document.createElement('span'),label=document.createElement('b');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker);
    const colors=['#ffd16d','#85dcff','#ff9ec6','#bba8ff','#97e69e'],hash=[...String(cursor.id)].reduce((n,c)=>n+c.charCodeAt(0),0);marker.style.setProperty('--cursor-color',colors[hash%colors.length]);
   }
   const label=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
-  const name=marker.querySelector('.shared-cursor-label'),status=marker.querySelector('.shared-cursor-status'),description=cursorStatusText(cursor.view);
+  const name=marker.querySelector('b');
   if(name.textContent!==label)name.textContent=label;
-  if(status.textContent!==description)status.textContent=description;
-  status.hidden=!description;
   const point=world.projectTile(motion.x-.5,motion.y-.5,.2);marker.hidden=!point.visible;
   if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}
   seen.add(cursor.id);
@@ -80,6 +78,7 @@ function acceptSharedCursors(cursors){
   else sharedCursorPositions.set(cursor.id,{x,y,targetX:x,targetY:y});
  }
  renderSharedCursors();
+ renderOnlinePlayerPresence();
  if(!cursorAnimationFrame&&gameMode==='online'&&!document.hidden&&sharedCursors.length){
   lastCursorFrame=performance.now();
   cursorAnimationFrame=requestAnimationFrame(animateSharedCursors);
@@ -102,10 +101,32 @@ canvas.addEventListener('pointerleave',()=>{if(gameMode==='online'){cursorOverCa
 canvas.addEventListener('pointerup',event=>{if(gameMode==='online'&&event.pointerType==='touch'){cursorOverCanvas=false;cursorDirty=true}});
 window.addEventListener('blur',()=>{cursorDirty=true});
 document.addEventListener('visibilitychange',()=>{cursorDirty=true;if(document.hidden){sharedCursors=[];renderSharedCursors()}});
+function receiveCursorUpdate(data){
+ if(gameMode!=='online'||!Array.isArray(data?.cursors))return;
+ const revision=Number(data.revision);
+ if(Number.isFinite(revision)&&revision<cursorRevision)return;
+ if(Number.isFinite(revision))cursorRevision=revision;
+ if(!document.hidden)acceptSharedCursors(data.cursors);
+}
+function stopCursorStream(){
+ if(cursorStream)cursorStream.close();
+ cursorStream=null;cursorRevision=-1;
+}
+function startCursorStream(){
+ stopCursorStream();
+ if(gameMode!=='online'||typeof EventSource==='undefined')return;
+ const stream=new EventSource('/api/cursors/stream?player='+encodeURIComponent(pid));
+ cursorStream=stream;
+ stream.onmessage=event=>{
+  if(cursorStream!==stream||gameMode!=='online')return;
+  try{receiveCursorUpdate(JSON.parse(event.data))}catch{}
+ };
+}
 setInterval(async()=>{
- if(gameMode!=='online'||cursorSending)return;
+ if(gameMode!=='online')return;
  const view=localCursorView();
- if(!cursorDirty&&view===lastCursorView&&(!ownCursor||Date.now()-lastCursorSent<1000))return;
+ if(view!==lastCursorView)renderOnlinePlayerPresence();
+ if(cursorSending||(!cursorDirty&&view===lastCursorView&&(!ownCursor||Date.now()-lastCursorSent<1000)))return;
  cursorSending=true;
  const position=ownCursor;
  cursorDirty=false;
@@ -114,8 +135,16 @@ setInterval(async()=>{
   if(!response.ok)throw Error('No se pudo compartir el cursor');
   lastCursorSent=Date.now();lastCursorView=view;
  }catch{cursorDirty=true}finally{cursorSending=false}
-},60);
-setInterval(async()=>{if(gameMode!=='online'||document.hidden||cursorReading)return;cursorReading=true;try{const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});if(response.ok){const data=await response.json();if(gameMode==='online'&&!document.hidden)acceptSharedCursors(data.cursors)}}catch{}finally{cursorReading=false}},75);
+},33);
+// Fallback for older LAN servers or when the push connection is interrupted.
+setInterval(async()=>{
+ if(gameMode!=='online'||document.hidden||cursorReading||(cursorStream&&cursorStream.readyState===EventSource.OPEN))return;
+ cursorReading=true;
+ try{
+  const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});
+  if(response.ok)receiveCursorUpdate(await response.json());
+ }catch{}finally{cursorReading=false}
+},150);
 const offers=['Sur Obras','Constructora Delta','Estudio y Obra Norte'],laborNeeds={road:4,bridge:10,home:6,shop:7,factory:12,civic:11,school:12,fireStation:12,depot:8,busStop:4,landfill:12,recyclingPlant:16,port:14,airport:16,hotel:10,powerPlant:18,waterPlant:12,gasPlant:10,wastewaterPlant:14};
 const SERVICE_MODELS={
  tvHeadend:{kind:'civic',label:'Cabecera municipal de TV por cable',cost:13800,days:72,radius:20},
@@ -345,13 +374,33 @@ function municipalFinancePanel(){const f=S.municipalFinance||{},social=S.socialS
 function treasuryDetailsMarkup(reserved,spendable){const f=S.municipalFinance||{},income=f.incomeBreakdown||{},expenses=f.expenseBreakdown||{},incomeLabels={ownedProperties:'Alquileres y dividendos municipales',propertyTaxes:'Impuestos inmobiliarios',businessTaxes:'Impuestos comerciales e industriales',transitFares:'Tarifas de transporte',airportFees:'Tasas aeroportuarias',tourismTax:'Impuesto turístico',recycling:'Reciclaje',portExports:'Exportaciones portuarias',railFreight:'Fletes ferroviarios'},expenseLabels={buildingOperations:'Funcionamiento de edificios municipales',publicPayroll:'Sueldos del personal público',police:'Policía',fire:'Bomberos',transit:'Transporte',utilities:'Redes',waste:'Residuos',roads:'Calles',health:'Salud',education:'Educación',housingAid:'Ayuda habitacional'},money=n=>`$ ${nfmt(Math.round(Number(n)||0))}`,sum=values=>Object.values(values).reduce((total,value)=>total+Number(value||0),0),rows=(values,labels)=>{const items=Object.entries(values).filter(([,value])=>Number(value)>0).map(([key,value])=>`<li><span>${escHtml(labels[key]||key)}</span><b>${money(value)}</b></li>`);return items.length?items.join(''):'<li class="treasury-empty">Sin movimientos este mes</li>'},totalIncome=Number(S.grossMonthlyIncome??S.monthlyIncome??sum(income)),totalExpenses=Number(S.effectiveMonthlyExpenses??S.monthlyExpenses??sum(expenses));const facilities=(S.buildings||[]).filter(b=>Number(b.monthlyCost)>0&&b.ownerType!=="private"),facilityTotal=facilities.reduce((n,b)=>n+Number(b.monthlyCost||0),0),otherOperations=Math.max(0,Number(expenses.buildingOperations||0)-facilityTotal),facilityRows=facilities.map(b=>`<li><span>${escHtml(b.name||b.kind)} · parcela ${b.x+1},${b.y+1}</span><b>${money(b.monthlyCost)}</b></li>`).join('')+(otherOperations?`<li><span>Otros costos municipales base</span><b>${money(otherOperations)}</b></li>`:''),publicKinds=new Set(['civic','school','fireStation','depot','landfill','recyclingPlant','port','airport','powerPlant','waterPlant','gasPlant','wastewaterPlant']),payrollRows=(S.workplaces||[]).filter(w=>publicKinds.has(w.kind)&&Number(w.payroll)>0).map(w=>`<li><span>${escHtml(w.name||w.kind)} · parcela ${w.x+1},${w.y+1}</span><b>${money(w.payroll)}</b></li>`).join(''),extra=`<details class="treasury-extra"><summary>Qué incluye el funcionamiento municipal</summary><p>Operación de edificios públicos y propiedades compradas por la ciudad. Los inmuebles privados pagan su propio mantenimiento.</p><ul>${facilityRows||'<li>Sin edificios municipales con costo mensual.</li>'}</ul></details><details class="treasury-extra"><summary>Qué incluye el sueldo público</summary><p>Salarios de quienes trabajan en servicios e instalaciones municipales.</p><ul>${payrollRows||'<li>Sin personal público asignado.</li>'}</ul></details>`;return `<header><strong>Detalle de tesorería</strong><button type="button" data-treasury-close aria-label="Cerrar detalle">×</button></header><div class="treasury-balances"><div><span>Caja actual</span><b>${money(S.money)}</b></div><div><span>Disponible para construir</span><b>${money(spendable)}</b></div><div><span>Reservado para obras</span><b>${money(reserved)}</b></div><div><span>Balance mensual</span><b class="${totalIncome-totalExpenses>=0?'positive':'negative'}">${totalIncome-totalExpenses>=0?'+':'−'} ${money(Math.abs(totalIncome-totalExpenses))}</b></div></div><section><h3>Ingresos mensuales · ${money(totalIncome)}</h3><ul>${rows(income,incomeLabels)}</ul></section><section><h3>Gastos mensuales · ${money(totalExpenses)}</h3><ul>${rows(expenses,expenseLabels)}</ul></section>${extra}`}
 function growthDemandState(){const d=growthDemand(S);return{housing:{value:d.housing.value,label:d.housing.vacancies?`${nfmt(d.housing.vacancies)} libres`:`${nfmt(d.housing.shortage)} faltan`,detail:d.housing.vacancies?`${nfmt(d.housing.vacancies)} plazas de vivienda disponibles. Hay ${nfmt(d.housing.waiting)} interesados que pueden ocuparlas antes de construir.`:`${nfmt(d.housing.shortage)} personas sin plaza disponible`},commercial:{value:d.commercial.value,label:d.commercial.idle?'Locales con cupo':`${nfmt(d.commercial.shortage)} locales`,detail:d.commercial.idle?`${nfmt(d.commercial.idle)} comercios tienen capacidad sin utilizar; no se requieren más locales.`:d.commercial.goal?`${nfmt(d.commercial.shortage)} locales adicionales necesarios; ${nfmt(d.commercial.existing)} existentes y ${nfmt(d.commercial.pipeline)} en obra`:'Crece a partir de 24 residentes'},industry:{value:d.industry.value,label:`${nfmt(d.industry.shortage)} faltan`,detail:d.industry.goal?`${nfmt(d.industry.shortage)} de ${nfmt(d.industry.goal)} fábricas locales necesarias`:'Crece cuando el comercio vende'}}}
 function renderGrowthDemand(){renderMetricDetails();const widget=document.getElementById('growthDemand');if(!widget||!S)return;const demand=growthDemandState();for(const [key,row]of Object.entries(demand)){const item=widget.querySelector(`[data-growth="${key}"]`);if(!item)continue;const value=Math.max(0,Math.min(100,row.value));item.querySelector('.growth-demand-percent').textContent=`${value}%`;item.querySelector('.growth-demand-track i').style.height=`${value}%`;item.querySelector('small').textContent=row.label;item.title=row.detail;item.setAttribute('aria-label',`${key==='housing'?'Vivienda':key==='commercial'?'Comercios':'Fábricas'}: ${row.detail}, demanda ${value}%`);item.dataset.level=value>=70?'high':value>=35?'medium':'low'}}
+function renderOnlinePlayerPresence(){
+ if(gameMode!=='online'||!S)return;
+ const people=document.getElementById('onlinePlayers'),players=S.onlinePlayers||[],active=new Set();
+ const views=new Map(sharedCursors.map(cursor=>[cursor.id,cursor.view||'']));
+ for(const player of players){
+  active.add(player.id);
+  let tag=[...people.children].find(node=>node.dataset.playerId===player.id);
+  if(!tag){
+   tag=document.createElement('span');tag.dataset.playerId=player.id;tag.className='online-player';
+   const name=document.createElement('strong'),status=document.createElement('small');
+   name.className='online-player-name';status.className='online-player-view';tag.append(name,status);people.append(tag);
+  }
+  const name=tag.querySelector('.online-player-name'),status=tag.querySelector('.online-player-view');
+  const displayName=(player.isHost?'★ ':'')+player.name;
+  const view=player.id===pid?localCursorView():views.get(player.id)||'';
+  const screen=cursorStatusText(view)||'En mapa 3D';
+  if(name.textContent!==displayName)name.textContent=displayName;
+  if(status.textContent!==screen)status.textContent=screen;
+ }
+ for(const child of [...people.children])if(!active.has(child.dataset.playerId))child.remove();
+}
 function renderOnlineHud(){
  const hud=document.getElementById('onlineHud');hud.classList.toggle('hidden',gameMode!=='online');
  if(gameMode!=='online'||!S)return;
  const players=S.onlinePlayers||[],count=players.length||S.online||1;
  document.getElementById('onlineCount').textContent=`${count} jugador${count===1?'':'es'} online`;
- const people=document.getElementById('onlinePlayers');people.replaceChildren();
- for(const player of players){const tag=document.createElement('span');tag.textContent=(player.isHost?'★ ':'')+player.name;people.append(tag)}
+ renderOnlinePlayerPresence();
  const feed=document.getElementById('onlineFeed');feed.replaceChildren();
  for(const action of [...(S.actionFeed||[])].reverse().slice(0,12)){const row=document.createElement('p');row.textContent=`${action.player} ${action.detail}`;feed.append(row)}
  if(!feed.childElementCount)feed.textContent='Todavía no hay acciones de jugadores.';
@@ -736,7 +785,7 @@ async function showSaveChoices(mode){
  }catch(error){list.textContent='No se pudieron leer las partidas.';document.getElementById('modeError').textContent=error.message}
 }
 async function startOffline(slot=null){
- const generation=++modeGeneration,previousAdapter=offlineAdapter,previousState=S,previousMode=gameMode,previousSlot=activeOfflineSlot,previousSaveTarget=activeOfflineSaveTarget;let candidateAdapter=null,previousClosed=false;window.cvStarting=true;gameMode='offline';offlineAdapter=null;const error=document.getElementById('modeError');error.textContent='Preparando la ciudad…';
+ stopCursorStream();const generation=++modeGeneration,previousAdapter=offlineAdapter,previousState=S,previousMode=gameMode,previousSlot=activeOfflineSlot,previousSaveTarget=activeOfflineSaveTarget;let candidateAdapter=null,previousClosed=false;window.cvStarting=true;gameMode='offline';offlineAdapter=null;const error=document.getElementById('modeError');error.textContent='Preparando la ciudad…';
  try{
   const selected=slot?await getOfflineSlot(slot.id):await createOfflineSlot(document.getElementById('newSlotName').value);if(generation!==modeGeneration)return;
   if(!selected)throw Error('No se encontró ese slot. No se modificó ningún guardado.');
@@ -757,10 +806,10 @@ async function enterRoom(create=false,code='',slotSelection={}){
  const name=document.getElementById('playerName').value.trim();const error=document.getElementById('modeError');
  if(name.length<2){error.textContent='Elegí un nombre de al menos dos letras para jugar online.';document.getElementById('playerName').focus();return}
  localStorage.setItem('ciudad-viva-player-name',name);
- const generation=++modeGeneration;gameMode=null;offlineAdapter=null;error.textContent=create?'Abriendo sala LAN…':'Conectando con la sala…';
+ stopCursorStream();const generation=++modeGeneration;gameMode=null;offlineAdapter=null;error.textContent=create?'Abriendo sala LAN…':'Conectando con la sala…';
  try{
   const endpoint=create?'/api/room/create':'/api/room/join',response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify({code,name,...slotSelection})}),reply=await response.json().catch(()=>{throw Error('Para jugar por LAN abrí la dirección local del anfitrión o ejecutá la app en tu equipo.')});
-  if(generation!==modeGeneration)return;if(!response.ok)throw Error(reply.error||'No se pudo conectar.');const stateResponse=await fetch('/api/state',{headers:{'X-Player-Id':pid}});if(generation!==modeGeneration)return;if(!stateResponse.ok)throw Error('La sala no responde.');const state=await stateResponse.json();if(generation!==modeGeneration)return;S=state;gameMode='online';window.cvInfo=await api('/api/info');if(generation!==modeGeneration)return;document.getElementById('modeBackdrop').classList.add('hidden');renderUI();world.invalidate();draw();playSound('open');if(create)showToast(`Sala LAN creada · código ${reply.roomCode}`);poll(generation)
+  if(generation!==modeGeneration)return;if(!response.ok)throw Error(reply.error||'No se pudo conectar.');const stateResponse=await fetch('/api/state',{headers:{'X-Player-Id':pid}});if(generation!==modeGeneration)return;if(!stateResponse.ok)throw Error('La sala no responde.');const state=await stateResponse.json();if(generation!==modeGeneration)return;S=state;gameMode='online';startCursorStream();window.cvInfo=await api('/api/info');if(generation!==modeGeneration)return;document.getElementById('modeBackdrop').classList.add('hidden');renderUI();world.invalidate();draw();playSound('open');if(create)showToast(`Sala LAN creada · código ${reply.roomCode}`);poll(generation)
  }catch(e){if(generation===modeGeneration)error.textContent=e.message}
 }
 

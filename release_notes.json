@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.255",
+  "currentVersion": "0.256",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.256",
+      "date": "2026-11-04",
+      "title": "Cursores online en tiempo real y actividad en la lista de jugadores",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El servidor separa los cursores del bloqueo de la simulación para que el tráfico del mouse no espere operaciones costosas de la ciudad.",
+        "Las posiciones se envían hasta 30 veces por segundo y el servidor las transmite inmediatamente mediante un flujo de eventos (SSE); se conserva la consulta periódica de respaldo si el canal se desconecta.",
+        "La actividad de cada jugador (Movilidad, Tráfico, Economía, etc.) se muestra junto a su nombre en la lista de conectados, encima del chat. Los cursores sobre el mapa muestran solamente nombre y parcela.",
+        "La posición del cursor se mantiene al salir del mapa o abrir un menú y la interfaz propia sigue ocultando los cursores ajenos mientras se leen ventanas."
+      ],
+      "verification": "Se incluyen pruebas del flujo SSE, el envío de cursores sin bloqueo durante operaciones de la simulación, presencia sin posición inicial y pruebas existentes de etiquetas y movimiento. Medición de latencia real entre dispositivos LAN pendiente."
+    },
     {
       "version": "0.255",
       "date": "2026-11-04",

@@ -1,3 +1,7 @@
+## Alfa 0.250 · Online LAN
+
+Las actualizaciones de red grandes se comprimen y las respuestas antiguas ya no pueden reemplazar un estado más reciente del mapa y la UI. Se comprobó una sala local con cuatro jugadores y cuatro acciones simultáneas visibles para todos. Falta medir la latencia de extremo a extremo en una red Hamachi real con cuatro equipos.
+
 ## Alfa 0.249 · Demanda y barra superior
 
 La demanda y una calle conectada bastan para iniciar obras zonificadas financiadas por promotores externos. Las nuevas viviendas registran compras o alquileres de familias según ingreso y ahorro; el constructor recibe esos pagos hasta que la ciudad compra el inmueble. Los costos de inmuebles privados no recaen en tesorería. La barra superior vuelve a un ancho compacto y ofrece desglose de población, empleo y servicios; el indicador de empleo se limita a 100 %. El detalle financiero enumera edificios municipales y personal, separa calles y expone un aporte regional temporal para ciudades pequeñas.

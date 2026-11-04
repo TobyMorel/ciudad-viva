@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.249
+# Ciudad Viva · Alfa 0.250
+
+**Online LAN (0.250):** las respuestas de red atrasadas no revierten acciones recientes. Las actualizaciones grandes se comprimen para aliviar el tráfico por Hamachi. Se comprobó una sala local con cuatro jugadores que zonifican simultáneamente y ven todos los cambios.
 
 **Crecimiento urbano y cabecera (0.249):** con demanda y calle conectada, un promotor financia nuevas viviendas, comercios y fábricas sin fondos municipales. Las familias compran o alquilan según sus ingresos y ahorros; la constructora cobra hasta que el municipio compra el inmueble. La tesorería detalla funcionamiento y sueldos públicos, evita cargar dos veces las calles y muestra un aporte regional de arranque. El empleo efectivo se limita a 100 % y la cabecera tiene desgloses compactos.
 

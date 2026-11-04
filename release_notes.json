@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.249",
+  "currentVersion": "0.250",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.250",
+      "date": "2026-11-04",
+      "title": "Sincronización y tráfico de red LAN",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las respuestas atrasadas de otras acciones o del sondeo ya no pueden hacer retroceder el estado visible del mapa o la interfaz en una sala compartida.",
+        "El servidor comprime las actualizaciones HTTP grandes; una ciudad inicial pasa de unos 762 KB a unos 79 KB por respuesta compatible.",
+        "Cuatro jugadores pueden pintar zonas simultáneamente y todos reciben las cuatro acciones en el mapa."
+      ],
+      "verification": "Prueba de integración local con cuatro clientes simultáneos y compresión HTTP. Pendiente: medir latencia real en cuatro equipos conectados por Hamachi."
+    },
     {
       "version": "0.249",
       "date": "2026-11-04",

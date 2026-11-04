@@ -1,4 +1,5 @@
 import concurrent.futures
+import gzip
 import json
 import tempfile
 import threading
@@ -83,6 +84,8 @@ class LANMultiplayerTests(unittest.TestCase):
 
         baseline = self.request("/api/state", "host")["stateRevision"]
         target = baseline + len(player_ids)
+        plots = [(6, 9), (11, 5), (13, 13), (19, 15)]
+        kinds = ["home", "shop", "factory", "home"]
         ready = threading.Barrier(len(player_ids) + 1)
 
         def watch(player_id):
@@ -106,7 +109,7 @@ class LANMultiplayerTests(unittest.TestCase):
             actions = [
                 pool.submit(
                     self.request, "/api/action", player_id,
-                    {"action": "speed", "value": index + 1}, 10
+                    {"action": "zone", "kind": kinds[index], "cells": [list(plots[index])]}, 10
                 )
                 for index, player_id in enumerate(player_ids)
             ]
@@ -117,8 +120,27 @@ class LANMultiplayerTests(unittest.TestCase):
 
         for snapshot in snapshots:
             self.assertEqual(snapshot["stateRevision"], target)
-            self.assertIn(snapshot["speed"], (1, 2, 3, 4))
             self.assertEqual(snapshot["online"], 4)
+            for (x, y), kind in zip(plots, kinds):
+                self.assertTrue(
+                    any(z["x"] == x and z["y"] == y and z["kind"] == kind
+                        for z in snapshot["zones"]),
+                    f"{kind} at {(x, y)} was not shared with every player",
+                )
+
+    def test_large_state_is_compressed_for_browser_clients(self):
+        self.request("/api/room/create", "host", {})
+        plain = Request(self.base + "/api/state", headers={"X-Player-Id": "host"})
+        zipped = Request(self.base + "/api/state", headers={
+            "X-Player-Id": "host", "Accept-Encoding": "gzip",
+        })
+        with urlopen(plain, timeout=8) as response:
+            plain_data = response.read()
+        with urlopen(zipped, timeout=8) as response:
+            self.assertEqual(response.headers["Content-Encoding"], "gzip")
+            zipped_data = response.read()
+        self.assertEqual(json.loads(gzip.decompress(zipped_data)), json.loads(plain_data))
+        self.assertLess(len(zipped_data), len(plain_data) / 3)
 
 
 if __name__ == "__main__":

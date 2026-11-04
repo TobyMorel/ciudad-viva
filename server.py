@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Servidor LAN local de Ciudad Viva. Solo biblioteca estándar de Python."""
-import heapq, json, math, mimetypes, os, socket, sys, threading, time, uuid, webbrowser
+import gzip, heapq, json, math, mimetypes, os, socket, sys, threading, time, uuid, webbrowser
 from urllib.parse import parse_qs, unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -6629,7 +6629,11 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
-        self.send_response(status); self.send_header("Content-Type",typ); self.send_header("Content-Length",str(len(data))); self.send_header("Cache-Control","no-store"); self.end_headers(); self.wfile.write(data)
+        compress=len(data)>1024 and "gzip" in self.headers.get("Accept-Encoding","").lower() and (typ.startswith("application/json") or typ.startswith("text/") or typ.startswith("application/javascript"))
+        if compress:data=gzip.compress(data,compresslevel=3)
+        self.send_response(status); self.send_header("Content-Type",typ); self.send_header("Content-Length",str(len(data))); self.send_header("Cache-Control","no-store"); self.send_header("Vary","Accept-Encoding")
+        if compress:self.send_header("Content-Encoding","gzip")
+        self.end_headers(); self.wfile.write(data)
     def do_OPTIONS(self): self._send(405,{"error":"Método no permitido"})
     def do_GET(self):
         path=unquote(self.path.split("?",1)[0])

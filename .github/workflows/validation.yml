@@ -40,6 +40,7 @@ jobs:
           node --check traffic.js
           node --check simulation_time.js
           node --check game.js
+          node --check beginnerTutorial.js
           node --check cursor_motion.js
           node --check cursor_presence.js
           node --check world3d.js
@@ -55,7 +56,7 @@ jobs:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
+        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tutorial.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
       - name: Cursores multijugador y presencia
         run: node --test tests/test_cursor_motion.mjs tests/test_cursor_presence.mjs
       - name: Stress económico 30 años (cinco perfiles)
@@ -107,6 +108,7 @@ jobs:
             tests/test_instant_public_services_ui.mjs
             tests/test_camera_markers.mjs
             tests/test_ui_layout.mjs
+            tests/test_beginner_tutorial_ui.mjs
             tests/test_utility_response_ui.mjs
             tests/test_municipal_forecast_ui.mjs
             tests/test_school_expansion_ui.mjs

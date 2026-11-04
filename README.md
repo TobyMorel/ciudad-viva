@@ -1,6 +1,6 @@
-# Ciudad Viva · Alfa 0.269
+# Ciudad Viva · Alfa 0.270
 
-**Plazas, estaciones y viajes con destino (0.269):** los autos de viajes reales se estacionan durante la jornada laboral o la visita; las líneas ferroviarias activas paran en sus estaciones y muestran pasajeros que bajan; los colectivos llevan pasajeros visibles; y las plazas incorporan juegos, deporte y ejercicio según sus visitas. Algunos vecinos salen a pasear con sus perros por la mañana y al atardecer. Las escenas se derivan de la partida y tienen límites para móviles; no cambian la economía ni la demanda.
+**Celdas y mundo 3D ampliados (0.270):** las celdas del mapa crecen un 50% y sus modelos un 35% manteniendo intactas las coordenadas de las partidas guardadas. La cámara, la selección y las superposiciones 3D siguen la escala nueva. Este cambio prepara el mapa para incorporar varias categorías de carreteras en próximas versiones.
 
 # Ciudad Viva · Alfa 0.267
 

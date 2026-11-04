@@ -1,7 +1,7 @@
 import {immersiveCityPlan,immersiveSignature} from './city_immersive_state.js';
 
 // Alfa 0.265: puramente visual, crea objetos 3D según los datos que YA existen.
-export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear}){
+export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear,worldScale=1}){
  const root=new THREE.Group();root.name='Ciudad Viva · La ciudad respira';
  scene.add(root);
  const layers={buses:new THREE.Group(),commerce:new THREE.Group(),coast:new THREE.Group(),animals:new THREE.Group(),
@@ -650,7 +650,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
  function inspect(px,py){
   let best=null;
   for(const item of inspectables){
-   const [x,z]=point(item.x,item.y),p=new THREE.Vector3(x,1.10,z).project(camera);
+   const [x,z]=point(item.x,item.y),p=new THREE.Vector3(x,1.10,z).multiplyScalar(worldScale).project(camera);
    if(p.z<-1||p.z>1)continue;
    const dist=Math.hypot((p.x+1)*canvas.clientWidth/2-px,(1-p.y)*canvas.clientHeight/2-py);
    if(dist<16&&(!best||dist<best.dist))best={...item,dist};

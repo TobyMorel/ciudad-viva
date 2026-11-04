@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.269",
+  "currentVersion": "0.270",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.270",
+      "date": "2026-11-04",
+      "title": "Celdas y mundo 3D ampliados",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Cada celda del mundo 3D pasa de 2 a 3 unidades (50% más) y los modelos del mapa crecen un 35%, dejando espacio relativo para vías más anchas. La cuadrícula lógica se conserva y las partidas guardadas mantienen sus coordenadas.",
+        "Los autos que quedan estacionados se desplazan a la franja lateral despejada, fuera del asfalto de circulación, y mantienen su escala respecto de la nueva celda.",
+        "La cámara, la selección de celdas, los cursores multijugador, la inspección de residentes y las luces se ajustan a la nueva escala.",
+        "Se amplía el alejamiento máximo para que también puedas recuperar el campo visual anterior y recorrer ciudades extensas.",
+        "La escala ampliada deja una base para calles con distintos anchos y categorías. Esta versión prepara el espacio; las nuevas tipologías viales se incorporarán después."
+      ],
+      "verification": "Revisión estática de sintaxis JavaScript, formato del diff y referencias de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.269",
       "date": "2026-11-04",

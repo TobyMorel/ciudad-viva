@@ -2,7 +2,7 @@ import {residentDirectory,residentCommute,parkActivityPlan,rushHourPlan,livingMo
 
 // Solo geometría Three.js procedimental, separada de la física y economía.
 // Dibujos únicamente a partir de proyectos, viajes y acontecimientos de la partida.
-export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen}){
+export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen,worldScale=1,tileSize=2}){
  const root=new THREE.Group();root.name='Alfa 0.263 · Historias y sucesos';
  scene.add(root);
  const projectsRoot=new THREE.Group(),parkRoot=new THREE.Group(),citizenRoot=new THREE.Group(),trafficRoot=new THREE.Group(),momentsRoot=new THREE.Group();
@@ -226,20 +226,20 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
    r.g.visible=h>=5.5&&h<=23||Boolean(r.commute&&moving);
    if(moving){
     const route=r.commute.route;
-    const length=(route.length-1)*2;
+    const length=(route.length-1)*tileSize;
     const travel=length*movement.progress;
-    const index=Math.min(route.length-2,Math.floor(travel/2)),f=(travel/2-index);
+    const index=Math.min(route.length-2,Math.floor(travel/tileSize)),f=(travel/tileSize-index);
     const from=movement.reverse?route[index+1]:route[index],to=movement.reverse?route[index]:route[index+1];
     const segmentProgress=movement.reverse?1-f:f;
     const dx=to[0]-from[0],dz=to[1]-from[1];
     if(Math.abs(dx)+Math.abs(dz)===1){
      // Camino sobre la vereda, no sobre el centro del carril.
-     r.g.position.set((from[0]+.5+dx*segmentProgress)*2+dz*.66,.1,(from[1]+.5+dz*segmentProgress)*2-dx*.66);
+     r.g.position.set((from[0]+.5+dx*segmentProgress)*tileSize+dz*.66,.1,(from[1]+.5+dz*segmentProgress)*tileSize-dx*.66);
      r.g.rotation.y=Math.atan2(dx,dz);
     }
    }else if(movement?.atWork){
     const route=r.commute.route,from=route.at(-2),to=route.at(-1),dx=to[0]-from[0],dz=to[1]-from[1];
-    r.g.position.set((to[0]+.5)*2+dz*.66,.1,(to[1]+.5)*2-dx*.66);
+    r.g.position.set((to[0]+.5)*tileSize+dz*.66,.1,(to[1]+.5)*tileSize-dx*.66);
    }else{
     const [x,z]=r.roadside;
     r.g.position.set(x,.1,z);
@@ -272,13 +272,13 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
  }
  function getResidentLocation(id){
   const r=residents.get(String(id));if(!r||!r.g.visible)return null;
-  return {id:String(id),name:r.name,x:r.g.position.x/2-.5,y:r.g.position.z/2-.5,visible:r.g.visible};
+  return {id:String(id),name:r.name,x:r.g.position.x/tileSize-.5,y:r.g.position.z/tileSize-.5,visible:r.g.visible};
  }
  function residentHit(px,py){
   let best=null;
   for(const [id,r] of residents){
    if(!r.g.visible)continue;
-   const point=r.g.position.clone();point.y+=.43;point.project(camera);
+   const point=r.g.position.clone();point.y+=.43;point.multiplyScalar(worldScale).project(camera);
    if(point.z<-1||point.z>1)continue;
    const x=(point.x+1)*canvas.clientWidth/2,y=(1-point.y)*canvas.clientHeight/2,d=Math.hypot(px-x,py-y);
    if(d<(smallScreen?26:21)&&(!best||d<best.distance))best={id,distance:d,person:r};

@@ -2,11 +2,13 @@ import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
 import {daylightIntensity} from './simulation_time.js';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.269';
-import {createLivingCity3D} from './living_city_3d.js?v=0.269';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.269';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.270';
+import {createLivingCity3D} from './living_city_3d.js?v=0.270';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.270';
 
-const TILE=2, LAND_CHUNK_SIZE=8;
+// La cuadrícula lógica conserva sus celdas; en escena, cada celda mide 3
+// unidades y los modelos crecen un 35%, dejando más espacio entre ellos.
+const MAP_WORLD_SCALE=1.35, MAP_CELL_WORLD_SIZE=3, TILE=MAP_CELL_WORLD_SIZE/MAP_WORLD_SCALE, LAND_CHUNK_SIZE=8;
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
 const key=(x,y)=>`${x},${y}`;
 const waterTile=(x,y)=>x===24||x===25;
@@ -47,8 +49,8 @@ export function createWorld(canvas){
   // el shadow map evita una pasada adicional justo al acercar la cámara.
   renderer.shadowMap.enabled=false;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  const scene=new THREE.Scene();scene.background=new THREE.Color('#bcd9df');scene.fog=new THREE.Fog('#bcd9df',132,240);
-  const camera=new THREE.OrthographicCamera(-40,40,30,-30,.1,350);
+  const scene=new THREE.Scene();scene.scale.setScalar(MAP_WORLD_SCALE);scene.background=new THREE.Color('#bcd9df');scene.fog=new THREE.Fog('#bcd9df',132*MAP_WORLD_SCALE,240*MAP_WORLD_SCALE);
+  const camera=new THREE.OrthographicCamera(-40,40,30,-30,.1,350*MAP_WORLD_SCALE);
   const hemi=new THREE.HemisphereLight('#fff5e5','#597d6e',.94);scene.add(hemi);
   const sun=new THREE.DirectionalLight('#ffe4bb',2.65);sun.position.set(3,31,28);sun.castShadow=false;scene.add(sun);sun.target.position.set(28,0,20);scene.add(sun.target);
   const staticRoot=new THREE.Group(),vegetationRoot=new THREE.Group(),landShadeRoot=new THREE.Group(),buildingRoot=new THREE.Group(),dynamicRoot=new THREE.Group(),trafficRoot=new THREE.Group(),selectionRoot=new THREE.Group(),weatherSprayRoot=new THREE.Group();scene.add(staticRoot,vegetationRoot,landShadeRoot,buildingRoot,dynamicRoot,trafficRoot,selectionRoot,weatherSprayRoot);const buildingModels=new Map();
@@ -326,7 +328,7 @@ export function createWorld(canvas){
   }
   function updateVegetation(){
     const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;
-    const unit=(58/clamp(view.zoom,.55,4))/Math.max(1,h),chunkX=Math.floor((view.panX*unit+cameraAnchor.x*TILE)/16),chunkY=Math.floor((view.panY*unit+cameraAnchor.y*TILE)/16),signature=`${chunkX}:${chunkY}:${view.rotation}:${Math.round(view.zoom*4)}:${w}:${h}`;
+    const unit=(58/clamp(view.zoom,.43,4))/Math.max(1,h),chunkX=Math.floor((view.panX*unit/MAP_WORLD_SCALE+cameraAnchor.x*TILE)/(LAND_CHUNK_SIZE*TILE)),chunkY=Math.floor((view.panY*unit/MAP_WORLD_SCALE+cameraAnchor.y*TILE)/(LAND_CHUNK_SIZE*TILE)),signature=`${chunkX}:${chunkY}:${view.rotation}:${Math.round(view.zoom*4)}:${w}:${h}`;
     if(signature===vegetationKey)return;vegetationKey=signature;
     vegetationBlockers.clear();
     const corners=[[0,0],[w,0],[0,h],[w,h]].map(([x,y])=>screenToTile(x,y)),xs=corners.map(p=>p[0]),ys=corners.map(p=>p[1]),minX=Math.min(...xs)-3,maxX=Math.max(...xs)+3,minY=Math.min(...ys)-3,maxY=Math.max(...ys)+3,span=Math.max(maxX-minX,maxY-minY);
@@ -343,13 +345,13 @@ export function createWorld(canvas){
     if(farLOD)addFarVegetation(trees,bushes);else if(!nearLOD)addDetailedVegetation(trees,bushes)
   }
   const spectacle=createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,box,sphere,cylinder,mat,tilePos,seeded,smallScreen,geometry});
-  const living3d=createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen});
-  const immersive3d=createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear});
+  const living3d=createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen,worldScale:MAP_WORLD_SCALE,tileSize:TILE});
+  const immersive3d=createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear,worldScale:MAP_WORLD_SCALE});
   let poweredStreetlights=new Set();
   const routeActors=[],fireVisuals=[],signalBulbs=[],streetLights=[],signalTiles=new Set(),wasteContainerModels=new Map();
   // Presupuesto acotado de luces de faros: fuentes reales, sin mapas de sombra.
   const headlightCarBudget=smallScreen?5:10,headlightLightPool=Array.from({length:headlightCarBudget*2},()=>{
-    const light=new THREE.PointLight('#ffe1a4',0,4.6,2);light.castShadow=false;light.visible=false;scene.add(light);return light;
+    const light=new THREE.PointLight('#ffe1a4',0,4.6*MAP_WORLD_SCALE,2);light.castShadow=false;light.visible=false;scene.add(light);return light;
   });
   const headlightProjection=new THREE.Vector3();let activeHeadlightActors=[],nextHeadlightRefresh=0;
   function updateTrafficHeadlights(actors,enabled,now){
@@ -357,7 +359,7 @@ export function createWorld(canvas){
     if(now>=nextHeadlightRefresh){
       const candidates=[];camera.updateMatrixWorld(true);
       for(const actor of actors){const offsets=actor.mesh?.userData.headlightOffsets;if(!offsets||actor.mesh.visible===false)continue;
-        const projected=headlightProjection.copy(actor.mesh.position).project(camera);
+        const projected=headlightProjection.copy(actor.mesh.position).multiplyScalar(MAP_WORLD_SCALE).project(camera);
         if(projected.z< -1||projected.z>1||Math.abs(projected.x)>1.08||Math.abs(projected.y)>1.08)continue;
         candidates.push({actor,distance:projected.x*projected.x+projected.y*projected.y});
       }
@@ -368,7 +370,7 @@ export function createWorld(canvas){
     let index=0;
     for(const actor of activeHeadlightActors){
       for(const offset of actor.mesh.userData.headlightOffsets||[]){const light=headlightLightPool[index++];if(!light)break;
-        light.position.set(offset[0],offset[1],offset[2]);actor.mesh.localToWorld(light.position);
+        light.position.set(offset[0],offset[1],offset[2]);actor.mesh.localToWorld(light.position);light.position.multiplyScalar(1/MAP_WORLD_SCALE);
         light.visible=true;light.intensity=1.45;
       }
     }
@@ -391,13 +393,13 @@ export function createWorld(canvas){
   let view={zoom:1,panX:0,panY:0,rotation:0},cameraAnchor={x:14,y:10},lastFrame=0,simulationClock=0,simulationSpeed=1,simulationPaused=false,visualTimeOfDayMinutes=360,visualGameDay=1,visualSignature='',lastProjection='',fpsWindowStart=performance.now(),fpsWindowFrames=0,renderFps=0,lastSceneSyncMs=0,sceneSyncRebuilds=0,sceneSyncFastPaths=0;
   const fpsCounter=document.getElementById('fpsCounter');
   function adaptRenderResolution(now){fpsWindowFrames++;const elapsed=now-fpsWindowStart;if(elapsed<1800)return;renderFps=fpsWindowFrames*1000/elapsed;fpsCounter.textContent=`FPS ${Math.round(renderFps)}`;fpsCounter.setAttribute('aria-label',`${Math.round(renderFps)} fotogramas por segundo`);fpsWindowFrames=0;fpsWindowStart=now;let next=renderPixelRatio;if(renderFps<38)next=Math.max(minPixelRatio,renderPixelRatio*.88);else if(renderFps>56)next=Math.min(maxPixelRatio,renderPixelRatio+.05);if(Math.abs(next-renderPixelRatio)>.025){renderPixelRatio=Number(next.toFixed(2));renderer.setPixelRatio(renderPixelRatio);lastProjection=''}}
-  function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;const dpr=renderer.getPixelRatio();if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr))renderer.setSize(w,h,false);const projection=`${w}:${h}:${view.zoom}`;if(projection===lastProjection)return;lastProjection=projection;const span=58/clamp(view.zoom,.55,4),aspect=w/h;camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix()}
-  function updateCamera(){resize();const yaw=Math.PI/4+view.rotation*Math.PI/2,span=58/clamp(view.zoom,.55,4),units=span/Math.max(1,canvas.clientHeight);const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));const target=new THREE.Vector3(cameraAnchor.x*TILE,0,cameraAnchor.y*TILE).addScaledVector(right,-view.panX*units).addScaledVector(upGround,-view.panY*units),recycle=20000;for(const axis of ['x','z']){const delta=target[axis]-infiniteGroundOffset[axis];if(Math.abs(delta)>10000)infiniteGroundOffset[axis]+=Math.trunc(delta/recycle)*recycle;for(const ground of infiniteGround)ground.position[axis]=infiniteGroundOffset[axis]}sun.target.position.set(target.x,0,target.z);sun.position.set(target.x+3,31,target.z+28);camera.position.copy(target).add(new THREE.Vector3(Math.sin(yaw)*60,65,Math.cos(yaw)*60));camera.lookAt(target);camera.updateMatrixWorld()}
+  function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;const dpr=renderer.getPixelRatio();if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr))renderer.setSize(w,h,false);const projection=`${w}:${h}:${view.zoom}`;if(projection===lastProjection)return;lastProjection=projection;const span=58/clamp(view.zoom,.43,4),aspect=w/h;camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix()}
+  function updateCamera(){resize();const yaw=Math.PI/4+view.rotation*Math.PI/2,span=58/clamp(view.zoom,.43,4),units=span/Math.max(1,canvas.clientHeight);const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));const target=new THREE.Vector3(cameraAnchor.x*TILE*MAP_WORLD_SCALE,0,cameraAnchor.y*TILE*MAP_WORLD_SCALE).addScaledVector(right,-view.panX*units).addScaledVector(upGround,-view.panY*units),targetLocalX=target.x/MAP_WORLD_SCALE,targetLocalZ=target.z/MAP_WORLD_SCALE,recycle=20000;for(const [axis,localTarget] of [['x',targetLocalX],['z',targetLocalZ]]){const delta=localTarget-infiniteGroundOffset[axis];if(Math.abs(delta)>10000)infiniteGroundOffset[axis]+=Math.trunc(delta/recycle)*recycle;for(const ground of infiniteGround)ground.position[axis]=infiniteGroundOffset[axis]}sun.target.position.set(targetLocalX,0,targetLocalZ);sun.position.set(targetLocalX+3,31,targetLocalZ+28);camera.position.copy(target).add(new THREE.Vector3(Math.sin(yaw)*60*MAP_WORLD_SCALE,65*MAP_WORLD_SCALE,Math.cos(yaw)*60*MAP_WORLD_SCALE));camera.lookAt(target);camera.updateMatrixWorld()}
   const daySky=new THREE.Color('#bcd9df'),nightSky=new THREE.Color('#172633'),twilightSky=new THREE.Color('#cb9b79'),dayGround=new THREE.Color('#597d6e'),nightGround=new THREE.Color('#253b4c'),sunDay=new THREE.Color('#ffe4bb'),sunNight=new THREE.Color('#8096c4'),hemiNight=new THREE.Color('#9fbad0'),hemiDay=new THREE.Color('#fff5e5'),tempSky=new THREE.Color(),tempHemi=new THREE.Color(),tempGround=new THREE.Color();
   function updateLighting(minutes){const daylight=daylightIntensity(minutes),horizon=clamp(1-Math.abs(((minutes%1440)+1440)%1440-720)/180,0,1);tempSky.copy(nightSky).lerp(daySky,daylight).lerp(twilightSky,horizon*(1-daylight)*.72);scene.background.copy(tempSky);scene.fog.color.copy(tempSky);tempHemi.copy(hemiNight).lerp(hemiDay,daylight);hemi.color.copy(tempHemi);tempGround.copy(nightGround).lerp(dayGround,daylight);hemi.groundColor.copy(tempGround);hemi.intensity=.38+daylight*.64;sun.color.copy(sunNight).lerp(sunDay,daylight);sun.intensity=.24+daylight*2.35;renderer.toneMappingExposure=.84+daylight*.18;const glow=1-daylight;for(const lamp of streetLights){const powered=poweredStreetlights.has(key(lamp.x,lamp.y));lamp.light.intensity=powered?glow*3.2:0;lamp.bulb.material.emissiveIntensity=powered?glow*3.2:0;lamp.pool.material.opacity=powered?glow*.4:0}}
   function environmentalRoadColor(score){if(!view.environmentOverlay)return null;if(view.environmentOverlay==='flood')return score>=65?'#3694aa':score>=1?'#8cbecc':'#aaa997';if(score<20)return'#58a47a';if(score<40)return'#d2bd65';if(score<65)return'#e28b58';return'#c95850'}
   function addRoad(root,x,y,roads,stress=0,signals=false,environmentIndex=0){const [cx,cz]=tilePos(x,y),n=roads.has(key(x,y-1)),s=roads.has(key(x,y+1)),e=roads.has(key(x+1,y)),w=roads.has(key(x-1,y)),degree=Number(n)+Number(s)+Number(e)+Number(w);const asphalt=environmentalRoadColor(environmentIndex)||(view.trafficOverlay?(stress>.8?'#c64e48':stress>.45?'#e88b48':stress>.2?'#e7be58':'#55af82'):COLORS.road);box(root,1.37,.055,1.37,COLORS.walk,cx,.006,cz,{cast:false});box(root,1.03,.052,1.03,asphalt,cx,.052,cz,{cast:false});
-    for(const [dx,dy] of [[1,0],[0,1]]){if(!roads.has(key(x+dx,y+dy)))continue;const horizontal=dx===1,sx=cx+dx,zs=cz+dy;box(root,horizontal?2.08:1.37,.055,horizontal?1.37:2.08,COLORS.walk,sx,.006,zs,{cast:false});box(root,horizontal?2.08:1.03,.052,horizontal?1.03:2.08,asphalt,sx,.052,zs,{cast:false});for(const step of [-.55,.55])box(root,horizontal?.27:.025,.008,horizontal?.025:.27,COLORS.line,sx+(horizontal?step:0),.083,zs+(horizontal?0:step),{cast:false})}
+    for(const [dx,dy] of [[1,0],[0,1]]){if(!roads.has(key(x+dx,y+dy)))continue;const horizontal=dx===1,sx=cx+dx*TILE,zs=cz+dy*TILE;box(root,horizontal?TILE+.08:1.37,.055,horizontal?1.37:TILE+.08,COLORS.walk,sx,.006,zs,{cast:false});box(root,horizontal?TILE+.08:1.03,.052,horizontal?1.03:TILE+.08,asphalt,sx,.052,zs,{cast:false});for(const step of [-.55,.55])box(root,horizontal?.27:.025,.008,horizontal?.025:.27,COLORS.line,sx+(horizontal?step:0),.083,zs+(horizontal?0:step),{cast:false})}
     if(degree===2&&n&&s||degree===2&&e&&w){for(const step of [-.31,.31])box(root,e&&w?.27:.025,.009,e&&w?.025:.27,COLORS.line,cx+(e&&w?step:0),.084,cz+(n&&s?step:0),{cast:false})}
     if(degree>=3){for(const [dx,dy,on] of [[0,-1,n],[0,1,s],[-1,0,w],[1,0,e]]){if(!on)continue;for(let j=-2;j<=2;j++){const shift=j*.16;box(root,dx?.14:.09,.009,dy?.14:.09,'#f6f1de',cx+(dx?.53*dx:shift),.085,cz+(dy?.53*dy:shift),{cast:false})}}}
     if(signals){
@@ -421,7 +423,7 @@ export function createWorld(canvas){
     }
     // Una farola cada dos tramos en cada dirección. El brazo apunta al asfalto,
     // nunca sobre la acera; la orientación alterna solo el lado de montaje.
-    if((x+y)%2===0){const horizontal=e||w,side=(x+y)%2?1:-1,px=horizontal?cx:cx+side*.59,pz=horizontal?cz+side*.59:cz,headX=horizontal?cx:px-side*.27,headZ=horizontal?pz-side*.27:cz;box(root,.065,1.34,.065,'#4b5755',px,.69,pz);const arm=box(root,.06,.045,.48,'#4b5755',(px+headX)/2,1.34,(pz+headZ)/2);if(!horizontal)arm.rotation.y=Math.PI/2;const bulb=sphere(root,.115,'#ffe4a6',headX,1.3,headZ,2);bulb.material=mat('#ffe4a6',{emissive:'#ffc76b',emissiveIntensity:0});const light=new THREE.PointLight('#ffca70',0,8,2);light.position.set(headX,1.2,headZ);root.add(light);const pool=new THREE.Mesh(new THREE.CircleGeometry(1.45,20),new THREE.MeshBasicMaterial({color:'#ffd17a',transparent:true,opacity:0,depthWrite:false,toneMapped:false}));pool.rotation.x=-Math.PI/2;pool.position.set(headX,.072,headZ);root.add(pool);streetLights.push({light,bulb,pool,x,y})
+    if((x+y)%2===0){const horizontal=e||w,side=(x+y)%2?1:-1,px=horizontal?cx:cx+side*.59,pz=horizontal?cz+side*.59:cz,headX=horizontal?cx:px-side*.27,headZ=horizontal?pz-side*.27:cz;box(root,.065,1.34,.065,'#4b5755',px,.69,pz);const arm=box(root,.06,.045,.48,'#4b5755',(px+headX)/2,1.34,(pz+headZ)/2);if(!horizontal)arm.rotation.y=Math.PI/2;const bulb=sphere(root,.115,'#ffe4a6',headX,1.3,headZ,2);bulb.material=mat('#ffe4a6',{emissive:'#ffc76b',emissiveIntensity:0});const light=new THREE.PointLight('#ffca70',0,8*MAP_WORLD_SCALE,2);light.position.set(headX,1.2,headZ);root.add(light);const pool=new THREE.Mesh(new THREE.CircleGeometry(1.45,20),new THREE.MeshBasicMaterial({color:'#ffd17a',transparent:true,opacity:0,depthWrite:false,toneMapped:false}));pool.rotation.x=-Math.PI/2;pool.position.set(headX,.072,headZ);root.add(pool);streetLights.push({light,bulb,pool,x,y})
       roundedBox(root,.18,.13,.18,'#66766c',px,.085,pz,.035);
       rodBetween(root,[px,.99,pz],[headX,1.31,headZ],.018,'#64746b',6);
       roundedBox(root,.22,.085,.19,'#f2daa0',headX,1.2,headZ,.04);
@@ -1660,8 +1662,8 @@ export function createWorld(canvas){
           start=outbound[1];end=returnWindow[0];if(end<=start)end=1170;
         }else{start=TRIP_WINDOWS.midday[1];end=TRIP_WINDOWS.afternoonReturn[0]}
         if(end<=start)continue;
-        const center=tilePos(roadEnd[0],roadEnd[1]),side=slot===0?-.54:.54,px=center[0]+dz*side,pz=center[1]-dx*side;
-        const mesh=makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][drawn%4]);mesh.position.set(px,.025,pz);mesh.rotation.y=Math.atan2(dx,dz);mesh.scale.setScalar(.84);mesh.userData.headlightOffsets=null;
+        const center=tilePos(roadEnd[0],roadEnd[1]),side=slot===0?-.94:.94,px=center[0]+dz*side,pz=center[1]-dx*side;
+        const mesh=makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][drawn%4]);mesh.position.set(px,.025,pz);mesh.rotation.y=Math.atan2(dx,dz);mesh.scale.setScalar(.78);mesh.userData.headlightOffsets=null;
         routeActors.push({mesh,actorKey:`parking:${trip.reason}:${trip.to.join(',')}:${slot}`,parkingStay:{start,end},selection:{type:'Auto estacionado',title:`Estacionamiento · ${trip.destinationName||trip.reason}`,description:'Vehículo de un viaje real que permanece junto al destino mientras sus ocupantes trabajan o hacen una visita.',metrics:[['Destino',trip.destinationName||`${trip.to[0]+1}, ${trip.to[1]+1}`],['Permanencia',`${Math.round((end-start)/60)} h`],['Viaje',trip.reason]]}});
         occupied.set(destination,slot+1);drawn++;
       }
@@ -1852,22 +1854,23 @@ export function createWorld(canvas){
     renderer.render(scene,camera);
   }
   requestAnimationFrame(animate);
+  function projectLocalPosition(position){return position.clone().multiplyScalar(MAP_WORLD_SCALE).project(camera)}
   function projectTile(x,y,height=2.5){
     updateCamera();
-    const projected=new THREE.Vector3((x+.5)*TILE,height,(y+.5)*TILE).project(camera);
+    const projected=new THREE.Vector3((x+.5)*TILE*MAP_WORLD_SCALE,height*MAP_WORLD_SCALE,(y+.5)*TILE*MAP_WORLD_SCALE).project(camera);
     const width=canvas.clientWidth,heightPixels=canvas.clientHeight;
     const visible=projected.z>=-1&&projected.z<=1&&projected.x>-.96&&projected.x<.96&&projected.y>-.95&&projected.y<.96;
     return {x:(projected.x+1)*width/2,y:(1-projected.y)*heightPixels/2,visible};
   }
-  function screenToMap(px,py){updateCamera();const w=canvas.clientWidth,h=canvas.clientHeight;raycaster.setFromCamera(new THREE.Vector2(px/w*2-1,1-py/h*2),camera);if(!raycaster.ray.intersectPlane(groundPlane,hit))return [NaN,NaN];return [hit.x/TILE,hit.z/TILE]}
+  function screenToMap(px,py){updateCamera();const w=canvas.clientWidth,h=canvas.clientHeight;raycaster.setFromCamera(new THREE.Vector2(px/w*2-1,1-py/h*2),camera);if(!raycaster.ray.intersectPlane(groundPlane,hit))return [NaN,NaN];return [hit.x/(TILE*MAP_WORLD_SCALE),hit.z/(TILE*MAP_WORLD_SCALE)]}
   function screenToTile(px,py){const [x,y]=screenToMap(px,py);return [Number.isFinite(x)?Math.floor(x):-1,Number.isFinite(y)?Math.floor(y):-1]}
-  function screenToActor(px,py){updateCamera();const w=canvas.clientWidth,h=canvas.clientHeight,candidates=[];for(const actor of routeActors){if(!actor.selection)continue;const point=actor.mesh.position.clone().project(camera);if(point.z<-1||point.z>1)continue;const sx=(point.x+1)*w/2,sy=(1-point.y)*h/2,d=Math.hypot(sx-px,sy-py),limit=smallScreen?26:20;if(d<=limit)candidates.push({actor,d,z:point.z})}candidates.sort((a,b)=>a.d-b.d||a.z-b.z);return living3d.residentHit(px,py)||candidates[0]?.actor.selection||immersive3d.inspect(px,py)||null}
+  function screenToActor(px,py){updateCamera();const w=canvas.clientWidth,h=canvas.clientHeight,candidates=[];for(const actor of routeActors){if(!actor.selection)continue;const point=projectLocalPosition(actor.mesh.position);if(point.z<-1||point.z>1)continue;const sx=(point.x+1)*w/2,sy=(1-point.y)*h/2,d=Math.hypot(sx-px,sy-py),limit=smallScreen?26:20;if(d<=limit)candidates.push({actor,d,z:point.z})}candidates.sort((a,b)=>a.d-b.d||a.z-b.z);return living3d.residentHit(px,py)||candidates[0]?.actor.selection||immersive3d.inspect(px,py)||null}
   function setView(nextView){
     const wasFar=shouldUseFarBuildingLOD();view=nextView;updateShadowQuality();
     if(wasFar!==shouldUseFarBuildingLOD()&&lastSceneState){visualSignature='';sync(lastSceneState,lastChosenTile,nextView);return}
     updateCamera();updateVegetation();updateLandShading(landShadeState);renderer.render(scene,camera)
   }
-  function focusTile(x,y,nextView=view){view={...nextView};updateShadowQuality();resize();updateVegetation();const yaw=Math.PI/4+view.rotation*Math.PI/2,right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),span=58/clamp(view.zoom,.55,4),units=span/Math.max(1,canvas.clientHeight),dx=cameraAnchor.x*TILE-(Number(x)+.5)*TILE,dz=cameraAnchor.y*TILE-(Number(y)+.5)*TILE;view.panX=(dx*right.x+dz*right.z)/units;view.panY=(dx*upGround.x+dz*upGround.z)/units;updateCamera();updateLandShading(landShadeState);renderer.render(scene,camera);return{panX:view.panX,panY:view.panY}}
+  function focusTile(x,y,nextView=view){view={...nextView};updateShadowQuality();resize();updateVegetation();const yaw=Math.PI/4+view.rotation*Math.PI/2,right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),span=58/clamp(view.zoom,.43,4),units=span/Math.max(1,canvas.clientHeight),dx=(cameraAnchor.x*TILE-(Number(x)+.5)*TILE)*MAP_WORLD_SCALE,dz=(cameraAnchor.y*TILE-(Number(y)+.5)*TILE)*MAP_WORLD_SCALE;view.panX=(dx*right.x+dz*right.z)/units;view.panY=(dx*upGround.x+dz*upGround.z)/units;updateCamera();updateLandShading(landShadeState);renderer.render(scene,camera);return{panX:view.panX,panY:view.panY}}
   const buildPreviewCache=new Map(),previewWidth=144,previewHeight=100,previewCanvas=document.createElement('canvas');let previewRenderer=null;
   const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#dce9da');previewScene.add(new THREE.HemisphereLight('#fff8e7','#637b68',1.3));const previewSun=new THREE.DirectionalLight('#fff0cd',2.1);previewSun.position.set(4,8,6);previewScene.add(previewSun);const previewCamera=new THREE.PerspectiveCamera(32,previewWidth/previewHeight,.1,30);previewCamera.position.set(3.7,3.1,4.8);previewCamera.lookAt(0,1,0);
 
@@ -1971,9 +1974,9 @@ export function createWorld(canvas){
     getResidentLocation:id=>living3d.getResidentLocation(id),
     getCinematicSubjects:()=>routeActors.filter(a=>a.selection&&a.mesh&&a.route?.length>1).slice(0,85).map((a,i)=>({id:a.actorKey||a.selection.type+':'+a.selection.title+':'+i,type:a.selection.type,title:a.selection.title,x:a.mesh.position.x/TILE-.5,y:a.mesh.position.z/TILE-.5})),
     invalidate(){visualSignature=''},
-    getSceneDiagnostics:()=>({farBuildingLOD:shouldUseFarBuildingLOD(),lastSceneSyncMs:Number(lastSceneSyncMs.toFixed(1)),sceneSyncRebuilds,sceneSyncFastPaths,animatedPedestrians:routeActors.filter(a=>a.mesh.userData.walkCycle).length,animatedCyclists:routeActors.filter(a=>a.mesh.userData.bikeCycle).length,cachedBuildingModels:buildingModels.size,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometryCount:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),renderFps:Number(renderFps.toFixed(1)),vegetationLOD,vegetationInstances,vegetationTrees:vegetationTreeCount,vegetationBatches:vegetationBatchCount,canvasWidth:canvas.width,canvasHeight:canvas.height,shadowMapEnabled:renderer.shadowMap.enabled,shadowMapSize:activeShadowMapSize,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,...spectacle.diagnostics(),...living3d.diagnostics(),...immersive3d.diagnostics(),metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
-    getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
-    getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=a.mesh.position.clone().project(camera);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),getEntryTrafficRoutes:()=>routeActors.filter(a=>a.actorKey?.startsWith('inbound:')).map(a=>({id:a.actorKey,route:a.route.map(point=>[Math.round(point[0]/TILE-.5),Math.round(point[1]/TILE-.5)]),position:[a.mesh.position.x,a.mesh.position.z]})),
+    getSceneDiagnostics:()=>({mapWorldScale:MAP_WORLD_SCALE,mapCellWorldSize:MAP_CELL_WORLD_SIZE,farBuildingLOD:shouldUseFarBuildingLOD(),lastSceneSyncMs:Number(lastSceneSyncMs.toFixed(1)),sceneSyncRebuilds,sceneSyncFastPaths,animatedPedestrians:routeActors.filter(a=>a.mesh.userData.walkCycle).length,animatedCyclists:routeActors.filter(a=>a.mesh.userData.bikeCycle).length,cachedBuildingModels:buildingModels.size,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometryCount:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio(),renderFps:Number(renderFps.toFixed(1)),vegetationLOD,vegetationInstances,vegetationTrees:vegetationTreeCount,vegetationBatches:vegetationBatchCount,canvasWidth:canvas.width,canvasHeight:canvas.height,shadowMapEnabled:renderer.shadowMap.enabled,shadowMapSize:activeShadowMapSize,contextLost:renderer.getContext().isContextLost(),paused:simulationPaused,dynamicObjects:dynamicRoot.children.length,...spectacle.diagnostics(),...living3d.diagnostics(),...immersive3d.diagnostics(),metroStations:dynamicRoot.children.filter(m=>m.userData.metroStation).length,physicalRailStations:dynamicRoot.children.filter(m=>m.userData.railStationSite).length,metroTunnelSegments:dynamicRoot.children.filter(m=>m.userData.metroTunnelSegment).length,metroTrains:trafficRoot.children.filter(m=>m.userData.metroProjection).length,railTrains:trafficRoot.children.filter(m=>m.userData.railTrain).length,railTracks:dynamicRoot.children.filter(m=>m.userData.railTrack).length,railPlatforms:dynamicRoot.children.filter(m=>m.userData.railPlatform).length,streetLightCount:streetLights.length,illuminatedStreetlights:streetLights.filter(l=>poweredStreetlights.has(key(l.x,l.y))).length,tunnel:{visible:gatewayTunnel.visible,roofVisible:tunnelRoof.visible,length:tunnelRoof.geometry.parameters.width}}),
+    getMaritimeActors:()=>routeActors.filter(a=>a.selection?.type?.includes('Buque')).map(a=>{const p=projectLocalPosition(a.mesh.position);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,position:[a.mesh.position.x,a.mesh.position.z]}}),
+    getInspectableActors:()=>routeActors.filter(a=>a.selection).map(a=>{const p=projectLocalPosition(a.mesh.position);return {type:a.selection.type,title:a.selection.title,x:(p.x+1)*canvas.clientWidth/2,y:(1-p.y)*canvas.clientHeight/2,visible:p.z>=-1&&p.z<=1&&p.x>-.98&&p.x<.98&&p.y>-.98&&p.y<.98,routeLength:a.route?.length||0,rotationY:a.mesh.rotation.y}}),getEntryTrafficRoutes:()=>routeActors.filter(a=>a.actorKey?.startsWith('inbound:')).map(a=>({id:a.actorKey,route:a.route.map(point=>[Math.round(point[0]/TILE-.5),Math.round(point[1]/TILE-.5)]),position:[a.mesh.position.x,a.mesh.position.z]})),
     getFireParticleCounts:()=>({incidents:fireVisuals.length,flames:fireVisuals.reduce((n,f)=>n+f.flames.length,0),smoke:fireVisuals.reduce((n,f)=>n+f.smoke.length,0)}),
     getCoverageTiles:()=>dynamicRoot.children.filter(m=>m.userData.serviceCoverage).map(m=>({x:m.position.x,z:m.position.z,radius:m.userData.serviceRadius,width:m.geometry?.parameters?.width||0})),
     getEmergencyActors:()=>trafficRoot.children.filter(m=>m.userData.emergencyRole).map(m=>({

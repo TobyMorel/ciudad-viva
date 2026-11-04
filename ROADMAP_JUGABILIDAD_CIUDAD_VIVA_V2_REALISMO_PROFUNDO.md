@@ -1040,6 +1040,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [x] Representar el acceso peatonal a viajes en colectivo y la llegada a los edificios de origen y destino según las rutinas existentes (Alfa 0.268; visual, sin cambiar la demanda ni los tiempos simulados).
 - [x] Representar el estacionamiento temporal junto a destinos de trabajo y visita usando viajes en auto reales y límites visuales de ocupación (Alfa 0.269; solo visual).
 - [x] Animar la llegada de trenes a estaciones operativas con pasajeros en andenes y descensos hacia la calle, condicionados por el servicio y la demanda existentes (Alfa 0.269; solo visual).
+- [x] Ampliar las celdas 50% y los modelos del mundo 3D 35%, conservando selección, cámara y coordenadas de juego (Alfa 0.270; base espacial para incorporar más categorías viales).
 
 ### Criterios de aceptación
 

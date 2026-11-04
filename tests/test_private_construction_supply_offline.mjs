@@ -31,15 +31,16 @@ async function withCity(city,callback){
     globalThis.fetch=fetch0;globalThis.localStorage=storage0;Date.now=now0;
   }
 }
-test('Offline: viviendas zonificadas usan inversión privada y no esperan entregas municipales',async()=>{
-  const city=base(),before=city.privateCapital;
+test('Offline: viviendas zonificadas usan promotor externo y no esperan entregas municipales',async()=>{
+  const city=base();
   await withCity(city,async({tick})=>{
     const s=await tick(),project=s.projects.find(p=>p.zonedDevelopment&&p.kind==='home');
     assert.ok(project,'Debe iniciar una vivienda privada cuando hay demanda y capital');
     assert.equal(project.privateMaterialsIncluded,true);
     assert.ok(Object.values(project.materialsRequired).every(n=>n===0));
     assert.equal(s.supply.orders.filter(o=>o.projectId===project.id).length,0);
-    assert.ok(s.privateCapital-(s.housingDemand?.lastFilled||0)*280<before,'El promotor aporta el costo de la obra desde su capital');
+    assert.equal(project.privatePaid,true,'La obra pertenece al promotor externo');
+    assert.equal(project.municipalPermitPaid,0,'La caja municipal no financia la obra privada');
     assert.equal(project.status,'contratada','La casa igualmente pasa por construcción y lleva plazos');
   });
 });
@@ -49,11 +50,11 @@ test('Offline: la vivienda zonificada construye sin depender de inventarios',asy
   for(const depot of city.supply.depots||[])depot.capacity=0;
   for(const stock of Object.values(city.supply.suppliers))
     for(const key of ['aggregate','concrete','steel','timber','components'])if(key in stock)stock[key]=0;
-  const cash=city.privateCapital;
+  city.privateCapital=0;
   await withCity(city,async({tick})=>{
     const s=await tick();
     assert.equal(s.projects.filter(p=>p.zonedDevelopment&&p.kind==='home').length,1);
     assert.equal(s.supply.orders.filter(o=>o.privateContract).length,0);
-    assert.ok(s.privateCapital-(s.housingDemand?.lastFilled||0)*280<cash);
+    assert.equal(s.projects.find(p=>p.zonedDevelopment&&p.kind==='home').privatePaid,true);
   });
 });

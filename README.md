@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.266
+
+**Impactos ambientales por barrio (0.266):** el informe **Clima** muestra índices locales de aire, ruido y calor, vinculados con recorridos, emisiones estimadas, fábricas y obras activas, parques y sombra vegetal. Las capas de aire, ruido, calor y anegamiento colorean las calles para localizar sectores con presión ambiental o exposición pluvial. Los parques amortiguan parcialmente calor y contaminación; el drenaje reporta su cobertura y anegamientos presentes. La exposición al aire eleva de forma moderada la demanda agregada de salud primaria. Los índices comparan barrios dentro de la ciudad y no son mediciones científicas. Disponible en partidas Offline y LAN.
+
 # Ciudad Viva · Alfa 0.265
 
 **Faros reales y fauna en vuelo (0.265):** los faros ya no muestran esferas: luces puntuales reales iluminan la calle, sin sombras dinámicas y con un presupuesto acotado que prioriza los vehículos cercanos. Gaviotas y palomas toman rutas amplias sobre la ciudad con tiempos escalonados; las mariposas revolotean dentro de los parques. Los barcos conservan su ubicación sobre el río y la flotación suave. Todo es visual y no altera la simulación ni la economía.

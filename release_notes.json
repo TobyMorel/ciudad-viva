@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.265",
+  "currentVersion": "0.266",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.266",
+      "date": "2026-11-04",
+      "title": "Impactos ambientales por barrio",
+      "roadmapPhase": 10,
+      "overallProgress": null,
+      "changes": [
+        "El informe Clima ahora relaciona el tránsito real, las emisiones estimadas de los viajes, la producción industrial y las obras activas con índices locales de aire y ruido por barrio. Los índices son comparativos de la ciudad y se muestran como estimaciones, no como mediciones científicas.",
+        "El mapa permite activar capas de aire, ruido, calor y anegamiento sobre las calles. La capa pluvial usa inundaciones registradas y parcelas expuestas en el pronóstico; el informe muestra la cobertura del drenaje.",
+        "Las plazas activas amortiguan el calor y reducen parcialmente la exposición local al aire y al ruido. La sombra vegetal del terreno alimenta el mapa térmico; la proximidad de parques y la población alcanzada quedan visibles en el informe.",
+        "Los sectores con mayor exposición al aire suman una demanda sanitaria primaria moderada, hasta 12% por barrio según el índice. Se refleja como consultas agregadas, sin asignar enfermedades a residentes individuales. Aplicable tanto a partidas Offline como LAN mediante el motor compartido."
+      ],
+      "verification": "Revisión estática de las fuentes y las capas del mapa; comprobación de sintaxis JavaScript y consistencia de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.265",
       "date": "2026-11-04",
@@ -3359,10 +3373,10 @@
     {
       "phase": 10,
       "title": "Medioambiente, calidad de vida y desarrollo urbano",
-      "progress": 35,
-      "summary": "Contaminación, clima y algunos impactos de servicios/desastres",
+      "progress": 40,
+      "summary": "Índices ambientales comparativos por barrio, fuentes viales e industriales, amortiguación verde y presión sanitaria localizada.",
       "pending": [
-        "Calidad de vida integrada, impactos ambientales amplios y desarrollo urbano completo."
+        "Faltan contaminación de agua y suelo, ruido con efectos de bienestar, políticas de mitigación y calidad de vida integrada."
       ]
     },
     {
@@ -3524,10 +3538,10 @@
     {
       "phase": 27,
       "title": "Clima, hidrología, desastres y resiliencia urbana",
-      "progress": 45,
-      "summary": "Tormentas, pronóstico, calor, sequía y medidas preventivas",
+      "progress": 50,
+      "summary": "Pronóstico de calor, sequía y tormentas; drenaje y anegamientos por parcela, mapas comparativos de calor y vulnerabilidad.",
       "pending": [
-        "Regiones climáticas, inundaciones prolongadas, incendios y reconstrucción total."
+        "Faltan variaciones regionales, incendios y reconstrucción de resiliencia a largo plazo."
       ]
     },
     {

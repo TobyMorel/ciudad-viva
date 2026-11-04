@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.248
+# Ciudad Viva · Alfa 0.249
+
+**Crecimiento urbano y cabecera (0.249):** con demanda y calle conectada, un promotor financia nuevas viviendas, comercios y fábricas sin fondos municipales. Las familias compran o alquilan según sus ingresos y ahorros; la constructora cobra hasta que el municipio compra el inmueble. La tesorería detalla funcionamiento y sueldos públicos, evita cargar dos veces las calles y muestra un aporte regional de arranque. El empleo efectivo se limita a 100 % y la cabecera tiene desgloses compactos.
 
 **Escala de peatones y ciclistas (0.248):** los modelos detallados ahora tienen proporciones menores frente a los autos; la animación de caminar y pedalear se conserva. Los camiones de transferencia se distinguen de los recolectores; los edificios públicos se pueden girar, la cámara rota con la rueda central y su arrastre horizontal, y la tesorería calcula ingresos y gastos de forma progresiva durante el tiempo simulado. La vivienda zonificada puede avanzar con capital privado o, si este se agota, con caja municipal disponible.
 

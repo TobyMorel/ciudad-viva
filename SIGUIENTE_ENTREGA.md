@@ -1,3 +1,7 @@
+## Alfa 0.249 · Demanda y barra superior
+
+La demanda y una calle conectada bastan para iniciar obras zonificadas financiadas por promotores externos. Las nuevas viviendas registran compras o alquileres de familias según ingreso y ahorro; el constructor recibe esos pagos hasta que la ciudad compra el inmueble. Los costos de inmuebles privados no recaen en tesorería. La barra superior vuelve a un ancho compacto y ofrece desglose de población, empleo y servicios; el indicador de empleo se limita a 100 %. El detalle financiero enumera edificios municipales y personal, separa calles y expone un aporte regional temporal para ciudades pequeñas.
+
 ## Alfa 0.248 · Ajuste de escala peatonal
 
 Se redujo el tamaño de peatones y ciclistas para que queden por debajo de los autos en altura y ocupación visual. Se mantienen los modelos detallados, la animación al caminar y el pedaleo.

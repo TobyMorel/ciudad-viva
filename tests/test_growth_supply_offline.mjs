@@ -38,3 +38,19 @@ test('Offline usa oferta real y no adjudica vivienda privada mientras haya plaza
    assert.equal(state.projects.filter(p=>p.kind==='home').length,0,'no debe iniciar obra nueva mientras hay casas libres');
  }finally{globalThis.fetch=previousFetch;globalThis.localStorage=previousStorage;Date.now=previousClock}
 });
+test('Demanda y calle conectada inician obras privadas con tesorería y capital promotor en cero',async()=>{
+ const previousFetch=globalThis.fetch,previousStorage=globalThis.localStorage,previousClock=Date.now;let saved=null,clock=1000;
+ globalThis.fetch=async()=>({ok:true,json:async()=>JSON.parse(readFileSync(new URL('../offline_seed.json',import.meta.url),'utf8'))});
+ globalThis.localStorage={getItem:()=>saved,setItem:(_,value)=>{saved=value}};Date.now=()=>clock;
+ try{
+   const first=await createOfflineAdapter();await first.request('/api/state');const city=JSON.parse(saved);
+   city.buildings=[];city.projects=[];city.money=0;city.privateCapital=0;city.population=168;city.housingDemand.unmet=325;city.roads=[[4,10],[5,10]];
+   city.zones=[{x:5,y:11,kind:'home',status:'disponible'},{x:4,y:11,kind:'shop',status:'disponible'},{x:7,y:7,kind:'home',status:'disponible'}];city.paused=false;saved=JSON.stringify(city);
+   const adapter=await createOfflineAdapter();adapter.setRealtimeClock(false);clock+=1000;
+   const state=await adapter.request('/api/state');
+   assert.ok(state.projects.some(p=>p.kind==='home'&&p.x===5&&p.y===11&&p.privatePaid));
+   assert.ok(state.projects.some(p=>p.kind==='shop'&&p.x===4&&p.y===11&&p.privatePaid));
+   assert.ok(!state.projects.some(p=>p.x===7&&p.y===7),'una parcela aislada no debe construirse');
+   assert.equal(state.privateCapital,0);
+ }finally{globalThis.fetch=previousFetch;globalThis.localStorage=previousStorage;Date.now=previousClock}
+});

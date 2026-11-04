@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.248",
+  "currentVersion": "0.249",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.249",
+      "date": "2026-11-04",
+      "title": "Construcción privada, familias y tesorería clara",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Con demanda y una parcela zonificada junto a una calle conectada, los promotores inician viviendas, comercios y fábricas sin usar caja municipal ni exigir un fondo privado común o cupos de constructoras.",
+        "Los inmuebles nuevos pertenecen a la constructora: cobra compras, alquileres y dividendos. Las familias compran o alquilan según sus ahorros e ingresos estimados.",
+        "Si el municipio compra un inmueble, recibe los ingresos posteriores y asume su mantenimiento desde esa compra.",
+        "La tesorería separa los costos de calles del funcionamiento de edificios públicos, explica cada edificio y los sueldos, y muestra un aporte regional de arranque para ciudades pequeñas.",
+        "El empleo efectivo queda acotado a 100 % en la simulación y en la interfaz.",
+        "La barra superior vuelve a ser compacta; tesorería recupera tamaño de texto y población, empleo y servicios tienen botones con sus componentes."
+      ],
+      "verification": "Comprobadas sintaxis, crecimiento con caja y capital privado en cero, exigencia de calle conectada, contratos de vivienda y diseño de tesorería en seis anchos de pantalla."
+    },
     {
       "version": "0.248",
       "date": "2026-11-04",

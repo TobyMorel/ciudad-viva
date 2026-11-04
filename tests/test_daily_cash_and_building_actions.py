@@ -8,13 +8,14 @@ class DailyCashAndBuildingActions(unittest.TestCase):
     def test_daily_cash_moves_once_per_day_and_totals_the_month(self):
         server.state = server.new_settlement_state()
         city = server.state
-        city.update(money=1000, monthlyIncome=300, monthlyExpenses=150)
+        city.update(money=1000, monthlyIncome=300, monthlyExpenses=150, newSettlement=False)
         city["utilities"]["report"] = {"monthlyMaintenance": 0}
         city["waste"]["report"] = {"monthlyOperatingCost": 0}
         with patch.object(server, "police_service_report", return_value={"monthlyOperatingCost": 0}), patch.object(server, "road_maintenance_report", return_value={"monthlyRequired": 0}):
             for day in range(2, 32):
                 city["day"] = day
                 server.settle_daily_municipal_cash({"workplaces": []})
+                server.accrue_municipal_cash(1)
                 if day == 2:
                     self.assertEqual(city["money"], 1005)
                     server.settle_daily_municipal_cash({"workplaces": []})

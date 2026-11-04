@@ -1809,10 +1809,10 @@ def _register_private_land(target,claims,item,category):
     x,y=item["x"],item["y"];key=f"{x},{y}";deed=claims["parcelDeeds"].get(key)
     if deed:
         if deed.get("ownerType")=="private":
-            business=item.get("business") or {};name=business.get("name") or item.get("ownerName") or item.get("name")
+            business=item.get("business") or {};name=item.get("ownerName") or business.get("name") or item.get("name")
             if name and deed.get("ownerName") in (None,"Promotor privado","Familia propietaria") :deed["ownerName"]=name
         return
-    business=item.get("business") or {};owner_name=business.get("name") or item.get("ownerName") or item.get("name") or ("Familia propietaria" if kind=="home" else "Promotor privado")
+    business=item.get("business") or {};owner_name=item.get("ownerName") or business.get("name") or item.get("name") or ("Familia propietaria" if kind=="home" else "Promotor privado")
     claims["parcelDeeds"][key]={"id":_land_key_id("P",x,y),"x":x,"y":y,"ownerType":"private","ownerId":business.get("id") or item.get("ownerId") or item.get("id"),"ownerName":str(owner_name),"rights":"dominio privado","registeredDay":int(target.get("day",1)),"acquiredDay":item.get("acquiredDay"),"landUse":kind,"source":"obra privada" if category=="project" else "inmueble privado","status":"inscripto"}
 
 def _sync_land_registry(target,claims):
@@ -1880,6 +1880,7 @@ def ev(title, detail):
     del state["events"][30:]
 
 def assess_contract_delay(project, contractor):
+    if project.get("zonedDevelopment"):return False
     """Monthly, reproducible schedule risk from past reliability and current workload."""
     day=int(state.get("day",1));start=int(project.get("contractedDay",day-max(0,int(project.get("elapsed",0)))))
     cycle=max(1,(day-start)//30)
@@ -2263,7 +2264,7 @@ def consume_materials(project, amounts):
         if remaining:raise RuntimeError("Inventario logístico cambió durante el consumo")
 
 def contractor_has_capacity(name):
-    assigned=sum(p["contractor"]==name and p.get("status")!="pausada" for p in state["projects"])
+    assigned=sum(p["contractor"]==name and not p.get("zonedDevelopment") and p.get("status") not in ("pausada","finalizada","completada","terminada","cancelada") for p in state["projects"])
     assigned+=sum(p.get("contractor")==name and p.get("status")=="en obra" for p in state.get("recoveryContracts",[]))
     assigned+=sum(g.get("contractor")==name and g.get("status")=="reparacion" for g in state.get("contractGuarantees",[]))
     assigned+=sum(b.get("industrialRecovery",{}).get("contractor")==name and b.get("industrialRecovery",{}).get("status")=="en obra" for b in state.get("buildings",[]))
@@ -2271,7 +2272,7 @@ def contractor_has_capacity(name):
 
 def contractor_free_workers(name):
     assigned=sum(p.get("workersAssigned",0 if p.get("status")=="pausada" else LABOR_NEEDS[p["kind"]])
-                 for p in state["projects"] if p["contractor"]==name)
+                 for p in state["projects"] if p["contractor"]==name and not p.get("zonedDevelopment") and p.get("status") not in ("pausada","finalizada","completada","terminada","cancelada"))
     assigned+=sum(p.get("workers",4) for p in state.get("recoveryContracts",[]) if p.get("contractor")==name and p.get("status")=="en obra")
     assigned+=sum(b.get("industrialRecovery",{}).get("workersAssigned",5) for b in state.get("buildings",[]) if b.get("industrialRecovery",{}).get("contractor")==name and b.get("industrialRecovery",{}).get("status")=="en obra")
     assigned+=sum(g.get("workersAssigned",3) for g in state.get("contractGuarantees",[]) if g.get("contractor")==name and g.get("status")=="reparacion")
@@ -3589,7 +3590,7 @@ def commute_model():
         walking+=residual if mode=="walk" else 0;bicycle_commuters+=residual if mode=="bicycle" else 0;auto_commuters+=residual if mode=="auto" else 0
         vehicles+=count;emissions+=school_trip_emissions;weighted_minutes+=len(students)*minutes;distance_total+=len(students)*group["distance"]
     total_eligible=len(residents);without_access=sum(1 for _,home,person in residents if person.get("status")!="empleado" and not any((hi,si) in routes for si in range(len(sites)) for hi,h in enumerate(homes) if h is home))
-    model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"busCommuters":bus_commuters,"bicycleCommuters":bicycle_commuters,"bicyclePassengers":bicycle_commuters+school_bicycles,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
+    model={"commuters":len(employees),"walkingCommuters":walking,"autoCommuters":auto_commuters,"busCommuters":bus_commuters,"bicycleCommuters":bicycle_commuters,"bicyclePassengers":bicycle_commuters+school_bicycles,"vehicles":vehicles,"dailyEmissionsKg":round(emissions,2),"workersWithoutRoadAccess":without_access,"unemployed":max(0,total_eligible-len(employees)-without_access),"meanDistance":round(distance_total/max(1,len(employees)),1) if employees else 0,"meanMinutes":round(weighted_minutes/max(1,len(employees))) if employees else 0,"effectiveEmployment":min(100,round(staffed/max(1,state["population"]*.42)*100)),"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"workplaces":workplaces,"routes":commutes,"segmentFlow":segment_flow,"employees":employees}
     _commute_cache_key=key;_commute_cache=model
     model.update({"commuters":model["commuters"]+sum(len(g["students"]) for g in school_groups.values()),"schoolTrips":len(school_groups),"schoolPassengers":sum(len(g["students"]) for g in school_groups.values()),"schoolBusPassengers":school_bus_passengers,"schoolWalkers":school_walkers,"schoolBicycles":school_bicycles,"schoolVehicles":school_vehicles,"schoolEmissionsKg":round(school_emissions,2)})
     # Now that segment flows are cached, congestion can include both commuters and trucks.
@@ -3628,13 +3629,13 @@ def commute_model():
         workplace["payroll"]=sum(emp.get("earnedWage",emp["wage"]) for emp in site_people[si])
         staffed+=effective
         if workplace["kind"] in ("shop","factory","hotel"):private_staffed+=effective
-    model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":round(staffed/max(1,state["population"]*.42)*100)})
+    model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":min(100,round(staffed/max(1,state["population"]*.42)*100))})
     model["transferCommuters"]=sum(trip["workers"] for trip in commutes if trip.get("reason")=="trabajo" and len(trip.get("busLineIds",[]))==2)
     model["carAccessWorkers"]=sum(1 for _,_,person in residents if person.get("carAccess"))
     for line in state["busRoutes"]:
         if line.get("status")=="cancelled":continue
         workplaces.append({"name":f"Colectivo · {line.get('originName','Línea')}","kind":"bus","x":line["from"][0],"y":line["from"][1],"jobSlots":line.get("buses",0)*2,"workersAssigned":len(line["driverIds"]),"staffedJobs":len(line["driverIds"]),"payroll":len(line["driverIds"])*10,"attendance":1 if line["driverIds"] else 0,"meanMinutes":None,"jobCategory":"logistica","jobCategoryLabel":"Logística","minimumSkill":42,"offeredWage":10})
-    model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":round((staffed+driver_count)/max(1,state["population"]*.42)*100)})
+    model.update({"effectiveWorkers":round(staffed+driver_count),"staffedJobs":round(staffed+driver_count),"effectiveEmployment":min(100,round((staffed+driver_count)/max(1,state["population"]*.42)*100))})
     returning=add_return_commutes(employees,commutes)
     model.update({key:value for key,value in returning.items() if key!="returnEmissionsKg"})
     model["bicyclePassengers"]+=returning.get("returnBicycleCommuters",0)
@@ -4676,52 +4677,54 @@ def accelerate_existing_private_builds():
         project["constructionSpeedAdjusted"]=True
 
 def advance_zoned_development():
-    """Promoters spend real capital and buy the materials for approved projects."""
-    demand=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
+    """Demanda y parcela libre bastan para iniciar una inversión privada."""
     supply=growth_demand(state)
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
-    for kind,threshold in (("home",12),("shop",0),("factory",0)):
-        if kind=="home" and supply["housing"]["shortage"]<threshold:continue
-        if kind=="shop" and not supply["commercial"]["shortage"]:continue
+    for kind,shortage in (("home",supply["housing"]["shortage"]),("shop",supply["commercial"]["shortage"]),("factory",supply["industry"]["shortage"])):
+        if shortage<=0:continue
+        zones=[z for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and any(abs(rx-z["x"])+abs(ry-z["y"])==1 for rx,ry in state.get("roads",[])) and route_between((z["x"],z["y"]),(4,10))]
+        if not zones:continue
+        zone=min(zones,key=lambda z:(z["y"],z["x"]))
+        name=min(CONTRACTORS,key=lambda n:(sum(p.get("contractor")==n and p.get("status") not in ("finalizada","cancelada") for p in state.get("projects",[])),n))
+        company=CONTRACTORS[name];spec=PROJECTS[kind];cost=round(spec["cost"]*company["price"]);zero={key:0 for key in MATERIAL_NAMES};advance=round(cost*.2)
+        project={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"ownerType":"private","ownerName":name,"cost":cost,"duration":construction_duration_days(kind,spec["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":"Demanda activa en parcela zonificada; inversión privada externa","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":zero.copy(),"materialsUsed":zero.copy(),"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":0,"zonedDevelopment":True,"retentionPct":0}
         if kind=="factory":
-            active_demand_shops=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto" and (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0))
-            target_factories=min(6,math.ceil(active_demand_shops/2))
-            existing_factories=sum(1 for b in state.get("buildings",[]) if b.get("kind")=="factory" and b.get("business",{}).get("status")!="cerrado")+sum(1 for p in state.get("projects",[]) if p.get("kind")=="factory" and p.get("status") not in ("cancelada","finalizada"))
-            if existing_factories>=target_factories:continue
-        candidates=[]
-        for z in state.get("zones",[]):
-            if z.get("kind")!=kind or z.get("status") not in (None,"disponible") or (z.get("x"),z.get("y")) in reserved:continue
-            if not any(abs(rx-z["x"])+abs(ry-z["y"])==1 for rx,ry in state.get("roads",[])):continue
-            route=route_between((z["x"],z["y"]),(4,10))
-            if route:candidates.append((len(route),z["y"],z["x"],z))
-        if not candidates:continue
-        _,_,_,zone=min(candidates,key=lambda row:(row[0],row[1],row[2]))
-        specification=PROJECTS[kind];required={key:0 for key in MATERIAL_NAMES};options=[]
-        for name,company in CONTRACTORS.items():
-            if not contractor_has_capacity(name) or contractor_free_workers(name)<LABOR_NEEDS[kind]:continue
-            cost=round(specification["cost"]*company["price"]);permit=round(specification["cost"]*.12);private_cost=cost-permit
-            # Promotores privados incluyen materiales, flete y acopio en su presupuesto; no retienen parcelas esperando compras municipales.
-            purchases=[];material_bill=0
-            reserve=4200 if kind=="factory" else 0
-            reserved_cash=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"))
-            available_cash=max(0,int(state.get("money",0))-reserved_cash)
-            private_funded=available_cash>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500
-            municipal_funded=kind=="home" and available_cash>=cost
-            if private_funded or municipal_funded:
-                options.append((cost,name,company,permit,private_cost,purchases,material_bill,reserve,private_funded))
-        if not options:continue
-        total_cost,name,company,permit,private_cost,purchases,material_bill,reserve,private_funded=min(options,key=lambda row:(not row[8],row[0],row[1]))
-        project_id=uuid.uuid4().hex;advance=round(private_cost*.2) if private_funded else 0;zero={key:0 for key in MATERIAL_NAMES};project_cost=private_cost if private_funded else total_cost
-        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":project_cost,"duration":construction_duration_days(kind,specification["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada" if private_funded else "Programa municipal de vivienda: demanda acumulada y capital promotor insuficiente","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":private_funded,"privateMaterialsIncluded":private_funded,"municipalPermitPaid":permit if private_funded else 0,"municipalHousingProgram":not private_funded,"zonedDevelopment":True,"retentionPct":0 if private_funded else .1}
-        if private_funded:
-            state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance
-        state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
-        zone["status"]="en obra"
-        if kind=="factory":
-            project["operatingReserve"]=reserve
-            project["industryType"]=next_factory_industry()
-            project["label"]=FACTORY_LABELS[project["industryType"]]
-        ev("Promotor inicia obra" if private_funded else "Vivienda municipal iniciada",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. {'Permiso municipal $ '+str(permit)+', inversión privada $ '+f'{private_cost:,}'+' con insumos incluidos' if private_funded else 'Inversión municipal contratada por $ '+f'{project_cost:,}'+' porque no hay capital promotor suficiente'}. Cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
+            project["operatingReserve"]=4200;project["industryType"]=next_factory_industry();project["label"]=FACTORY_LABELS[project["industryType"]]
+        state["projects"].append(project);zone["status"]="en obra";reserved.add((zone["x"],zone["y"]))
+        state["supply"]["contractorCash"][name]=state["supply"]["contractorCash"].get(name,0)+advance
+        ev("Promotor inicia obra",f"{name} financia {project['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. La obra no usa tesorería municipal.")
+
+def assign_housing_contract(home,person):
+    if not home.get("zonedDevelopment"):return
+    contracts=home.setdefault("housingContracts",[])
+    if person.get("age",18)<18 and contracts:
+        contract=contracts[-1];contract.setdefault("residentIds",[]).append(person["id"]);person["housingContractId"]=contract["id"];person["housingTenure"]=contract["tenure"];return
+    income=max(0,int(person.get("monthlyWage") or person.get("expectedWage") or 60+stable_skill(person["id"],"family-income")%140))
+    savings=200+stable_skill(person["id"],"family-savings")%2800
+    price=1800;tenure="propietaria" if savings>=price and income>=80 else "inquilina"
+    contract={"id":f"lease-{person['id']}","residentIds":[person["id"]],"tenure":tenure,"familyIncome":income,"initialSavings":savings,"purchasePrice":price if tenure=="propietaria" else 0,"monthlyRent":24 if tenure=="inquilina" else 0,"startDay":state.get("day",1)}
+    contracts.append(contract);person["housingContractId"]=contract["id"];person["housingTenure"]=tenure;home["householdCash"]=home.get("householdCash",0)+savings
+    if tenure=="propietaria":
+        home["householdCash"]-=price
+        if home.get("ownerType")=="municipal":state["money"]+=price
+        else:home["privateOwnerIncome"]=home.get("privateOwnerIncome",0)+price
+
+def settle_property_owner_income():
+    income=0
+    for building in state.get("buildings",[]):
+        if building.get("kind") not in ("home","shop","factory"):continue
+        owner=state.get("landClaims",{}).get("parcelDeeds",{}).get(f"{building['x']},{building['y']}",{}).get("ownerType",building.get("ownerType","private"))
+        amount=0
+        if building.get("kind")=="home" and building.get("zonedDevelopment"):
+            active_ids={person.get("id") for person in building.get("residents",[])}
+            due=sum(c.get("monthlyRent",0) for c in building.get("housingContracts",[]) if any(person_id in active_ids for person_id in c.get("residentIds",[])))
+            amount=min(due,max(0,int(building.get("householdCash",0))));building["householdCash"]-=amount
+        elif building.get("business") and building.get("zonedDevelopment"):
+            business=building["business"];amount=min(max(0,int(business.get("cash",0))),max(0,round(business.get("lastProfit",0)*.3)));business["cash"]-=amount
+        if owner=="municipal":income+=amount
+        else:building["privateOwnerIncome"]=building.get("privateOwnerIncome",0)+amount
+    state["municipalPropertyIncomeLastMonth"]=income;state["money"]+=income
+    if income:record_direct_municipal_income(income,"municipal_property")
 
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
@@ -4739,7 +4742,7 @@ def move_households():
                 options=[b for b in homes if b is not origin and b.get("quality",75)>=35 and b.get("emergencyReturnDay",0)<=state.get("day",1) and b.get("occupants",0)<b.get("capacity",0)]
                 if not options:continue
                 home=min(options,key=lambda b:(b.get("occupants",0)/max(1,b.get("capacity",1)),b.get("y",0),b.get("x",0)))
-            home["occupants"]=home.get("occupants",0)+1;home.setdefault("residents",[]).append(person)
+            home["occupants"]=home.get("occupants",0)+1;assign_housing_contract(home,person);home.setdefault("residents",[]).append(person)
             if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
             for key in ("shelterId","admittedDay","displacedBy","originHomeX","originHomeY","displacedDay","plannedReturnDay"):person.pop(key,None)
             person["status"]="buscando" if person.get("workerEligible") else "inactivo";ensure_person_work_profile(person)
@@ -4750,7 +4753,7 @@ def move_households():
         home["occupants"]=home.get("occupants",0)+1
         if home.get("adaptiveReuseDay"):home.setdefault("rentalLeaseDays",[]).append(state.get("day",1))
         person.pop("shelterId",None);person.pop("admittedDay",None);person["status"]="buscando" if person.get("workerEligible") else "inactivo"
-        ensure_person_work_profile(person);home.setdefault("residents",[]).append(person);temporary.remove(person);demand_state["unmet"]=max(0,int(demand_state.get("unmet",0))-1);rehoused+=1
+        ensure_person_work_profile(person);assign_housing_contract(home,person);home.setdefault("residents",[]).append(person);temporary.remove(person);demand_state["unmet"]=max(0,int(demand_state.get("unmet",0))-1);rehoused+=1
     if rehoused:ev("Personas reubicadas desde el refugio",f"{rehoused} residentes volvieron a su vivienda reparada o accedieron a una casa disponible.")
     if desired>0:
         jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
@@ -4777,7 +4780,7 @@ def move_households():
             age_seed=stable_skill(identifier,"migration-cohort")
             age=(18+stable_skill(identifier,"migration-age")%49) if eligible else ((age_seed%18) if age_seed%100<80 else 67+age_seed%18)
             person={"id":identifier,"age":age,"birthYear":2026+(max(0,state.get("day",1)-1)//360),"lifeStage":"vida laboral" if 18<=age<67 else "infancia" if age<18 else "jubilación","workerEligible":eligible,"status":"buscando" if eligible else "inactivo" if age<18 else "jubilado","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1) if eligible else None,"unemploymentReason":"primer empleo" if eligible else None}
-            ensure_person_work_profile(person);members.append(person);placed+=1
+            ensure_person_work_profile(person);assign_housing_contract(home,person);members.append(person);placed+=1
         demand_state["unmet"]=max(4,int(demand_state.get("unmet",0))-placed);demand_state["lastFilled"]=placed
         if placed:
             state["population"]=state.get("population",0)+placed;state["monthlyIncome"]=state.get("monthlyIncome",0)+placed*3;state["privateCapital"]=state.get("privateCapital",0)+placed*280
@@ -5268,13 +5271,22 @@ def record_direct_municipal_income(amount,source):
     direct[source]=direct.get(source,0)+amount
 
 
+def regional_startup_grant():
+    if not state.get("newSettlement"):return 0
+    population=max(0,int(state.get("population",0)))
+    return round(8000*min(1,max(0,(850-population)/600)))
+
+def municipal_building_operations():
+    road_base=sum(max(0,int(asset.get("monthlyCost",0))) for asset in state.get("roadAssets",[]))
+    return max(0,int(state.get("monthlyExpenses",0))-road_base)
+
 def municipal_cash_rates(economic):
     utility=state.get("utilities",{}).get("report",{})
     waste=state.get("waste",{}).get("report",{})
     workplaces=economic.get("workplaces",[])
     return {
-        "income":max(0,state.get("monthlyIncome",0)+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
-        "services":max(0,state.get("monthlyExpenses",0)+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
+        "income":max(0,state.get("monthlyIncome",0)+regional_startup_grant()+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
+        "services":max(0,municipal_building_operations()+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
         "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("metroLines",[]) if r.get("operational"))),
         "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
         "debt":max(0,sum(loan.get("payment",0) for loan in state.get("finance",{}).get("municipalLoans",[]) if loan.get("status")=="active")),
@@ -5423,7 +5435,7 @@ def tick_one_day():
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+metro_balance["cost"]
         airport_income=state.get("airportMonthlyIncome",0)
         port_income=max(0,round(state.get("portMonthlyIncome",0)))
-        monthly_income=state["monthlyIncome"]+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)+port_income
+        monthly_income=state["monthlyIncome"]+regional_startup_grant()+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)+port_income
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
         road_maintenance=road_maintenance_report().get("monthlyRequired",0)
         waste_report=calculate_waste_balance()
@@ -5434,7 +5446,7 @@ def tick_one_day():
         # Cobrar alquileres antes de planificar ayuda; la transferencia solo atiende deuda vigente.
         collect_adaptive_rents()
         aid_allocations=plan_housing_aid();aid_requested=sum(x["amount"] for x in aid_allocations)
-        operating_costs={"services":state["monthlyExpenses"]+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+fire_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
+        operating_costs={"services":municipal_building_operations()+public_payroll+health_cost+education_cost+police_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+fire_service_report(economic["workplaces"]).get("monthlyOperatingCost",0)+aid_requested,"mobility":transit_cost,"networks":utility_maintenance+waste_cost+road_maintenance}
         full_operating_cost=sum(operating_costs.values())
         debt_due=municipal_finance_report(monthly_income,full_operating_cost,include_scenarios=False)["monthlyDebtService"]
         daily=state.get("dailyCashFlow",{})
@@ -5479,6 +5491,7 @@ def tick_one_day():
                     if loan.get("status")=="active" and loan.get("delinquentMonths",0)>=2:state["services"]=max(5,state["services"]-1)
                 ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastPortMonthlyIncome"]=max(0,round(state.get("portMonthlyIncome",0)));state["portMonthlyIncome"]=0
+        settle_property_owner_income()
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
@@ -5547,15 +5560,15 @@ def tick_one_day():
                 state["monthlyExpenses"]+=maintenance
                 state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
             elif p["kind"]=="home":
-                b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality}; state["buildings"].append(b)
+                b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
                 ev("Vivienda terminada",f"La vivienda en {p['x']+1},{p['y']+1} superó la inspección y quedó disponible. Los hogares llegarán según demanda y empleos.")
             elif p["kind"]=="shop":
-                building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality}
-                opening_capital=min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=opening_capital
+                building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+                opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
                 building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
             elif p["kind"]=="factory":
                 industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
-                building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180}
+                building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
                 if industry_type=="concrete":name="Hormigonera de Puerto Claro"
                 building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
                 building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
@@ -6519,7 +6532,7 @@ def _build_public_state(player_id=None):
     transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+sum(l.get("monthlyOperatingCost",0) for l in state.get("metroLines",[]) if l.get("operational"))
     transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))+sum(l.get("monthlyFareRevenue",0) for l in state.get("metroLines",[]) if l.get("operational"))
     view["housingAidMonthlyCost"]=max(0,round(state.get("socialServices",{}).get("lastReport",{}).get("requested",0)))
-    view["effectiveMonthlyExpenses"]=round(state["monthlyExpenses"]+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["fireReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0)+view["housingAidMonthlyCost"])
+    view["effectiveMonthlyExpenses"]=round(municipal_building_operations()+view["publicPayroll"]+transit_cost+state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)+state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)+view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)+view["policeReport"].get("monthlyOperatingCost",0)+view["fireReport"].get("monthlyOperatingCost",0)+view["educationReport"].get("monthlySuppliesCost",0)+view["housingAidMonthlyCost"])
     port_income=max(0,round(state.get("portMonthlyIncome",0)))
     view["transitMonthlyIncome"]=transit_income
     view["portMonthlyIncome"]=port_income
@@ -6529,15 +6542,15 @@ def _build_public_state(player_id=None):
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
     tax_report=state.get("taxes",{}).get("lastReport",{})
     rail_freight_income=round(state.get("dailyCashFlow",{}).get("directIncome",{}).get("rail_freight",0))
-    gross=round(state["monthlyIncome"]+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income+rail_freight_income)
+    gross=round(state["monthlyIncome"]+regional_startup_grant()+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income+rail_freight_income+state.get("municipalPropertyIncomeLastMonth",0))
     view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
     view["municipalFinance"]["incomeBreakdown"]={
-        "baseAndResidents":round(state.get("monthlyIncome",0)),"privateEmployment":business_income,
+        "baseAndResidents":round(state.get("monthlyIncome",0)),"regionalStartupGrant":regional_startup_grant(),"ownedProperties":state.get("municipalPropertyIncomeLastMonth",0),"privateEmployment":business_income,
         "propertyTaxes":round(tax_report.get("propertyCollected",0)),"businessTaxes":round(tax_report.get("businessCollected",0)),
         "transitFares":round(transit_income),"airportFees":round(state.get("airportMonthlyIncome",0)),
         "tourismTax":round(tourism_tax),"recycling":round(view["recyclingIncome"]),"portExports":port_income,"railFreight":rail_freight_income}
     view["municipalFinance"]["expenseBreakdown"]={
-        "buildingOperations":round(state.get("monthlyExpenses",0)),"publicPayroll":round(view["publicPayroll"]),
+        "buildingOperations":municipal_building_operations(),"publicPayroll":round(view["publicPayroll"]),
         "police":round(view["policeReport"].get("monthlyOperatingCost",0)),"fire":round(view["fireReport"].get("monthlyOperatingCost",0)),
         "transit":round(transit_cost),"utilities":round(state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)),
         "waste":round(state.get("waste",{}).get("report",{}).get("monthlyOperatingCost",0)),
@@ -6990,7 +7003,7 @@ class Handler(BaseHTTPRequestHandler):
                     reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
                     if available<price:self._send(409,{"error":f"Quedan $ {available:,} libres; la tasación es $ {price:,}.".replace(",",".")});return
                     seller=deed.get("ownerName","Propietario privado");state["money"]-=price;history=deed.setdefault("transferHistory",[]);history.append({"day":int(state.get("day",1)),"price":price,"seller":seller,"buyer":f"Municipalidad de {state.get('cityName','Puerto Claro')}","type":"compraventa"});deed["transferHistory"]=history[-20:]
-                    deed.update({"ownerType":"municipal","ownerId":f"municipal-{x}-{y}","ownerName":f"Municipalidad de {state.get('cityName','Puerto Claro')}","rights":"dominio municipal","lastTransferDay":int(state.get("day",1)),"lastTransferPrice":price,"status":"inscripto"})
+                    deed.update({"ownerType":"municipal","ownerId":f"municipal-{x}-{y}","ownerName":f"Municipalidad de {state.get('cityName','Puerto Claro')}","rights":"dominio municipal","lastTransferDay":int(state.get("day",1)),"lastTransferPrice":price,"status":"inscripto"});building["ownerType"]="municipal";building["ownerName"]=deed["ownerName"];upkeep={"home":60,"shop":90,"factory":180}.get(building["kind"],0);prior=building.get("monthlyCost",0);building["monthlyCost"]=upkeep;state["monthlyExpenses"]+=max(0,upkeep-prior)
                     ev("Inmueble adquirido por el municipio",f"{building.get('name','Inmueble')}: compra a {seller} por $ {price:,}. El negocio continúa bajo su operador actual.".replace(",","."))
                 elif action=="place":
                     if any(site.get("x")==data.get("x") and site.get("y")==data.get("y") for site in state.get("railStations",[])):
@@ -7256,7 +7269,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
                         label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
-                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). La vivienda puede financiarse con caja municipal libre si falta capital promotor; el resto de usos requiere demanda, inversión y cuadrilla.")
+                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). Con demanda y calle conectada, un promotor financia viviendas, comercios e industrias; el municipio no paga esas obras ni su mantenimiento.")
                         advance_zoned_development()
                 elif action in ("pauseProject","resumeProject","cancelProject"):
                     project=next((p for p in state["projects"] if p["id"]==str(data.get("id"))),None)

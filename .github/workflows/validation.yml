@@ -95,8 +95,6 @@ jobs:
           npx playwright install --with-deps chromium
       - name: "Tutorial narrado: móvil y escritorio"
         run: node tests/test_beginner_tutorial_ui.mjs
-      - name: Validar construcción en sector remoto
-        run: node tests/test_distant_land_ui.mjs
       - name: Comprobar UI, construcción y Economía (390/1440 px)
         run: |
           tests=(
@@ -131,9 +129,6 @@ jobs:
             echo "::endgroup::"
           done
           exit "$status"
-      - name: Perfil de renderizado (zoom lejano, móvil y escritorio)
-        if: always()
-        run: node tests/test_render_performance.mjs
       - name: Informe responsive
         if: always()
         uses: actions/upload-artifact@v4

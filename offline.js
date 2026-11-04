@@ -3,7 +3,7 @@ import {gameMinutesForElapsedSeconds} from './simulation_time.js';
 import {assignTaxiPassengers} from './taxi_passengers.js?v=0.245';
 import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.245';
 import {growthDemand} from './growth_demand.js';
-import {recordCityProgress} from './cityInsights.js?v=0.268';
+import {recordCityProgress} from './cityInsights.js?v=0.269';
 import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.245';
 import {freightRouteForFactoryPort,freightRoutesForFactoryPort,freightRoutesFromStationToPort,freightLegRoute,serializeFreightLegs,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.245';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';

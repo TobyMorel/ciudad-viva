@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.268",
+  "currentVersion": "0.269",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.269",
+      "date": "2026-11-04",
+      "title": "Plazas, estaciones y viajes con destino",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los autos de viajes reales de trabajo, compras, servicios y ocio quedan estacionados junto al destino mientras dura la permanencia simulada. Se muestra una cantidad acotada de vehículos representativos, sin alterar demanda ni costes.",
+        "Las líneas ferroviarias operativas se detienen en sus estaciones. Los pasajeros de líneas con usuarios reales esperan en el andén o la entrada y bajan hacia la calle cuando llega un tren; las estaciones sin servicio permanecen vacías.",
+        "Los colectivos muestran figuras de pasajeros sentados, además de las caminatas de acceso y las escenas de subida y bajada ya vinculadas a viajes reales.",
+        "Las plazas con visitantes incorporan juegos infantiles, cancha y estación de ejercicio. La actividad y el equipamiento visibles se ajustan al número de visitas registradas.",
+        "Perros de algunos hogares salen con sus dueños en paseos matutinos y vespertinos; el clima lluvioso pausa esos recorridos. El resto del tiempo las mascotas permanecen en casa."
+      ],
+      "verification": "Revisión estática de sintaxis JavaScript, formato del diff y referencias de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.268",
       "date": "2026-11-04",

@@ -7,7 +7,7 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
  scene.add(root);
  const projectsRoot=new THREE.Group(),parkRoot=new THREE.Group(),citizenRoot=new THREE.Group(),trafficRoot=new THREE.Group(),momentsRoot=new THREE.Group();
  root.add(projectsRoot,parkRoot,citizenRoot,trafficRoot,momentsRoot);
- const residents=new Map(),animations=[],projectAnimations=[],parkAnimations=[],celebrations=[];
+ const residents=new Map(),animations=[],projectAnimations=[],parkAnimations=[],exerciseFigures=[],celebrations=[];
  let signature='',state=null,clock=0,peakVisible=false,activeParkVisitors=0,activeProjects=0;
  const C=['#d48e65','#6797a0','#d8b76d','#9e7ba8','#6aa27d','#c48078'];
  const palette=['#dba67c','#aa7657','#e5bd94'];
@@ -120,12 +120,38 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
    if(park.activities.includes('juego')){
     const ball=sphere(g,.092,'#f9e0a6',.15,.28,-.55,2);
     const stripe=box(g,.19,.015,.019,'#cb6260',.15,.28,-.55);
-    parkAnimations.push({ball,stripe,seed:park.x*9+park.y,baseY:.18});
+    // Juegos de plaza: torre, trepador, tobogán y columpio en tamaño de parcela.
+    box(g,.40,.31,.37,'#d7b76f',-.43,.35,-.48);
+    box(g,.49,.055,.45,'#f0d391',-.43,.53,-.48);
+    for(const sx of [-.62,-.24])for(const sz of [-.65,-.31])box(g,.045,.58,.045,'#587c70',sx,.29,sz);
+    box(g,.34,.035,.55,'#78aeba',.02,.20,-.51).rotation.x=-.24;
+    box(g,.035,.04,.46,'#e4bd68',-.06,.12,-.51);
+    for(const sx of [-.76,-.34])box(g,.035,.48,.035,'#718b7a',sx,.32,.16);
+    box(g,.49,.045,.045,'#718b7a',-.55,.59,.16);
+    const swingSeat=box(g,.20,.035,.12,'#c1745c',-.55,.31,.16);
+    parkAnimations.push({ball,stripe,swingSeat,seed:park.x*9+park.y,baseY:.18,baseX:.15,baseZ:-.55});
+   }
+   if(park.activities.includes('deporte')){
+    box(g,.94,.025,.72,'#789875',.27,.135,.34);
+    for(const sx of [-.20,.74])box(g,.024,.02,.72,'#e8e4cf',sx,.151,.34);
+    box(g,.94,.02,.024,'#e8e4cf',.27,.151,.34);
+    box(g,.026,.02,.72,'#e8e4cf',.27,.153,.34);
+    for(const sx of [-.13,.67]){
+     box(g,.045,.34,.045,'#7e8d7d',sx,.32,.34);
+     box(g,.23,.035,.04,'#d8d2bc',sx,.49,.34);
+     box(g,.025,.22,.025,'#d8d2bc',sx,.59,.34);
+    }
+    const sportBall=sphere(g,.075,'#e8b35e',.29,.25,.35,2);
+    parkAnimations.push({ball:sportBall,stripe:null,seed:park.x*13+park.y*7,baseY:.20,baseX:.29,baseZ:.35,sport:true});
    }
    if(park.activities.includes('ejercicio')){
-    const bench=box(g,.39,.04,.13,'#a27d5d',-.34,.26,.53);
-    for(const sx of [-.15,.15])box(g,.036,.25,.038,'#6c7568',-.34+sx,.16,.53);
+    const bench=box(g,.39,.045,.13,'#a27d5d',-.48,.24,.57);
+    for(const sx of [-.15,.15])box(g,.036,.25,.038,'#6c7568',-.48+sx,.15,.57);
     bench.userData.parkExerciseStation=true;
+    for(const sx of [-.18,.18])box(g,.045,.52,.045,'#648b83',.47+sx,.34,-.51);
+    box(g,.46,.045,.045,'#e3c879',.47,.61,-.51);
+    const athlete=figure(g,.47,.10,-.22,'plaza-ejercicio:'+park.x+':'+park.y,{worker:true});
+    athlete.g.userData.parkExerciseActor=true;exerciseFigures.push({person:athlete,phase:park.x*.7+park.y});
    }
   }
  }
@@ -182,7 +208,7 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
   if(sig===signature)return;
   signature=sig;
   for(const group of [projectsRoot,parkRoot,citizenRoot,trafficRoot,momentsRoot])clear(group);
-  residents.clear();animations.length=0;projectAnimations.length=0;parkAnimations.length=0;celebrations.length=0;
+  residents.clear();animations.length=0;projectAnimations.length=0;parkAnimations.length=0;exerciseFigures.length=0;celebrations.length=0;
   activeParkVisitors=0;activeProjects=0;
   if(preview)return;
   createCitizens(data);
@@ -227,7 +253,18 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
   }
   for(const a of projectAnimations){a.pivot.rotation.y=Math.sin(clock*.35+a.phase)*.25;a.hook.position.y=-.22-Math.sin(clock*.58+a.phase)*.08}
   parkRoot.visible=h>=8&&h<=21;
-  for(const a of parkAnimations){const y=a.baseY+Math.abs(Math.sin(clock*2.8+a.seed))*.22;a.ball.position.y=y;a.stripe.position.y=y}
+  for(const a of parkAnimations){
+   const phase=clock*2.8+a.seed,y=a.baseY+Math.abs(Math.sin(phase))*(a.sport?.24:.22);
+   a.ball.position.y=y;if(a.stripe)a.stripe.position.y=y;
+   if(a.sport){a.ball.position.x=a.baseX+Math.sin(phase*.65)*.33;a.ball.position.z=a.baseZ+Math.cos(phase*.82)*.22}
+   if(a.swingSeat)a.swingSeat.rotation.x=Math.sin(clock*2.1+a.seed)*.34;
+  }
+  for(const a of exerciseFigures){
+   if(!a.person.g.visible)continue;
+   const cycle=clock*3.2+a.phase;a.person.arms[0].rotation.x=-1.15+Math.sin(cycle)*.55;
+   a.person.arms[1].rotation.x=-1.15-Math.sin(cycle)*.55;
+   a.person.g.position.y=.10+Math.max(0,Math.sin(cycle*2))*.07;
+  }
   for(const c of celebrations)for(const r of c.rays){
    const radius=.24+Math.abs(Math.sin(clock*.8+c.phase))*.39;
    r.mesh.position.set(Math.cos(r.angle)*radius,.35+Math.sin(clock*1.6+r.i)*.26,Math.sin(r.angle)*radius);

@@ -143,7 +143,7 @@ export function parkActivityPlan(state){
  return (state?.buildings||[]).filter(b=>b.serviceModel==='urbanPark'&&oper(b)).map(b=>{
   const visitors=visits.get(tile([b.x,b.y]))||0;
   return {x:b.x,y:b.y,visitors,activities:visitors<=0?[]:
-   ['paseo',...(visitors>=3?['descanso']:[]),...(visitors>=7?['juego']:[]),...(visitors>=12?['ejercicio']:[])]};
+   ['paseo',...(visitors>=3?['descanso']:[]),...(visitors>=7?['juego']:[]),...(visitors>=9?['deporte']:[]),...(visitors>=12?['ejercicio']:[])]};
  }).filter(x=>x.visitors>0).slice(0,smallParkLimit(state));
 }
 function smallParkLimit(state){return N(state?.population)>10000?9:6}

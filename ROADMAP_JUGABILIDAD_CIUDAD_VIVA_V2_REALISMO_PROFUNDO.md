@@ -1038,6 +1038,8 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [ ] Separar flujos de viajeros y mercancías, con ocupación física compartida de corredores cuando aplique.
 - [x] Mostrar paradas reales con apertura de puertas y embarque/desembarque basado en la demanda de pasajeros simulada.
 - [x] Representar el acceso peatonal a viajes en colectivo y la llegada a los edificios de origen y destino según las rutinas existentes (Alfa 0.268; visual, sin cambiar la demanda ni los tiempos simulados).
+- [x] Representar el estacionamiento temporal junto a destinos de trabajo y visita usando viajes en auto reales y límites visuales de ocupación (Alfa 0.269; solo visual).
+- [x] Animar la llegada de trenes a estaciones operativas con pasajeros en andenes y descensos hacia la calle, condicionados por el servicio y la demanda existentes (Alfa 0.269; solo visual).
 
 ### Criterios de aceptación
 

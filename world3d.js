@@ -2,9 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
 import {daylightIntensity} from './simulation_time.js';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.268';
-import {createLivingCity3D} from './living_city_3d.js?v=0.268';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.268';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.269';
+import {createLivingCity3D} from './living_city_3d.js?v=0.269';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.269';
 
 const TILE=2, LAND_CHUNK_SIZE=8;
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
@@ -70,7 +70,7 @@ export function createWorld(canvas){
       for(const actor of routeActors){
         if(count>=limit*2)break;
         const mesh=actor.mesh,type=actor.selection?.type||'';
-        if(!mesh?.visible||!type||type.includes('Peatones')||type.includes('Visitante')||type.includes('Tren')||type.includes('Avión')||type.includes('Buque'))continue;
+        if(actor.parkingStay||!mesh?.visible||!type||type.includes('Peatones')||type.includes('Visitante')||type.includes('Tren')||type.includes('Avión')||type.includes('Buque'))continue;
         const yaw=mesh.rotation.y,cos=Math.cos(yaw),sin=Math.sin(yaw);
         for(const side of [-1,1]){
           if(count>=limit*2)break;
@@ -1146,9 +1146,12 @@ export function createWorld(canvas){
     const interior=box(g,.35,.044,.22,mat('#f5dab1',{emissive:'#fbcf91',emissiveIntensity:1}),0,.617,-.16);
     interior.visible=false;g.userData.interiorLights=[interior];
     const passengers=[];
-    for(const z of [-.28,-.05,.16]){
+    for(let index=0;index<3;index++){
+      const z=[-.28,-.05,.16][index];
       const seat=new THREE.Group();seat.position.set(-.17,0,z);g.add(seat);
-      sphere(seat,.095,'#a4c2c2',0,.42,0,1);box(seat,.13,.12,.09,'#708f97',0,.31,.015);
+      const shirts=['#71958a','#c18b65','#6f8fa7'],skins=['#d5a17e','#e3bd96','#a9735a'];
+      sphere(seat,.043,skins[index],0,.49,0,1);box(seat,.085,.13,.075,shirts[index],0,.385,0);
+      box(seat,.10,.05,.11,'#708f97',0,.30,.015);
       seat.visible=passengers.length<Math.min(3,Math.max(0,passengerCount));passengers.push(seat);
     }
     g.userData.passengerSeats=passengers;
@@ -1363,6 +1366,9 @@ export function createWorld(canvas){
     box(g,.72,.09,.14,'#e6ad58',0,.29,.69);
     for(const x of [-.372,.372])for(const z of [-.43,-.06,.32])
       box(g,.025,.23,.26,'#48879d',x,.49,z);
+    const passengerDoor=new THREE.Group();passengerDoor.position.set(.379,.49,.16);g.add(passengerDoor);
+    box(passengerDoor,.026,.23,.15,'#e1e3d7',0,0,0);
+    box(passengerDoor,.030,.11,.095,'#80b8c3',.006,.035,.01);
     for(const z of [-.52,.52])for(const x of [-.26,.26])
       box(g,.1,.2,.15,'#34424b',x,.12,z);
     box(g,.42,.2,.025,'#d5ecf0',0,.48,.73);
@@ -1371,7 +1377,7 @@ export function createWorld(canvas){
       box(g,.32,.15,.34,'#c58a4d',0,.77,-.24,{cast:true});
       box(g,.3,.13,.3,'#668d72',0,.77,.14,{cast:true});
     }
-    g.userData.railFreightTrain=freight;g.userData.railTrain=true;trafficRoot.add(g);vehicleFinish(g,'train');return g;
+    g.userData.railFreightTrain=freight;g.userData.railPassengerDoor=passengerDoor;g.userData.railPassengerDoorClosedZ=.16;g.userData.railTrain=true;trafficRoot.add(g);vehicleFinish(g,'train');return g;
   }
   function makeMetroProjection(){
     const g=new THREE.Group(),ghost=mat('#55c8d2',{transparent:true,opacity:.58,depthWrite:false,emissive:'#207688',emissiveIntensity:.24});
@@ -1419,7 +1425,7 @@ export function createWorld(canvas){
       (state.healthReport?.hospital?.hospitals||[]).map(u=>[u.x,u.y,u.name,u.beds,u.ambulances,u.activeAmbulances]),(state.healthReport?.hospital?.ambulanceDispatches||[]).map(i=>[i.id,i.status,i.route,i.stationX,i.stationY,i.day]),
       (state.roadIncidentReport?.activeIncidents||[]).map(i=>[i.id,i.x,i.y,i.status,i.responseRoute]),
       view.utilityLayer,view.trafficOverlay,view.environmentOverlay,state.stateRevision,state.day,view.servicePreview?.serviceModel||null,view.zoom>=1.4,shouldUseFarBuildingLOD(),view.preview
-    ]);updateSelection(chosen);const roads=new Set((state.roads||[]).map(r=>key(r[0],r[1]))),closedRoads=new Set((state.roadAssets||[]).filter(a=>(a.quality??82)<25||a.accidentClosed).map(a=>key(a.x,a.y))),openRoads=new Set([...roads].filter(k=>!closedRoads.has(k)));spectacle.sceneSync(state,{preview:Boolean(view.preview)});living3d.sceneSync(state,{preview:Boolean(view.preview)});immersive3d.sceneSync(state,{preview:Boolean(view.preview)});if(signature===visualSignature){refreshServiceCoverage(state,chosen,view,openRoads);renderer.render(scene,camera);sceneSyncFastPaths++;lastSceneSyncMs=performance.now()-syncStarted;return}const previousActors=new Map(routeActors.filter(a=>actorIdentity(a)).map(a=>[actorIdentity(a),{route:a.route,offset:a.offset,speed:a.speed,position:a.mesh.position.clone(),rotation:a.mesh.rotation.y,busWaitUntil:a.busWaitUntil,lastBusStopKey:a.lastBusStopKey,busStopVisitCount:a.busStopVisitCount,busStopVisitKey:a.busStopVisitKey}]));visualSignature=signature;walkerModelPool.clear();bicycleModelPool.clear();for(const actor of routeActors){const model=actor.mesh,modelKey=model.userData.walkerModelKey,bikeKey=model.userData.bicycleModelKey;if(modelKey||bikeKey!==undefined){trafficRoot.remove(model);const pool=modelKey?walkerModelPool:bicycleModelPool,id=modelKey||bikeKey,items=pool.get(id)||[];items.push(model);pool.set(id,items)}}const buildings=state.buildings||[],projects=state.projects||[],nextVegetationObstacles=new Set([...roads,...buildings.map(b=>key(b.x,b.y)),...projects.map(p=>key(p.x,p.y)),...(state.railStations||[]).map(p=>key(p.x,p.y)),...(state.adaptiveReuseWorks||[]).map(w=>key(w.x,w.y)),...(state.abandoned||[]).map(a=>key(a.x,a.y))]);syncVegetationObstacles(nextVegetationObstacles);clear(dynamicRoot);clear(trafficRoot);wasteContainerModels.clear();routeActors.length=0;fireVisuals.length=0;signalBulbs.length=0;streetLights.length=0;signalTiles.clear();
+    ]);updateSelection(chosen);const roads=new Set((state.roads||[]).map(r=>key(r[0],r[1]))),closedRoads=new Set((state.roadAssets||[]).filter(a=>(a.quality??82)<25||a.accidentClosed).map(a=>key(a.x,a.y))),openRoads=new Set([...roads].filter(k=>!closedRoads.has(k)));spectacle.sceneSync(state,{preview:Boolean(view.preview)});living3d.sceneSync(state,{preview:Boolean(view.preview)});immersive3d.sceneSync(state,{preview:Boolean(view.preview)});if(signature===visualSignature){refreshServiceCoverage(state,chosen,view,openRoads);renderer.render(scene,camera);sceneSyncFastPaths++;lastSceneSyncMs=performance.now()-syncStarted;return}const previousActors=new Map(routeActors.filter(a=>actorIdentity(a)).map(a=>[actorIdentity(a),{route:a.route,offset:a.offset,speed:a.speed,position:a.mesh.position.clone(),rotation:a.mesh.rotation.y,busWaitUntil:a.busWaitUntil,lastBusStopKey:a.lastBusStopKey,busStopVisitCount:a.busStopVisitCount,busStopVisitKey:a.busStopVisitKey,railWaitUntil:a.railWaitUntil,lastRailStopKey:a.lastRailStopKey,railStopVisitCount:a.railStopVisitCount,railStopVisitKey:a.railStopVisitKey}]));visualSignature=signature;walkerModelPool.clear();bicycleModelPool.clear();for(const actor of routeActors){const model=actor.mesh,modelKey=model.userData.walkerModelKey,bikeKey=model.userData.bicycleModelKey;if(modelKey||bikeKey!==undefined){trafficRoot.remove(model);const pool=modelKey?walkerModelPool:bicycleModelPool,id=modelKey||bikeKey,items=pool.get(id)||[];items.push(model);pool.set(id,items)}}const buildings=state.buildings||[],projects=state.projects||[],nextVegetationObstacles=new Set([...roads,...buildings.map(b=>key(b.x,b.y)),...projects.map(p=>key(p.x,p.y)),...(state.railStations||[]).map(p=>key(p.x,p.y)),...(state.adaptiveReuseWorks||[]).map(w=>key(w.x,w.y)),...(state.abandoned||[]).map(a=>key(a.x,a.y))]);syncVegetationObstacles(nextVegetationObstacles);clear(dynamicRoot);clear(trafficRoot);wasteContainerModels.clear();routeActors.length=0;fireVisuals.length=0;signalBulbs.length=0;streetLights.length=0;signalTiles.clear();
     const roadStress=new Map();for(const trip of state.commutes||[]){if(trip.mode==='walk')continue;const load=((trip.vehicles||0)*(trip.reason==='regreso'?.45:1)+(trip.mode==='bus'?2:0))*(trip.trafficFactor||1);for(const [x,y] of trip.route||[])roadStress.set(key(x,y),(roadStress.get(key(x,y))||0)+load)}for(const line of state.busRoutes||[]){if(!line.operational)continue;for(const [x,y] of line.route||[])roadStress.set(key(x,y),(roadStress.get(key(x,y))||0)+(line.effectiveBuses||0)*2)}for(const taxi of state.taxiRoutes||[]){if(!taxi.operational)continue;for(const [x,y] of taxi.route||[])roadStress.set(key(x,y),(roadStress.get(key(x,y))||0)+1)}for(const order of state.supply?.orders||[]){if(order.status!=='en tránsito')continue;for(const [x,y] of order.route||[])roadStress.set(key(x,y),(roadStress.get(key(x,y))||0)+2)}const maxStress=Math.max(8,...roadStress.values()),signalOverrides=state.trafficSignalOverrides||{};for(const [x,y] of state.roads){const neighbors=[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>roads.has(key(x+dx,y+dy))),intersection=neighbors.length>=3,signals=intersection&&signalOverrides[key(x,y)]!==false,env=environmentalTileScores.get(key(x,y))?.[view.environmentOverlay]||0;addRoad(dynamicRoot,x,y,roads,(roadStress.get(key(x,y))||0)/maxStress,signals,env);if(signals)signalTiles.add(key(x,y))}
     // El tablero queda sobre el cauce y las barandas dejan libre el carril.
     // Dibujar una sola estructura por pareja de tramos al completar la obra.
@@ -1539,6 +1545,7 @@ export function createWorld(canvas){
         }
         entrance.userData.metroStation=true;entrance.userData.metroComplete=plan.completed;
         dynamicRoot.add(entrance);
+        if(plan.trains)addStationPassengerActors(metro,[sx,sy],false,stationTiles.size);
       }
     }
 
@@ -1561,12 +1568,13 @@ export function createWorld(canvas){
       const count=Math.min(4,Math.max(0,Math.trunc(trainLine.trainCount||0)));
       for(let i=0;i<count;i++)routeActors.push({
         mesh:makeElevatedTrain(),route:path,offset:i*(path.length-1)*TILE*2/Math.max(1,count),
-        speed:2.15,side:0,height:1.82,railTrain:true,
+        speed:2.15,side:0,height:1.82,railTrain:true,railLineId:String(trainLine.id),railStopKeys:new Set((trainLine.stations||[]).map(p=>Array.isArray(p)?key(p[0],p[1]):'')),
         selection:{type:'Tren elevado de pasajeros',title:trainLine.name+' · formación '+(i+1),
           description:'Tren eléctrico real del servicio municipal elevado. Requiere obras habilitadas, flota, energía y presupuesto.',
           metrics:[['Pasajeros hoy',trainLine.dailyRiders||0],['Capacidad por día',trainLine.dailyCapacity||0],
             ['Frecuencia',(trainLine.headwayMinutes||0)+' min'],['Costo mensual',trainLine.monthlyOperatingCost||0]]}
       });
+      for(const [stationIndex,station] of (trainLine.stations||[]).entries())addStationPassengerActors(trainLine,station,true,stationIndex);
     }
 
     // Solo hay trenes visuales cuando el motor autoritativo declara la línea operativa.
@@ -1589,14 +1597,14 @@ export function createWorld(canvas){
       if(path.length<2)continue;
       for(let i=0;i<plan.trains;i++)routeActors.push({
         mesh:makeMetroProjection(),route:path,offset:i*(path.length-1)*TILE*2/plan.trains,
-        speed:1.85,side:0,height:.045,metroProjection:true,
+        speed:1.85,side:0,height:.045,metroProjection:true,railTrain:true,railLineId:String(metro.id),railStopKeys:new Set((metro.stations||[]).map(p=>Array.isArray(p)?key(p[0],p[1]):'')),
         selection:{type:'Proyección de tren de subte',title:(metro.name||'Subte')+' · formación '+(i+1),
           description:'Marcador translúcido de la posición ilustrativa de un tren bajo tierra. No ocupa carriles de la calle.',
           metrics:[['Estado','En servicio'],['Pasajeros diarios',metro.dailyRiders||0],
             ['Frecuencia',(metro.headwayMinutes||0)+' min'],['Formaciones',metro.trainCount||0]]}
       });
     }
-    let transitAccessActors=0;const transitAccessLimit=smallScreen?12:24;
+    let transitAccessActors=0,stationPassengerActors=0;const transitAccessLimit=smallScreen?12:24,stationPassengerLimit=smallScreen?6:12;
     function addTransitAccessActors(trip,index,tag){
       const transitPassengers=Math.max(Number(trip.busRiders)||0,trip.mode==='bus'?Number(trip.workers)||0:0);
       if(transitAccessActors>=transitAccessLimit||!(transitPassengers>0)||!Array.isArray(trip.from)||!Array.isArray(trip.to))return;
@@ -1620,6 +1628,45 @@ export function createWorld(canvas){
         routeActors.push({mesh:walker,route:segment.map(([x,y])=>tilePos(x,y)),dailyRoutine:schedule,routineSpanMinutes:clamp(Number(trip.walkAccessMinutes)||4,3,8),offset:actorIndex*1.1,speed:.48,side:actorIndex%2?.64:-.64,actorKey:`transit-access:${tag}:${trip.reason}:${index}:${isDestination?'destination':'origin'}:${trip.from.join(',')}:${trip.to.join(',')}`,selection:{type:'Peatones',title:`Acceso al colectivo · ${trip.destinationName||trip.reason}`,description:'Caminata de acceso o salida asociada a un viaje real en colectivo; sigue los extremos del recorrido y su horario.',metrics:[['Pasajeros del viaje',transitPassengers],['Destino',trip.destinationName||trip.to.join(',')],['Acceso',isDestination?'Desde la parada al destino':'Desde el origen a la parada']]}});
       }
     }
+    function addStationPassengerActors(line,station,elevated=false,sequence=0){
+      const riders=Math.max(0,Number(line.dailyRiders)||Number(line.ridersThisPass)||0);
+      if(!line.operational||line.status!=='active'||riders<=0||!Array.isArray(station)||station.length!==2)return;
+      const remaining=stationPassengerLimit-stationPassengerActors;if(remaining<=0)return;
+      const limit=smallScreen?2:4,count=Math.min(remaining,limit,Math.max(1,Math.ceil(riders/90))),[cx,cz]=tilePos(station[0],station[1]);
+        const originX=elevated?cx:cx+.63,originZ=elevated?cz:cz+.62,radius=elevated?.31:.24;
+      for(let i=0;i<count;i++){
+        const shade=['#6d91a0','#b78162','#719775','#a37998'][i%4],walk=makeWalker(shade),shift=(i-(count-1)/2)*.055;
+        walk.scale.setScalar(.68);
+        const loop=[[-radius,-radius],[radius,-radius],[radius,radius],[-radius,radius],[-radius,-radius]].map(([x,z])=>[originX+x+shift,originZ+z+shift]);
+          const platform=new THREE.Vector3(originX+shift,.035+(elevated?1.85:0),originZ+shift),exit=new THREE.Vector3(elevated?cx+.52:originX,.035,elevated?cz+.68:originZ+.30);
+          const boarding=i%2===1;
+          routeActors.push({mesh:walk,route:loop,offset:i*2.2,speed:.23,side:0,height:elevated?1.88:.035,activeMinutes:[390,1200],stationPassenger:{lineId:String(line.id),tile:key(station[0],station[1]),platform,exit,boarding},actorKey:`station-passenger:${line.id}:${station[0]},${station[1]}:${sequence}:${i}`,selection:{type:'Peatones',title:`Pasajero/a · ${line.name||'transporte ferroviario'}`,description:boarding?'Camina desde la entrada al andén cuando llega una formación operativa.':'Espera en el andén y baja hacia la salida cuando llega una formación operativa.',metrics:[['Pasajeros reales de la línea',riders],['Estación',`${station[0]+1}, ${station[1]+1}`],['Servicio',elevated?'Tren elevado':'Subte']]}});
+          stationPassengerActors++;
+      }
+    }
+    function addTripParkingActors(){
+      const trips=(state.commutes||[]).filter(t=>t.mode==='auto'&&Number(t.vehicles)>0&&Array.isArray(t.route)&&t.route.length>1&&Array.isArray(t.to)&&['trabajo','compras','servicios','ocio'].includes(t.reason));
+      const limit=smallScreen?5:12,occupied=new Map();let drawn=0;
+      for(const trip of trips){
+        if(drawn>=limit)break;
+        const destination=key(trip.to[0],trip.to[1]),slot=occupied.get(destination)||0;if(slot>=2)continue;
+        const roadEnd=trip.route.at(-1),roadBefore=trip.route.at(-2);if(!Array.isArray(roadEnd)||!Array.isArray(roadBefore))continue;
+        const dx=Math.sign(roadEnd[0]-roadBefore[0]),dz=Math.sign(roadEnd[1]-roadBefore[1]);if(Math.abs(dx)+Math.abs(dz)!==1)continue;
+        let start,end;
+        if(trip.reason==='trabajo'){
+          const outbound=TRIP_WINDOWS[trip.departureWindowKey]||TRIP_WINDOWS.morningPeak;
+          const returnTrip=(state.commutes||[]).find(t=>t.reason==='regreso'&&t.mode==='auto'&&Array.isArray(t.from)&&Array.isArray(t.to)&&t.from[0]===trip.to[0]&&t.from[1]===trip.to[1]&&t.to[0]===trip.from?.[0]&&t.to[1]===trip.from?.[1]);
+          const returnWindow=TRIP_WINDOWS[returnTrip?.departureWindowKey]||TRIP_WINDOWS.eveningPeak;
+          start=outbound[1];end=returnWindow[0];if(end<=start)end=1170;
+        }else{start=TRIP_WINDOWS.midday[1];end=TRIP_WINDOWS.afternoonReturn[0]}
+        if(end<=start)continue;
+        const center=tilePos(roadEnd[0],roadEnd[1]),side=slot===0?-.54:.54,px=center[0]+dz*side,pz=center[1]-dx*side;
+        const mesh=makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][drawn%4]);mesh.position.set(px,.025,pz);mesh.rotation.y=Math.atan2(dx,dz);mesh.scale.setScalar(.84);mesh.userData.headlightOffsets=null;
+        routeActors.push({mesh,actorKey:`parking:${trip.reason}:${trip.to.join(',')}:${slot}`,parkingStay:{start,end},selection:{type:'Auto estacionado',title:`Estacionamiento · ${trip.destinationName||trip.reason}`,description:'Vehículo de un viaje real que permanece junto al destino mientras sus ocupantes trabajan o hacen una visita.',metrics:[['Destino',trip.destinationName||`${trip.to[0]+1}, ${trip.to[1]+1}`],['Permanencia',`${Math.round((end-start)/60)} h`],['Viaje',trip.reason]]}});
+        occupied.set(destination,slot+1);drawn++;
+      }
+    }
+    addTripParkingActors();
     const parkVisits=new Map();for(const trip of state.commutes||[]){if(trip.reason!=='ocio'||!Array.isArray(trip.to))continue;const id=key(trip.to[0],trip.to[1]);parkVisits.set(id,(parkVisits.get(id)||0)+Math.max(0,Number(trip.workers)||0))}for(const park of buildings.filter(b=>b.serviceModel==='urbanPark'&&['operativo','habilitado'].includes(b.status))){const visitors=parkVisits.get(key(park.x,park.y))||0;if(!visitors)continue;const center=tilePos(park.x,park.y),count=Math.min(5,Math.ceil(visitors/6)),colors=['#4d8d68','#d49a5b','#6387a2','#a46e79','#7c9b54'];for(let i=0;i<count;i++){const shift=(Math.floor(i/2)-1)*.16,loop=[[-.58,-.58],[.58,-.58],[.58,.58],[-.58,.58],[-.58,-.58]].map(([x,z])=>[center[0]+x+shift,center[1]+z+shift]);routeActors.push({mesh:makeWalker(colors[i%colors.length]),route:loop,offset:i*1.7,speed:.3+(i%3)*.035,side:i%2?.045:-.045,activeMinutes:[600,1200],selection:{type:'Visitante de plaza',title:`${park.name||'Plaza barrial'} · paseo ${i+1}`,description:'Vecino que eligió este espacio público como destino de ocio. Los caminantes del mapa corresponden a visitas generadas por hogares conectados.',metrics:[['Visitantes simulados hoy',visitors],['Actividad','Paseo por senderos y mobiliario'],['Ubicación',`${park.x+1}, ${park.y+1}`]]}})}}    const route=buildRoute(openRoads);if(route.length>1){const commuteRoutes=(state.commutes||[]).filter(t=>['trabajo','regreso'].includes(t.reason)).slice().sort((a,b)=>b.workers-a.workers).slice(0,18);for(let i=0;i<commuteRoutes.length;i++){const trip=commuteRoutes[i],path=trip.route.map(([x,y])=>tilePos(x,y));if(trip.busRiders>0||trip.mode==='bus')addTransitAccessActors(trip,i,'commute');if(path.length>1&&trip.mode!=='bus')routeActors.push({mesh:trip.mode==='walk'?makeWalker(['#476d83','#b46f62','#d3a05a'][i%3]):trip.mode==='bicycle'?makeBicycle(['#287b80','#398e68','#d39b39'][i%3]):makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][i%4]),route:path,dailyRoutine:tripRoutine(trip),offset:i*3.7,speed:(trip.mode==='walk'?.5:trip.mode==='bicycle'?1.05:1.55)/Math.max(1,trip.trafficFactor||1),side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.83:-.83):(i%2?.23:-.23),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Vehículo particular')})}const nonworkRoutes=(state.commutes||[]).filter(t=>['compras','servicios','ocio'].includes(t.reason)).sort((a,b)=>(b.reason==='ocio')-(a.reason==='ocio')).slice(0,8);
     for(let i=0;i<nonworkRoutes.length;i++){
       const trip=nonworkRoutes[i],path=trip.route.map(([x,y])=>tilePos(x,y)),service=trip.reason==='servicios',leisure=trip.reason==='ocio',shopping=trip.reason==='compras',roadUsers=Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)-(trip.taxiRiders||0));if(trip.busRiders>0||trip.mode==='bus')addTransitAccessActors(trip,i,'nonwork');
@@ -1685,7 +1732,7 @@ export function createWorld(canvas){
       const incoming=voyage.direction==='importación',berth=voyage.status==='atracado',path=berth?[tilePos(...voyage.route.at(-1)),tilePos(...voyage.route.at(-1))]:voyage.route.map(([x,y])=>tilePos(x,y));
       routeActors.push({mesh:makeShip(),route:path,deliveryStartDay:incoming?voyage.departureDay:undefined,deliveryEndDay:incoming?voyage.arrivalDay:undefined,deliveryProgress:incoming?0:Math.min(.99,Math.max(0,((state.day||voyage.departureDay)-voyage.departureDay)/Math.max(1,voyage.arrivalDay-voyage.departureDay))),side:incoming ? .48 : 0,selection:{type:incoming?'Buque de importación':'Buque mercante',title:incoming?`Importación de acero · ${voyage.quantity||0} unidades`:`Buque de exportación · ${voyage.quantity||0} unidades`,description:incoming?'Remesa de acero comprada por la ciudad; el puerto limita la descarga diaria y cada unidad pasa al inventario real del proveedor.':'Viaje marítimo de exportación desde mercancía trasladada al puerto.',metrics:[['Estado',berth?`Atracado · descargado ${voyage.unloadedUnits||0}/${voyage.quantity||0}`:voyage.status],['Carga',`${voyage.quantity||0} ${incoming?'unidades de acero':'unidades'}`],...(incoming?[['Descargado',`${voyage.unloadedUnits||0} / ${voyage.quantity||0} unidades`]]:[]),['Salida',`día ${voyage.departureDay||0}`],['Arribo previsto',`día ${voyage.arrivalDay||0}`]]}})
     }
-    for(const actor of routeActors){const old=previousActors.get(actorIdentity(actor));if(!old)continue;if((actor.selection?.type==='Vehículo entrante'||actor.actorKey?.startsWith('shopping-'))&&!sameRoute(actor.route,old.route)){const oldTotal=Math.max(TILE,(old.route.length-1)*TILE),oldPhase=((simulationClock*(old.speed||actor.speed||1)+(old.offset||0))%(2*oldTotal)+2*oldTotal)%(2*oldTotal),mapped=projectRoutePhase(actor.route,old.position,oldPhase>oldTotal?-1:1);const loop=mapped.total*2;actor.offset=((mapped.phase-simulationClock*actor.speed)%loop+loop)%loop;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation;continue}if(actor.actorKey?.startsWith('shipment:'))continue;actor.route=old.route;actor.offset=old.offset;actor.busWaitUntil=old.busWaitUntil;actor.lastBusStopKey=old.lastBusStopKey;actor.busStopVisitCount=old.busStopVisitCount;actor.busStopVisitKey=old.busStopVisitKey;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation}
+    for(const actor of routeActors){const old=previousActors.get(actorIdentity(actor));if(!old)continue;if((actor.selection?.type==='Vehículo entrante'||actor.actorKey?.startsWith('shopping-'))&&!sameRoute(actor.route,old.route)){const oldTotal=Math.max(TILE,(old.route.length-1)*TILE),oldPhase=((simulationClock*(old.speed||actor.speed||1)+(old.offset||0))%(2*oldTotal)+2*oldTotal)%(2*oldTotal),mapped=projectRoutePhase(actor.route,old.position,oldPhase>oldTotal?-1:1);const loop=mapped.total*2;actor.offset=((mapped.phase-simulationClock*actor.speed)%loop+loop)%loop;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation;continue}if(actor.actorKey?.startsWith('shipment:'))continue;actor.route=old.route;actor.offset=old.offset;actor.busWaitUntil=old.busWaitUntil;actor.lastBusStopKey=old.lastBusStopKey;actor.busStopVisitCount=old.busStopVisitCount;actor.busStopVisitKey=old.busStopVisitKey;actor.railWaitUntil=old.railWaitUntil;actor.lastRailStopKey=old.lastRailStopKey;actor.railStopVisitCount=old.railStopVisitCount;actor.railStopVisitKey=old.railStopVisitKey;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation}
     for(const pool of [...walkerModelPool.values(),...bicycleModelPool.values()])for(const model of pool)clear(model);walkerModelPool.clear();bicycleModelPool.clear();
     refreshServiceCoverage(state,chosen,view,openRoads);
     renderer.render(scene,camera);sceneSyncRebuilds++;lastSceneSyncMs=performance.now()-syncStarted;
@@ -1707,6 +1754,23 @@ export function createWorld(canvas){
     }
     const cursors=[];
     for(const a of routeActors){
+      if(a.parkingStay){const minute=((visualTimeOfDayMinutes%1440)+1440)%1440;a.mesh.visible=minute>=a.parkingStay.start&&minute<=a.parkingStay.end;continue}
+      if(a.stationPassenger){
+        const minute=((visualTimeOfDayMinutes%1440)+1440)%1440,active=minute>=390&&minute<=1200,station=a.stationPassenger;
+        if(!active){a.mesh.visible=false;continue}
+        const train=routeActors.find(actor=>actor.railTrain&&String(actor.railLineId)===station.lineId&&actor.railAtStop&&actor.railStopVisitKey?.startsWith(station.tile+':'));
+        if(train&&train.railStopVisitKey!==a.stationLastTrainVisit&&simulationClock>=(a.stationHiddenUntil||0)){
+          a.stationLastTrainVisit=train.railStopVisitKey;a.stationWalkStarted=simulationClock;a.stationWalkDuration=2.2*simulationSpeed;a.stationHiddenUntil=simulationClock+8*simulationSpeed;
+        }
+        if(a.stationWalkStarted!==undefined&&simulationClock<a.stationWalkStarted+a.stationWalkDuration){
+          const progress=clamp((simulationClock-a.stationWalkStarted)/Math.max(.1,a.stationWalkDuration),0,1),smooth=progress*progress*(3-2*progress);
+          const from=station.boarding?station.exit:station.platform,to=station.boarding?station.platform:station.exit;
+          a.mesh.visible=true;a.mesh.position.lerpVectors(from,to,smooth);a.mesh.rotation.y=Math.atan2(to.x-from.x,to.z-from.z);
+          const gait=simulationClock*6.8+(a.offset||0),cycle=a.mesh.userData.walkCycle;if(cycle){cycle.legs[0].rotation.x=Math.sin(gait)*.4;cycle.legs[1].rotation.x=-Math.sin(gait)*.4;cycle.arms[0].rotation.x=-Math.sin(gait)*.3;cycle.arms[1].rotation.x=Math.sin(gait)*.3}
+        }else if(simulationClock<(a.stationHiddenUntil||0))a.mesh.visible=false;
+        else{a.stationWalkStarted=undefined;a.mesh.visible=true;a.mesh.position.copy(station.boarding?station.exit:station.platform)}
+        continue;
+      }
       if(a.activeMinutes){const minute=((visualTimeOfDayMinutes%1440)+1440)%1440;a.mesh.visible=minute>=a.activeMinutes[0]&&minute<=a.activeMinutes[1];if(!a.mesh.visible)continue}
       if(a.deliveryProgress!==undefined)continue;
       // Detención breve en las paradas asignadas a la línea; no altera frecuencias ni viajes simulados.
@@ -1722,6 +1786,18 @@ export function createWorld(canvas){
         }
         if(!a.busStopKeys.has(tileKey))a.lastBusStopKey='';
       }
+      a.railAtStop=a.railWaitUntil>simulationClock;
+      if(a.railAtStop)a.offset-=wallDelta*simulationSpeed*a.speed;
+      else if(a.railStopKeys?.size){
+        const p=a.mesh.position,tx=Math.round(p.x/TILE-.5),ty=Math.round(p.z/TILE-.5),tileKey=key(tx,ty),center=tilePos(tx,ty);
+        if(a.railStopKeys.has(tileKey)&&Math.hypot(p.x-center[0],p.z-center[1])<.48&&a.lastRailStopKey!==tileKey){
+          a.railWaitUntil=simulationClock+2.8*simulationSpeed;a.lastRailStopKey=tileKey;a.railStopVisitCount=(a.railStopVisitCount||0)+1;a.railStopVisitKey=tileKey+':'+a.railStopVisitCount;a.railAtStop=true;
+          a.offset-=wallDelta*simulationSpeed*a.speed;
+        }
+        if(!a.railStopKeys.has(tileKey))a.lastRailStopKey='';
+      }
+      const passengerDoor=a.mesh.userData.railPassengerDoor;
+      if(passengerDoor&&!a.mesh.userData.railFreightTrain){const closed=a.mesh.userData.railPassengerDoorClosedZ??.16;passengerDoor.position.z+=( (a.railAtStop?closed+.13:closed)-passengerDoor.position.z)*.2}
       a.serviceAtStop=a.serviceWaitUntil>simulationClock;
       if(a.serviceAtStop)a.offset-=wallDelta*simulationSpeed*a.speed;
       else if(a.serviceStops?.size){

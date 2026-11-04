@@ -1,6 +1,6 @@
-# Ciudad Viva · Alfa 0.268
+# Ciudad Viva · Alfa 0.269
 
-**Trayectos y actividad de barrio (0.268):** peatones completan el acceso a colectivos y entran o salen de las parcelas según los horarios de sus viajes. Las cafeterías con ventas muestran clientes sentados; los camiones recolectores hacen una pausa y levantan los contenedores de sus rutas; y los autos dejan pequeñas salpicaduras al cruzar calles mojadas. Las escenas se basan en actividad registrada y los efectos tienen límites de rendimiento para móviles. Son cambios visuales: no alteran la simulación ni la economía.
+**Plazas, estaciones y viajes con destino (0.269):** los autos de viajes reales se estacionan durante la jornada laboral o la visita; las líneas ferroviarias activas paran en sus estaciones y muestran pasajeros que bajan; los colectivos llevan pasajeros visibles; y las plazas incorporan juegos, deporte y ejercicio según sus visitas. Algunos vecinos salen a pasear con sus perros por la mañana y al atardecer. Las escenas se derivan de la partida y tienen límites para móviles; no cambian la economía ni la demanda.
 
 # Ciudad Viva · Alfa 0.267
 

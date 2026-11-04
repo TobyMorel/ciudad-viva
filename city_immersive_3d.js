@@ -8,7 +8,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   schools:new THREE.Group(),repairs:new THREE.Group(),emergency:new THREE.Group(),weather:new THREE.Group(),surprises:new THREE.Group()};
  for(const [k,l] of Object.entries(layers)){l.name='Escenografía '+k;root.add(l)}
  let plan=null,signature='',clock=0,state=null,builds=0,boardingNow=0;
- const figures=[],animals=[],wings=[],boats=[],waves=[],forklifts=[],doors=[],smoke=[],cranes=[],waterDrops=[],props=[],
+ const figures=[],animals=[],dogWalks=[],wings=[],boats=[],waves=[],forklifts=[],doors=[],smoke=[],cranes=[],waterDrops=[],props=[],
   umbrellas=[],busStops=[],schoolFigures=[],inspectables=[],vanActors=[];
  const skin=['#d4a27e','#ad735b','#efc9a0','#946a50'],clothes=['#668b9b','#aa7d9b','#b88b5f','#71997e','#c77867'];
  const N=x=>Number.isFinite(Number(x))?Number(x):0;
@@ -280,7 +280,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    }
   }
  }
- function dog(parent,x,z,seed,cat=false){
+ function dog(parent,x,z,seed,cat=false,walkOwner=false,walkCenter=null){
   const g=place(parent,x,.085,z),coat=cat?'#ad9375':rnd(seed)>.5?'#c39561':'#837d6e';
   box(g,cat?.23:.28,cat?.17:.24,cat?.35:.39,coat,0,.21,0);
   for(const sx of [-.083,.083])for(const zz of [-.14,.14])box(g,.058,.17,.065,coat,sx,.08,zz);
@@ -295,7 +295,9 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   sphere(g,.044,'#444044',0,.33,.36,1);
   const tail=place(g,0,.32,-.21);
   box(tail,.06,.09,.27,coat,0,.08,-.11);
-  animals.push({g,tail,x,z,seed,cat});
+  const owner=walkOwner?person(parent,x-.34,z-.10,seed+83,{umbrella:false}):null;
+  animals.push({g,tail,x,z,seed,cat,owner,walkCenter,ownerX:x-.34,ownerZ:z-.10});
+  if(owner)dogWalks.push({dog:g,owner:owner.g,x,z,ownerX:x-.34,ownerZ:z-.10,seed});
   return g;
  }
  function butterflies(parent,x,z,seed){
@@ -308,10 +310,19 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   }
  }
  function animals3D(){
+  const dogWalkLimit=smallScreen?3:8;
+  function walkingPoint(home){
+   const roads=new Set((state?.roads||[]).map(p=>Array.isArray(p)?p.join(','):''));
+   const direction=[[0,1],[1,0],[0,-1],[-1,0]].find(([dx,dy])=>roads.has((home.x+dx)+','+(home.y+dy)));
+   if(!direction)return null;
+   const [dx,dy]=direction,[rx,rz]=point(home.x+dx,home.y+dy);
+   return dx?[rx,rz+.48]:[rx+.48,rz];
+  }
   for(const [i,b] of plan.animals.homes.entries()){
-   if(i%3!==0)continue;
+   if(i%3!==0||dogWalks.length>=dogWalkLimit)continue;
    const [x,z]=point(b.x,b.y);
-   dog(layers.animals,x+.70,z+.69,i*53+b.x*7,false);
+   const center=walkingPoint(b);
+   dog(layers.animals,x+.70,z+.69,i*53+b.x*7,false,true,center?{x:center[0],z:center[1]}:null);
   }
   for(const [i,b] of plan.animals.shops.entries()){
    if(i%2)continue;
@@ -495,7 +506,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   if(sig===signature)return;
   signature=sig;builds++;
   for(const l of Object.values(layers))clear(l);
-  for(const arr of [figures,animals,wings,boats,waves,forklifts,doors,smoke,cranes,waterDrops,props,umbrellas,
+  for(const arr of [figures,animals,dogWalks,wings,boats,waves,forklifts,doors,smoke,cranes,waterDrops,props,umbrellas,
     busStops,schoolFigures,inspectables,vanActors])arr.length=0;
   if(preview)return;
   transportStops();shops3D();coast3D();animals3D();school3D();repairs3D();emergency3D();surprises3D();weather3D();
@@ -600,10 +611,20 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    }
   }
   for(const a of animals){
-   a.g.position.x=a.x+Math.sin(clock*.48+a.seed)*.19;
-   a.g.rotation.y=Math.sin(clock*.27+a.seed)*.3;
+   const walking=Boolean(a.owner&&!rain&&((hour>=6&&hour<9)||(hour>=17&&hour<21)));
+   const phase=clock*.48+a.seed,walkFactor=walking?Math.max(0,Math.min(1,hour<9?Math.min((hour-6)*4,(9-hour)*4):Math.min((hour-17)*4,(21-hour)*4))):0;
+   const originX=a.x+(a.walkCenter?a.walkCenter.x-a.x:0)*walkFactor,originZ=a.z+(a.walkCenter?a.walkCenter.z-a.z:0)*walkFactor;
+   const walkX=Math.sin(phase)*(.07+walkFactor*.23),walkZ=Math.cos(phase*.72)*walkFactor*.24;
+   a.g.position.x=originX+walkX;a.g.position.z=originZ+walkZ;
+   a.g.rotation.y=walking?Math.atan2(Math.cos(phase*.72),Math.cos(phase))*.55:Math.sin(clock*.27+a.seed)*.3;
    a.tail.rotation.y=Math.sin(clock*4+a.seed)*.38;
    a.g.visible=a.cat?hour>=6||hour<3:hour>=5&&hour<=23;
+   if(a.owner){
+    a.owner.g.visible=walking&&hour>=5.5&&hour<=23;
+    a.owner.g.position.x=(a.ownerX+(a.walkCenter?a.walkCenter.x-.34-a.ownerX:0)*walkFactor)+walkX-.18;
+    a.owner.g.position.z=(a.ownerZ+(a.walkCenter?a.walkCenter.z-.10-a.ownerZ:0)*walkFactor)+walkZ-.06;
+    if(walking)a.owner.g.rotation.y=a.g.rotation.y;
+   }
   }
   layers.schools.visible=hour>=7&&hour<=17.5;
   for(const drop of waterDrops){

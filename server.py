@@ -7204,22 +7204,26 @@ class Handler(BaseHTTPRequestHandler):
                     ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversión $350 · capacidad de recolección +0,15 t/día. Cada depósito conectado suma además una estación de transferencia con 12 t de almacenamiento y despacho de 1,5 t/día.")
                 elif action=="zone":
                     kind=data.get("kind")
-                    if kind not in ("home","shop","factory"):self._send(400,{"error":"Uso de suelo inválido"});return
+                    if kind not in ("home","shop","factory","clear"):self._send(400,{"error":"Uso de suelo inválido"});return
                     cells=data.get("cells") or [[data.get("x",-1),data.get("y",-1)]]
                     if not isinstance(cells,list) or not cells or len(cells)>560:self._send(400,{"error":"La pintura debe incluir entre 1 y 560 parcelas."});return
                     normalized=[];seen=set()
                     for cell in cells:
                         if not isinstance(cell,(list,tuple)) or len(cell)!=2:self._send(400,{"error":"Parcela de zonificación inválida."});return
                         x,y=map(int,cell)
-                        if is_water(x,y):self._send(409,{"error":"La franja incluye una parcela de agua."});return
                         if not land_tile_unlocked(x,y):self._send(409,{"error":"La franja incluye terreno bloqueado. Desbloquealo tocando su candado."});return
-                        if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
-                        if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle terminada al lado."});return
+                        if kind!="clear":
+                            if is_water(x,y):self._send(409,{"error":"La franja incluye una parcela de agua."});return
+                            if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
+                            if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle terminada al lado."});return
                         if (x,y) not in seen:normalized.append((x,y));seen.add((x,y))
-                    state["zones"]=[z for z in state.setdefault("zones",[]) if (z.get("x"),z.get("y")) not in seen]
-                    for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
-                    label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
-                    ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). La construcción depende de demanda, capital, materiales, cuadrillas y acceso.")
+                    zones=state.setdefault("zones",[]);before=len(zones);state["zones"]=[z for z in zones if (z.get("x"),z.get("y")) not in seen]
+                    if kind=="clear":
+                        ev("Permisos de suelo eliminados",f"Se quitaron permisos de zona en {before-len(state['zones'])} parcela(s).")
+                    else:
+                        for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
+                        label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
+                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). La construcción depende de demanda, capital, materiales, cuadrillas y acceso.")
                 elif action in ("pauseProject","resumeProject","cancelProject"):
                     project=next((p for p in state["projects"] if p["id"]==str(data.get("id"))),None)
                     if not project: self._send(404,{"error":"La obra ya no está activa."}); return

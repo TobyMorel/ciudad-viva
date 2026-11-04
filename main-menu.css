@@ -1037,3 +1037,37 @@ footer { display: none !important; }
     justify-self: stretch;
   }
 }
+
+/* Tesorería y popover: evitar que el HUD compacto corte el saldo. */
+@media (min-width: 651px) {
+  .topbar .metrics { display: flex !important; flex: 1 1 0; min-width: 0; height: 48px !important; max-height: 48px; gap: 4px; overflow: visible !important; }
+  .topbar .metrics > .metric { flex: 1 1 68px; min-width: 62px; }
+  .topbar .metrics > .metric:first-child { flex: 1.7 1 150px; min-width: 142px; grid-template-columns: 23px minmax(0,1fr) !important; }
+  .topbar .metrics > .metric:first-child .treasury-value { grid-column: 2 !important; grid-row: 1 !important; align-self: center; display: flex; min-width: 0; align-items: center; gap: 3px; }
+  .topbar .metrics > .metric:first-child .treasury-value #money { flex: 0 0 auto; width: auto; overflow: visible !important; text-overflow: clip; font-size: 12px !important; }
+  .topbar .metrics > .metric:first-child .treasury-value button { flex: 0 0 18px; width: 18px; height: 18px; padding: 0; font-size: 11px; }
+  .topbar .metrics > .metric:first-child > span { left: 32px; top: 1px; width: auto; height: auto; overflow: hidden; opacity: .8; font-size: 6px !important; line-height: 7px; }
+  .topbar .metrics > .metric:first-child > small { display: none !important; }
+}
+@media (min-width: 651px) and (max-width: 1050px) {
+  .topbar .metrics { justify-content: stretch; }
+  .topbar .metrics > .metric:nth-child(4) { display: grid; }
+  .topbar .metrics > .metric:nth-child(5) { display: none; }
+  .topbar .metrics > .metric:first-child { flex-basis: 150px; }
+  .topbar .metrics > .metric:not(:first-child) { flex: 1 1 70px; min-width: 66px; }
+  .topbar .metrics > .metric:first-child .treasury-value #money { font-size: 11px !important; }
+  .topbar .metrics > .metric:first-child .treasury-value button { flex-basis: 16px; width: 16px; height: 16px; font-size: 10px; }
+}
+@media (max-width: 820px) and (min-width: 651px) {
+  .topbar .city-title { display: none; }
+  .topbar .metrics > .metric:first-child { flex-basis: 142px; }
+}
+@media (max-width: 650px) {
+  .topbar .metrics { overflow: visible !important; }
+  .topbar .metrics > .metric:first-child { grid-template-columns: minmax(0,1fr) !important; }
+  .topbar .metrics > .metric:first-child .treasury-value { grid-column: 1 !important; grid-row: 1 !important; justify-self: center; align-self: center; gap: 2px; }
+  .topbar .metrics > .metric:first-child .treasury-value #money { flex: 0 0 auto; width: auto; overflow: visible !important; font-size: 10px !important; }
+  .topbar .metrics > .metric:first-child .treasury-value button { flex: 0 0 15px; width: 15px; height: 15px; font-size: 9px; }
+  .topbar .metrics > .metric:first-child > small { display: none !important; }
+  .metric-treasury .treasury-popover { left: 50%; transform: translateX(-50%); }
+}

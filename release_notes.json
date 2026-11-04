@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.245",
+  "currentVersion": "0.246",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.246",
+      "date": "2026-11-04",
+      "title": "Escena 3D más ágil, peatones animados y herramientas de suelo",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Seleccionar una parcela ya no reconstruye toda la escena. Al construir, se conserva la vegetación y solo se ocultan o restauran las instancias de la parcela afectada.",
+        "Los elementos repetidos de construcciones, calles y peatones reutilizan geometría 3D para reducir trabajo al actualizar la escena.",
+        "Se conserva la sombra circular suave al pie de los árboles y se quitan las sombras proyectadas por el sol; el shadow map deja de activarse al acercar la cámara.",
+        "Las personas ahora tienen una silueta articulada de baja carga, con brazos y piernas animados al caminar; los compradores mantienen sus bolsas visibles al salir del comercio.",
+        "La bicicleta se rehízo con ruedas, radios, cuadro tubular, guardabarros, cadena, sillín, manubrio y pedales animados, siguiendo referencias de bicicletas urbanas.",
+        "Tesorería mantiene visible el saldo en la barra superior y abre un panel del juego con caja disponible, reservas y detalle mensual de ingresos y gastos.",
+        "Construir → Zonas incluye Quitar zona, que permite borrar permisos pintados con clic o arrastrando, también sobre parcelas que ya tienen una plaza u otra construcción."
+      ],
+      "verification": "Sintaxis de JavaScript y Python, versión 0.246 y borrado de zonas en Online y Offline verificados. La tesorería, su popup y la herramienta de zonas se comprobaron en navegador; la distribución de la barra superior no desborda en 1024 px ni en pantalla móvil estrecha. Las sombras circulares de suelo permanecen activas sin shadow map."
+    },
     {
       "version": "0.245",
       "date": "2026-11-04",

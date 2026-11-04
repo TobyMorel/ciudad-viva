@@ -1,3 +1,9 @@
+## Alfa 0.246 · Construcción fluida y herramientas de ciudad
+
+La selección del mapa actualiza su resaltado sin reconstruir toda la ciudad, y ocupar una parcela ya no regenera el lote de árboles visibles. Los peatones tienen extremidades articuladas con ciclo de marcha; el ciclista y la bicicleta cuentan con cuadro y ruedas detallados y pedaleo. La tesorería muestra saldo, dinero libre, reservas y los rubros mensuales dentro de un popup propio. En Construir → Zonas, Quitar zona borra permisos con clic o arrastre, incluso en parcelas ocupadas.
+
+Siguiente: medir la pausa al colocar edificios en ciudades grandes, perfilar la escena con los peatones y ciclistas mejorados y verificar que el saldo siga legible en ventanas de escritorio estrechas y en el Samsung A54.
+
 ## Alfa 0.245 · Árboles y rendimiento del mapa
 
 Los árboles detallados ya no proyectan la sombra oscura que aparece al alejarse del tronco; se conserva el círculo suave debajo de cada árbol. El mapa muestra los FPS medidos en una etiqueta compacta que también cabe en móvil.

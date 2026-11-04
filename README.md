@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.271
+
+**Calles con estacionamiento y maniobras (0.271):** cada calle tiene veredas, espacios señalizados para estacionar y un carril de circulación por sentido. Los autos avanzan, maniobran marcha atrás para estacionarse y se incorporan otra vez al salir.
+
 # Ciudad Viva · Alfa 0.270
 
 **Celdas y mundo 3D ampliados (0.270):** las celdas del mapa crecen un 50% y sus modelos un 35% manteniendo intactas las coordenadas de las partidas guardadas. La cámara, la selección y las superposiciones 3D siguen la escala nueva. Este cambio prepara el mapa para incorporar varias categorías de carreteras en próximas versiones.

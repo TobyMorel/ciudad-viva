@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.270",
+  "currentVersion": "0.271",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.271",
+      "date": "2026-11-04",
+      "title": "Calles con estacionamiento y maniobras",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Cada calle ahora reserva una vereda a cada lado, una franja señalizada para estacionar junto a cada vereda y un carril de circulación por sentido en el centro.",
+        "Las líneas de separación y los espacios de estacionamiento siguen la calle y se interrumpen en las intersecciones para dejar libres los cruces.",
+        "Los autos llegan por el carril, avanzan hasta el espacio y retroceden con las ruedas delanteras giradas hasta quedar alineados. Al terminar la visita o jornada, salen marcha atrás y se incorporan de nuevo a la calle.",
+        "Los semáforos, farolas y elementos de vereda se reubican para convivir con la calzada más ancha. La simulación económica y las coordenadas de las partidas se mantienen."
+      ],
+      "verification": "Revisión estática del cambio y las referencias de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.270",
       "date": "2026-11-04",

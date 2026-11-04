@@ -1,0 +1,52 @@
+/* Alfa 0.262 · cámara inmersiva sobre el mismo render WebGL real. */
+#cinemaToggle{position:relative}
+#cinemaToggle .cinema-dock-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#e9e7fb;color:#544d85;font-size:23px;font-weight:800}
+#cinemaPanel[hidden],#cinemaPanel .cinema-comparison[hidden]{display:none!important}
+#cinemaPanel{position:fixed;z-index:10025;top:12px;left:12px;width:min(350px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #a4c2b6;border-radius:16px;padding:11px 13px;background:#fafff5ee;backdrop-filter:blur(14px);box-shadow:0 12px 45px #102e3280;color:#294a3f;font:12px/1.42 system-ui,-apple-system,sans-serif}
+#cinemaPanel header{display:flex;justify-content:space-between;align-items:start;gap:8px;padding-bottom:8px;border-bottom:1px solid #c6dcca}
+#cinemaPanel header small{font-weight:850;letter-spacing:.04em;font-size:9px;color:#397e62}
+#cinemaPanel header h2{margin:1px 0;font-size:17px;color:inherit}
+#cinemaPanel header [data-exit]{font-size:25px;padding:0 5px}
+#cinemaPanel .cinema-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0}
+#cinemaPanel .cinema-controls button{border:1px solid #89baa0;background:#e4f2e6;color:#245741;border-radius:8px;padding:8px 6px;font-weight:800;font-size:11px}
+#cinemaPanel .cinema-controls button[aria-pressed=true]{background:#2b8662;color:#fff}
+#cinemaPanel .cinema-controls label{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800;color:#43675b}
+#cinemaPanel select{width:100%;min-height:35px;padding:7px;border:1px solid #a1bdae;border-radius:8px;color:#245741;background:#fff;font:12px system-ui}
+#cinemaPanel .cinema-status{border-radius:8px;padding:8px;background:#e9f6e9;color:#436b5b;font-size:11px}
+#cinemaPanel .cinema-comparison{border:1px solid #b4cdbb;background:#fcfff8;border-radius:9px;padding:9px;margin-top:10px;max-height:35dvh;overflow:auto}
+#cinemaPanel .cinema-comparison>p{font-size:10px;color:#61766f}
+#cinemaPanel .cinema-history{border-top:1px solid #d2e3d8;margin-top:7px;padding-top:7px;display:grid;gap:3px}
+#cinemaPanel .cinema-history b{color:#315f48}
+#cinemaPanel .cinema-history small{font-size:10px;color:#657f72}
+#cinemaPanel button:focus-visible,#cinemaPanel select:focus-visible,#cinemaToggle:focus-visible{outline:3px solid #e7b451;outline-offset:2px}
+body.cinema-mode{overflow:hidden;background:#0d242a}
+body.cinema-mode #app{display:block!important;height:100dvh!important;min-height:0!important;overflow:hidden!important}
+body.cinema-mode #app>.topbar,body.cinema-mode #app>.metrics,body.cinema-mode #app>footer{display:none!important}
+body.cinema-mode #app>.layout{display:block!important;position:fixed!important;inset:0!important;min-height:0!important;width:100vw!important;height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden!important}
+body.cinema-mode .layout>.ui-source,body.cinema-mode .layout>#cityReportRail,
+body.cinema-mode .world-wrap>.world-toolbar,body.cinema-mode .world-wrap>.game-dock,
+body.cinema-mode .world-wrap>.growth-demand,body.cinema-mode .world-wrap>.map-hint,
+body.cinema-mode .world-wrap>.city-alert-counter,body.cinema-mode .world-wrap>.fps-counter,
+body.cinema-mode .world-wrap>.city-alert-markers,body.cinema-mode .world-wrap>.neighborhood-markers,
+body.cinema-mode .world-wrap>.bus-route-markers,body.cinema-mode .world-wrap>.citizen-inbox,
+body.cinema-mode .world-wrap>.bus-route-composer,body.cinema-mode .world-wrap>#cityPlanPreview,
+body.cinema-mode #cityCompanion,body.cinema-mode #beginnerTutorial,body.cinema-mode #tutorialSpotlight,
+body.cinema-mode #onlineHud{display:none!important}
+body.cinema-mode .layout>.world-wrap{display:block!important;position:relative!important;inset:auto!important;grid-column:1!important;grid-row:1!important;width:100vw!important;height:100dvh!important;min-height:0!important;max-height:none!important;margin:0!important;border:0!important;flex:1 1 auto!important;overflow:hidden!important}
+body.cinema-mode canvas#city{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important}
+body[data-theme=dark] #cinemaPanel{background:#213b38f2;color:#e2f3eb;border-color:#739f8e}
+body[data-theme=dark] #cinemaPanel .cinema-status,body[data-theme=dark] #cinemaPanel .cinema-comparison{background:#2e5145;color:#e2f3e6;border-color:#557969}
+body[data-theme=dark] #cinemaPanel .cinema-history b{color:#d3edd6}
+@media(max-width:650px){
+ #cinemaToggle .cinema-dock-icon{width:28px;height:28px;font-size:20px}
+ #cinemaPanel{top:8px;left:8px;width:min(280px,calc(100vw - 16px));max-height:min(52dvh,390px);padding:8px 10px}
+ #cinemaPanel header h2{font-size:14px}
+ #cinemaPanel .cinema-controls{gap:5px}
+ #cinemaPanel .cinema-controls button{font-size:10px;padding:7px 5px}
+}
+@media(prefers-reduced-motion:reduce){#cinemaPanel{backdrop-filter:none}}
+
+.city-climate-badge{position:absolute;z-index:14;top:71px;left:12px;max-width:230px;padding:7px 11px;border-radius:12px;border:1px solid #8bad9b;background:#f9fff1db;color:#2e6452;font:800 10px/1.25 system-ui,-apple-system,sans-serif;pointer-events:none;box-shadow:0 5px 18px #244c3838;backdrop-filter:blur(5px)}
+.city-climate-badge[data-weather=rain]{background:#dcecf0e6;color:#315d76;border-color:#80a8b7}
+body.cinema-mode .city-climate-badge{top:12px;left:auto;right:12px;z-index:10004}
+@media(max-width:650px){.city-climate-badge{top:54px;left:7px;max-width:160px;padding:5px 7px;font-size:9px}body.cinema-mode .city-climate-badge{top:9px;right:9px;max-width:132px}}

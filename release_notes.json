@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.261",
+  "currentVersion": "0.262",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.262",
+      "date": "2026-11-04",
+      "title": "Ciudad Viva 3D: vecinos, festivales, clima, negocios, cámara y servicios",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "La vida barrial muestra ciudadanos 3D y alguna mascota con anatomía proporcionada, y pequeñas rutinas visibles vinculadas a viviendas ocupadas, comercios que venden, viajes de ocio, paradas de colectivo con pasajeros y emergencias atendidas. Los trayectos de transporte existentes siguen vinculados a viajes de la simulación.",
+        "Las ferias de productores, festivales culturales y congresos registrados y efectivamente realizados con visitantes exhiben puestos 3D y público en espacios libres cercanos a una instalación cívica; hitos municipales recientes añaden una decoración de celebración. No se inventan eventos ni visitantes.",
+        "Viviendas, comercios, escuelas, fábricas y hoteles obtienen ventanas 3D con iluminación nocturna ligada a ocupación, actividad y suministro eléctrico; los apagones oscurecen las ventanas afectadas.",
+        "Efectos meteorológicos 3D de lluvia, bruma, charcos, hojas estacionales y paleta de ambiente según mes austral (verano, otoño, invierno y primavera), alimentados por la lluvia reportada en la simulación. La densidad se limita en móviles.",
+        "Los comercios incorporan carteles legibles sobre textura CanvasTexture, toldos existentes y modelos 3D específicos de panadería, café, mercado, florería o taller. Cuando no existe un rubro explícito, es una variante estética y no altera ventas ni inventarios.",
+        "El botón Cámara y la tecla K permiten un modo cinematográfico 3D a pantalla completa, recorridos de lugares construidos, seguimiento de actores reales, capturas PNG y comparación honesta de registros de barrios históricos contra indicadores actuales, sin reconstrucciones engañosas del pasado.",
+        "Se refuerza la visualización de servicios: trabajadores en el lugar durante incidencias atendidas y pasajeros visibles en paradas activas. Bomberos, ambulancias, colectivos, transporte de basura y carga conservan sus modelos y trayectos 3D existentes del motor.",
+        "Los módulos de escenas limitan instancias y usan geometrías compartidas, proporciones uniformes y efectos adaptativos. Se añaden pruebas de estado, 3D y Playwright en 390 y 1440 px."
+      ],
+      "verification": "Pruebas en Node.js para estaciones, eventos reales, identidades comerciales, recorridos y comparación histórica. Validación de sintaxis y Playwright de la escena WebGL y el modo cámara en móvil y escritorio, con las regresiones históricas activas."
+    },
     {
       "version": "0.261",
       "date": "2026-11-04",

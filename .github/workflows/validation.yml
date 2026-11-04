@@ -49,6 +49,9 @@ jobs:
           node --check city_spectacle_state.js
           node --check city_spectacle_3d.js
           node --check city_cinema.js
+          node --check living_city.js
+          node --check living_city_3d.js
+          node --check living_city_ui.js
           node --check online_engine.mjs
           python -m py_compile shared_engine.py
           node --check cityGuide.js
@@ -61,7 +64,7 @@ jobs:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
-        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tutorial.mjs tests/test_city_insights.mjs tests/test_city_spectacle.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
+        run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tutorial.mjs tests/test_city_insights.mjs tests/test_city_spectacle.mjs tests/test_living_city.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
       - name: Cursores multijugador y presencia
         run: node --test tests/test_cursor_motion.mjs tests/test_cursor_presence.mjs
       - name: Stress económico 30 años (cinco perfiles)
@@ -70,7 +73,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.262
+          name: ciudad-viva-alfa-0.263
           path: |
             .
             !.git/**
@@ -104,6 +107,8 @@ jobs:
         run: node tests/test_city_companion_ui.mjs
       - name: "Ciudad viva en 3D y cámara: móvil y escritorio"
         run: node tests/test_city_spectacle_ui.mjs
+      - name: "Historias, obras, tráfico y plazas en 3D: móvil y escritorio"
+        run: node tests/test_living_city_ui.mjs
       - name: Comprobar UI, construcción y Economía (390/1440 px)
         run: |
           tests=(
@@ -142,7 +147,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.262-responsive
+          name: ciudad-viva-alfa-0.263-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

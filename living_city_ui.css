@@ -1,0 +1,50 @@
+/* Alfa 0.263 · historias y ceremonias. Panel superpuesto al mundo 3D. */
+#lifeStoriesToggle{position:relative}
+#lifeStoriesToggle .life-dock-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:11px;background:#eaf0e4;color:#537f6d;font-size:24px;font-weight:800}
+#lifeStoriesPanel[hidden],#lifeStoriesPanel [hidden]{display:none!important}
+#lifeStoriesPanel{position:fixed;z-index:10020;right:13px;top:12px;bottom:12px;overflow-y:auto;overscroll-behavior:contain;width:min(378px,calc(100vw - 26px));padding:13px 16px;border:1px solid #b0cdb7;border-radius:17px;color:#244d40;background:#f9fff8f5;backdrop-filter:blur(14px);box-shadow:0 15px 55px #112b3888;font:12px/1.45 system-ui,-apple-system,sans-serif}
+#lifeStoriesPanel header{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding-bottom:8px;border-bottom:1px solid #bfd7c7}
+#lifeStoriesPanel header small{letter-spacing:.07em;font-weight:850;font-size:9px;color:#498668}
+#lifeStoriesPanel h2{margin:3px 0;font-size:19px;line-height:1.18}
+#lifeStoriesPanel header [data-life-close]{font-size:26px;line-height:1;border:1px solid #c8d8cd;border-radius:9px;min-width:28px;min-height:28px}
+#lifeStoriesPanel .life-tabs{display:flex;gap:6px;margin:12px 0}
+#lifeStoriesPanel .life-tabs button{flex:1;padding:8px 5px;background:#e8f3e8;border:1px solid #c0d8c8;border-radius:9px;font-size:11px;font-weight:800}
+#lifeStoriesPanel .life-tabs button[aria-selected=true]{background:#386f58;color:#fff;border-color:#386f58}
+#lifeStoriesPanel .life-search-label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:800}
+#lifeStoriesPanel #lifeResidentSearch{width:100%;height:34px;padding:6px 9px;border:1px solid #a3c0ac;border-radius:8px;background:#fff;color:#214c3f;font-size:12px}
+#lifeStoriesPanel .life-people-list{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow:auto;margin:8px 0 12px;padding-right:2px}
+#lifeStoriesPanel .life-person{display:flex;align-items:center;gap:10px;width:100%;border:1px solid #ddebe1;border-radius:9px;background:#f3f8f1;color:#214a3d;text-align:left;padding:7px}
+#lifeStoriesPanel .life-person.is-active{background:#e0f1e3;border-color:#6dae8a}
+#lifeStoriesPanel .life-avatar{width:30px;height:30px;flex-shrink:0;border-radius:11px;background:#c3d8c8;color:#46705c;display:grid;place-items:center;font-size:16px}
+#lifeStoriesPanel .life-person b{display:block;font-size:11px}
+#lifeStoriesPanel .life-person small{display:block;margin-top:1px;color:#5c7b6b;font-size:10px}
+#lifeStoriesPanel .life-details{margin-top:8px;border-top:1px solid #bbd7c4;padding-top:10px}
+#lifeStoriesPanel .life-details h3{margin:0 0 3px;font-size:16px}
+#lifeStoriesPanel .life-details p{margin:5px 0 9px}
+#lifeStoriesPanel .life-data{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:10px 0}
+#lifeStoriesPanel .life-data span{font-size:9px;color:#5c7c6d;border:1px solid #d2e3d8;border-radius:9px;padding:7px;background:#f2f8ef}
+#lifeStoriesPanel .life-data b{display:block;margin-top:2px;font-size:11px;color:#305f46;overflow-wrap:anywhere}
+#lifeStoriesPanel .life-follow{display:block;width:100%;border-radius:9px;border:1px solid #508c6b;background:#367c58;color:#fff;font-weight:800;margin:10px 0;padding:9px}
+#lifeStoriesPanel .life-follow[aria-pressed=true]{background:#a85d49;border-color:#a85d49}
+#lifeStoriesPanel h4{font-size:12px;margin:10px 0 6px}
+#lifeStoriesPanel .life-timeline{padding:0;margin:0;list-style:none;max-height:230px;overflow:auto}
+#lifeStoriesPanel .life-timeline li{display:grid;gap:2px;position:relative;border-left:2px solid #a5c7af;padding:3px 0 7px 10px;margin-left:3px}
+#lifeStoriesPanel .life-timeline small{font-weight:800;font-size:10px;color:#59826b}
+#lifeStoriesPanel .life-empty,#lifeStoriesPanel .life-moments>p{color:#617e6c;font-size:11px}
+#lifeStoriesPanel .life-moment{border:1px solid #cbded2;background:#f3faef;border-radius:10px;padding:10px;margin:8px 0}
+#lifeStoriesPanel .life-moment>small{font-size:10px;font-weight:700;color:#63856e}
+#lifeStoriesPanel .life-moment h3{font-size:14px;margin:4px 0}
+#lifeStoriesPanel .life-moment p{font-size:11px;margin:3px 0 8px}
+#lifeStoriesPanel .life-moment button{padding:7px 10px;border-radius:8px;background:#e0ede2;border:1px solid #b2cdb6;font-size:11px;font-weight:800;color:#41684e}
+.life-event-banner{position:fixed;z-index:10004;left:50%;top:78px;transform:translateX(-50%);max-width:calc(100vw - 25px);min-height:40px;padding:9px 16px;border-radius:12px;border:1px solid #e5c47e;background:#fff4ccf5;color:#67512a;font:800 12px system-ui;box-shadow:0 10px 32px #57482a55;white-space:normal}
+body.cinema-mode .life-event-banner{display:none}
+body[data-theme=dark] #lifeStoriesPanel{background:#223d37f5;color:#e4f5e9;border-color:#65967b}
+body[data-theme=dark] #lifeStoriesPanel .life-person,body[data-theme=dark] #lifeStoriesPanel .life-moment{background:#31574a;color:#e4f2e7;border-color:#577e69}
+body[data-theme=dark] #lifeStoriesPanel .life-person small,body[data-theme=dark] #lifeStoriesPanel .life-data span{color:#c9e7d4}
+body[data-theme=dark] #lifeStoriesPanel .life-data span{background:#2b5040}
+body[data-theme=dark] #lifeStoriesPanel .life-data b{color:#e9f1d9}
+@media(max-width:650px){#lifeStoriesToggle .life-dock-icon{width:28px;height:28px;font-size:20px}
+ #lifeStoriesPanel{top:7px;bottom:7px;right:7px;width:min(342px,calc(100vw - 14px));padding:10px 12px}
+ .life-event-banner{top:65px;font-size:11px}}
+
+body.cinema-mode #lifeStoriesPanel{display:none!important}

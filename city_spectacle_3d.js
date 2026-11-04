@@ -165,7 +165,9 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
  function addNeighborhoodLife(state){
   if(!plan)return;
   const cap=smallScreen?16:34;let people=0;
-  const residents=plan.homes.slice(0,smallScreen?10:22);
+  // Desde 0.263 las figuras residentes las dibuja living_city_3d.js,
+  // asociadas a identificadores reales: no duplicarlas como extras aleatorios.
+  const residents=[];
   for(const h of residents){
    if(people>=cap)break;
    const seed=Math.abs(h.x*117+h.y*193),count=Math.min(h.occupants>6?2:1,cap-people);

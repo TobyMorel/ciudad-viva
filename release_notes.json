@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.262",
+  "currentVersion": "0.263",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.263",
+      "date": "2026-11-04",
+      "title": "Historias de vecinos, obras 3D, tráfico expresivo, plazas animadas y grandes momentos",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Se integra un registro persistente de historias reales de residentes: identificador, vivienda, empleador, situación laboral y cambios observados (primer padrón, mudanzas, contrataciones, desempleo y cambios de empleo). Los registros son acotados y compartidos tanto en Offline como LAN, sin inventar nombres, edades o relaciones familiares.",
+        "Las figuras tridimensionales de los vecinos están asociadas al padrón auténtico; se pueden seleccionar en el mapa y seguir desde el nuevo botón Historias. Cuando un residente tiene un trayecto de caminata compatible con su hogar y trabajo, camina por esa ruta real; en otros casos permanece cerca de su hogar sin fingir trayectos individuales en automóvil o colectivo.",
+        "Las obras existentes de viviendas, comercios y fábricas muestran nuevas etapas 3D con cimentación, muros, estructura, techumbre, grúa y personal en obra. Son animaciones puramente visuales derivadas del avance que el motor ya declara: no cambian precios, materiales, plazos, permisos ni decisiones de construcción.",
+        "Durante las horas pico se representan agrupaciones visuales de vehículos con luces de freno sobre calles realmente cargadas por los viajes simulados. Las filas desaparecen fuera del horario pico. La simulación de capacidad y semáforos sigue siendo la autoritativa; esta capa no crea automóviles nuevos a efectos económicos.",
+        "Las plazas reciben actividades en modelos tridimensionales de descanso, juegos con pelota y ejercicios de acuerdo con el volumen efectivo de viajes de ocio hacia cada plaza; fuera del horario diurno se reducen las figuras. Sin visitas reales no se fabrican escenas.",
+        "Se registran grandes momentos de la ciudad con origen verificable: umbrales demográficos, primer hospital operativo, primeros colectivos y trenes operativos, elecciones efectivamente registradas y aniversarios de la partida. Se muestran decoraciones 3D, una notificación discreta y una galería que permite visitar sus ubicaciones. No se reconstruye arbitrariamente la historia previa.",
+        "El nuevo panel Historias incluye búsqueda de habitantes, ficha personal, evolución registrada, seguimiento en la cámara y recorridos a los escenarios de los hitos. Se añaden pruebas de lógica, persistencia, invariancia económica, geometría y experiencia responsive."
+      ],
+      "verification": "Validación de sintaxis con Node.js, pruebas de las historias y los eventos, no modificación de proyectos o finanzas, regresiones Online/Offline, stress económico 30 años y Playwright en 390/1440 px."
+    },
     {
       "version": "0.262",
       "date": "2026-11-04",

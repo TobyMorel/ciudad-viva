@@ -1,4 +1,5 @@
 import {growthDemand} from './growth_demand.js';
+import {recordLivingCity} from './living_city.js';
 
 // Lecturas deterministas de la ciudad: nunca crean residentes, dinero ni cobertura.
 export const DISTRICTS=Object.freeze([
@@ -99,6 +100,7 @@ export function recordCityProgress(state){
   }
  }
  milestones.events=milestones.events.slice(-32);
+ recordLivingCity(state);
 }
 export function neighborhoodTimeline(state,districtId){
  const snapshots=(state?.neighborhoodHistory?.snapshots||[]).map(s=>({day:s.day,record:s.districts?.find(d=>d.id===districtId)})).filter(s=>s.record);

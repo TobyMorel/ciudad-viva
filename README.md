@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.267
+
+**Rutinas diarias y clima vivo (0.267):** residentes y viajes 3D siguen los horarios de trabajo, regreso, escuela, compras, servicios y paseo. Los peatones esperan el semáforo al cruzar; en las paradas, las puertas de los colectivos se abren y los pasajeros suben y bajan según los viajes de la línea. Viento y estación animan árboles, hojas, banderas, humo, barcos y ondas del río. Comercios, escuelas y plazas muestran actividad en sus horarios de mayor movimiento. Cambios visuales, sin efectos nuevos en la economía.
+
 # Ciudad Viva · Alfa 0.266
 
 **Impactos ambientales por barrio (0.266):** el informe **Clima** muestra índices locales de aire, ruido y calor, vinculados con recorridos, emisiones estimadas, fábricas y obras activas, parques y sombra vegetal. Las capas de aire, ruido, calor y anegamiento colorean las calles para localizar sectores con presión ambiental o exposición pluvial. Los parques amortiguan parcialmente calor y contaminación; el drenaje reporta su cobertura y anegamientos presentes. La exposición al aire eleva de forma moderada la demanda agregada de salud primaria. Los índices comparan barrios dentro de la ciudad y no son mediciones científicas. Disponible en partidas Offline y LAN.

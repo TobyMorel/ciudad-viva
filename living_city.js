@@ -2,6 +2,8 @@
 const N=v=>Number.isFinite(Number(v))?Number(v):0;
 const tile=(p)=>Array.isArray(p)?p.join(','):'';
 const oper=b=>['operativo','habilitado','active'].includes(b?.status);
+const commuteWindows=Object.freeze({early:[300,420],morningPeak:[420,570],midday:[660,840],afternoon:[840,1020],eveningPeak:[1020,1170],late:[1170,1320],dayNoon:[570,1020]});
+export function commuteWindow(key){return commuteWindows[key]||commuteWindows.morningPeak}
 export function citizenName(resident){
  if(typeof resident?.name==='string'&&resident.name.trim())return resident.name.trim();
  return 'Vecino/a #'+String(resident?.id||'sin identificador').slice(-6).toUpperCase();
@@ -16,6 +18,7 @@ export function residentDirectory(state,limit=900){
     age:Number.isFinite(p.age)?p.age:null,status:p.status||'sin registrar',eligible:Boolean(p.workerEligible),
     employerId:p.employerId||null,employerName:p.employerName||null,
     monthlyWage:N(p.monthlyWage),unemploymentEpisodes:N(p.unemploymentEpisodes),
+    workShiftWindow:p.workShiftWindow||null,returnShiftWindow:p.returnShiftWindow||null,
     unemploymentSinceDay:p.unemployedSinceDay??null,attendance:p.attendance??null,
     previousEmployer:p.previousEmployer||null,
     lastUnemploymentDurationDays:p.lastUnemploymentDurationDays??null});
@@ -33,9 +36,13 @@ export function residentCommute(state,resident){
  const workplace=(state?.workplaces||[]).find(w=>workplaceId&&w.x===Number(workplaceId[1])&&w.y===Number(workplaceId[2]))||
    (state?.workplaces||[]).find(w=>w.name===resident.employerName)||null;
  if(!workplace)return null;
- const trip=(state?.commutes||[]).find(t=>tile(t.from)===tile(resident.home)&&tile(t.to)===tile([workplace.x,workplace.y])&&Array.isArray(t.route)&&t.route.length>=2&&N(t.workers)>0);
+ const options=(state?.commutes||[]).filter(t=>t.reason==='trabajo'&&tile(t.from)===tile(resident.home)&&tile(t.to)===tile([workplace.x,workplace.y])&&Array.isArray(t.route)&&t.route.length>=2&&N(t.workers)>0);
+ const trip=options.find(t=>(t.people||[]).some(p=>String(p.id)===String(resident.id)))||
+  options.find(t=>!resident.workShiftWindow||t.departureWindowKey===resident.workShiftWindow)||options[0];
  if(!trip)return null;
  return {route:trip.route,mode:trip.mode||'desconocido',reason:trip.reason||'trabajo',
+  departureWindowKey:trip.departureWindowKey||resident.workShiftWindow||'morningPeak',
+  returnWindowKey:resident.returnShiftWindow||'eveningPeak',
   from:resident.home,to:[workplace.x,workplace.y],destination:workplace.name,passengers:N(trip.workers)};
 }
 function moment(day,id,title,detail,x,y,type='celebracion'){

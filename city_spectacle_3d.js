@@ -10,7 +10,7 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
  const dimMaterial=mat('#507d8d',{emissive:'#142832',emissiveIntensity:.05,roughness:.4});
  const closedMaterial=mat('#65717a',{emissive:'#000000',emissiveIntensity:0});
  const palettePeople=['#db986f','#5c8f8d','#9b74a7','#caad64','#6687ae','#81a470'];
- let plan=null,sceneKey='',climateKey='',animations=[],retailCount=0,festivalCount=0,eventVisitors=0,windowCount=0,illuminatedWindows=0,frame=0,clock=0;
+ let plan=null,sceneKey='',climateKey='',animations=[],flags=[],retailCount=0,festivalCount=0,eventVisitors=0,windowCount=0,illuminatedWindows=0,frame=0,clock=0;
  const signCache=new Map();const weatherTint=new THREE.Color();let buildingLookup=new Map();
  const tone=(value)=>String(value||'').toUpperCase().slice(0,28);
  function makeSign(label,color){
@@ -95,7 +95,7 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
    if(obj.geometry&&!obj.geometry.userData.shared)obj.geometry.dispose();
    if(obj.material?.userData?.ephemeral)obj.material.dispose();
   });
-  lifeRoot.clear();animations=[];
+  lifeRoot.clear();animations=[];flags=[];
  }
  function makeHuman(parent,x,z,seed,{staff=false,child=false}={}){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=seeded(seed+8)*Math.PI*2;parent.add(g);
@@ -136,7 +136,7 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
   for(let i=0;i<4;i++)box(g,.13,.015,.56,i%2?'#fff5e3':accent,-.20+i*.135,1.055,0);
   box(g,.48,.12,.28,'#bd995e',0,.66,0);
   for(let i=0;i<5;i++)sphere(g,.048,i%2?'#ddaa56':'#74a668',-.18+i*.09,.76,-.02,1);
-  for(let i=0;i<3;i++){const flag=box(g,.13,.11,.015,accent,(i-1)*.18,1.25,.02);flag.rotation.z=seeded(seed+i)*.16}
+  for(let i=0;i<3;i++){const flag=box(g,.13,.11,.015,accent,(i-1)*.18,1.25,.02);flag.rotation.z=seeded(seed+i)*.16;flags.push({mesh:flag,phase:seeded(seed+i+5)*Math.PI*2})}
   return g;
  }
  function freePublicTile(state,center){
@@ -280,18 +280,21 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
    camera.getWorldDirection(direction);
    const travel=Math.abs(direction.y)>1e-5?-camera.position.y/direction.y:85;
    center.copy(camera.position).addScaledVector(direction,travel);
-   const spread=canvas.clientWidth<650?17:24;
+   const spread=canvas.clientWidth<650?17:24,directionAngle=(Number(plan.windDirection)||0)*Math.PI/180,wind=Number(plan.windStrength)||.58;
    if(raindrops.visible)for(let i=0;i<dropCount;i++){
-    const dx=(seeded(i*13+4)-.5)*spread,dz=(seeded(i*23+9)-.5)*spread;
+    const rawX=(seeded(i*13+4)-.5)*spread,rawZ=(seeded(i*23+9)-.5)*spread;
+    const dx=((rawX+Math.cos(directionAngle)*clock*wind*.26+spread/2)%spread+spread)%spread-spread/2;
+    const dz=((rawZ+Math.sin(directionAngle)*clock*wind*.26+spread/2)%spread+spread)%spread-spread/2;
     const y=paused?seeded(i*5+13)*6+1:((seeded(i*5+13)*7-clock*8)%7+7)%7+1;
-    dummy.position.set(center.x+dx,y,center.z+dz);dummy.rotation.set(0,0,-.17);dummy.scale.set(1,1,1);
+    dummy.position.set(center.x+dx,y,center.z+dz);dummy.rotation.set(0,0,-.17-Math.sin(directionAngle)*wind*.08);dummy.scale.set(1,1,1);
     dummy.updateMatrix();raindrops.setMatrixAt(i,dummy.matrix);
    }
    if(raindrops.visible)raindrops.instanceMatrix.needsUpdate=true;
    if(leaves.visible)for(let i=0;i<leavesCount;i++){
     const dx=(seeded(i*12+17)-.5)*spread,dz=(seeded(i*31+21)-.5)*spread;
-    const y=((seeded(i*7+14)*2.3-clock*.4)%2.3+2.3)%2.3+.1;
-    dummy.position.set(center.x+dx+Math.sin(clock+i)*.2,y,center.z+dz);dummy.rotation.set(clock+i*.28,clock*.4+i,0);dummy.scale.set(1,1,1);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);
+    const y=((seeded(i*7+14)*2.3-clock*(.4+wind*.14))%2.3+2.3)%2.3+.1;
+    const drift=clock*wind*.34,leafX=((dx+Math.cos(directionAngle)*drift+spread/2)%spread+spread)%spread-spread/2,leafZ=((dz+Math.sin(directionAngle)*drift+spread/2)%spread+spread)%spread-spread/2;
+    dummy.position.set(center.x+leafX+Math.sin(clock+i)*.2,y,center.z+leafZ);dummy.rotation.set(clock+i*.28,clock*.4+i,Math.sin(directionAngle)*wind*.24);dummy.scale.set(1,1,1);dummy.updateMatrix();leaves.setMatrixAt(i,dummy.matrix);
    }
    if(leaves.visible)leaves.instanceMatrix.needsUpdate=true;
   }
@@ -323,7 +326,7 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
    if(item.kind==='person'){
     const routine=item.g.userData.cityRoutine;
     item.g.visible=routine==='festival'?hour>=9&&hour<=22:routine==='emergency'?true:routine==='resident'?peopleVisible:
-     routine==='customer'?hour>=9&&hour<=21:routine==='waiting'?hour>=5&&hour<=23:routine==='park'?hour>=8&&hour<=20:true;
+     routine==='customer'?((hour>=7&&hour<10)||(hour>=12&&hour<14)||(hour>=17&&hour<21)):routine==='waiting'?hour>=5&&hour<=23:routine==='park'?((hour>=9&&hour<11)||(hour>=12&&hour<14)||(hour>=16&&hour<20)):true;
     if(!item.g.visible)continue;
     const cyc=clock*2.2+item.phase;
     item.g.position.y=Math.sin(cyc)*.007;
@@ -331,6 +334,7 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
     item.legs[0].rotation.x=Math.sin(cyc)*.13;item.legs[1].rotation.x=-Math.sin(cyc)*.13;
    }else if(item.kind==='dog'){item.tail.rotation.y=Math.sin(clock*5+item.seed)*.4}
   }
+  for(const flag of flags){const gust=Math.sin(clock*2.6+flag.phase)*(Number(plan.windStrength)||.58);flag.mesh.rotation.z=gust*.22;flag.mesh.rotation.y=Math.cos(clock*1.9+flag.phase)*gust*.13}
  }
  function diagnostics(){
   let invalidVisualTransforms=0;

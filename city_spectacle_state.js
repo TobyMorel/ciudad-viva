@@ -35,8 +35,11 @@ export function commerceIdentity(building){
   trading:Boolean(!closed&&(numeric(building.business?.lastSales)>0||numeric(building.business?.lastLocalSales)>0))};
 }
 export function citySpectaclePlan(state){
- if(!state)return {day:1,season:'verano',rainMm:0,storm:false,events:[],milestones:[],homes:[],shops:[],parks:[],transitStops:[],activeServices:[]};
+ if(!state)return {day:1,season:'verano',rainMm:0,windStrength:.58,windDirection:0,storm:false,events:[],milestones:[],homes:[],shops:[],parks:[],transitStops:[],activeServices:[]};
  const day=Math.max(1,Math.floor(numeric(state.day,1))),season=visualSeason(day),rainMm=Math.max(0,numeric(state.utilities?.report?.drainage?.rainfallMm));
+ const seasonalWind=season==='otoño'?.18:season==='invierno'?.24:season==='primavera'?.08:0;
+ const windStrength=Math.max(.45,Math.min(1.55,.58+Math.min(.58,rainMm*.035)+seasonalWind));
+ const windDirection=(day*37+['verano','otoño','invierno','primavera'].indexOf(season)*53)%360;
  const buildings=Array.isArray(state.buildings)?state.buildings:[];
  const events=(state.tourismEvents||[]).filter(event=>event?.status==='realizado'&&numeric(event.visitors)>0&&numeric(event.completedDay)>0&&day-numeric(event.completedDay)>=0&&day-numeric(event.completedDay)<=2).slice(-3);
  const milestones=(state.cityMilestones?.events||[]).filter(e=>numeric(e.day)>0&&day-numeric(e.day)>=0&&day-numeric(e.day)<=1).slice(-3);
@@ -49,11 +52,11 @@ export function citySpectaclePlan(state){
   ...(state.healthReport?.hospital?.ambulanceDispatches||[]).filter(i=>i.status==='traslado'&&numeric(i.day)>0&&day-numeric(i.day)<=1&&Number.isInteger(i.x)&&Number.isInteger(i.y)).map(i=>({kind:'ambulancia',x:i.x,y:i.y,arrived:true})),
   ...(state.waste?.containers||[]).filter(i=>i&&Number(i.lastPickedTons)>0&&Number.isInteger(i.x)&&Number.isInteger(i.y)).map(i=>({kind:'residuos',x:i.x,y:i.y,arrived:true}))
  ].slice(0,18);
- return {day,season,rainMm,storm:rainMm>=12,events,milestones,homes,shops,parks,transitStops,activeServices,
+ return {day,season,rainMm,windStrength,windDirection,storm:rainMm>=12,events,milestones,homes,shops,parks,transitStops,activeServices,
   activeTrips:(state.commutes||[]).filter(t=>['trabajo','compras','educacion','ocio','servicios'].includes(t.reason)&&numeric(t.workers)>0).length};
 }
 export function citySceneSignatures(plan){
  const building=JSON.stringify([plan.homes.map(b=>[b.x,b.y,b.occupants]),plan.shops.map(b=>[b.x,b.y,b.business?.status,b.business?.lastSales]),plan.parks.map(b=>[b.x,b.y]),plan.transitStops,plan.activeServices,plan.events.map(e=>[e.id,e.status,e.visitors,e.completedDay]),plan.milestones.map(e=>[e.id,e.day])]);
- const climate=plan.season+':'+plan.rainMm+':'+plan.day;
+ const climate=plan.season+':'+plan.rainMm+':'+plan.windStrength+':'+plan.windDirection+':'+plan.day;
  return {building,climate};
 }

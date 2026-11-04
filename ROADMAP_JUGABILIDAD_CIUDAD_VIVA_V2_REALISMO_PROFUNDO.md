@@ -413,6 +413,8 @@ Ninguna empresa debe ser siempre óptima. La contratación varía según disponi
 ### Tareas para la IA
 
 - [ ] Representar viajes por origen/destino y carga por vías.
+- [x] Animar recorridos peatonales y de otros modos dentro de sus ventanas de trabajo, regreso, escuela, compras, servicios y paseo.
+- [x] Hacer que los peatones cedan el paso en intersecciones señalizadas y que los colectivos se detengan para embarcar y desembarcar pasajeros.
 - [ ] Mostrar congestión, tiempos de viaje y zonas aisladas.
 - [ ] Permitir crear y ajustar rutas de autobús.
 - [ ] Hacer que construir una avenida cause perturbaciones temporales antes de producir mejoras.
@@ -1034,6 +1036,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [ ] Hacer que la frecuencia dependa de flota, personal y recursos efectivamente disponibles.
 - [ ] Incorporar trenes/metros con obra e inspección completas, capacidad y transbordos.
 - [ ] Separar flujos de viajeros y mercancías, con ocupación física compartida de corredores cuando aplique.
+- [x] Mostrar paradas reales con apertura de puertas y embarque/desembarque basado en la demanda de pasajeros simulada.
 
 ### Criterios de aceptación
 
@@ -1233,6 +1236,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [ ] Relacionar riesgo efectivo con peligro, suelo, activos construidos y medidas de protección.
 - [ ] Implementar pronóstico, preparación, incidente, respuesta y recuperación.
 - [ ] Calcular pérdida económica y disrupción de servicios sin borrar activos al instante por una tirada aleatoria.
+- [x] Vincular la intensidad y dirección del viento visual con la estación y la lluvia; animar vegetación, hojas, banderas, humo y agua.
 
 ### Criterios de aceptación
 

@@ -103,9 +103,11 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    for(let i=0;i<number;i++){
     const p=person(g,-.48+i*.20,.25+(i%2)*.13,i*43+s.x*11+s.y*13,{umbrella:true});
     p.g.position.y=.07;
-    waiting.push({p,x:p.g.position.x});
+    waiting.push({p,x:p.g.position.x,z:p.g.position.z,start:new THREE.Vector3(p.g.position.x,p.g.position.y,p.g.position.z),progress:0,boarded:false});
    }
-   busStops.push({g,waiting,pos:[x,z],boarding:0});
+   const alighting=[];
+   for(let i=0;i<1;i++){const p=person(g,.42+i*.14,.10,i*67+s.x*17+s.y*19,{umbrella:false});p.g.visible=false;alighting.push({p,active:false,age:0,start:null,end:null})}
+   busStops.push({g,waiting,alighting,pos:[x,z],tile:`${s.x},${s.y}`,boarding:0,lastVisitKey:'',arrivalClock:0});
    inspectables.push({x:s.x,y:s.y,type:'Colectivos',title:String(s.riders)+' pasajeros esperando en la parada'});
   }
  }
@@ -157,7 +159,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
      }
      box(g,.30,.09,.25,'#c49d63',.45,.26,1.12);
     }else for(let i=0;i<3;i++)crate(g,-.36+i*.35,.27,1.09);
-    doors.push({obj:awning,type:'awning',active:s.active,seed:s.x*3+s.y});
+    doors.push({obj:awning,type:'awning',active:s.active,open:s.open,seed:s.x*3+s.y});
     if(s.active){
      person(g,.57,1.12,s.x*7+s.y*29,{umbrella:true});
      if(s.deliveries>0){pallet(g,-.55,1.10,2);forklift(g,-.52,1.52,s.x*17+s.y)}
@@ -210,7 +212,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    const [x,z]=point(24.5,y),row=place(layers.coast,x,.055,z);
    for(let i=0;i<5;i++){
     const line=box(row,.68+(i%3)*.12,.016,.026,i%2?'#d6f1ea':'#9dd3df',(i-2)*.26,.008,(i-2)*.32);
-    waves.push({obj:line,seed:y*11+i,baseX:line.position.x});
+    waves.push({obj:line,seed:y*11+i,baseX:line.position.x,baseZ:line.position.z});
    }
   }
   for(let i=0;i<3;i++){
@@ -489,9 +491,10 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   if(!plan)return;
   if(!paused)clock+=Math.max(0,Math.min(.1,Number(delta)||0));
   const hour=((N(minutes)%1440)+1440)%1440/60;
-  const rain=plan.rainMm>0,night=hour>=19||hour<5.5,schoolTime=hour>=7&&hour<17;
+   const rain=plan.rainMm>0,night=hour>=19||hour<5.5,schoolTime=hour>=7&&hour<17,schoolRush=(hour>=7&&hour<9)||(hour>=14&&hour<17);
+   const wind=Number(plan.windStrength)||.58,windAngle=(Number(plan.windDirection)||0)*Math.PI/180,windX=Math.cos(windAngle),windZ=Math.sin(windAngle);
   for(const f of figures){
-   const v=clock*(f.role==='school'?5.8:3.6)+f.seed*.27;
+    const v=clock*(f.role==='school'?(schoolRush?7.3:3.8):3.6)+f.seed*.27;
    f.g.visible=f.role==='school'?schoolTime:!['fire','crew','medic'].includes(f.role)?
      hour>=5.5&&hour<=23.5:true;
    f.legs[0].rotation.x=Math.sin(v)*.17;f.legs[1].rotation.x=-Math.sin(v)*.17;
@@ -499,21 +502,37 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   }
   for(const item of umbrellas)item.obj.visible=rain&&item.host.visible;
   boardingNow=0;
-  for(const s of busStops){
-   const atStop=routeActors.some(a=>a.selection?.type==='Colectivo municipal'&&a.mesh&&
-    Math.hypot(a.mesh.position.x-s.pos[0],a.mesh.position.z-s.pos[1])<1.1);
-   s.boarding+=((atStop?1:0)-s.boarding)*.13;
-   if(s.boarding>.5)boardingNow++;
-   for(const [i,p] of s.waiting.entries()){
-    p.p.g.position.x=p.x+s.boarding*.21*(i+1)/s.waiting.length;
-    p.p.g.rotation.y=atStop?-.6:0;
+   for(const s of busStops){
+    const busActor=routeActors.filter(a=>a.selection?.type==='Colectivo municipal'&&a.mesh?.userData?.passengerDoor&&a.busAtStop&&a.busStopVisitKey?.startsWith(s.tile+':')&&
+     Math.hypot(a.mesh.position.x-s.pos[0],a.mesh.position.z-s.pos[1])<1.1).sort((a,b)=>
+      Math.hypot(a.mesh.position.x-s.pos[0],a.mesh.position.z-s.pos[1])-Math.hypot(b.mesh.position.x-s.pos[0],b.mesh.position.z-s.pos[1]))[0];
+    const atStop=Boolean(busActor),visitKey=atStop?`${busActor.actorKey||busActor.selection.title}:${busActor.busStopVisitKey||''}`:'';
+    if(atStop&&visitKey&&visitKey!==s.lastVisitKey){
+     s.lastVisitKey=visitKey;s.arrivalClock=clock;
+     for(const p of s.waiting){p.progress=0;p.boarded=false;p.start.set(p.x,.07,p.z);p.p.g.visible=true}
+     const seat=(busActor.mesh.userData.passengerSeats||[]).find(item=>item.visible),alighter=s.alighting.find(item=>!item.active);
+     if(seat&&alighter){seat.visible=false;busActor.mesh.updateMatrixWorld(true);const doorPosition=busActor.mesh.userData.passengerDoor.getWorldPosition(new THREE.Vector3());
+      const local=s.g.worldToLocal(doorPosition.clone());alighter.start=local.clone().setY(.07);alighter.end=local.clone().add(new THREE.Vector3(.22,0,.44)).setY(.07);alighter.age=0;alighter.active=true;alighter.p.g.visible=true;alighter.p.g.position.copy(alighter.start)}
+    }
+    s.boarding+=((atStop?1:0)-s.boarding)*.18;
+    if(s.boarding>.5)boardingNow++;
+    let doorLocal=null;
+    if(atStop){busActor.mesh.updateMatrixWorld(true);doorLocal=s.g.worldToLocal(busActor.mesh.userData.passengerDoor.getWorldPosition(new THREE.Vector3()).clone())}
+    for(const [i,p] of s.waiting.entries()){
+     if(atStop&&!p.boarded&&doorLocal){
+      p.progress=Math.max(p.progress,Math.min(1,(clock-s.arrivalClock-i*.12)/.72));
+      const ease=p.progress*p.progress*(3-2*p.progress),target=doorLocal.clone().add(new THREE.Vector3(.08*(i%2),0,.08*Math.floor(i/2))).setY(.07);
+      p.p.g.position.lerpVectors(p.start,target,ease);p.p.g.rotation.y=-.6;
+      if(p.progress>=1){p.boarded=true;p.p.g.visible=false;const seat=(busActor.mesh.userData.passengerSeats||[]).find(item=>!item.visible);if(seat)seat.visible=true}
+     }else if(!p.boarded){p.p.g.position.x=p.x+Math.sin(clock*1.4+i)*.025;p.p.g.position.z=p.z+Math.cos(clock*1.1+i)*.025;p.p.g.rotation.y=atStop?-.6:0}
+    }
+    for(const a of s.alighting){if(!a.active)continue;a.age+=delta;const t=Math.max(0,Math.min(1,a.age/.95)),ease=t*t*(3-2*t);a.p.g.position.lerpVectors(a.start,a.end,ease);a.p.g.rotation.y=.55;if(t>=1){a.active=false;a.p.g.visible=false}}
    }
-  }
   // El colectivo del mundo real abre las puertas solo cerca de una parada real con pasajeros.
   for(const actor of routeActors){
    const bus=actor.mesh?.userData?.passengerDoor;
    if(!bus)continue;
-   const near=busStops.some(s=>Math.hypot(actor.mesh.position.x-s.pos[0],actor.mesh.position.z-s.pos[1])<1.07);
+    const near=Boolean(actor.busAtStop&&busStops.some(s=>Math.hypot(actor.mesh.position.x-s.pos[0],actor.mesh.position.z-s.pos[1])<1.07));
    bus.rotation.y+=( (near?-.93:0)-bus.rotation.y)*.16;
    for(const light of actor.mesh.userData.interiorLights||[])light.visible=night||rain;
   }
@@ -523,29 +542,31 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   }
   for(const v of vanActors)v.v.position.z=v.z+Math.sin(clock*.48+v.seed)*.10;
   for(const d of doors){
-   const open=d.active&&hour>=7&&hour<=21;
+   const open=d.type==='awning'?Boolean(d.open&&hour>=7&&hour<=21):Boolean(d.active&&hour>=7&&hour<=21);
    if(d.type==='factory')d.obj.position.y=.60+(open?.32:0)*(1+Math.sin(clock*.55+d.seed))*.5;
-   else d.obj.rotation.z=Math.sin(clock*.8+d.seed)*(rain?.03:.015);
+   else{const busy=(hour>=7&&hour<10)||(hour>=12&&hour<14)||(hour>=17&&hour<21);d.obj.visible=Boolean(d.open);d.obj.rotation.z=Math.sin(clock*(busy?.8:.35)+d.seed)*(busy?.05:rain?.03:.012)}
   }
   for(const f of smoke){
    const t=(clock*.32+f.seed)%1;
    f.obj.position.y=f.baseY+t*1.21;
-   f.obj.position.x=f.x+Math.sin(clock*.9+f.seed)*(.05+t*.17);
+    f.obj.position.x=f.x+Math.sin(clock*.9+f.seed)*(.05+t*.17)+windX*t*wind*.22;
+    f.obj.position.z=f.z+windZ*t*wind*.22;
    f.obj.scale.setScalar(.7+t*1.2);
    f.obj.material.opacity=(1-t)*.21;
   }
   for(const c of cranes){c.boom.rotation.y=Math.sin(clock*.33+c.seed)*.23;c.hook.position.y=-.51+Math.sin(clock*.61+c.seed)*.26}
   for(const b of boats){
    const phase=clock*.32+b.seed;
-   b.g.position.set(b.x+Math.sin(phase*.33)*.27,.06+Math.sin(phase*2.6)*.035,b.z+Math.cos(phase*.27)*.27);
-   b.g.rotation.z=Math.sin(phase*1.75)*.034;
+    b.g.position.set(b.x+Math.sin(phase*.33)*(.23+wind*.06),.06+Math.sin(phase*2.6)*(.025+wind*.018),b.z+Math.cos(phase*.27)*(.23+wind*.06));
+    b.g.rotation.z=Math.sin(phase*1.75)*(.024+wind*.012);
   }
   for(const w of waves){
    if(w.reflect){
-    w.obj.scale.setScalar(1+Math.abs(Math.sin(clock*1.5+w.seed))*.19);
+     w.obj.scale.setScalar(1+Math.abs(Math.sin(clock*1.5+w.seed))*(.12+wind*.08));
    }else{
-    w.obj.position.x=w.baseX+Math.sin(clock*.85+w.seed)*.16;
-    w.obj.scale.z=1+Math.sin(clock*1.40+w.seed)*.15;
+     w.obj.position.x=w.baseX+Math.sin(clock*.85+w.seed)*(.11+wind*.07)+windX*.025;
+     w.obj.position.z=(w.baseZ||0)+Math.sin(clock*.48+w.seed)*windZ*wind*.035;
+     w.obj.scale.z=1+Math.sin(clock*1.40+w.seed)*(.09+wind*.08);
    }
   }
   for(const item of wings){

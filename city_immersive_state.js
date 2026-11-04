@@ -115,7 +115,7 @@ export function immersiveCityPlan(state){
  const s=state||{},spectacle=citySpectaclePlan(s);
  const parks=parkActivityPlan(s),homes=(s.buildings||[]).filter(b=>b.kind==='home'&&open(b)&&N(b.occupants)>0);
  const shops=(s.buildings||[]).filter(b=>b.kind==='shop'&&open(b)&&b.business?.status!=='cerrado');
- return {day:N(s.day)||1,rainMm:spectacle.rainMm,storm:spectacle.storm,season:spectacle.season,
+  return {day:N(s.day)||1,rainMm:spectacle.rainMm,windStrength:spectacle.windStrength,windDirection:spectacle.windDirection,storm:spectacle.storm,season:spectacle.season,
    buses:realBusStopScenes(s),industries:realIndustryScenes(s),ports:realPortScenes(s),
    schools:realSchoolScenes(s),issues:realStreetIssues(s),emergencies:realEmergencyScenes(s),
    surprises:realSurpriseScenes(s),parks:parks.slice(0,15),
@@ -124,6 +124,6 @@ export function immersiveCityPlan(state){
    coastEnabled:true};
 }
 export function immersiveSignature(plan){
- const {day,rainMm,season,buses,industries,ports,schools,issues,emergencies,surprises,parks,animals}=plan;
- return JSON.stringify([day,rainMm,season,buses,industries,ports,schools,issues,emergencies,surprises,parks,animals]);
+  const {day,rainMm,windStrength,windDirection,season,buses,industries,ports,schools,issues,emergencies,surprises,parks,animals}=plan;
+  return JSON.stringify([day,rainMm,windStrength,windDirection,season,buses,industries,ports,schools,issues,emergencies,surprises,parks,animals]);
 }

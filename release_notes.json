@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.266",
+  "currentVersion": "0.267",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.267",
+      "date": "2026-11-04",
+      "title": "Rutinas diarias y clima vivo",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las figuras y los viajes 3D de residentes ahora siguen horarios diarios de trabajo, regreso, escuela, compras, servicios y paseo. Recorren el origen y destino de viajes reales de la partida; las compras muestran bolsas en el regreso.",
+        "Los peatones esperan el semáforo que cruza su recorrido. Los colectivos se detienen en sus paradas asignadas, abren las puertas y muestran pasajeros que suben y bajan; la ocupación visible parte del número real de pasajeros de la línea.",
+        "El clima y la estación modulan el movimiento de árboles, hojas, banderas, humo de fábricas, barcos y ondas del río. El viento tiene dirección e intensidad visual derivadas de la lluvia y la estación, sin alterar la economía.",
+        "Escuelas, comercios y plazas muestran sus momentos de mayor actividad en los horarios de apertura, entrada, salida y paseo. Las rutinas visuales siguen los viajes y la actividad que ya registra la simulación."
+      ],
+      "verification": "Revisión estática de los cambios y de las referencias de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.266",
       "date": "2026-11-04",
@@ -3340,8 +3354,8 @@
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
-      "progress": 95,
-      "summary": "Viajes, jerarquía vial, buses, incidentes, colas por franja, desvíos ponderados y entrega logística desde la posición real del camión.",
+      "progress": 96,
+      "summary": "Demanda y viajes por motivo, horarios, tránsito con semáforos y embarque de pasajeros en paradas reales.",
       "pending": [
         "Medir alivio del tráfico y puntualidad en ciudades densas al abrir accesos alternativos.",
         "Extender fiabilidad horaria del transporte público y completar criterios restantes de movilidad."
@@ -3490,8 +3504,8 @@
     {
       "phase": 22,
       "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
-      "progress": 50,
-      "summary": "Autos, peatones, bicicletas y colectivos con cupo para viajes laborales, escolares, compras, servicios y ocio; carga industrial transfiere entre corredores físicos y comparte capacidad con pasajeros.",
+      "progress": 53,
+      "summary": "Viajes por origen, destino, motivo y ventana horaria; pasajeros visibles en colectivos y cruces peatonales señalizados.",
       "pending": [
         "Integrar completamente metro y tren en todos los viajes; resolver accidentes y capacidad vial detallada."
       ]
@@ -3538,8 +3552,8 @@
     {
       "phase": 27,
       "title": "Clima, hidrología, desastres y resiliencia urbana",
-      "progress": 50,
-      "summary": "Pronóstico de calor, sequía y tormentas; drenaje y anegamientos por parcela, mapas comparativos de calor y vulnerabilidad.",
+      "progress": 52,
+      "summary": "Lluvia y estación vinculadas con viento visual direccional en arbolado, hojas, humo, banderas y oleaje.",
       "pending": [
         "Faltan variaciones regionales, incendios y reconstrucción de resiliencia a largo plazo."
       ]

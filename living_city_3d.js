@@ -1,4 +1,4 @@
-import {residentDirectory,residentCommute,parkActivityPlan,rushHourPlan,livingMomentVisuals,citizenName} from './living_city.js';
+import {residentDirectory,residentCommute,parkActivityPlan,rushHourPlan,livingMomentVisuals,citizenName,commuteWindow} from './living_city.js';
 
 // Solo geometría Three.js procedimental, separada de la física y economía.
 // Dibujos únicamente a partir de proyectos, viajes y acontecimientos de la partida.
@@ -12,6 +12,14 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
  const C=['#d48e65','#6797a0','#d8b76d','#9e7ba8','#6aa27d','#c48078'];
  const palette=['#dba67c','#aa7657','#e5bd94'];
  function hash(s){let h=2166136261;for(let i=0;i<String(s).length;i++)h=Math.imul(h^String(s).charCodeAt(i),16777619);return h>>>0}
+ function scheduledProgress(commute,minutes){
+  const minute=((Number(minutes)||0)%1440+1440)%1440;
+  const [outStart,outEnd]=commuteWindow(commute.departureWindowKey),[returnStart,returnEnd]=commuteWindow(commute.returnWindowKey);
+  if(minute>=outStart&&minute<=outEnd)return {progress:(minute-outStart)/Math.max(1,outEnd-outStart),reverse:false};
+  if(minute>=returnStart&&minute<=returnEnd)return {progress:1-(minute-returnStart)/Math.max(1,returnEnd-returnStart),reverse:true};
+  if(minute>outEnd&&minute<returnStart)return {atWork:true};
+  return null;
+ }
  function figure(parent,x,y,z,id,{child=false,worker=false}={}){
   const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(child?.77:1);parent.add(g);
   const code=hash(id),shirt=worker?'#dfa94e':C[code%C.length],skin=palette[code%palette.length],hair=['#4a3c35','#73604d','#394651'][code%3];
@@ -188,20 +196,24 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
   trafficRoot.visible=(h>=7&&h<9.5)||(h>=17&&h<19.5);
   peakVisible=trafficRoot.visible&&trafficRoot.children.length>0;
   for(const r of residents.values()){
-   const moving=!!r.commute&&((h>=7&&h<10)||(h>=16&&h<20));
+   const movement=r.commute?scheduledProgress(r.commute,minutes):null,moving=Number.isFinite(movement?.progress);
    r.g.visible=h>=5.5&&h<=23||Boolean(r.commute&&moving);
    if(moving){
     const route=r.commute.route;
     const length=(route.length-1)*2;
-    const along=(clock*.8+r.phase*.9)%(length*2),travel=along>length?length*2-along:along;
+    const travel=length*movement.progress;
     const index=Math.min(route.length-2,Math.floor(travel/2)),f=(travel/2-index);
-    const from=route[index],to=route[index+1];
+    const from=movement.reverse?route[index+1]:route[index],to=movement.reverse?route[index]:route[index+1];
+    const segmentProgress=movement.reverse?1-f:f;
     const dx=to[0]-from[0],dz=to[1]-from[1];
     if(Math.abs(dx)+Math.abs(dz)===1){
      // Camino sobre la vereda, no sobre el centro del carril.
-     r.g.position.set((from[0]+.5+dx*f)*2+dz*.66,.1,(from[1]+.5+dz*f)*2-dx*.66);
+     r.g.position.set((from[0]+.5+dx*segmentProgress)*2+dz*.66,.1,(from[1]+.5+dz*segmentProgress)*2-dx*.66);
      r.g.rotation.y=Math.atan2(dx,dz);
     }
+   }else if(movement?.atWork){
+    const route=r.commute.route,from=route.at(-2),to=route.at(-1),dx=to[0]-from[0],dz=to[1]-from[1];
+    r.g.position.set((to[0]+.5)*2+dz*.66,.1,(to[1]+.5)*2-dx*.66);
    }else{
     const [x,z]=r.roadside;
     r.g.position.set(x,.1,z);

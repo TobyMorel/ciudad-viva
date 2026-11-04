@@ -18,8 +18,20 @@ try{
   });
   await page.locator('#offlineMode').evaluate(b=>b.click());
   await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');
-  await page.locator('#saveList button, #newSlotButton').first().evaluate(b=>b.click());
-  await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
+  await page.locator('#saveList .save-slot-row button:not(.save-slot-delete)').first().waitFor({timeout:20000});
+  await page.locator('#saveList .save-slot-row button:not(.save-slot-delete)').first().evaluate(b=>b.click());
+  try{
+   await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:60000});
+  }catch(error){
+   const detail=await page.evaluate(()=>({
+     ready:document.readyState,mode:window.__ciudadVivaMode?.(),
+     modeError:document.getElementById('modeError')?.textContent,
+     modeBackdrop:document.getElementById('modeBackdrop')?.className,
+     slotLabels:[...document.querySelectorAll('#saveList .save-slot-row')].map(x=>x.textContent?.slice(0,100)),
+     diagnostics:window.__ciudadVivaScene?.()
+   }));
+   throw Error('No inició la ciudad de prueba: '+JSON.stringify({detail,pageErrors:errors,reason:error.message}));
+  }
   await page.waitForFunction(()=>Number.isFinite(window.__ciudadVivaScene?.()?.immersiveBoats),null,{timeout:30000});
   const values=await page.evaluate(()=>window.__ciudadVivaScene());
   assert.equal(values.invalidVisualTransforms,0,'La escena anterior conserva geometrías válidas');

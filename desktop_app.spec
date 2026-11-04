@@ -12,11 +12,18 @@ for directory in ("assets","vendor"):
     path=root/directory
     if path.exists():
         datas.append((str(path),directory))
+# The LAN game runs offline.js in a separate Node.js process.
+# Bundle its entrypoint, ESM package metadata and Node runtime in the one-file EXE.
+for filename in ("online_engine.mjs","package.json"):
+    path=root/filename
+    if path.exists():datas.append((str(path),"."))
+node_runtime=root/"runtime"/"node.exe"
+binaries=[(str(node_runtime),".")] if node_runtime.is_file() else []
 
 analysis=Analysis(
     [str(root/"desktop_app.py")],
     pathex=[str(root)],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=collect_submodules("webview"),
     hookspath=[],

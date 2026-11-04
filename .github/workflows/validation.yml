@@ -43,6 +43,8 @@ jobs:
           node --check cursor_motion.js
           node --check cursor_presence.js
           node --check world3d.js
+          node --check online_engine.mjs
+          python -m py_compile shared_engine.py
           node --check cityGuide.js
           node --check reference-ui.js
           python -m json.tool release_notes.json > /dev/null
@@ -62,7 +64,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.257
+          name: ciudad-viva-alfa-0.258
           path: |
             .
             !.git/**
@@ -133,7 +135,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.257-responsive
+          name: ciudad-viva-alfa-0.258-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

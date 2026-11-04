@@ -1,4 +1,4 @@
-import {createOfflineAdapter} from './offline.js?v=0.257';
+import {createOfflineAdapter} from './offline.js?v=0.258';
 
 const SAVE_KEY='ciudad-viva-offline-v1';
 export async function createOfflineWorkerAdapter(snapshot=null,onSnapshot=()=>{}){
@@ -7,7 +7,7 @@ export async function createOfflineWorkerAdapter(snapshot=null,onSnapshot=()=>{}
     const adapter=await createOfflineAdapter();
     return {...adapter,close(){},async request(path,body){const result=await adapter.request(path,body);onSnapshot(localStorage.getItem(SAVE_KEY));return result}};
   }
-  const worker=new Worker(new URL('./offline_worker.js?v=0.257',import.meta.url),{type:'module'}),pending=new Map();let nextId=1,readyResolve,readyReject;
+  const worker=new Worker(new URL('./offline_worker.js?v=0.258',import.meta.url),{type:'module'}),pending=new Map();let nextId=1,readyResolve,readyReject;
   const ready=new Promise((resolve,reject)=>{readyResolve=resolve;readyReject=reject});
   worker.addEventListener('message',event=>{
     const message=event.data||{};

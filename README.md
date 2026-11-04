@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.257
+# Ciudad Viva · Alfa 0.258
+
+**Nuevo Online con motor único de Offline (0.258):** ahora las salas LAN ejecutan el mismo archivo `offline.js` que la partida local. Un proceso Node.js en el anfitrión aplica las acciones, las simulaciones diarias y los reportes; Python maneja únicamente jugadores, red, chat, cursores y guardados. Se conservan copias previas de los guardados de Online antes de su importación. El ejecutable Windows incluye Node.js. Los jugadores comparten un único estado autoritativo, por lo que las reglas futuras pasan automáticamente a los dos modos.
 
 **Construcciones instantáneas y ambulancias en misión (0.257):** las obras colocadas directamente desde el catálogo se habilitan al instante también en salas LAN, sin ocupar cuadrillas ni solicitar materiales; se conservan los plazos para obras automáticas y trabajos especiales. Los hospitales dejan de generar ambulancias estacionadas en la calzada al construirse. Se añadieron pruebas de paridad del catálogo y de cobertura de acciones. La simulación Online y Offline aún utiliza motores distintos: esta revisión corrige casos concretos y no presupone equivalencia integral.
 

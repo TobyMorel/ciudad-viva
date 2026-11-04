@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.257",
+  "currentVersion": "0.258",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.258",
+      "date": "2026-11-04",
+      "title": "Nuevo Online construido sobre el motor actual de Offline",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Se sustituye el motor de simulación de las salas LAN: todas las acciones y la evolución de la ciudad se ejecutan en offline.js, el mismo código JavaScript del modo individual.",
+        "El anfitrión conserva el servidor Python sólo para sala, presencia de jugadores, chat, cursores, sincronización y gestión de partidas; el motor JavaScript autoritativo procesa todas las acciones en serie y distribuye sus resultados a todos los invitados.",
+        "El ejecutable Windows incluye Node.js, necesario para ejecutar el motor Offline dentro de la sala sin instalaciones externas; el servidor desde código fuente admite Node.js 22.",
+        "Los guardados de salas existentes se importan al motor Offline y se conserva una copia con sufijo .pre-offline-online.json antes de reescribirlos.",
+        "Se añaden pruebas de equivalencia por código compartido, guardado/restauración y cuatro jugadores en una misma ciudad, evitando duplicar futuras reglas de juego en Python."
+      ],
+      "verification": "CI incluye pruebas del proceso Node compartido, simulación de edificios inmediata desde la sala, sincronización de 4 jugadores, restauración de snapshots y copia preventiva de partidas. La equivalencia de reglas ahora se garantiza para las acciones que atiende el adaptador Offline compartido; los servicios de red permanecen independientes. Migraciones de ciudades antiguas pueden requerir comprobación por partida."
+    },
     {
       "version": "0.257",
       "date": "2026-11-04",

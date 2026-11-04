@@ -10,6 +10,7 @@ from growth_demand import growth_demand
 from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro_day,metro_assign_passengers,settle_metro_month
 from rail_freight import freight_route_for_factory_port,freight_routes_for_factory_port,freight_routes_from_station_to_port,freight_leg_route,serialize_freight_legs,reserve_freight_route,next_freight_departure_day,rail_freight_report
 from essential_services import evaluate_essential_services,advance_essential_service_day
+from shared_engine import SharedOfflineEngine,SharedEngineError
 
 ROOT = Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent)).resolve()
 if getattr(sys,"frozen",False):
@@ -32,6 +33,8 @@ PLAYER_CURSORS = {}
 CURSOR_CONDITION = threading.Condition(threading.RLock())
 CURSOR_REVISION = 0
 ACTIVE_SLOT_ID = None
+SHARED_ENGINE = None
+SHARED_GAME_VIEW = None
 DISCOVERY_PORT = 8766
 PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
 MATERIAL_NAMES = {"aggregate":"áridos","concrete":"hormigón","steel":"acero","timber":"madera","components":"componentes"}
@@ -1913,7 +1916,7 @@ def save_slot(slot_id=None,name=None):
     elif name:existing["name"]=str(name)[:48]
     existing.update({"city":str(state.get("name","Puerto Claro"))[:48],"day":int(state.get("day",1)),"updatedAt":int(time.time())})
     folder=SAVE_ROOT/"partidas";folder.mkdir(parents=True,exist_ok=True)
-    snapshot={k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed","roomName")}
+    snapshot=SHARED_ENGINE.snapshot() if SHARED_ENGINE is not None and ROOM_OPEN else {k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed","roomName")}
     write_slot_json(folder/(slot_id+".json"),snapshot)
     write_slot_json(folder/"indice.json",slots)
     ACTIVE_SLOT_ID=slot_id
@@ -1923,6 +1926,71 @@ def load_slot(slot_id):
     if not isinstance(slot_id,str) or not any(item["id"]==slot_id for item in slot_catalog()):raise ValueError("Esa partida guardada no existe.")
     try:return json.loads((SAVE_ROOT/"partidas"/(slot_id+".json")).read_text(encoding="utf-8"))
     except (ValueError,OSError):raise ValueError("No se pudo abrir esa partida guardada.")
+
+def publish_shared_view(view):
+    """Expose Offline state while retaining the independent multiplayer presence."""
+    global SHARED_GAME_VIEW
+    if not isinstance(view,dict):raise SharedEngineError("La simulación compartida devolvió un estado inválido.")
+    SHARED_GAME_VIEW=view
+    # Python's state is a read-only view for chat, cursors and old API consumers;
+    # only offline.js can mutate the simulation itself.
+    network_keys=("players","playerNames","host","chatMessages","actionFeed","roomName")
+    network={key:state[key] for key in network_keys if key in state}
+    state.clear()
+    state.update(view)
+    state.update(network)
+
+
+def start_shared_room(player_id,data,client_ip):
+    """Replace the legacy server simulation with an authoritative Offline adapter."""
+    global SHARED_ENGINE,SHARED_GAME_VIEW,state,ACTIVE_SLOT_ID,ROOM_OPEN,STATE_REVISION,CURSOR_REVISION
+    if client_ip not in ("127.0.0.1","::1"):
+        raise PermissionError("La sala solo puede crearla el anfitrión desde su equipo.")
+    if ROOM_OPEN and state.get("host")!=player_id:
+        raise ValueError("Ya hay una sala creada en este equipo.")
+    slot_id=data.get("slotId")
+    snapshot=load_slot(slot_id) if slot_id else None
+    # Make a copy BEFORE any migration. Never overwrite the old save on failure.
+    if slot_id:
+        backup=SAVE_ROOT/"partidas"/(slot_id+".pre-offline-online.json")
+        if not backup.exists():write_slot_json(backup,snapshot)
+    engine=SharedOfflineEngine(ROOT)
+    try:
+        view=engine.initialize(snapshot)
+    except Exception:
+        engine.close()
+        raise
+    previous=SHARED_ENGINE
+    if previous is not None:
+        try:
+            if ACTIVE_SLOT_ID:save_slot()
+        finally:previous.close()
+    state=new_settlement_state()
+    SHARED_ENGINE=engine
+    SHARED_GAME_VIEW=None
+    ACTIVE_SLOT_ID=slot_id
+    publish_shared_view(view)
+    ROOM_OPEN=True
+    state["host"]=player_id
+    state["players"]={player_id:time.time()}
+    state["playerNames"]={player_id:clean_player_name(data.get("name"))}
+    state["chatMessages"]=[]
+    state["actionFeed"]=[]
+    if slot_id:
+        chosen=next((x for x in slot_catalog() if x["id"]==slot_id),None)
+        state["roomName"]=chosen["name"] if chosen else state.get("name","Ciudad Viva")
+    elif data.get("newSlotName"):
+        slot=save_slot(name=str(data["newSlotName"]).strip() or "Nueva partida")
+        state["roomName"]=slot["name"]
+    else:
+        state["roomName"]=state.get("name","Ciudad Viva")
+    with CURSOR_CONDITION:
+        PLAYER_CURSORS.clear()
+        CURSOR_REVISION+=1
+        CURSOR_CONDITION.notify_all()
+    STATE_REVISION+=1
+    STATE_CONDITION.notify_all()
+
 
 def cursor_member(player_id):
     # Atomic dictionary reads avoid waiting for the main simulation mutex.
@@ -6643,8 +6711,20 @@ def _build_public_state(player_id=None):
     return {**view,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 def public_state(player_id=None,use_cache=False):
-    """Build a fresh view for direct model calls; cache only versioned network snapshots."""
+    """The room uses Offline's view; legacy direct test fixtures remain isolated."""
     global _PUBLIC_STATE_CACHE_REVISION,_PUBLIC_STATE_CACHE_VIEW
+    if ROOM_OPEN and SHARED_ENGINE is not None:
+        view=dict(SHARED_GAME_VIEW or {})
+        cutoff=time.time()-25
+        view["online"]=sum(1 for t in state.get("players",{}).values() if t>cutoff)
+        view["onlinePlayers"]=player_list()
+        view["chatMessages"]=state.get("chatMessages",[])[-80:]
+        view["actionFeed"]=state.get("actionFeed",[])[-40:]
+        view["stateRevision"]=STATE_REVISION
+        view["isHost"]=player_id is not None and player_id==state.get("host")
+        view["simulationEngine"]="offline.js"
+        view["municipalTeam"]=municipal_team_report(player_id)
+        return view
     if use_cache:
         if _PUBLIC_STATE_CACHE_REVISION!=STATE_REVISION or _PUBLIC_STATE_CACHE_VIEW is None:
             _PUBLIC_STATE_CACHE_VIEW=_build_public_state(None)
@@ -6838,33 +6918,16 @@ class Handler(BaseHTTPRequestHandler):
                 CURSOR_CONDITION.notify_all()
             self._send(200,{"ok":True});return
         with LOCK:
-            if path in ("/api/action","/api/load"):
+            if path in ("/api/action","/api/load") and SHARED_ENGINE is None:
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
             if path=="/api/room/create":
-                if self.client_address[0] not in ("127.0.0.1","::1"):
-                    self._send(403,{"error":"La sala solo puede crearla el anfitrión desde su equipo."});return
-                if ROOM_OPEN and state.get("host")!=pid:
-                    self._send(409,{"error":"Ya hay una sala creada en este equipo."});return
-                if data.get("slotId"):
-                    try:state={**initial_state(),**load_slot(data["slotId"])}
-                    except ValueError as error:self._send(404,{"error":str(error)});return
-                    ACTIVE_SLOT_ID=data["slotId"]
-                    chosen=next((slot for slot in slot_catalog() if slot["id"]==ACTIVE_SLOT_ID),None)
-                    state["roomName"]=chosen["name"] if chosen else state.get("name","Ciudad Viva")
-                elif data.get("newSlotName"):
-                    state=new_settlement_state()
-                    ACTIVE_SLOT_ID=None
-                    chosen=save_slot(name=str(data["newSlotName"]).strip() or "Nueva partida")
-                    state["roomName"]=chosen["name"]
-                ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
-                with CURSOR_CONDITION:
-                    PLAYER_CURSORS.clear()
-                    CURSOR_REVISION+=1
-                    CURSOR_CONDITION.notify_all()
-                state.setdefault("playerNames",{})[pid]=clean_player_name(data.get("name"))
-                state["chatMessages"]=[];state["actionFeed"]=[]
-                STATE_REVISION+=1;STATE_CONDITION.notify_all()
-                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{(local_ips() or ['127.0.0.1'])[0]}:{PORT}/"});return
+                try:
+                    start_shared_room(pid,data,self.client_address[0])
+                except PermissionError as error:self._send(403,{"error":str(error)});return
+                except ValueError as error:self._send(409,{"error":str(error)});return
+                except (SharedEngineError,OSError) as error:self._send(503,{"error":str(error)});return
+                self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{(local_ips() or ['127.0.0.1'])[0]}:{PORT}/","engine":"offline.js"})
+                return
             if path=="/api/room/join":
                 if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
                 if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
@@ -6885,6 +6948,26 @@ class Handler(BaseHTTPRequestHandler):
                 del chat[:-80]
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
                 self._send(200,{"ok":True,"stateRevision":STATE_REVISION,"chatMessages":chat.copy()});return
+            if path=="/api/action" and SHARED_ENGINE is not None:
+                if not ROOM_OPEN or pid not in state.get("players",{}):
+                    self._send(409,{"error":"Tenés que ingresar a la sala para construir."});return
+                action=data.get("action")
+                if not isinstance(action,str) or len(action)>80:
+                    self._send(400,{"error":"Acción inválida."});return
+                previous=state.get("events",[None])[0] if state.get("events") else None
+                if action=="new" and ACTIVE_SLOT_ID:save_slot()
+                try:
+                    view=SHARED_ENGINE.action(data)
+                except SharedEngineError as error:self._send(409,{"error":str(error)});return
+                publish_shared_view(view)
+                state["players"][pid]=time.time()
+                if action=="new":
+                    ACTIVE_SLOT_ID=None
+                    chosen=save_slot(name="Nueva partida "+time.strftime("%d-%m-%Y %H:%M"))
+                    state["roomName"]=chosen["name"]
+                self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),action_description(data),previous)
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._send(200,public_state(pid,use_cache=True));return
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
@@ -7518,6 +7601,19 @@ class Handler(BaseHTTPRequestHandler):
                     state["roomName"]=chosen["name"]
                 else: self._send(400,{"error":"Acción desconocida"}); return
                 self._send(200,public_state(pid,use_cache=True)); return
+            if path=="/api/save" and SHARED_ENGINE is not None:
+                if not ROOM_OPEN or pid not in state.get("players",{}):
+                    self._send(409,{"error":"Entrá a la sala para guardar."});return
+                try:slot=save_slot(name=None if ACTIVE_SLOT_ID else state.get("name","Partida"))
+                except (OSError,SharedEngineError) as error:self._send(503,{"error":str(error)});return
+                # Keep compatibility backup, but persist raw Offline data, never a rendered report.
+                write_slot_json(SAVE,load_slot(slot["id"]))
+                feed=state.setdefault("actionFeed",[])
+                feed.append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),
+                             "detail":"guardó la partida","day":state.get("day",1),"time":int(time.time())})
+                del feed[:-40]
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._send(200,{"ok":True,"file":slot["name"],"slotId":slot["id"]});return
             if path=="/api/save":
                 if ACTIVE_SLOT_ID:slot=save_slot()
                 else:slot=save_slot(name=state.get("name","Partida"))
@@ -7525,6 +7621,21 @@ class Handler(BaseHTTPRequestHandler):
                 feed=state.setdefault("actionFeed",[]);feed.append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":"guardó la partida","day":state.get("day",1),"time":int(time.time())});del feed[:-40]
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
                 self._send(200,{"ok":True,"file":slot["name"],"slotId":slot["id"]}); return
+            if path=="/api/load" and SHARED_ENGINE is not None:
+                if not ROOM_OPEN or pid not in state.get("players",{}):
+                    self._send(409,{"error":"Entrá a la sala para cargar."});return
+                try:
+                    loaded=load_slot(ACTIVE_SLOT_ID) if ACTIVE_SLOT_ID else json.loads(SAVE.read_text(encoding="utf-8"))
+                    if ACTIVE_SLOT_ID:
+                        backup=SAVE_ROOT/"partidas"/(ACTIVE_SLOT_ID+".pre-offline-online.json")
+                        if not backup.exists():write_slot_json(backup,loaded)
+                    view=SHARED_ENGINE.load(loaded)
+                except (ValueError,OSError,SharedEngineError) as error:
+                    self._send(409,{"error":str(error)});return
+                publish_shared_view(view)
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),"cargó una partida guardada",None)
+                self._send(200,public_state(pid,use_cache=True));return
             if path=="/api/load":
                 try:loaded=load_slot(ACTIVE_SLOT_ID) if ACTIVE_SLOT_ID else json.loads(SAVE.read_text(encoding="utf-8"))
                 except (ValueError,OSError):self._send(404,{"error":"No hay ciudad guardada todavía"});return
@@ -7546,10 +7657,28 @@ def advance_simulation_clock(day_progress,elapsed,speed):
 
 def simulation_loop():
     global STATE_REVISION
-    last=time.monotonic();last_save=last
+    last=time.monotonic();last_save=last;last_shared_tick=last
     while True:
         time.sleep(.05)
         now=time.monotonic()
+        if SHARED_ENGINE is not None:
+            if now-last_shared_tick<.75:continue
+            last_shared_tick=now
+            with LOCK:
+                if not ROOM_OPEN:continue
+                try:
+                    previous=SHARED_GAME_VIEW or {}
+                    new_view=SHARED_ENGINE.advance()
+                    publish_shared_view(new_view)
+                    if new_view.get("stateRevision")!=previous.get("stateRevision") or new_view.get("day")!=previous.get("day"):
+                        STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                    if ACTIVE_SLOT_ID and now-last_save>=30:
+                        save_slot()
+                        last_save=now
+                except (SharedEngineError,OSError) as error:
+                    print("Error del motor compartido:",error,file=sys.stderr)
+                last=now
+            continue
         with LOCK:
             if ROOM_OPEN and ACTIVE_SLOT_ID and now-last_save>=30:
                 try:save_slot()
@@ -7569,6 +7698,17 @@ def simulation_loop():
             if run_day:
                 tick_one_day()
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
+
+def stop_shared_engine():
+    """Shut down the authoritative JavaScript worker with the desktop app."""
+    global SHARED_ENGINE,SHARED_GAME_VIEW,ROOM_OPEN
+    with LOCK:
+        worker=SHARED_ENGINE
+        SHARED_ENGINE=None
+        SHARED_GAME_VIEW=None
+        ROOM_OPEN=False
+    if worker is not None:worker.close()
+
 
 def start_server(open_browser=False,background=False):
     global state

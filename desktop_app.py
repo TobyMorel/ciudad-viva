@@ -24,6 +24,7 @@ def main():
         stop.start()
         stop.join(timeout=3)
         httpd.server_close()
+        server.stop_shared_engine()
 
 
 if __name__=="__main__":

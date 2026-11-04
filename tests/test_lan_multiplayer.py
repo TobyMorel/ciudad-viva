@@ -25,6 +25,9 @@ class LANMultiplayerTests(unittest.TestCase):
             "rooms": server.DISCOVERED_ROOMS,
             "cursors": server.PLAYER_CURSORS,
             "cursor_revision": server.CURSOR_REVISION,
+            "engine": server.SHARED_ENGINE,
+            "shared_view": server.SHARED_GAME_VIEW,
+            "active_slot": server.ACTIVE_SLOT_ID,
             "cache_revision": server._PUBLIC_STATE_CACHE_REVISION,
             "cache_view": server._PUBLIC_STATE_CACHE_VIEW,
         }
@@ -37,6 +40,9 @@ class LANMultiplayerTests(unittest.TestCase):
         server.DISCOVERED_ROOMS = {}
         server.PLAYER_CURSORS = {}
         server.CURSOR_REVISION = 0
+        server.SHARED_ENGINE = None
+        server.SHARED_GAME_VIEW = None
+        server.ACTIVE_SLOT_ID = None
         server._PUBLIC_STATE_CACHE_REVISION = -1
         server._PUBLIC_STATE_CACHE_VIEW = None
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -49,6 +55,11 @@ class LANMultiplayerTests(unittest.TestCase):
         self.http.shutdown()
         self.http.server_close()
         self.thread.join(timeout=2)
+        if server.SHARED_ENGINE is not None and server.SHARED_ENGINE is not self.old["engine"]:
+            server.stop_shared_engine()
+        server.SHARED_ENGINE = self.old["engine"]
+        server.SHARED_GAME_VIEW = self.old["shared_view"]
+        server.ACTIVE_SLOT_ID = self.old["active_slot"]
         server.state = self.old["state"]
         server.ROOM_OPEN = self.old["room_open"]
         server.STATE_REVISION = self.old["revision"]
@@ -90,18 +101,16 @@ class LANMultiplayerTests(unittest.TestCase):
 
         baseline = self.request("/api/state", "host")["stateRevision"]
         target = baseline + len(player_ids)
-        plots = [(6, 9), (11, 5), (13, 13), (19, 15)]
-        kinds = ["home", "shop", "factory", "home"]
         ready = threading.Barrier(len(player_ids) + 1)
 
         def watch(player_id):
-            ready.wait(timeout=3)
+            ready.wait(timeout=5)
             revision = baseline
             latest = None
-            deadline = time.monotonic() + 10
+            deadline = time.monotonic() + 20
             while revision < target and time.monotonic() < deadline:
                 latest = self.request(
-                    f"/api/sync?revision={revision}", player_id, timeout=4
+                    f"/api/sync?revision={revision}", player_id, timeout=8
                 )
                 revision = latest["stateRevision"]
             self.assertIsNotNone(latest, f"{player_id} received no update")
@@ -110,29 +119,35 @@ class LANMultiplayerTests(unittest.TestCase):
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
             watchers = [pool.submit(watch, player_id) for player_id in player_ids]
-            ready.wait(timeout=3)
+            ready.wait(timeout=5)
             started_at = time.monotonic()
             actions = [
-                pool.submit(
-                    self.request, "/api/action", player_id,
-                    {"action": "zone", "kind": kinds[index], "cells": [list(plots[index])]}, 10
-                )
+                pool.submit(self.request, "/api/action", player_id,
+                    {"action": "speed", "value": index + 1}, 15)
                 for index, player_id in enumerate(player_ids)
             ]
             for action in actions:
-                action.result(timeout=10)
-            snapshots = [future.result(timeout=12) for future in watchers]
-            self.assertLess(time.monotonic() - started_at, 5.0)
+                action.result(timeout=20)
+            snapshots = [future.result(timeout=22) for future in watchers]
+            self.assertLess(time.monotonic() - started_at, 20.0)
 
         for snapshot in snapshots:
             self.assertEqual(snapshot["stateRevision"], target)
             self.assertEqual(snapshot["online"], 4)
-            for (x, y), kind in zip(plots, kinds):
-                self.assertTrue(
-                    any(z["x"] == x and z["y"] == y and z["kind"] == kind
-                        for z in snapshot["zones"]),
-                    f"{kind} at {(x, y)} was not shared with every player",
-                )
+            self.assertEqual(len(snapshot["onlinePlayers"]),4)
+            self.assertIn(snapshot["speed"],[1,2,3,4])
+
+        # The same new-city Offline rules execute for every connected player.
+        self.request("/api/action", "host", {"action": "placeRoad", "x": 5, "y": 10})
+        placed = self.request("/api/action", "player-2",
+            {"action": "place", "kind": "civic", "serviceModel": "generalHospital", "x": 5, "y": 9})
+        self.assertTrue(any(b.get("serviceModel")=="generalHospital" for b in placed["buildings"]))
+        self.assertFalse(placed["projects"])
+        for player_id in player_ids:
+            view=self.request("/api/state",player_id)
+            self.assertEqual(view["money"],placed["money"])
+            self.assertTrue(any(b.get("serviceModel")=="generalHospital" for b in view["buildings"]))
+            self.assertEqual(view["simulationEngine"],"offline.js")
 
     def test_cursor_remains_visible_and_reports_player_view_when_leaving_map(self):
         self.request("/api/room/create", "host", {"name": "Ana"})

@@ -4,12 +4,15 @@ on:
     branches: [main]
     paths:
       - 'server.py'
+      - 'shared_engine.py'
+      - 'online_engine.mjs'
       - 'desktop_app.py'
       - 'desktop_app.spec'
       - 'requirements-desktop.txt'
       - 'index.html'
       - '*.css'
       - '*.js'
+      - '*.mjs'
       - '*.json'
       - 'assets/**'
       - 'vendor/**'
@@ -25,6 +28,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Incluir Node.js dentro del ejecutable Windows
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force runtime | Out-Null
+          Copy-Item -Path (Get-Command node.exe).Source -Destination runtime/node.exe
+          & runtime/node.exe --version
       - name: Instalar empaquetador y ventana integrada
         run: pip install -r requirements-desktop.txt
       - name: Empaquetar Ciudad Viva

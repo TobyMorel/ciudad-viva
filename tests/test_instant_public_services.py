@@ -105,8 +105,12 @@ class InstantPublicServices(unittest.TestCase):
                 city["roads"]=[[road_x,10] for road_x in range(4,24)]
                 city["landClaims"]["unlockedChunks"].extend(["2,1","3,1"])
                 if kind=="busStop":
-                    city["busRoutes"]=[{"id":"test-bus","route":[[4,10],[5,10],[6,10]],"status":"active",
-                                         "stops":[],"operational":True,"buses":1}]
+                    city["busRoutes"]=[{"id":"test-bus","from":[4,10],"to":[6,10],
+                                         "route":[[4,10],[5,10],[6,10]],"status":"active",
+                                         "stops":[],"operational":True,"buses":1,
+                                         "driverIds":[],"originName":"Inicio","destinationName":"Final",
+                                         "fare":10,"headwayMinutes":30,"capacity":30,
+                                         "purchaseCost":3500}]
                 payload={"kind":kind,"x":x,"y":y,"contractor":"Sur Obras"}
                 if kind=="busStop":payload["busLineId"]="test-bus"
                 with mock.patch.object(server,"contractor_has_capacity",return_value=False),mock.patch.object(server,"contractor_free_workers",return_value=0):

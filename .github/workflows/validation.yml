@@ -93,6 +93,8 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: Tutorial narrado: móvil y escritorio
+        run: node tests/test_beginner_tutorial_ui.mjs
       - name: Validar construcción en sector remoto
         run: node tests/test_distant_land_ui.mjs
       - name: Comprobar UI, construcción y Economía (390/1440 px)
@@ -108,7 +110,6 @@ jobs:
             tests/test_instant_public_services_ui.mjs
             tests/test_camera_markers.mjs
             tests/test_ui_layout.mjs
-            tests/test_beginner_tutorial_ui.mjs
             tests/test_utility_response_ui.mjs
             tests/test_municipal_forecast_ui.mjs
             tests/test_school_expansion_ui.mjs

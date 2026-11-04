@@ -1,5 +1,6 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
 import {createWorld} from './world3d.js?v=0.254';
+import {smoothRemoteCursor} from './cursor_motion.js';
 import {createOfflineWorkerAdapter} from './offline_client.js?v=0.254';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
 import {growthDemand} from './growth_demand.js';
@@ -30,25 +31,62 @@ function renderMetricDetails(){if(!S)return;const homes=(S.buildings||[]).filter
 const pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).slice(2,9));sessionStorage.setItem('cv-player',pid);
 let placementQueue=Promise.resolve();
 let S=null,gameMode=null,offlineAdapter=null,modeGeneration=0,disconnectToast=false,selectedActor=null,tool='inspect',toolVariant=null,toolIndustry=null,hoverServiceTile=null,selected=null,zoom=window.innerWidth<650?1.08:2.05,panX=0,panY=0,rotation=0,drag=null,toastTimer,orderProjectId=null;
-const sharedCursorLayer=document.createElement('div'),sharedCursorNodes=new Map();sharedCursorLayer.className='shared-cursor-layer';sharedCursorLayer.setAttribute('aria-hidden','true');document.body.append(sharedCursorLayer);
-let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0;
+const sharedCursorLayer=document.createElement('div'),sharedCursorNodes=new Map(),sharedCursorPositions=new Map();sharedCursorLayer.className='shared-cursor-layer';sharedCursorLayer.setAttribute('aria-hidden','true');document.body.append(sharedCursorLayer);
+let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,cursorAnimationFrame=0,lastCursorFrame=0;
+// Render in map coordinates so camera movements do not add a second visual delay.
 function renderSharedCursors(){
  const bounds=canvas.getBoundingClientRect(),seen=new Set();
  for(const cursor of gameMode==='online'?sharedCursors:[]){
   const x=Number(cursor.x),y=Number(cursor.y);if(!Number.isFinite(x)||!Number.isFinite(y))continue;
-  let marker=sharedCursorNodes.get(cursor.id);if(!marker){marker=document.createElement('div');marker.className='shared-cursor';const arrow=document.createElement('span'),label=document.createElement('b');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker)}
-  marker.querySelector('b').textContent=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
-  const colors=['#ffd16d','#85dcff','#ff9ec6','#bba8ff','#97e69e'],hash=[...String(cursor.id)].reduce((n,c)=>n+c.charCodeAt(0),0);marker.style.setProperty('--cursor-color',colors[hash%colors.length]);
-  const point=world.projectTile(x-.5,y-.5,.2);marker.hidden=!point.visible;if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}seen.add(cursor.id);
+  let motion=sharedCursorPositions.get(cursor.id);if(!motion){motion={x,y,targetX:x,targetY:y};sharedCursorPositions.set(cursor.id,motion)}
+  let marker=sharedCursorNodes.get(cursor.id);
+  if(!marker){
+   marker=document.createElement('div');marker.className='shared-cursor';
+   const arrow=document.createElement('span'),label=document.createElement('b');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker);
+   const colors=['#ffd16d','#85dcff','#ff9ec6','#bba8ff','#97e69e'],hash=[...String(cursor.id)].reduce((n,c)=>n+c.charCodeAt(0),0);marker.style.setProperty('--cursor-color',colors[hash%colors.length]);
+  }
+  const label=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
+  if(marker.querySelector('b').textContent!==label)marker.querySelector('b').textContent=label;
+  const point=world.projectTile(motion.x-.5,motion.y-.5,.2);marker.hidden=!point.visible;
+  if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}
+  seen.add(cursor.id);
  }
- for(const [id,marker] of sharedCursorNodes)if(!seen.has(id)){marker.remove();sharedCursorNodes.delete(id)}
+ for(const [id,marker] of sharedCursorNodes)if(!seen.has(id)){marker.remove();sharedCursorNodes.delete(id);sharedCursorPositions.delete(id)}
 }
-canvas.addEventListener('pointermove',event=>{if(gameMode!=='online'||document.hidden||performance.now()-lastCursorSample<65)return;lastCursorSample=performance.now();const bounds=canvas.getBoundingClientRect(),[x,y]=world.screenToMap(event.clientX-bounds.left,event.clientY-bounds.top);if(Number.isFinite(x)&&Number.isFinite(y)){ownCursor={x,y};cursorDirty=true}});
+function animateSharedCursors(now){
+ cursorAnimationFrame=0;
+ if(gameMode!=='online'||document.hidden){lastCursorFrame=0;return}
+ const delta=Math.max(0,Math.min(100,now-lastCursorFrame));lastCursorFrame=now;
+ let moving=false;
+ for(const motion of sharedCursorPositions.values()){
+  const next=smoothRemoteCursor(motion,{x:motion.targetX,y:motion.targetY},delta);
+  motion.x=next.x;motion.y=next.y;
+  if(motion.x!==motion.targetX||motion.y!==motion.targetY)moving=true;
+ }
+ renderSharedCursors();
+ if(moving)cursorAnimationFrame=requestAnimationFrame(animateSharedCursors);
+ else lastCursorFrame=0;
+}
+function acceptSharedCursors(cursors){
+ sharedCursors=Array.isArray(cursors)?cursors:[];
+ for(const cursor of sharedCursors){
+  const x=Number(cursor.x),y=Number(cursor.y);if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+  let motion=sharedCursorPositions.get(cursor.id);
+  if(motion){motion.targetX=x;motion.targetY=y}
+  else sharedCursorPositions.set(cursor.id,{x,y,targetX:x,targetY:y});
+ }
+ renderSharedCursors();
+ if(!cursorAnimationFrame&&gameMode==='online'&&!document.hidden&&sharedCursors.length){
+  lastCursorFrame=performance.now();
+  cursorAnimationFrame=requestAnimationFrame(animateSharedCursors);
+ }
+}
+canvas.addEventListener('pointermove',event=>{const now=performance.now();if(gameMode!=='online'||document.hidden||now-lastCursorSample<16)return;lastCursorSample=now;const bounds=canvas.getBoundingClientRect(),[x,y]=world.screenToMap(event.clientX-bounds.left,event.clientY-bounds.top);if(Number.isFinite(x)&&Number.isFinite(y)){ownCursor={x,y};cursorDirty=true}});
 canvas.addEventListener('pointerleave',()=>{if(gameMode==='online'){ownCursor=null;cursorDirty=true}});
 canvas.addEventListener('pointerup',event=>{if(gameMode==='online'&&event.pointerType==='touch'){ownCursor=null;cursorDirty=true}});
 window.addEventListener('blur',()=>{ownCursor=null;cursorDirty=true});document.addEventListener('visibilitychange',()=>{if(document.hidden){ownCursor=null;cursorDirty=true;sharedCursors=[];renderSharedCursors()}});
-setInterval(async()=>{if(gameMode!=='online'||cursorSending||(!cursorDirty&&(!ownCursor||Date.now()-lastCursorSent<1000)))return;cursorSending=true;const position=ownCursor;cursorDirty=false;try{await fetch('/api/cursors',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify(position||{}),cache:'no-store'});lastCursorSent=Date.now()}catch{cursorDirty=true}finally{cursorSending=false}},120);
-setInterval(async()=>{if(gameMode!=='online'||document.hidden||cursorReading)return;cursorReading=true;try{const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});if(response.ok){sharedCursors=(await response.json()).cursors||[];renderSharedCursors()}}catch{}finally{cursorReading=false}},220);
+setInterval(async()=>{if(gameMode!=='online'||cursorSending||(!cursorDirty&&(!ownCursor||Date.now()-lastCursorSent<1000)))return;cursorSending=true;const position=ownCursor;cursorDirty=false;try{await fetch('/api/cursors',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify(position||{}),cache:'no-store'});lastCursorSent=Date.now()}catch{cursorDirty=true}finally{cursorSending=false}},60);
+setInterval(async()=>{if(gameMode!=='online'||document.hidden||cursorReading)return;cursorReading=true;try{const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});if(response.ok){const data=await response.json();if(gameMode==='online'&&!document.hidden)acceptSharedCursors(data.cursors)}}catch{}finally{cursorReading=false}},75);
 const offers=['Sur Obras','Constructora Delta','Estudio y Obra Norte'],laborNeeds={road:4,bridge:10,home:6,shop:7,factory:12,civic:11,school:12,fireStation:12,depot:8,busStop:4,landfill:12,recyclingPlant:16,port:14,airport:16,hotel:10,powerPlant:18,waterPlant:12,gasPlant:10,wastewaterPlant:14};
 const SERVICE_MODELS={
  tvHeadend:{kind:'civic',label:'Cabecera municipal de TV por cable',cost:13800,days:72,radius:20},

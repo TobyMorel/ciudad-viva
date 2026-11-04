@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.264
+# Ciudad Viva · Alfa 0.265
+
+**Faros reales y fauna en vuelo (0.265):** los faros ya no muestran esferas: luces puntuales reales iluminan la calle, sin sombras dinámicas y con un presupuesto acotado que prioriza los vehículos cercanos. Gaviotas y palomas toman rutas amplias sobre la ciudad con tiempos escalonados; las mariposas revolotean dentro de los parques. Los barcos conservan su ubicación sobre el río y la flotación suave. Todo es visual y no altera la simulación ni la economía.
 
 **La ciudad respira.** Nueve mejoras de ambientación 3D: colectivos con puertas y paradas donde suben pasajeros, fábricas y comercios activos, costanera con muelles operativos, aves y embarcaciones, mascotas en hogares y parques, escuelas con alumnos según matrícula y horario, deterioro urbano con cuadrillas reales, lluvia con paraguas y faros, bomberos y ambulancias con intervenciones detalladas, y pequeñas escenas de mudanzas, festivales y celebraciones documentadas. Se utiliza geometría procedimental Three.js (fachadas, personas, equipos, vehículos, olas, luces y partículas) para conseguir escenas tridimensionales coherentes, priorizando su riqueza visual. **Todas las escenas son visuales y derivan de la partida: no agregan condiciones de construcción, materiales, costos, pasajeros ni demanda.**
 

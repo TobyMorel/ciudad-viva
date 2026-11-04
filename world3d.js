@@ -2,9 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
 import {daylightIntensity} from './simulation_time.js';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.264';
-import {createLivingCity3D} from './living_city_3d.js?v=0.264';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.264';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.265';
+import {createLivingCity3D} from './living_city_3d.js?v=0.265';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.265';
 
 const TILE=2, LAND_CHUNK_SIZE=8;
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
@@ -299,6 +299,33 @@ export function createWorld(canvas){
   const immersive3d=createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear});
   let poweredStreetlights=new Set();
   const routeActors=[],fireVisuals=[],signalBulbs=[],streetLights=[],signalTiles=new Set();
+  // Presupuesto acotado de luces de faros: fuentes reales, sin mapas de sombra.
+  const headlightCarBudget=smallScreen?5:10,headlightLightPool=Array.from({length:headlightCarBudget*2},()=>{
+    const light=new THREE.PointLight('#ffe1a4',0,4.6,2);light.castShadow=false;light.visible=false;scene.add(light);return light;
+  });
+  const headlightProjection=new THREE.Vector3();let activeHeadlightActors=[],nextHeadlightRefresh=0;
+  function updateTrafficHeadlights(actors,enabled,now){
+    if(!enabled){for(const light of headlightLightPool){light.visible=false;light.intensity=0}return}
+    if(now>=nextHeadlightRefresh){
+      const candidates=[];camera.updateMatrixWorld(true);
+      for(const actor of actors){const offsets=actor.mesh?.userData.headlightOffsets;if(!offsets||actor.mesh.visible===false)continue;
+        const projected=headlightProjection.copy(actor.mesh.position).project(camera);
+        if(projected.z< -1||projected.z>1||Math.abs(projected.x)>1.08||Math.abs(projected.y)>1.08)continue;
+        candidates.push({actor,distance:projected.x*projected.x+projected.y*projected.y});
+      }
+      candidates.sort((a,b)=>a.distance-b.distance);
+      activeHeadlightActors=candidates.slice(0,headlightCarBudget).map(item=>item.actor);
+      nextHeadlightRefresh=now+220;
+    }
+    let index=0;
+    for(const actor of activeHeadlightActors){
+      for(const offset of actor.mesh.userData.headlightOffsets||[]){const light=headlightLightPool[index++];if(!light)break;
+        light.position.set(offset[0],offset[1],offset[2]);actor.mesh.localToWorld(light.position);
+        light.visible=true;light.intensity=1.45;
+      }
+    }
+    for(;index<headlightLightPool.length;index++){headlightLightPool[index].visible=false;headlightLightPool[index].intensity=0}
+  }
   const walkerModelPool=new Map(),bicycleModelPool=new Map();
   const actorIdentity=a=>a.selection?`${a.selection.type}:${a.selection.title}:${(a.selection.people||[]).map(p=>p.id).join(',')}:${a.actorKey||''}`:null;
   const sameRoute=(a,b)=>a?.length===b?.length&&a.every((point,index)=>point[0]===b[index][0]&&point[1]===b[index][1]);
@@ -995,11 +1022,13 @@ export function createWorld(canvas){
       for(const x of [-.21,.21]){rodBetween(g,[x,.34,.02],[x*1.18,.39,.02],.012,'#4e6466',6);roundedBox(g,.045,.035,.045,'#e5d8bd',x*1.19,.39,.035,.012);roundedBox(g,.025,.09,.035,'#cfc9b7',x,.34,.12,.008)}
       for(const x of [-.22,.22])for(const z of [-.23,.23])hub(x,z,.13,.09);
       roundedBox(g,.13,.028,.018,'#f4e8cf',0,.18,.4,.006);
+      g.userData.headlightOffsets=[[-.20,.25,.39],[.20,.25,.39]];
     }else if(style==='delivery'||style==='truck'||style==='service'){
       roundedBox(g,.25,.16,.2,'#a8ccca',0,.31,.35,.035);
       roundedBox(g,.36,.055,.07,'#3a4847',0,.19,.42,.015);
       for(const x of [-.13,-.065,0,.065,.13])roundedBox(g,.022,.018,.015,'#d7d5c9',x,.27,.368,.006);
       lamp(-.13,.27,.37,'#fff0b8');lamp(.13,.27,.37,'#fff0b8');
+      g.userData.headlightOffsets=[[-.13,.27,.39],[.13,.27,.39]];
       for(const x of [-.22,.22]){roundedBox(g,.055,.06,.09,'#e0d5bd',x,.41,.36,.016);roundedBox(g,.12,.025,.035,'#ce644e',x,.22,-.39,.008);for(const z of [-.28,.32])hub(x,z,.14,.09)}
       for(let z=-.29;z<=.14;z+=.14)roundedBox(g,.34,.018,.018,'#e2c58d',0,.3,z,.006);
       roundedBox(g,.3,.025,.06,'#7d8e85',0,.41,-.43,.012);
@@ -1053,13 +1082,7 @@ export function createWorld(canvas){
     }
   }
 
-  function makeVehicle(color){const g=new THREE.Group();box(g,.39,.16,.68,color,0,.22,0,{cast:true});box(g,.32,.18,.37,'#b9d6da',0,.39,-.04);box(g,.32,.035,.02,'#5a7078',0,.48,.13);for(const x of [-.22,.22]){for(const z of [-.23,.23]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.055,18),mat('#263c42'));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.13,z);g.add(wheel);cylinder(g,.035,.035,.061,'#a6b4ac',x*1.12,.13,z,12)}box(g,.085,.05,.02,'#fff2c3',x,.25,.35);box(g,.08,.045,.02,'#d06f61',x,.25,-.35);box(g,.045,.05,.07,'#718f95',x*1.01,.41,.13)}box(g,.29,.025,.035,'#344d55',0,.21,.355);// Faros con halo volumétrico cuando llueve o anochece.
-    const halos=[];
-    for(const sx of [-.20,.20]){
-      const h=sphere(g,.115,mat('#ffefd1',{emissive:'#ffe5b8',emissiveIntensity:1.3,transparent:true,opacity:.67,depthWrite:false}),sx,.24,.39,1);
-      h.visible=false;halos.push(h);
-    }
-    g.userData.nightLamps=halos;
+  function makeVehicle(color){const g=new THREE.Group();box(g,.39,.16,.68,color,0,.22,0,{cast:true});box(g,.32,.18,.37,'#b9d6da',0,.39,-.04);box(g,.32,.035,.02,'#5a7078',0,.48,.13);for(const x of [-.22,.22]){for(const z of [-.23,.23]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.055,18),mat('#263c42'));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.13,z);g.add(wheel);cylinder(g,.035,.035,.061,'#a6b4ac',x*1.12,.13,z,12)}box(g,.085,.05,.02,'#fff2c3',x,.25,.35);box(g,.08,.045,.02,'#d06f61',x,.25,-.35);box(g,.045,.05,.07,'#718f95',x*1.01,.41,.13)}box(g,.29,.025,.035,'#344d55',0,.21,.355);
     trafficRoot.add(g);vehicleFinish(g,'car');return g}
   function makeDeliveryTruck(color='#c78c50',role=null,id=null,withCargo=false){const g=new THREE.Group();box(g,.38,.2,.7,color,0,.27,-.08);box(g,.3,.22,.28,'#c9e4e3',0,.3,.36);box(g,.4,.035,.72,'#e5d2aa',0,.39,-.08);for(const x of [-.23,.23])for(const z of [-.28,.32])box(g,.075,.12,.13,'#303f43',x,.13,z);const cargoMeshes=[];if(withCargo){for(const [x,y,z,color] of [[-.11,.49,-.21,'#bd8650'],[.05,.49,-.22,'#72947a'],[0,.61,-.2,'#d0a153'],[.12,.49,-.04,'#b96d58']]){const crate=roundedBox(g,.14,.13,.15,color,x,y,z,.025);roundedBox(g,.145,.022,.16,'#e6d2ac',x,y+.035,z,.012);cargoMeshes.push(crate,g.children.at(-1))}for(const x of [-.18,.18])rodBetween(g,[x,.44,-.31],[x,.66,-.31],.012,'#e8d7b2',5)}g.userData.cargoMeshes=cargoMeshes;if(role){g.userData.emergencyRole=role;g.userData.emergencyId=id}trafficRoot.add(g);vehicleFinish(g,'delivery');return g}
   function makeHearse(){const g=makeVehicle('#343c40');box(g,.32,.17,.34,'#273034',0,.47,-.04,{cast:true});box(g,.26,.08,.3,'#aeb8b3',0,.59,-.04,{cast:true});box(g,.12,.035,.035,'#e7e4da',0,.65,-.04,{cast:false});g.userData.emergencyRole='Coche fúnebre';vehicleFinish(g,'delivery');return g}
@@ -1070,10 +1093,7 @@ export function createWorld(canvas){
     box(door,.030,.19,.20,'#7fb3bc',.01,.085,-.09);
     box(door,.037,.085,.04,'#b5bfb2',.018,-.07,.01);
     g.userData.passengerDoor=door;
-    g.userData.nightLamps=[...[-.23,.23].map(sx=>{
-      const h=sphere(g,.122,mat('#ffe6b2',{emissive:'#ffd98b',emissiveIntensity:1.4,transparent:true,opacity:.75,depthWrite:false}),sx,.29,.625,1);
-      h.visible=false;return h;
-    })];
+    g.userData.headlightOffsets=[[-.23,.28,.60],[.23,.28,.60]];
     const interior=box(g,.35,.044,.22,mat('#f5dab1',{emissive:'#fbcf91',emissiveIntensity:1}),0,.617,-.16);
     interior.visible=false;g.userData.interiorLights=[interior];
     const passengers=[];
@@ -1584,7 +1604,7 @@ export function createWorld(canvas){
     requestAnimationFrame(animate);
     const wallDelta=Math.min(.1,Math.max(0,(now-lastFrame)/1000));
     lastFrame=now;adaptRenderResolution(now);updateWind(wallDelta);
-    if(simulationPaused){resize();updateVegetation();spectacle.tick(0,visualTimeOfDayMinutes,true);living3d.tick(0,visualTimeOfDayMinutes,true);immersive3d.tick(0,visualTimeOfDayMinutes,true,routeActors);renderer.render(scene,camera);return}
+    if(simulationPaused){resize();updateVegetation();spectacle.tick(0,visualTimeOfDayMinutes,true);living3d.tick(0,visualTimeOfDayMinutes,true);immersive3d.tick(0,visualTimeOfDayMinutes,true,routeActors);const pausedHeadlights=visualTimeOfDayMinutes>=1110||visualTimeOfDayMinutes<350||Number(lastSceneState?.utilities?.report?.drainage?.rainfallMm||0)>0;updateTrafficHeadlights(routeActors,pausedHeadlights,now);renderer.render(scene,camera);return}
     simulationClock+=wallDelta*simulationSpeed;visualTimeOfDayMinutes=(visualTimeOfDayMinutes+wallDelta*simulationSpeed*15)%1440;visualGameDay+=wallDelta*simulationSpeed/96;updateLighting(visualTimeOfDayMinutes);resize();updateVegetation();spectacle.tick(wallDelta,visualTimeOfDayMinutes);living3d.tick(wallDelta,visualTimeOfDayMinutes);
     const signalPhase=Math.floor(simulationClock/9)%2,signalAmber=simulationClock%9>=8;
     for(const signal of signalBulbs){
@@ -1648,7 +1668,7 @@ export function createWorld(canvas){
     immersive3d.tick(wallDelta,visualTimeOfDayMinutes,false,routeActors);
     const lampsOn=visualTimeOfDayMinutes>=1110||visualTimeOfDayMinutes<350||
       Number(lastSceneState?.utilities?.report?.drainage?.rainfallMm||0)>0;
-    for(const a of routeActors)for(const lamp of a.mesh.userData.nightLamps||[])lamp.visible=lampsOn;
+    updateTrafficHeadlights(routeActors,lampsOn,now);
     for(let i=0;i<waves.length;i++)waves[i].material.opacity=.23+.11*Math.sin(now*.0014+i);
     renderer.render(scene,camera);
   }

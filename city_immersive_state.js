@@ -1,4 +1,4 @@
-// Alfa 0.264 · Solo lectura. No genera pasajeros, producción, delitos ni dinero.
+// Alfa 0.265 · Solo lectura. No genera pasajeros, producción, delitos ni dinero.
 import {commerceIdentity,citySpectaclePlan} from './city_spectacle_state.js';
 import {parkActivityPlan} from './living_city.js';
 const N=x=>Number.isFinite(Number(x))?Number(x):0;

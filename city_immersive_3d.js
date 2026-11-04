@@ -1,6 +1,6 @@
 import {immersiveCityPlan,immersiveSignature} from './city_immersive_state.js';
 
-// Alfa 0.264: puramente visual, crea objetos 3D según los datos que YA existen.
+// Alfa 0.265: puramente visual, crea objetos 3D según los datos que YA existen.
 export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear}){
  const root=new THREE.Group();root.name='Ciudad Viva · La ciudad respira';
  scene.add(root);
@@ -192,15 +192,15 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   for(const sx of [-.31,.31])sphere(g,.10,'#f3e4bc',sx,.31,-.37,1);
   boats.push({g,x,z,seed});return g;
  }
- function gull(parent,x,z,seed){
+ function gull(parent,x,z,seed,species='gull'){
   const g=place(parent,x,3.2,z);
-  const body=sphere(g,.12,'#faf6e6',0,0,0,1);body.scale.set(1,.7,1.28);
-  sphere(g,.065,'#edbf66',0,-.016,.15,1);
+  const urban=species==='pigeon',body=sphere(g,urban?.105:.12,urban?'#89949a':'#faf6e6',0,0,0,1);body.scale.set(1,urban?.78:.7,urban?1.08:1.28);
+  sphere(g,.065,urban?'#b9bec0':'#edbf66',0,-.016,.15,1);
   for(const sx of [-1,1]){
    const wing=place(g,sx*.12,.02,0);
-   const plane=box(wing,.42,.035,.17,'#f2f5ec',sx*.19,0,0);
+   const plane=box(wing,urban?.34:.42,urban?.028:.035,urban?.14:.17,urban?'#777f84':'#f2f5ec',sx*(urban?.15:.19),0,0);
    plane.rotation.z=sx*.1;
-   wings.push({wing,g,sx,seed,x,z,kind:'bird'});
+   wings.push({wing,g,sx,seed,x,z,kind:'bird',species,radiusX:9+rnd(seed+91)*8,radiusZ:5+rnd(seed+92)*7,period:30+rnd(seed+93)*22,phase:rnd(seed+94)*Math.PI*2});
   }
  }
  function coast3D(){
@@ -307,7 +307,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    const [x,z]=point(p.x,p.y);
    dog(layers.animals,x+.57,z-.45,i*37+p.x*11,false);
    butterflies(layers.animals,x-.29,z+.38,i*37+p.y);
-   if(i<5)gull(layers.animals,x,z,i*73+p.y);
+   if(i<5)gull(layers.animals,x,z,i*73+p.y,'pigeon');
   }
  }
  function school3D(){
@@ -553,10 +553,15 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    item.wing.rotation.z=item.sx*(.15+Math.sin(p)*.45);
    if(item.kind==='butterfly'){
     item.g.position.y=.85+Math.sin(clock*1.7+item.seed)*.20;
+    item.g.position.x=item.x+Math.sin(clock*.72+item.seed)*.24;
+    item.g.position.z=item.z+Math.cos(clock*.64+item.seed)*.22;
+    item.g.rotation.y=Math.atan2(Math.cos(clock*.72+item.seed),-Math.sin(clock*.64+item.seed));
     item.g.visible=plan.season!=='invierno'&&!rain&&hour>=8&&hour<19;
    }else{
-    item.g.position.x=item.x+Math.sin(clock*.20+item.seed)*.25;
-    item.g.position.z=item.z+Math.cos(clock*.23+item.seed)*.24;
+    const phase=clock/item.period*Math.PI*2+item.phase,dx=-Math.sin(phase)*item.radiusX,dz=Math.cos(phase)*item.radiusZ;
+    item.g.position.set(item.x+Math.cos(phase)*item.radiusX,3.25+Math.sin(phase*2+item.phase)*.42,item.z+Math.sin(phase)*item.radiusZ);
+    item.g.rotation.y=Math.atan2(dx,dz);
+    item.g.rotation.z=Math.sin(phase)*.045;
    }
   }
   for(const a of animals){

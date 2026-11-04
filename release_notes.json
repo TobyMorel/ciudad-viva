@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.264",
+  "currentVersion": "0.265",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.265",
+      "date": "2026-11-04",
+      "title": "Faros reales y fauna en vuelo",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Los faros de autos, buses y camiones dejan de usar esferas visibles. Luces puntuales reales iluminan la calzada, sin mapas de sombra; un grupo reutilizable y limitado sigue a los vehículos cercanos y se activa de noche o con lluvia para cuidar el rendimiento.",
+        "Gaviotas y palomas tienen recorridos aéreos curvos y escalonados sobre el río, los parques y la ciudad. Las mariposas también revolotean dentro de los jardines. El movimiento se pausa junto con la partida y no altera población, actividad ni economía.",
+        "Los barcos conservan sus ubicaciones sobre el cauce del río y el balanceo suave; no se desplazan sobre calles ni cambian la operación portuaria."
+      ],
+      "verification": "Inspección de cambios recientes en main y revisión estática del código de luces, rutas de vuelo, historial y referencias de versión."
+    },
     {
       "version": "0.264",
       "date": "2026-11-04",

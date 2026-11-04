@@ -31,6 +31,14 @@ class ReleaseVersionTests(unittest.TestCase):
         self.assertIn(f"game.js?v={version}", html)
         self.assertIn(f"world3d.js?v={version}", game)
         self.assertIn(f"ciudad-viva-alfa-{version}", workflow)
+        package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+        lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(package["version"], f"{version}.0")
+        self.assertEqual(lock["version"], f"{version}.0")
+        self.assertEqual(lock["packages"][""]["version"], f"{version}.0")
+        self.assertIn(f"main-menu.css?v={version}", html)
+        self.assertIn(f"cursor_motion.js?v={version}", game)
+        self.assertIn(f"cursor_presence.js?v={version}", game)
         self.assertIn('release_notes.json', game, "Cambios debe consultar el historial vigente")
         self.assertIn('releaseData?.currentVersion', game, "El banner debe usar la versión vigente")
         self.assertIn('id="releaseNotes"', html, "Historial visible en Cambios")
@@ -41,15 +49,20 @@ class ReleaseVersionTests(unittest.TestCase):
                       'La recuperacion debe volver a la version publicada')
 
     def test_code_changes_require_a_new_release_in_pr(self):
-        """CI: un PR que altera el juego debe incrementar su versión y sus notas."""
+        """CI: cada cambio jugable en PR o push a main incrementa la versión."""
         base = os.environ.get("GITHUB_BASE_REF")
-        if not base:
+        ref = f"origin/{base}" if base else ""
+        if not ref and os.environ.get("GITHUB_EVENT_NAME") == "push":
+            previous_sha = os.environ.get("GITHUB_EVENT_BEFORE", "")
+            if len(previous_sha) == 40 and previous_sha != "0" * 40:
+                ref = previous_sha
+        if not ref:
             return
         try:
             previous = subprocess.check_output(
-                ["git", "show", f"origin/{base}:release_notes.json"], cwd=ROOT, text=True)
+                ["git", "show", f"{ref}:release_notes.json"], cwd=ROOT, text=True)
             changed = subprocess.check_output(
-                ["git", "diff", "--name-only", f"origin/{base}", "HEAD"], cwd=ROOT, text=True).splitlines()
+                ["git", "diff", "--name-only", ref, "HEAD"], cwd=ROOT, text=True).splitlines()
         except (OSError, subprocess.CalledProcessError):
             self.fail("No se pudo comparar el historial con la base del PR; configurar checkout fetch-depth: 0.")
         if not any(path in {"server.py", "offline.js", "game.js", "world3d.js", "index.html"}

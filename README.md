@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.254
+# Ciudad Viva · Alfa 0.255
+
+**Cursores multijugador más fluidos (0.255):** en las salas LAN, los cursores remotos se actualizan más seguido y se interpolan entre muestras para reducir los saltos. Al abrir un panel (por ejemplo, Movilidad o Tráfico), el cursor del jugador queda en su última posición y muestra la pantalla que está consultando. Los cursores de los demás se ocultan localmente mientras tenés abierta una ventana para que no tapen el contenido.
 
 **Tesorería de ciudades nuevas (0.254):** Una ciudad vacía empieza con $0 de ingresos y $0 de gastos mensuales. Se elimina el aporte regional y los ingresos ficticios por habitantes o empleos; la recaudación proviene de impuestos realmente cobrados a hogares y ventas, y de servicios municipales cuando existan. El acceso regional no genera mantenimiento municipal.
 

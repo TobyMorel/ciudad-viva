@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.254",
+  "currentVersion": "0.255",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.255",
+      "date": "2026-11-04",
+      "title": "Cursores LAN fluidos y actividad visible en las pantallas",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Las posiciones de los cursores online se envían y consultan con más frecuencia y se interpolan por fotograma para reducir saltos visibles.",
+        "Cuando un jugador abre Movilidad, Tráfico u otra ventana, los demás conservan su cursor en el último lugar del mapa y ven qué pantalla está consultando junto a su nombre.",
+        "Mientras tenés abierta una ventana de la interfaz, los cursores remotos se ocultan localmente para no tapar el contenido; reaparecen al volver al mapa.",
+        "Se sincroniza la versión de la interfaz, el caché, el paquete y el historial de novedades."
+      ],
+      "verification": "Pruebas unitarias de interpolación y etiquetas de presencia, prueba de integración LAN del estado de los cursores y validación de versión incorporadas a CI. Pendiente comprobar la interacción visual con dos equipos reales."
+    },
     {
       "version": "0.254",
       "date": "2026-11-04",

@@ -40,6 +40,8 @@ jobs:
           node --check traffic.js
           node --check simulation_time.js
           node --check game.js
+          node --check cursor_motion.js
+          node --check cursor_presence.js
           node --check world3d.js
           node --check cityGuide.js
           node --check reference-ui.js
@@ -47,16 +49,20 @@ jobs:
           python -m json.tool offline_seed.json > /dev/null
       - name: Regresión Online
         id: online
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
       - name: Regresión Offline
         run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
+      - name: Cursores multijugador y presencia
+        run: node --test tests/test_cursor_motion.mjs tests/test_cursor_presence.mjs
       - name: Stress económico 30 años (cinco perfiles)
         if: ${{ !cancelled() && steps.syntax.outcome == 'success' && steps.online.outcome == 'success' }}
         run: python tests/stress_30_years.py
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.254
+          name: ciudad-viva-alfa-0.255
           path: |
             .
             !.git/**
@@ -127,7 +133,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.254-responsive
+          name: ciudad-viva-alfa-0.255-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

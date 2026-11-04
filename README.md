@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.251
+# Ciudad Viva · Alfa 0.252
+
+**Guardados offline protegidos (0.252):** El selector carga el contenido completo de cada slot antes de iniciar la simulación y comprueba el estado antes de permitir el guardado automático. Las partidas nuevas usan un slot separado, hay copias de seguridad automáticas y se puede eliminar un slot desde el selector.
 
 **Partidas y sala LAN (0.251):** Offline permite crear tantos slots como admita el almacenamiento del navegador y retoma los guardados anteriores. El anfitrión elige una partida local o una ciudad nueva antes de abrir la sala. Cada jugador elige un nombre; la sala muestra participantes, chat y actividad de construcción. El anfitrión guarda en su equipo y la app anuncia la sala en Radmin VPN (`26.x.x.x`) o Hamachi (`25.x.x.x`). Para descubrir salas automáticamente, ambos equipos abren la app Windows; desde GitHub Pages se puede entrar mediante la dirección VPN del anfitrión.
 

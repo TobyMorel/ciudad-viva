@@ -1,3 +1,7 @@
+## Alfa 0.252 · Protección de partidas offline
+
+La selección de partida vuelve a leer el snapshot completo de IndexedDB. Antes de escribir, comprueba que la ciudad abierta corresponda con el guardado. La creación de una ciudad usa otro slot; hay copias de seguridad periódicas y una opción para eliminar partidas desde el selector. El botón Cargar partida offline abre ese mismo selector.
+
 ## Alfa 0.251 · Partidas y sala compartida
 
 Offline y Online muestran un selector de partidas antes de comenzar. Los slots offline se guardan en IndexedDB, con migración de la partida anterior, y el anfitrión conserva múltiples slots en su equipo. Cada jugador usa un nombre visible; la partida compartida muestra participantes, chat y acciones recientes. La app anuncia salas en Radmin VPN y Hamachi. El navegador de GitHub Pages no puede escuchar anuncios LAN: para buscar salas se abre la app en ambos equipos, o se entra por dirección VPN.

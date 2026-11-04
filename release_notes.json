@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.251",
+  "currentVersion": "0.252",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.252",
+      "date": "2026-11-04",
+      "title": "Protección de partidas offline",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Al elegir una partida offline, el juego recupera el snapshot completo del slot y verifica la ciudad abierta antes de activar el guardado automático.",
+        "Una partida nueva se inicia en otro slot y el botón Cargar partida vuelve al selector, sin reemplazar el slot que se estaba jugando.",
+        "Los slots tienen copias de seguridad automáticas y se pueden eliminar, junto con sus copias, desde el selector."
+      ],
+      "verification": "Revisión del flujo de carga, creación, guardado y eliminación de slots."
+    },
     {
       "version": "0.251",
       "date": "2026-11-04",

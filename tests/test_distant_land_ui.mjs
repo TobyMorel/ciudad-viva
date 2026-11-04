@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 try{
  const page=await browser.newPage({viewport:{width:1280,height:800}});page.setDefaultTimeout(20000);const errors=[],failedRequests=[],badResponses=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});page.on('requestfailed',r=>failedRequests.push({url:r.url(),error:r.failure()?.errorText||'request failed'}));page.on('response',r=>{if(r.status()>=400)badResponses.push({url:r.url(),status:r.status()})});page.on('dialog',d=>d.accept());
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
- await page.locator('#offlineMode').evaluate(el=>el.click());
+ await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
  try{await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),undefined,{timeout:60000})}catch(error){const boot=await page.evaluate(()=>({mode:window.__ciudadVivaMode?.(),modeType:typeof window.__ciudadVivaMode,backdrop:document.getElementById('modeBackdrop')?.className,modeError:document.getElementById('modeError')?.textContent,offlineButtonDisabled:document.getElementById('offlineMode')?.disabled}));throw new Error('Offline no inició: '+JSON.stringify({boot,pageErrors:errors,failedRequests,badResponses})+'; '+error.message)};
  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
  await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden')&&document.getElementById('money')?.textContent.includes('175.000')&&document.getElementById('population')?.textContent.trim()==='0',undefined,{timeout:30000});
@@ -46,7 +46,7 @@ try{
  assert.equal(before.roads,10);assert.equal(before.sectors,5);assert.equal(before.remoteClinic?.x,5);assert.equal(before.remoteClinic?.y,19);assert.equal(before.remoteClinic?.serviceModel,'clinic');
  const moneyText=await page.locator('#money').innerText();
  await page.reload({waitUntil:'commit',timeout:60000});await page.waitForFunction(()=>typeof window.__ciudadVivaMode==='function',undefined,{timeout:60000});
- await page.locator('#offlineMode').evaluate(el=>el.click());
+ await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
  await page.waitForFunction(expected=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden')&&document.getElementById('money')?.innerText===expected,moneyText,{timeout:60000});
  const after=await page.evaluate(()=>{const c=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));const clinic=c.buildings.find(b=>b.x===5&&b.y===19&&b.serviceModel==='clinic');return{roads:c.roads.length,sectors:c.landClaims.unlockedChunks.length,money:c.money,paused:c.paused,remoteClinic:clinic?{x:clinic.x,y:clinic.y,serviceModel:clinic.serviceModel,status:clinic.status}:null}});
  assert.deepEqual(after,before);assert.deepEqual(errors,[]);

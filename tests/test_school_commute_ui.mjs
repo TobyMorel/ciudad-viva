@@ -7,7 +7,7 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',error=>errors.push(error.message));
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
  await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;city.buildings.push({kind:'school',serviceModel:'university',name:'Universidad experimental',x:10,y:11,status:'habilitado',classrooms:8,jobSlots:30,utilityAccess:{powerServedPct:100,waterServedPct:100,wastewaterTreatedPct:100}});localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
- await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+ await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
  await page.waitForFunction(()=>window.__ciudadVivaVehicles?.().some(actor=>actor.title==='Estudiantes en camino'&&actor.routeLength>1),{timeout:30000});
  const actors=await page.evaluate(()=>window.__ciudadVivaVehicles().filter(actor=>actor.title==='Estudiantes en camino'));
  assert.ok(actors.length>0,'los estudiantes matriculados deben tener peatones o autos animados sobre rutas');

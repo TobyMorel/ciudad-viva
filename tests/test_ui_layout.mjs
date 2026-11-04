@@ -8,7 +8,7 @@ try{
   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(response=>response.json());city.paused=true;localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').evaluate(button=>button.click());
+  await page.locator('#offlineMode').evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
   await page.locator('.game-dock').waitFor({state:'visible',timeout:30000});
   const layout=await page.evaluate(()=>{const dock=document.querySelector('.game-dock').getBoundingClientRect(),rail=document.querySelector('#cityReportRail'),railRect=rail.getBoundingClientRect(),date=document.querySelector('#mapDate'),body=document.body;return{pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth,dock:{left:dock.left,right:dock.right,top:dock.top,bottom:dock.bottom,width:dock.width,height:dock.height},dockInside:dock.left>=-1&&dock.right<=innerWidth+1&&dock.top>=-1&&dock.bottom<=innerHeight+1,rail:{visible:railRect.width>0&&railRect.height>0,count:rail.querySelectorAll('[data-city-report]').length,inside:railRect.left>=0&&railRect.right<=innerWidth+1},date:date.textContent.trim(),hasTimeControl:body.querySelector('.game-dock .time-controls')?.textContent.trim()||''}});

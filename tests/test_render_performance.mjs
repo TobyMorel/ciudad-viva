@@ -10,7 +10,7 @@ try{
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').click();
+  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
   await page.evaluate(()=>window.__ciudadVivaSetZoomForDiagnostics(.58));
   await page.waitForFunction(()=>window.__ciudadVivaScene?.()?.vegetationLOD==='instanced-far',null,{timeout:15000});

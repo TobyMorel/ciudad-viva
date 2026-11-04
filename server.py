@@ -27,6 +27,7 @@ ROOM_OPEN = False
 STATE_REVISION = 0
 ROOM_CODE = uuid.uuid4().hex[:6].upper()
 DISCOVERED_ROOMS = {}
+ACTIVE_SLOT_ID = None
 DISCOVERY_PORT = 8766
 PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
 MATERIAL_NAMES = {"aggregate":"áridos","concrete":"hormigón","steel":"acero","timber":"madera","components":"componentes"}
@@ -1013,7 +1014,7 @@ def municipal_team_report(player_id=None):
     cutoff=time.time()-25
     active=[(member,last) for member,last in state.get("players",{}).items() if last>cutoff]
     active.sort(key=lambda item:(item[0]!=state.get("host"),item[0]))
-    labels={member:("Alcaldía · anfitrión" if member==state.get("host") else f"Jugador {member[-6:]}") for member,_ in active}
+    labels={member:state.get("playerNames",{}).get(member) or ("Alcaldía · anfitrión" if member==state.get("host") else f"Jugador {member[-6:]}") for member,_ in active}
     members=[{"id":member,"label":labels[member],"isHost":member==state.get("host"),"role":next((role for role,owner in responsibilities.items() if owner==member),"compartido")} for member,_ in active]
     roles=[{"id":role,"label":meta["label"],"summary":meta["summary"],"playerId":responsibilities.get(role),"playerLabel":labels.get(responsibilities.get(role),"Titular desconectado · área compartida")} for role,meta in MUNICIPAL_ROLES.items()]
     return {"isHost":player_id is not None and player_id==state.get("host"),"myRole":next((role for role,owner in responsibilities.items() if owner==player_id),"compartido"),"members":members,"roles":roles,"online":len(active)}
@@ -1865,15 +1866,74 @@ def local_ips():
     try:
         for info in socket.getaddrinfo(socket.gethostname(),None,socket.AF_INET):ips.add(info[4][0])
     except OSError:pass
-    # Hamachi reserves 25.0.0.0/8; probing a UDP route reveals its virtual adapter.
-    for target in ("192.0.2.1","25.0.0.1"):
+    # Hamachi uses 25/8 and Radmin VPN uses 26/8.
+    for target in ("192.0.2.1","25.0.0.1","26.0.0.1"):
         probe=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         try:
             probe.connect((target,80));ips.add(probe.getsockname()[0])
         except OSError:pass
         finally:probe.close()
     usable=[ip for ip in ips if not ip.startswith("127.")]
-    return sorted(usable,key=lambda ip:(0 if ip.startswith("25.") else 1,tuple(int(part) for part in ip.split("."))))
+    return sorted(usable,key=lambda ip:(0 if ip.startswith(("25.","26.")) else 1,tuple(int(part) for part in ip.split("."))))
+
+def slot_catalog():
+    """Keep save metadata separate so listing cities never parses large snapshots."""
+    folder=SAVE_ROOT/"partidas";folder.mkdir(parents=True,exist_ok=True)
+    index=folder/"indice.json"
+    try:slots=json.loads(index.read_text(encoding="utf-8")) if index.exists() else []
+    except (ValueError,OSError):slots=[]
+    if not slots and SAVE.exists():
+        try:
+            old=json.loads(SAVE.read_text(encoding="utf-8"))
+            legacy={"id":uuid.uuid4().hex,"name":"Partida anterior","city":str(old.get("name","Puerto Claro"))[:48],"day":int(old.get("day",1)),"updatedAt":int(SAVE.stat().st_mtime)}
+            (folder/(legacy["id"]+".json")).write_text(json.dumps(old,ensure_ascii=False),encoding="utf-8")
+            slots=[legacy];index.write_text(json.dumps(slots,ensure_ascii=False),encoding="utf-8")
+        except (ValueError,OSError,TypeError):pass
+    return slots
+
+def save_slot(slot_id=None,name=None):
+    global ACTIVE_SLOT_ID
+    slots=slot_catalog();slot_id=slot_id or ACTIVE_SLOT_ID or uuid.uuid4().hex
+    if not isinstance(slot_id,str) or len(slot_id)!=32 or any(c not in "0123456789abcdef" for c in slot_id):raise ValueError("Slot de partida inválido.")
+    existing=next((item for item in slots if item["id"]==slot_id),None)
+    if not existing:
+        existing={"id":slot_id,"name":str(name or state.get("name","Nueva partida"))[:48]};slots.append(existing)
+    elif name:existing["name"]=str(name)[:48]
+    existing.update({"city":str(state.get("name","Puerto Claro"))[:48],"day":int(state.get("day",1)),"updatedAt":int(time.time())})
+    folder=SAVE_ROOT/"partidas";folder.mkdir(parents=True,exist_ok=True)
+    snapshot={k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed","roomName")}
+    (folder/(slot_id+".json")).write_text(json.dumps(snapshot,ensure_ascii=False),encoding="utf-8")
+    (folder/"indice.json").write_text(json.dumps(slots,ensure_ascii=False),encoding="utf-8")
+    ACTIVE_SLOT_ID=slot_id
+    return existing
+
+def load_slot(slot_id):
+    if not isinstance(slot_id,str) or not any(item["id"]==slot_id for item in slot_catalog()):raise ValueError("Esa partida guardada no existe.")
+    try:return json.loads((SAVE_ROOT/"partidas"/(slot_id+".json")).read_text(encoding="utf-8"))
+    except (ValueError,OSError):raise ValueError("No se pudo abrir esa partida guardada.")
+
+def player_list():
+    now=time.time();names=state.get("playerNames",{})
+    return [{"id":pid,"name":names.get(pid) or ("Anfitrión" if pid==state.get("host") else "Jugador"),"isHost":pid==state.get("host")}
+            for pid,last in state.get("players",{}).items() if last>now-25]
+
+def clean_player_name(value):
+    name=" ".join(str(value or "").strip().split())[:24]
+    return name if len(name)>=2 else "Jugador"
+
+def action_description(data):
+    action=str(data.get("action", ""))
+    labels={"placeRoad":"construyó una calle","place":"inició una construcción","zone":"cambió la zona","demolishAt":"demolió una construcción","demolishBuilding":"demolió un edificio","speed":"cambió la velocidad","pause":"cambió la pausa","new":"inició una ciudad nueva","toggleTrafficSignal":"cambió un semáforo","unlockLand":"desbloqueó terreno","rotateBuilding":"giró un edificio","adjustTax":"modificó un impuesto","municipalLoan":"solicitó un crédito"}
+    detail=labels.get(action,"realizó una acción municipal")
+    if action in ("demolishAt","demolishBuilding"):
+        target=next((b for b in state.get("buildings",[]) if b.get("x")==data.get("x") and b.get("y")==data.get("y")),None)
+        if target:detail="demolió " + str(target.get("name") or target.get("kind") or "un edificio")[:60]
+    cells=data.get("cells")
+    point=cells[0] if isinstance(cells,list) and cells and isinstance(cells[0],(list,tuple)) else (data.get("x"),data.get("y"))
+    try:
+        if point[0] is not None and point[1] is not None:detail+=f" en {int(point[0])+1},{int(point[1])+1}"
+    except (ValueError,TypeError,IndexError):pass
+    return detail
 
 def ev(title, detail):
     state["events"].insert(0,{"day":state["day"],"title":title,"detail":detail})
@@ -6466,7 +6526,7 @@ def _build_public_state(player_id=None):
     online=sum(1 for t in state["players"].values() if t>cutoff)
     ensure_utility_state();calculate_utility_balance();evaluate_essential_services(state);calculate_waste_balance()
     reserved=sum(max(0,p["cost"]-p.get("paid",0)) for p in state["projects"] if not p.get("privatePaid"))
-    view={k:v for k,v in state.items() if k not in ("players","host")}
+    view={k:v for k,v in state.items() if k not in ("players","playerNames","host")}
     view["buildings"]=[]
     for building in state.get("buildings",[]):
         connected=building_road_access(building)
@@ -6575,6 +6635,9 @@ def public_state(player_id=None,use_cache=False):
         view=_build_public_state(None)
     now=time.time();cutoff=now-25
     view["online"]=sum(1 for last in state.get("players",{}).values() if last>cutoff)
+    view["onlinePlayers"]=player_list()
+    view["chatMessages"]=state.get("chatMessages",[])[-80:]
+    view["actionFeed"]=state.get("actionFeed",[])[-40:]
     view["stateRevision"]=STATE_REVISION
     view["timeOfDayMinutes"]=state.get("timeOfDayMinutes",360)
     view["day"]=state.get("day",1)
@@ -6595,9 +6658,10 @@ def discovery_loop():
         while True:
             now=time.time()
             if ROOM_OPEN and now-last>=3:
-                packet=json.dumps({"tag":"CiudadVivaLAN","name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"port":PORT}).encode()
+                packet=json.dumps({"tag":"CiudadVivaLAN","name":state.get("roomName",state.get("name","Ciudad Viva")),"code":ROOM_CODE,"port":PORT}).encode()
                 destinations=["255.255.255.255"]
                 if any(ip.startswith("25.") for ip in local_ips()):destinations.append("25.255.255.255")
+                if any(ip.startswith("26.") for ip in local_ips()):destinations.append("26.255.255.255")
                 for destination in destinations:
                     try:sock.sendto(packet,(destination,DISCOVERY_PORT))
                     except OSError:pass
@@ -6628,6 +6692,16 @@ class Handler(BaseHTTPRequestHandler):
     server_version="CiudadViva/0.88"
     def log_message(self,*args): pass
     def _send(self,status,body,typ="application/json; charset=utf-8"):
+        if status==200 and isinstance(body,dict) and getattr(self,"_action_context",None):
+            who,detail,previous_event=self._action_context;self._action_context=None
+            latest=state.get("events",[None])[0] if state.get("events") else None
+            if detail.startswith("realizó una acción municipal") and latest is not previous_event and latest:
+                detail=str(latest.get("title","realizó una acción municipal"))[:90].lower()
+            feed=state.setdefault("actionFeed",[])
+            feed.append({"id":uuid.uuid4().hex,"player":who,"detail":detail,"day":state.get("day",1),"time":int(time.time())})
+            del feed[:-40]
+            body["actionFeed"]=feed.copy()
+            if _PUBLIC_STATE_CACHE_VIEW is not None:_PUBLIC_STATE_CACHE_VIEW["actionFeed"]=feed.copy()
         data=body if isinstance(body,bytes) else (json.dumps(body,ensure_ascii=False).encode() if typ.startswith("application/json") else body.encode())
         compress=len(data)>1024 and "gzip" in self.headers.get("Accept-Encoding","").lower() and (typ.startswith("application/json") or typ.startswith("text/") or typ.startswith("application/javascript"))
         if compress:data=gzip.compress(data,compresslevel=3)
@@ -6655,7 +6729,7 @@ class Handler(BaseHTTPRequestHandler):
                 if STATE_REVISION!=requested:
                     payload=public_state(pid,use_cache=True)
                 else:
-                    payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360),"money":state.get("money",0)}
+                    payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"onlinePlayers":player_list(),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360),"money":state.get("money",0)}
             self._send(200,payload);return
         if path=="/api/state":
             pid=self.headers.get("X-Player-Id","jugador-local")
@@ -6667,9 +6741,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200,public_state(pid,use_cache=True))
             return
         if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None}); return
+        if path=="/api/saves":
+            if self.client_address[0] not in ("127.0.0.1","::1"):self._send(403,{"error":"Las partidas guardadas solo se eligen desde el equipo anfitrión."});return
+            with LOCK:self._send(200,{"slots":sorted(slot_catalog(),key=lambda item:item.get("updatedAt",0),reverse=True)})
+            return
         if path=="/api/rooms":
             with LOCK:
-                now=time.time();rooms=[{"name":state.get("name","Ciudad Viva"),"code":ROOM_CODE,"address":f"http://{ip}:{PORT}/","host":True} for ip in local_ips()[:1]] if ROOM_OPEN else []
+                now=time.time();rooms=[{"name":state.get("roomName",state.get("name","Ciudad Viva")),"code":ROOM_CODE,"address":f"http://{ip}:{PORT}/","host":True} for ip in local_ips()[:1]] if ROOM_OPEN else []
                 rooms += [{**{k:v for k,v in r.items() if k!="seen"},"host":False} for r in DISCOVERED_ROOMS.values() if now-r["seen"]<12]
             self._send(200,{"rooms":rooms});return
         rel="index.html" if path=="/" else path.lstrip("/")
@@ -6682,7 +6760,7 @@ class Handler(BaseHTTPRequestHandler):
         typ="text/html; charset=utf-8" if suffix==".html" else "text/css; charset=utf-8" if suffix==".css" else "application/javascript; charset=utf-8" if suffix in (".js",".mjs") else "application/json; charset=utf-8" if suffix==".json" else "image/svg+xml; charset=utf-8" if suffix==".svg" else mimetypes.guess_type(str(file))[0] or "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
-        global state,STATE_REVISION
+        global state,STATE_REVISION,ACTIVE_SLOT_ID
         try: data=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
         except Exception: self._send(400,{"error":"JSON inválido"}); return
         path=self.path.split("?",1)[0]
@@ -6696,16 +6774,46 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(403,{"error":"La sala solo puede crearla el anfitrión desde su equipo."});return
                 if ROOM_OPEN and state.get("host")!=pid:
                     self._send(409,{"error":"Ya hay una sala creada en este equipo."});return
+                if data.get("slotId"):
+                    try:state={**initial_state(),**load_slot(data["slotId"])}
+                    except ValueError as error:self._send(404,{"error":str(error)});return
+                    ACTIVE_SLOT_ID=data["slotId"]
+                    chosen=next((slot for slot in slot_catalog() if slot["id"]==ACTIVE_SLOT_ID),None)
+                    state["roomName"]=chosen["name"] if chosen else state.get("name","Ciudad Viva")
+                elif data.get("newSlotName"):
+                    state=new_settlement_state()
+                    ACTIVE_SLOT_ID=None
+                    chosen=save_slot(name=str(data["newSlotName"]).strip() or "Nueva partida")
+                    state["roomName"]=chosen["name"]
                 ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
+                state.setdefault("playerNames",{})[pid]=clean_player_name(data.get("name"))
+                state["chatMessages"]=[];state["actionFeed"]=[]
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
                 self._send(200,{"roomCode":ROOM_CODE,"address":f"http://{(local_ips() or ['127.0.0.1'])[0]}:{PORT}/"});return
             if path=="/api/room/join":
                 if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
                 if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
                     self._send(403,{"error":"Código de sala incorrecto."});return
-                state["players"][pid]=time.time();self._send(200,public_state(pid,use_cache=True));return
+                chosen_name=clean_player_name(data.get("name"))
+                if data.get("name") and any(other!=pid and last>time.time()-25 and state.get("playerNames",{}).get(other)==chosen_name for other,last in state["players"].items()):
+                    self._send(409,{"error":"Ese nombre ya está en uso en la sala. Elegí otro."});return
+                state["players"][pid]=time.time();state.setdefault("playerNames",{})[pid]=chosen_name
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._send(200,public_state(pid,use_cache=True));return
+            if path=="/api/chat":
+                if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para conversar."});return
+                message=" ".join(str(data.get("text","")).strip().split())[:300]
+                if not message:self._send(400,{"error":"Escribí un mensaje."});return
+                state["players"][pid]=time.time()
+                chat=state.setdefault("chatMessages",[])
+                chat.append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"text":message,"time":int(time.time())})
+                del chat[:-80]
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._send(200,{"ok":True,"stateRevision":STATE_REVISION,"chatMessages":chat.copy()});return
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),action_description(data),state.get("events",[None])[0] if state.get("events") else None)
                 ensure_government_state()
                 ensure_land_claims()
                 if state["government"].get("status") in ("derrotado","destituido") and action not in ("new",):
@@ -7323,15 +7431,30 @@ class Handler(BaseHTTPRequestHandler):
                     state["abandoned"].remove(abandoned);state["projects"].append(p)
                     ev("Rescate de obra adjudicado",f"{abandoned['label']} continúa desde {round(initial*100)}% con {contractor}; contrato nuevo $ {total:,} y plazo estimado {duration} días.".replace(",","."))
                 elif action=="new":
-                    room_host=state.get("host",pid);active_players=state.get("players",{})
-                    state=new_settlement_state();state["host"]=room_host;state["players"]=active_players
+                    if ACTIVE_SLOT_ID:save_slot()
+                    session={key:state.get(key) for key in ("host","players","playerNames","chatMessages","actionFeed","roomName")}
+                    state=new_settlement_state();state.update(session)
+                    ACTIVE_SLOT_ID=None
+                    chosen=save_slot(name="Nueva partida " + time.strftime("%d-%m-%Y %H:%M"))
+                    state["roomName"]=chosen["name"]
                 else: self._send(400,{"error":"Acción desconocida"}); return
                 self._send(200,public_state(pid,use_cache=True)); return
             if path=="/api/save":
-                SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","host")},ensure_ascii=False,indent=2),encoding="utf-8"); self._send(200,{"ok":True,"file":SAVE.name}); return
+                if ACTIVE_SLOT_ID:slot=save_slot()
+                else:slot=save_slot(name=state.get("name","Partida"))
+                SAVE.write_text(json.dumps({k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed")},ensure_ascii=False),encoding="utf-8")
+                feed=state.setdefault("actionFeed",[]);feed.append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":"guardó la partida","day":state.get("day",1),"time":int(time.time())});del feed[:-40]
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
+                self._send(200,{"ok":True,"file":slot["name"],"slotId":slot["id"]}); return
             if path=="/api/load":
-                if not SAVE.exists(): self._send(404,{"error":"No hay ciudad guardada todavía"}); return
-                loaded=json.loads(SAVE.read_text(encoding="utf-8")); loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360)); loaded["players"]=state.get("players",{}); loaded["host"]=state.get("host",pid); state=loaded; ev("Ciudad cargada","Se restauró el último estado guardado."); self._send(200,public_state(pid,use_cache=True)); return
+                try:loaded=load_slot(ACTIVE_SLOT_ID) if ACTIVE_SLOT_ID else json.loads(SAVE.read_text(encoding="utf-8"))
+                except (ValueError,OSError):self._send(404,{"error":"No hay ciudad guardada todavía"});return
+                loaded.setdefault("timeOfDayMinutes",state.get("timeOfDayMinutes",360))
+                for key in ("players","playerNames","host","chatMessages","actionFeed"):loaded[key]=state.get(key,{} if key in ("players","playerNames") else [] if key in ("chatMessages","actionFeed") else pid)
+                loaded["roomName"]=state.get("roomName",state.get("name","Ciudad Viva"))
+                state={**initial_state(),**loaded};ev("Ciudad cargada","Se restauró el último estado guardado.")
+                self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),"cargó una partida guardada",None)
+                self._send(200,public_state(pid,use_cache=True));return
         self._send(404,{"error":"No encontrado"})
 
 REAL_SECONDS_PER_GAME_HOUR=4
@@ -7344,11 +7467,15 @@ def advance_simulation_clock(day_progress,elapsed,speed):
 
 def simulation_loop():
     global STATE_REVISION
-    last=time.monotonic()
+    last=time.monotonic();last_save=last
     while True:
         time.sleep(.05)
         now=time.monotonic()
         with LOCK:
+            if ROOM_OPEN and ACTIVE_SLOT_ID and now-last_save>=30:
+                try:save_slot()
+                except OSError:pass
+                last_save=now
             if state["paused"]: last=now; continue
             day_progress=max(0.0,min(23.999,float(state.get("timeOfDayMinutes",360))/60))
             elapsed=now-last

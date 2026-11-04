@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.250",
+  "currentVersion": "0.251",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.251",
+      "date": "2026-11-04",
+      "title": "Slots de partidas y vida social de la sala LAN",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Antes de jugar offline o crear una sala, se elige una partida guardada o una ciudad nueva. Los slots offline se guardan en IndexedDB y se importa el guardado anterior. Iniciar una ciudad nueva desde una partida conserva el slot anterior y crea otro.",
+        "El anfitrión elige entre sus partidas guardadas en Windows o crea un slot nuevo; la ciudad compartida se guarda automáticamente cada 30 segundos.",
+        "Cada jugador elige un nombre. La partida online muestra la lista de conectados, un chat y las acciones recientes con autor y ubicación.",
+        "El descubrimiento LAN anuncia y busca salas también en el rango 26.x de Radmin VPN. Los invitados usan la app Windows para descubrir salas; desde GitHub Pages pueden entrar mediante dirección VPN."
+      ],
+      "verification": "Revisión de integración de guardados, flujo de sala, chat, presencia y actividad compartida."
+    },
     {
       "version": "0.250",
       "date": "2026-11-04",

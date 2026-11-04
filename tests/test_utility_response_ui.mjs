@@ -8,7 +8,7 @@ try{
   const page=await browser.newPage({viewport:{width,height}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:18766/',{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;city.utilities=city.utilities||{};city.utilities.failures=[{id:'ui-outage',network:'power',x:8,y:10,day:12,reason:'daño de red',repairCost:500,affectedBuildings:4,status:'avería',remainingDays:0}];localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
   await page.locator('[data-popup="city"]').click();await page.locator('#panelPopup:not(.hidden)').waitFor({timeout:10000});
   await page.locator('#cityReportRail [data-city-report=\"utilities\"]').evaluate(button=>button.click());
   const panel=page.locator('[data-city-section="utilities"]');await page.waitForFunction(()=>!document.querySelector('[data-city-section="utilities"]')?.hidden);

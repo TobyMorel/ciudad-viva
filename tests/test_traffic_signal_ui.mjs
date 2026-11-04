@@ -9,7 +9,7 @@ try{
   const page=await browser.newPage({viewport:{width,height}});page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;localStorage.setItem('cv-sound','off');localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'));await page.locator('.game-dock').waitFor();
+  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'));await page.locator('.game-dock').waitFor();
   await page.locator('[data-popup="build"]').evaluate(el=>el.click());await page.locator('.tool[data-tool="road"]').evaluate(el=>el.click());
   const crossing=await page.evaluate(()=>window.__ciudadVivaProjectTile(12,10,0)),canvas=await page.locator('#city').boundingBox();assert.ok(crossing.visible,`${name}: cruce de prueba visible`);
   await page.mouse.click(canvas.x+crossing.x,canvas.y+crossing.y);await page.locator('#popupTitle').filter({hasText:'Semáforo de intersección'}).waitFor();

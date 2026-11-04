@@ -13,7 +13,7 @@ try{
    city.paused=true;city.newSettlement=true;city.police={lastProcessedMonth:1,recentIncidents:[{id:'camera-pin-test',day:city.day,x:10,y:10,location:'Prueba de cámara',status:'sin respuesta'}]};
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
-  await page.locator('#offlineMode').click();
+  await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'));
   await page.waitForFunction(()=>document.getElementById('netLabel')?.textContent.includes('Partida offline'));
   const pin=page.locator('[data-city-alert="camera-pin-test"]');

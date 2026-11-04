@@ -15,7 +15,7 @@ try{
   city.roads=[[4,10],[5,10],[6,10]];city.projects=[];city.busRoutes=[];city.taxiRoutes=[];
   localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
  });
- await page.locator('#offlineMode').evaluate(e=>e.click());
+ await page.locator('#offlineMode').evaluate(e=>e.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
  await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
  await page.waitForFunction(()=>document.querySelector('[data-growth="housing"] .growth-demand-item')||document.querySelector('[data-growth="housing"] .growth-demand-percent')?.textContent==='0%',null,{timeout:15000});
  const home=page.locator('[data-growth="housing"]'),shop=page.locator('[data-growth="commercial"]');

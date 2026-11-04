@@ -1,3 +1,7 @@
+## Alfa 0.251 · Partidas y sala compartida
+
+Offline y Online muestran un selector de partidas antes de comenzar. Los slots offline se guardan en IndexedDB, con migración de la partida anterior, y el anfitrión conserva múltiples slots en su equipo. Cada jugador usa un nombre visible; la partida compartida muestra participantes, chat y acciones recientes. La app anuncia salas en Radmin VPN y Hamachi. El navegador de GitHub Pages no puede escuchar anuncios LAN: para buscar salas se abre la app en ambos equipos, o se entra por dirección VPN.
+
 ## Alfa 0.250 · Online LAN
 
 Las actualizaciones de red grandes se comprimen y las respuestas antiguas ya no pueden reemplazar un estado más reciente del mapa y la UI. Al reconectarse, el indicador de la sala recupera su estado en la siguiente respuesta. Se comprobó una sala local con cuatro jugadores y cuatro acciones simultáneas visibles para todos. Falta medir la latencia de extremo a extremo en una red Hamachi real con cuatro equipos.

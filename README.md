@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.250
+# Ciudad Viva · Alfa 0.251
+
+**Partidas y sala LAN (0.251):** Offline permite crear tantos slots como admita el almacenamiento del navegador y retoma los guardados anteriores. El anfitrión elige una partida local o una ciudad nueva antes de abrir la sala. Cada jugador elige un nombre; la sala muestra participantes, chat y actividad de construcción. El anfitrión guarda en su equipo y la app anuncia la sala en Radmin VPN (`26.x.x.x`) o Hamachi (`25.x.x.x`). Para descubrir salas automáticamente, ambos equipos abren la app Windows; desde GitHub Pages se puede entrar mediante la dirección VPN del anfitrión.
 
 **Online LAN (0.250):** las respuestas de red atrasadas no revierten acciones recientes. Las actualizaciones grandes se comprimen para aliviar el tráfico por Hamachi. Se comprobó una sala local con cuatro jugadores que zonifican simultáneamente y ven todos los cambios.
 
@@ -135,7 +137,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 
-Para jugar por Hamachi, todos se conectan a la misma red virtual. El anfitrión crea la sala y comparte el enlace que copia el juego; el servidor prioriza su IP Hamachi `25.x.x.x`. Los invitados abren el enlace en el navegador. Hay que dejar la app del anfitrión abierta durante la partida y permitir conexiones privadas en el firewall. El juego sincroniza acciones por cambios de estado para que las cuatro personas vean cada jugada sin descargar el estado completo continuamente. GitHub Pages sigue siendo estático: no puede abrir un puerto LAN desde el navegador, por eso el anfitrión usa la app integrada.
+Para jugar por Radmin VPN o Hamachi, todos se conectan a la misma red virtual. El anfitrión abre la app, elige un slot y crea la sala. Los invitados abren la misma app para usar «Ver salas LAN»; los anuncios se envían a las redes virtuales `26.x.x.x` y `25.x.x.x`. Si el anuncio no llega, pueden entrar con la dirección VPN y el código. La app del anfitrión debe permanecer abierta y el firewall debe permitir conexiones privadas. GitHub Pages es estático y no puede descubrir salas LAN por sí solo, aunque permite entrar mediante la dirección del anfitrión.
 
 ## Cambios y próximas entregas
 

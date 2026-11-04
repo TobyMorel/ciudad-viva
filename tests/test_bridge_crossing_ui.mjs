@@ -8,7 +8,7 @@ try{
   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.money=100000;city.paused=true;city.roads=Array.from({length:20},(_,i)=>[i+4,10]);city.roadAssets=[];city.buildings=[];city.projects=[];city.landClaims={chunkSize:8,unlockedChunks:['0,0','1,0','0,1','1,1','2,1','3,1'],expansionCount:2};localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').evaluate(button=>button.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+  await page.locator('#offlineMode').evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
   for(let i=0;i<4;i++)await page.locator('#zoomOut').evaluate(button=>button.click());
   await page.locator('.game-dock [data-popup="build"]').evaluate(button=>button.click());await page.locator('[data-build-filter="terrain"]').evaluate(button=>button.click());
   const bridge=page.locator('.build-catalog-item[data-tool="bridge"]');await bridge.scrollIntoViewIfNeeded();await bridge.evaluate(button=>button.click());

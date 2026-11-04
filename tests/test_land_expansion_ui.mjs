@@ -9,7 +9,7 @@ try{
   const page=await browser.newPage({viewport:{width,height}});page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
   page.on('dialog',dialog=>dialog.accept());
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
-  await page.locator('#offlineMode').evaluate(el=>el.click());
+  await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline',{timeout:30000});
   await page.locator('.game-dock').waitFor({timeout:30000});
   await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());

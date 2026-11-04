@@ -29,7 +29,7 @@ try{
    ];
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
-  await page.locator('#offlineMode').evaluate(e=>e.click());
+  await page.locator('#offlineMode').evaluate(e=>e.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
   await page.waitForFunction(()=>!document.getElementById('offlineMode')?.disabled,null,{timeout:30000});
   await page.locator('.game-dock [data-popup="city"]').evaluate(e=>e.click());

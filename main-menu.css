@@ -1089,3 +1089,9 @@ footer { display: none !important; }
   .topbar .metrics .metric-detail .treasury-value button{flex-basis:13px;width:13px;height:13px;font-size:8px}
   .topbar .metrics .metric-detail .treasury-popover{position:fixed;top:calc(86px + env(safe-area-inset-top));left:8px;right:auto;width:calc(100vw - 16px);max-height:55vh}
 }
+.mode-card:has(.save-choices:not(.hidden)){height:auto;min-height:0;max-height:calc(100dvh - 24px);transform:none;display:block}
+.mode-card:has(.save-choices:not(.hidden)):after{display:none}
+.mode-card:has(.save-choices:not(.hidden)) h1{clear:both;padding-top:7px}
+.online-hud form{min-width:0;width:100%}.online-hud form input{flex:1 1 0;width:0;min-width:0}.online-hud form button{flex:0 0 auto}
+.online-hud{bottom:108px}
+@media(max-width:650px){.online-hud{bottom:160px}}

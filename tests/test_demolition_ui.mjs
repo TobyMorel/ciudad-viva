@@ -11,7 +11,7 @@ try{
     let dialogs=0;page.on('dialog',dialog=>{dialogs++;dialog.dismiss()});
     await page.goto('http://127.0.0.1:18804/',{waitUntil:'domcontentloaded'});
     await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.paused=true;city.money=200000;city.roads.push([11,4]);localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-    await page.locator('#offlineMode').click();
+    await page.locator('#offlineMode').click();await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
     await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
     const button=page.locator('#demolishTool');
     assert.equal(await button.isVisible(),true);

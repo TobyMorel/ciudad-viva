@@ -19,7 +19,7 @@ try{
    city.utilities.failures=[];
    localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city));
   });
-  await page.locator('#offlineMode').evaluate(e=>e.click());
+  await page.locator('#offlineMode').evaluate(e=>e.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
   await page.waitForFunction(()=>document.getElementById('modeBackdrop')?.classList.contains('hidden'),null,{timeout:30000});
   await page.locator('.city-alert-pin.city-alert-service').waitFor({state:'visible',timeout:30000});
   const scene=await page.evaluate(()=>window.__ciudadVivaScene());

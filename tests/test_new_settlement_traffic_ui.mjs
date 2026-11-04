@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.CH
 try{
  const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());
  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
- await page.locator('#offlineMode').evaluate(el=>el.click());
+ await page.locator('#offlineMode').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());
  await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.getElementById('modeBackdrop')?.classList.contains('hidden'),undefined,{timeout:60000});
  await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
  await page.waitForFunction(()=>{const city=JSON.parse(localStorage.getItem('ciudad-viva-offline-v1'));return city?.newSettlement===true&&city.money===175000},undefined,{timeout:30000});

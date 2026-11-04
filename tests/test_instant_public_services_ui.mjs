@@ -8,7 +8,7 @@ try{
   const page=await browser.newPage({viewport}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'domcontentloaded'});
   await page.evaluate(async()=>{const city=await fetch('/offline_seed.json').then(r=>r.json());city.money=100000;city.paused=true;city.buildings=[];city.projects=[];city.roads=Array.from({length:10},(_,i)=>[i+4,10]);localStorage.setItem('ciudad-viva-offline-v1',JSON.stringify(city))});
-  await page.locator('#offlineMode').evaluate(button=>button.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
+  await page.locator('#offlineMode').evaluate(button=>button.click());await page.waitForFunction(()=>document.getElementById('saveList')?.textContent!=='Buscando partidas…');await page.locator('#saveList button, #newSlotButton').first().evaluate(button=>button.click());await page.waitForFunction(()=>window.__ciudadVivaMode?.()==='offline'&&document.querySelector('#modeBackdrop')?.classList.contains('hidden'),{timeout:30000});
   await page.locator('.game-dock [data-popup="build"]').evaluate(button=>button.click());
   const hospital=page.locator('.build-catalog-item[data-model="generalHospital"]');await hospital.scrollIntoViewIfNeeded();await hospital.hover();
   const tip=await page.locator('.build-help-popover:not([hidden])').innerText();assert.match(tip,/inmediatamente/);assert.doesNotMatch(tip,/Tiempo de obra/);

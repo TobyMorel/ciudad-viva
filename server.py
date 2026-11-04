@@ -4703,19 +4703,25 @@ def advance_zoned_development():
             # Promotores privados incluyen materiales, flete y acopio en su presupuesto; no retienen parcelas esperando compras municipales.
             purchases=[];material_bill=0
             reserve=4200 if kind=="factory" else 0
-            if state.get("money",0)>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500:
-                options.append((cost,name,company,permit,private_cost,purchases,material_bill,reserve))
+            reserved_cash=sum(max(0,int(p.get("cost",0)-p.get("paid",0))) for p in state.get("projects",[]) if not p.get("privatePaid"))
+            available_cash=max(0,int(state.get("money",0))-reserved_cash)
+            private_funded=available_cash>=permit and state.get("privateCapital",0)>=private_cost+material_bill+reserve+1500
+            municipal_funded=kind=="home" and available_cash>=cost
+            if private_funded or municipal_funded:
+                options.append((cost,name,company,permit,private_cost,purchases,material_bill,reserve,private_funded))
         if not options:continue
-        _,name,company,permit,private_cost,purchases,material_bill,reserve=min(options,key=lambda row:(row[0],row[1]))
-        project_id=uuid.uuid4().hex;advance=round(private_cost*.2);zero={key:0 for key in MATERIAL_NAMES}
-        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":private_cost,"duration":construction_duration_days(kind,specification["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":permit,"zonedDevelopment":True}
-        state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance;state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
+        total_cost,name,company,permit,private_cost,purchases,material_bill,reserve,private_funded=min(options,key=lambda row:(not row[8],row[0],row[1]))
+        project_id=uuid.uuid4().hex;advance=round(private_cost*.2) if private_funded else 0;zero={key:0 for key in MATERIAL_NAMES};project_cost=private_cost if private_funded else total_cost
+        project={"id":project_id,"kind":kind,"label":specification["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"cost":project_cost,"duration":construction_duration_days(kind,specification["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":specification["stageNames"],"stageIndex":0,"status":"contratada","cause":"Promotor privado: demanda y parcela zonificada" if private_funded else "Programa municipal de vivienda: demanda acumulada y capital promotor insuficiente","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":required,"materialsUsed":zero,"privatePaid":private_funded,"privateMaterialsIncluded":private_funded,"municipalPermitPaid":permit if private_funded else 0,"municipalHousingProgram":not private_funded,"zonedDevelopment":True,"retentionPct":0 if private_funded else .1}
+        if private_funded:
+            state["money"]-=permit;state["privateCapital"]-=private_cost+reserve+material_bill;state["supply"]["contractorCash"][name]+=advance
+        state["projects"].append(project);reserved.add((zone["x"],zone["y"]))
         zone["status"]="en obra"
         if kind=="factory":
             project["operatingReserve"]=reserve
             project["industryType"]=next_factory_industry()
             project["label"]=FACTORY_LABELS[project["industryType"]]
-        ev("Promotor inicia obra",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. Permiso municipal $ {permit}, inversión privada $ {private_cost:,} con insumos privados incluidos, cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
+        ev("Promotor inicia obra" if private_funded else "Vivienda municipal iniciada",f"Demanda activa: {specification['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. {'Permiso municipal $ '+str(permit)+', inversión privada $ '+f'{private_cost:,}'+' con insumos incluidos' if private_funded else 'Inversión municipal contratada por $ '+f'{project_cost:,}'+' porque no hay capital promotor suficiente'}. Cuadrilla {LABOR_NEEDS[kind]} personas.".replace(",","."))
 
 def move_households():
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
@@ -5262,38 +5268,53 @@ def record_direct_municipal_income(amount,source):
     direct[source]=direct.get(source,0)+amount
 
 
-def settle_daily_municipal_cash(economic):
-    """Anticipa cada día los flujos mensuales; el cierre concilia solo diferencias."""
-    period=(state["day"]-2)//30
-    ledger=state.setdefault("dailyCashFlow",{"period":period,"raw":{},"scheduled":{},"paid":{},"income":0})
-    if ledger.get("period")!=period:
-        ledger={"period":period,"raw":{},"scheduled":{},"paid":{},"income":0}
-        state["dailyCashFlow"]=ledger
-    if ledger.get("lastDay")==state["day"]:return ledger
+def municipal_cash_rates(economic):
     utility=state.get("utilities",{}).get("report",{})
     waste=state.get("waste",{}).get("report",{})
     workplaces=economic.get("workplaces",[])
-    monthly={
+    return {
         "income":max(0,state.get("monthlyIncome",0)+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
         "services":max(0,state.get("monthlyExpenses",0)+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
         "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("metroLines",[]) if r.get("operational"))),
         "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
         "debt":max(0,sum(loan.get("payment",0) for loan in state.get("finance",{}).get("municipalLoans",[]) if loan.get("status")=="active")),
     }
-    ledger["lastPaid"]={}
-    for key,amount in monthly.items():
-        ledger["raw"][key]=ledger["raw"].get(key,0)+amount/30
-        target=round(ledger["raw"][key])
-        due=max(0,target-ledger["scheduled"].get(key,0))
-        ledger["scheduled"][key]=target
-        if key=="income":
-            state["money"]+=due;ledger["income"]+=due;ledger["lastIncome"]=due
-        else:
-            paid=min(max(0,state["money"]),due)
-            state["money"]-=paid;ledger["paid"][key]=ledger["paid"].get(key,0)+paid
-            ledger["lastPaid"][key]=paid
+
+def settle_daily_municipal_cash(economic):
+    """Actualiza las tasas mensuales; el reloj las liquida progresivamente durante el día."""
+    period=(state["day"]-2)//30
+    ledger=state.setdefault("dailyCashFlow",{"period":period,"raw":{},"scheduled":{},"paid":{},"income":0})
+    if ledger.get("period")!=period:
+        ledger={"period":period,"raw":{},"scheduled":{},"paid":{},"income":0}
+        state["dailyCashFlow"]=ledger
+    if ledger.get("rateDay")==state["day"]:return ledger
+    ledger["rates"]=municipal_cash_rates(economic)
+    ledger["rateDay"]=state["day"]
+    ledger.setdefault("raw",{});ledger.setdefault("scheduled",{});ledger.setdefault("paid",{})
     ledger["lastDay"]=state["day"]
     return ledger
+
+def accrue_municipal_cash(game_days):
+    """Liquida ingresos y gastos al ritmo del reloj simulado, incluso entre medianoches."""
+    if game_days<=0:return
+    period=(state["day"]-2)//30
+    ledger=state.setdefault("dailyCashFlow",{"period":period,"raw":{},"scheduled":{},"paid":{},"income":0})
+    if ledger.get("period")!=period:
+        ledger={"period":period,"raw":{},"scheduled":{},"paid":{},"income":0}
+        state["dailyCashFlow"]=ledger
+    rates=ledger.get("rates") or {}
+    if not rates:return
+    if ledger.get("accrualDay")!=state["day"]:
+        ledger["lastIncome"]=0;ledger["lastPaid"]={};ledger["accrualDay"]=state["day"]
+    raw=ledger.setdefault("raw",{});scheduled=ledger.setdefault("scheduled",{});paid=ledger.setdefault("paid",{})
+    for key,monthly in rates.items():
+        raw[key]=raw.get(key,0)+max(0,float(monthly))*game_days/30
+        target=round(raw[key]);due=max(0,target-scheduled.get(key,0));scheduled[key]=target
+        if key=="income":
+            state["money"]+=due;ledger["income"]=ledger.get("income",0)+due;ledger["lastIncome"]=ledger.get("lastIncome",0)+due
+        else:
+            amount=min(max(0,state["money"]),due);state["money"]-=amount;paid[key]=paid.get(key,0)+amount
+            last_paid=ledger.setdefault("lastPaid",{});last_paid[key]=last_paid.get(key,0)+amount
 
 def tick_one_day():
     if state["paused"]: return
@@ -6337,6 +6358,15 @@ def change_building_site(action,x,y,to_x=None,to_y=None):
     ev("Edificio demolido",f"{building.get('name','Edificio')} fue demolido sin devolución de fondos.")
     return building
 
+def rotate_public_building(x,y):
+    if type(x) is not int or type(y) is not int:raise ValueError("Seleccioná un edificio válido.")
+    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y),None)
+    if not building:raise ValueError("El edificio ya no existe.")
+    if building.get("kind") in ("home","shop","factory","hotel"):raise ValueError("Solo se pueden rotar edificios públicos.")
+    building["rotation"]=(int(building.get("rotation",0))+1)%4
+    ev("Edificio público girado",f"{building.get('name','Edificio municipal')} giró 90°.")
+    return building
+
 
 def demolish_at(x,y):
     """Retira una construcción del mapa sin reembolso; mantiene el acceso regional."""
@@ -6608,7 +6638,7 @@ class Handler(BaseHTTPRequestHandler):
                 if STATE_REVISION!=requested:
                     payload=public_state(pid,use_cache=True)
                 else:
-                    payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360)}
+                    payload={"heartbeat":True,"stateRevision":STATE_REVISION,"online":sum(1 for last_seen in state["players"].values() if last_seen>now-25),"paused":state.get("paused",False),"speed":state.get("speed",1),"day":state.get("day",1),"timeOfDayMinutes":state.get("timeOfDayMinutes",360),"money":state.get("money",0)}
             self._send(200,payload);return
         if path=="/api/state":
             pid=self.headers.get("X-Player-Id","jugador-local")
@@ -6868,6 +6898,9 @@ class Handler(BaseHTTPRequestHandler):
                 elif action in ("demolishBuilding","relocateBuilding"):
                     try:change_building_site(action,data.get("x"),data.get("y"),data.get("toX"),data.get("toY"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
+                elif action=="rotateBuilding":
+                    try:rotate_public_building(data.get("x"),data.get("y"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                 elif action=="createTaxiRouteFromDepot":
                     try:create_taxi_route_from_depot(data.get("depotX"),data.get("depotY"),data.get("stops",[]))
                     except (TypeError,ValueError) as error:self._send(409,{"error":str(error)});return
@@ -7223,7 +7256,8 @@ class Handler(BaseHTTPRequestHandler):
                     else:
                         for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
                         label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
-                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). La construcción depende de demanda, capital, materiales, cuadrillas y acceso.")
+                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). La vivienda puede financiarse con caja municipal libre si falta capital promotor; el resto de usos requiere demanda, inversión y cuadrilla.")
+                        advance_zoned_development()
                 elif action in ("pauseProject","resumeProject","cancelProject"):
                     project=next((p for p in state["projects"] if p["id"]==str(data.get("id"))),None)
                     if not project: self._send(404,{"error":"La obra ya no está activa."}); return
@@ -7300,9 +7334,14 @@ def simulation_loop():
         with LOCK:
             if state["paused"]: last=now; continue
             day_progress=max(0.0,min(23.999,float(state.get("timeOfDayMinutes",360))/60))
-            day_progress,run_day=advance_simulation_clock(day_progress,now-last,state["speed"])
+            elapsed=now-last
+            day_progress,run_day=advance_simulation_clock(day_progress,elapsed,state["speed"])
             last=now
             state["timeOfDayMinutes"]=round(day_progress*60,2)
+            ledger=state.get("dailyCashFlow",{})
+            if ledger.get("rateDay")!=state.get("day"):
+                settle_daily_municipal_cash(commute_model())
+            accrue_municipal_cash(max(0.0,elapsed)*max(1,int(state["speed"]))/(REAL_SECONDS_PER_GAME_HOUR*24))
             # La hora guardada es autoritativa; cada jornada nace al cruzar medianoche.
             if run_day:
                 tick_one_day()

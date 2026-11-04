@@ -1,8 +1,8 @@
-## Alfa 0.246 · Construcción fluida y herramientas de ciudad
+## Alfa 0.247 · Escala, cámara y crecimiento urbano
 
-La selección del mapa actualiza su resaltado sin reconstruir toda la ciudad, y ocupar una parcela ya no regenera el lote de árboles visibles. Los peatones tienen extremidades articuladas con ciclo de marcha; el ciclista y la bicicleta cuentan con cuadro y ruedas detallados y pedaleo. La tesorería muestra saldo, dinero libre, reservas y los rubros mensuales dentro de un popup propio. En Construir → Zonas, Quitar zona borra permisos con clic o arrastre, incluso en parcelas ocupadas.
+Peatones y ciclistas bajan a una escala proporcionada frente a los autos. Los camiones de transferencia tienen un diseño propio; los edificios públicos se pueden girar en cuartos de vuelta; mantener la rueda central y arrastrar gira la cámara libremente. La tesorería acomoda sus cifras sin solaparlas y liquida los ingresos y egresos a medida que avanza el reloj. La vivienda zonificada se inicia con inversión privada o con fondos municipales libres cuando falta capital promotor.
 
-Siguiente: medir la pausa al colocar edificios en ciudades grandes, perfilar la escena con los peatones y ciclistas mejorados y verificar que el saldo siga legible en ventanas de escritorio estrechas y en el Samsung A54.
+Siguiente en fase 22: validar rutas y colas de carga con tránsito denso, y ampliar la interacción física de peatones, bicis y camiones. Revisar el costo de vivienda municipal en ciudades grandes y el balance de caja durante una partida larga.
 
 ## Alfa 0.245 · Árboles y rendimiento del mapa
 

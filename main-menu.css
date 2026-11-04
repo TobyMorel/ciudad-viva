@@ -1069,5 +1069,5 @@ footer { display: none !important; }
   .topbar .metrics > .metric:first-child .treasury-value #money { flex: 0 0 auto; width: auto; overflow: visible !important; font-size: 10px !important; }
   .topbar .metrics > .metric:first-child .treasury-value button { flex: 0 0 15px; width: 15px; height: 15px; font-size: 9px; }
   .topbar .metrics > .metric:first-child > small { display: none !important; }
-  .metric-treasury .treasury-popover { left: 50%; transform: translateX(-50%); }
+  .metric-treasury .treasury-popover { left: 0; transform: none; }
 }

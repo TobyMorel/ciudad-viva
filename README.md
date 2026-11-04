@@ -1,6 +1,6 @@
-# Ciudad Viva · Alfa 0.246
+# Ciudad Viva · Alfa 0.247
 
-**Construcción y ciudad vivas (0.246):** la selección no rehace la escena y los cambios de ocupación actualizan los árboles de la parcela afectada. Los peatones caminan con brazos y piernas articulados, los ciclistas pedalean sobre bicicletas detalladas, la tesorería abre un desglose de ingresos y gastos y Construir → Zonas permite quitar permisos pintados.
+**Ciudad activa y controles de cámara (0.247):** peatones y ciclistas ahora tienen escala proporcionada frente a los autos; los camiones de transferencia se distinguen de los recolectores. Los edificios públicos se pueden girar, la cámara rota con la rueda central y su arrastre horizontal, y la tesorería calcula ingresos y gastos de forma progresiva durante el tiempo simulado. La vivienda zonificada puede avanzar con capital privado o, si este se agota, con caja municipal disponible.
 
 **Metas de desarrollo de ciudad (fase 14):** Gobierno ofrece cinco objetivos voluntarios, con requisitos medibles y continuidad durante seis cierres mensuales. Se pueden pausar o cambiar, se sincronizan en la sala LAN y no alteran elecciones ni bloquean herramientas.
 

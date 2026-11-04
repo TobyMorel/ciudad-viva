@@ -107,7 +107,14 @@ body[data-theme=dark] .ref-alert-aside,body[data-theme=dark] .ref-version-banner
 @media(max-width:650px){.metric:first-child{grid-template-columns:23px minmax(0,1fr)}}
 @media(max-width:380px){.metric:first-child{grid-template-columns:minmax(0,1fr)}}
 
-/* Alfa 0.246: la tesorería conserva espacio y su detalle vive en el juego. */
+/* Restablece la disposición propia del desglose dentro de la tarjeta de tesorería. */
+.metric-treasury .treasury-popover .treasury-balances>div{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:48px}
+.metric-treasury .treasury-popover .treasury-balances>div>span,.metric-treasury .treasury-popover .treasury-balances>div>b{display:block!important;position:static!important;grid-column:auto!important;grid-row:auto!important;width:auto!important;min-width:0;margin:0!important;transform:none!important;line-height:1.2!important;text-align:left}
+.metric-treasury .treasury-popover .treasury-balances>div>span{color:#70857a!important;font-size:9px!important;font-weight:700!important;white-space:normal}
+.metric-treasury .treasury-popover .treasury-balances>div>b{color:#25584a!important;font-size:12px!important;font-weight:800!important;white-space:nowrap}
+#city.camera-rotating{cursor:ew-resize!important}
+
+/* Alfa 0.247: la tesorería conserva espacio y su detalle vive en el juego. */
 .metric-treasury{position:relative;z-index:12;overflow:visible!important}
 .metric-treasury .treasury-value{grid-column:2;grid-row:2;display:flex;align-items:center;gap:4px;min-width:0}
 .metric-treasury .treasury-value b{display:block;grid-column:auto;grid-row:auto;min-width:0;overflow:visible;text-overflow:clip;flex:0 1 auto;font-variant-numeric:tabular-nums}

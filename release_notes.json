@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.253",
+  "currentVersion": "0.254",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.254",
+      "date": "2026-11-04",
+      "title": "Tesorería real desde el primer día",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Una partida nueva sin edificios ni calles municipales muestra cero ingresos y cero gastos mensuales. El acceso regional no se cobra como infraestructura municipal.",
+        "Se elimina el aporte regional de arranque y los ingresos automáticos por residentes y puestos privados. Los impuestos de viviendas y ventas empresariales se registran cuando se cobran.",
+        "La corrección afecta tanto la simulación offline como el servidor LAN, sin borrar partidas guardadas."
+      ],
+      "verification": "Revisión de las fórmulas de caja, impuestos y mantenimiento en ambos motores."
+    },
     {
       "version": "0.253",
       "date": "2026-11-04",

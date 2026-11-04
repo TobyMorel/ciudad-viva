@@ -1,3 +1,7 @@
+## Alfa 0.254 · Economía de una ciudad vacía
+
+Una nueva ciudad no muestra ingresos ni gastos sin actividad propia. El acceso regional queda fuera de mantenimiento vial y de redes municipales. Se quita el aporte regional de arranque y se eliminan los ingresos automáticos por población y empleo privado; los hogares y comercios aportan mediante impuestos efectivamente cobrados.
+
 ## Alfa 0.253 · Cursores compartidos en la sala LAN
 
 Los jugadores pueden ver en el mapa 3D el puntero, nombre y parcela de los demás. La posición usa coordenadas del terreno, por lo que se proyecta correctamente con distintos zoom y ángulos. El intercambio usa mensajes pequeños e independientes de las acciones y no se guarda con la ciudad.

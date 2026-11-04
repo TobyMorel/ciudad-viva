@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.253
+# Ciudad Viva · Alfa 0.254
+
+**Tesorería de ciudades nuevas (0.254):** Una ciudad vacía empieza con $0 de ingresos y $0 de gastos mensuales. Se elimina el aporte regional y los ingresos ficticios por habitantes o empleos; la recaudación proviene de impuestos realmente cobrados a hogares y ventas, y de servicios municipales cuando existan. El acceso regional no genera mantenimiento municipal.
 
 **Cursores compartidos (0.253):** En partidas LAN, cada jugador ve el puntero y el nombre de los demás sobre la parcela del mapa 3D. La posición se actualiza varias veces por segundo y sigue la cámara local de cada jugador.
 

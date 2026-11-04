@@ -950,7 +950,7 @@ def _city_dev_readings():
  resolved={"resuelta","resuelto","reparada","reparado","cerrada","cerrado","completada","completado","estabilizada","estabilizado","cancelada","cancelado"}
  failures=state.get("utilities",{}).get("failures",[]);needs=state.get("recoveryNeeds",[])
  activebiz=sum(1 for b in buildings if b.get("kind") in ("shop","factory","hotel") and str(b.get("business",{}).get("status",b.get("status",""))).lower() in ("abierto","operativo","en actividad"))
- inc=float(state.get("monthlyIncome",0) or 0);exp=float(state.get("monthlyExpenses",0) or 0)
+ inc=float(state.get("grossMonthlyIncome",0) or 0);exp=float(state.get("effectiveMonthlyExpenses",0) or 0)
  return {"services":max(0,min(100,float(state.get("services",0) or 0))),"employment":max(0,min(100,float(state.get("employment",0) or 0))),"population":sum(int(d.get("population",0) or 0) for d in districts),
  "homeAccess":round(100*ch/len(homes)) if homes else 0,"destinationAccess":round(100*cd/len(dest)) if dest else 0,
  "roadCondition":round(sum(float(assets.get((r[0],r[1]),{}).get("quality",82)) for r in roads)/len(roads),1) if roads else 0,
@@ -1198,7 +1198,10 @@ def ensure_critical_inspection_schedule(building):
 
 def road_maintenance_report(funding_factor=None,advance=False):
     roads=state.setdefault("roads",[]);assets=state.setdefault("roadAssets",[])
+    if state.get("newSettlement"):
+        assets[:]=[asset for asset in assets if (asset.get("x"),asset.get("y"))!=(4,10)]
     for x,y in roads:
+        if state.get("newSettlement") and (x,y)==(4,10):continue
         if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15})
     policy=max(0,min(200,int(state.get("roadMaintenancePct",100))))
     road_set={tuple(r) for r in roads};road_rows=[];required=0
@@ -1488,7 +1491,7 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
             amount=min(unpaid,monthly);schedule[index]+=amount;unpaid-=amount
     taxes=state.get("taxes",{});tax_report=taxes.get("lastReport",{});last_tax=max(0,round(tax_report.get("collected",0)))
     assessed=sum(max(0,b.get("occupants",0))*2400 for b in state.get("buildings",[]) if b.get("kind")=="home")
-    sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")=="shop" and b.get("business",{}).get("status")=="abierto")
+    sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto")
     property_rate=max(0,int(taxes.get("propertyRateBp",60)));business_rate=max(0,int(taxes.get("businessRateBp",200)))
     property_collection=min(1,max(0,tax_report.get("propertyCollected",0)/tax_report["propertyBilled"])) if tax_report.get("propertyBilled",0)>0 else 1;business_collection=min(1,max(0,tax_report.get("businessCollected",0)/tax_report["businessBilled"])) if tax_report.get("businessBilled",0)>0 else 1
     projected_tax=round(assessed*property_rate/120000*min(1,property_collection)+sales*business_rate/10000*min(1,business_collection))
@@ -1608,7 +1611,7 @@ def municipal_finance_report(monthly_income=None, monthly_expenses=None, include
     outstanding=round(sum(max(0,x.get("balance",0)) for x in loans if x.get("status")=="active"))
     debt_arrears=round(sum(max(0,x.get("paymentArrears",0)) for x in loans if x.get("status")=="active"))
     service=round(sum(municipal_loan_due(x) for x in loans if x.get("status")=="active"))
-    income=max(0,round(monthly_income if monthly_income is not None else state.get("monthlyIncome",0)))
+    income=max(0,round(monthly_income if monthly_income is not None else state.get("grossMonthlyIncome",0)))
     expenses=max(0,round(monthly_expenses if monthly_expenses is not None else state.get("monthlyExpenses",0)))
     net=income-expenses-service
     # Proyección de referencia; mantiene las bases actuales y los pagos contratados constantes.
@@ -2937,7 +2940,7 @@ def calculate_utility_balance(apply_effects=False):
         "drainage":{"rainfallMm":rainfall,"weather":"Tormenta" if rainfall>=12 else "Lluvia" if rainfall else "Seco","runoffM3Day":round(total_runoff),"capturedM3Day":round(captured),"capacityM3Day":round(drainage_capacity),"permanentCapacityM3Day":round(permanent_drainage_capacity),"emergencyCapacityM3Day":emergency_capacity,"standingWaterM3Day":round(standing_water),"coveragePct":drainage_coverage,"connectedSegments":len(drain_tiles),"connectedBuildings":sum(any((b["x"]+dx,b["y"]+dy) in drain_tiles for dx,dy in ((0,0),(1,0),(-1,0),(0,1),(0,-1))) for b in buildings),"floodedTiles":[list(xy) for xy in flooded_tiles],"floodedBuildings":flooded_buildings,"repairCostEstimate":round(sum(row["repairCost"] for row in flooded_buildings)),"forecast":forecast},
         "sources":{"gasPlants":sum(b.get("kind")=="gasPlant" and utility_building_connected(b,"gas") for b in buildings),"powerPlants":sum(b.get("kind")=="powerPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings),"waterPlants":sum(b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water") for b in buildings)},
         "climate":{"heatwave":{"active":heat_active,"targetDay":heat_day,"durationDays":5,"powerDemandMultiplier":1.22 if heat_active else 1.0,"waterDemandMultiplier":1.18 if heat_active else 1.0,"coolingPrepared":climate.get("coolingPreparedForDay")==heat_day,"healthCases":(climate.get("heatForecast") or {}).get("actualHealthCases",0)},"drought":{"active":drought_active,"targetDay":drought_day,"durationDays":30,"sourceReductionPct":45 if drought_active else 0,"waterRestrictions":restrictions_active,"waterCapacityM3Day":round(water_capacity),"emergencyTankerM3Day":tanker_capacity,"demandM3Day":round(water_total),"shortageM3Day":round(max(0,water_total-water_delivered))}},
-        "monthlyMaintenance":round(len(power_tiles)*1.2+len(water_tiles)*.8+len(sewer_tiles)*.9+len(drain_tiles)*.7+len(gas_tiles)*1.1+len(telecom_tiles)*.6+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
+        "monthlyMaintenance":round(sum(rate*sum(tile!=(4,10) or not state.get("newSettlement") for tile in tiles) for tiles,rate in ((power_tiles,1.2),(water_tiles,.8),(sewer_tiles,.9),(drain_tiles,.7),(gas_tiles,1.1),(telecom_tiles,.6)))+sum(70 for b in critical_backup if b.get("backupCapacityKw",0))),
         "lineCondition":utility_condition_report(),
         "failures":[{k:f.get(k) for k in ("id","network","x","y","day","reason","repairCost","affectedBuildings","status","remainingDays","responseKind","responseStartedDay","responseDurationDays","responseProgress","responseRoute","completedDay")} | {"emergencyRouteAvailable":bool(route_between((4,10),(f.get("x"),f.get("y"))))} for f in utilities.get("failures",[]) if f.get("status")!="reparada" or state.get("day",0)-f.get("completedDay",-99)<=1]}
     utilities["report"]=report
@@ -4849,7 +4852,7 @@ def move_households():
             ensure_person_work_profile(person);assign_housing_contract(home,person);members.append(person);placed+=1
         demand_state["unmet"]=max(4,int(demand_state.get("unmet",0))-placed);demand_state["lastFilled"]=placed
         if placed:
-            state["population"]=state.get("population",0)+placed;state["monthlyIncome"]=state.get("monthlyIncome",0)+placed*3;state["privateCapital"]=state.get("privateCapital",0)+placed*280
+            state["population"]=state.get("population",0)+placed;state["privateCapital"]=state.get("privateCapital",0)+placed*280
             ev("Nuevos hogares",f"{placed} residentes llegaron a viviendas vacantes. Cada persona tiene edad, perfil laboral y elegibilidad propios; solo quienes encuentran un puesto viable se incorporan al empleo. Ingreso tributario futuro +$ {placed*3}/mes.")
         elif not vacancies and state.get("day",1)%30==0:ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
 
@@ -4867,7 +4870,7 @@ def move_households():
             home["occupants"]-=1
             if home.get("adaptiveReuseDay") and home.get("rentalLeaseDays"):home["rentalLeaseDays"].pop()
             left+=1
-        state["population"]=max(0,state.get("population",0)-left);state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-left*3)
+        state["population"]=max(0,state.get("population",0)-left);
         if left:ev("Salida de residentes",f"{left} residentes dejaron hogares con menor calidad; sus perfiles laborales y plazas ocupadas se liberaron y los ingresos tributarios futuros bajan $ {left*3}/mes.")
     report=update_social_shelters()
     pending=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
@@ -4879,7 +4882,7 @@ def move_households():
         person={"id":identifier,"name":f"Residente en alojamiento temporal {len(temporary)+1}","age":age,"birthYear":2026+(max(0,state.get("day",1)-1)//360),"lifeStage":"vida laboral","workerEligible":True,"status":"alojamiento temporal","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0,"unemployedSinceDay":state.get("day",1),"unemploymentReason":"sin vivienda permanente","admittedDay":state.get("day",1)}
         ensure_person_work_profile(person);temporary.append(person)
     if admitted:
-        state["population"]=state.get("population",0)+admitted;state["monthlyIncome"]=state.get("monthlyIncome",0)+admitted*3
+        state["population"]=state.get("population",0)+admitted;
         ev("Alojamiento temporal asignado",f"{admitted} personas de la lista migratoria fueron recibidas en plazas municipales; siguen necesitando vivienda permanente.")
     report=update_social_shelters()
     report.update({"housingDemand":max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary)),"rehousedThisMonth":rehoused,"admittedThisMonth":admitted})
@@ -5337,11 +5340,6 @@ def record_direct_municipal_income(amount,source):
     direct[source]=direct.get(source,0)+amount
 
 
-def regional_startup_grant():
-    if not state.get("newSettlement"):return 0
-    population=max(0,int(state.get("population",0)))
-    return round(8000*min(1,max(0,(850-population)/600)))
-
 def municipal_building_operations():
     road_base=sum(max(0,int(asset.get("monthlyCost",0))) for asset in state.get("roadAssets",[]))
     return max(0,int(state.get("monthlyExpenses",0))-road_base)
@@ -5351,7 +5349,7 @@ def municipal_cash_rates(economic):
     waste=state.get("waste",{}).get("report",{})
     workplaces=economic.get("workplaces",[])
     return {
-        "income":max(0,state.get("monthlyIncome",0)+regional_startup_grant()+round(economic.get("privateStaffedJobs",0)*2)+sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
+        "income":max(0,sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
         "services":max(0,municipal_building_operations()+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
         "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("metroLines",[]) if r.get("operational"))),
         "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
@@ -5494,14 +5492,13 @@ def tick_one_day():
         collect_bus_fares(economic)
         collect_bus_nonwork_fares(state)
         metro_balance=state.pop("metroMonthSettlement",{"income":0,"cost":0})
-        business_income=round(economic["privateStaffedJobs"]*2)
         taxi_income=sum(t.get("monthlyFareRevenue",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
         taxi_cost=sum(t.get("monthlyOperatingCost",0) for t in state.get("taxiRoutes",[]) if t.get("operational"))
         transit_income=sum(line.get("monthlyFareRevenue",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_income+metro_balance["income"]
         transit_cost=sum(line.get("monthlyOperatingCost",0) for line in state.get("busRoutes",[]) if line.get("operational"))+taxi_cost+metro_balance["cost"]
         airport_income=state.get("airportMonthlyIncome",0)
         port_income=max(0,round(state.get("portMonthlyIncome",0)))
-        monthly_income=state["monthlyIncome"]+regional_startup_grant()+business_income+transit_income+airport_income+tourism_tax+tax_report.get("collected",0)+port_income
+        monthly_income=transit_income+airport_income+tourism_tax+tax_report.get("collected",0)+port_income
         utility_maintenance=state.get("utilities",{}).get("report",{}).get("monthlyMaintenance",0)
         road_maintenance=road_maintenance_report().get("monthlyRequired",0)
         waste_report=calculate_waste_balance()
@@ -6426,7 +6423,6 @@ def change_building_site(action,x,y,to_x=None,to_y=None):
     state["buildings"].remove(building)
     occupants=max(0,int(building.get("occupants",0))) if building.get("kind")=="home" else 0
     state["population"]=max(0,state.get("population",0)-occupants)
-    state["monthlyIncome"]=max(0,state.get("monthlyIncome",0)-occupants*3)
     state.setdefault("housingDemand",{}).setdefault("unmet",0)
     state["housingDemand"]["unmet"]+=occupants
     state["jobs"]=max(0,state.get("jobs",0)-max(0,int(building.get("jobSlots",(building.get("business") or {}).get("jobSlots",0)))))
@@ -6604,14 +6600,13 @@ def _build_public_state(player_id=None):
     view["portMonthlyIncome"]=port_income
     view["recyclingIncome"]=state.get("waste",{}).get("report",{}).get("recyclingRevenueMonth",0)
     view["transitMonthlyCost"]=transit_cost
-    business_income=round(commute["privateStaffedJobs"]*2)
     tourism_tax=sum(b.get("business",{}).get("lastTourismTax",0) for b in state["buildings"] if b.get("kind")=="hotel")
     tax_report=state.get("taxes",{}).get("lastReport",{})
     rail_freight_income=round(state.get("dailyCashFlow",{}).get("directIncome",{}).get("rail_freight",0))
-    gross=round(state["monthlyIncome"]+regional_startup_grant()+business_income+transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income+rail_freight_income+state.get("municipalPropertyIncomeLastMonth",0))
+    gross=round(transit_income+state.get("airportMonthlyIncome",0)+tourism_tax+view["recyclingIncome"]+tax_report.get("collected",0)+port_income+rail_freight_income+state.get("municipalPropertyIncomeLastMonth",0))
     view["municipalFinance"]=municipal_finance_report(gross,view["effectiveMonthlyExpenses"])
     view["municipalFinance"]["incomeBreakdown"]={
-        "baseAndResidents":round(state.get("monthlyIncome",0)),"regionalStartupGrant":regional_startup_grant(),"ownedProperties":state.get("municipalPropertyIncomeLastMonth",0),"privateEmployment":business_income,
+        "ownedProperties":state.get("municipalPropertyIncomeLastMonth",0),
         "propertyTaxes":round(tax_report.get("propertyCollected",0)),"businessTaxes":round(tax_report.get("businessCollected",0)),
         "transitFares":round(transit_income),"airportFees":round(state.get("airportMonthlyIncome",0)),
         "tourismTax":round(tourism_tax),"recycling":round(view["recyclingIncome"]),"portExports":port_income,"railFreight":rail_freight_income}
@@ -6624,7 +6619,7 @@ def _build_public_state(player_id=None):
         "health":round(view["healthReport"].get("monthlySupplyCost",0)+view["healthReport"].get("hospital",{}).get("monthlyOperatingCost",0)),
         "education":round(view["educationReport"].get("monthlySuppliesCost",0)),"housingAid":view["housingAidMonthlyCost"]}
     view["taxReport"]=state.get("taxes",{}).get("lastReport",{})
-    return {**view,"businessIncome":business_income,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
+    return {**view,"grossMonthlyIncome":gross,"online":online,"isHost":player_id is not None and player_id==state.get("host"),"contractors":CONTRACTORS,"suppliers":SUPPLIERS,"materialPrices":MATERIAL_PRICE,"reserved":round(reserved),"available":max(0,round(state["money"]-reserved))}
 
 def public_state(player_id=None,use_cache=False):
     """Build a fresh view for direct model calls; cache only versioned network snapshots."""

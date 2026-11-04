@@ -31,7 +31,7 @@ test('Offline forecast honors the chosen payment priority under a municipal cash
  storage.set('ciudad-viva-offline-v1',JSON.stringify(city));globalThis.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};globalThis.fetch=async()=>({ok:true,json:async()=>structuredClone(seed)});
  try{
   let adapter=await createOfflineAdapter();adapter.setRealtimeClock(false);let baseline=await adapter.request('/api/state');
-  city.baseMonthlyGross=100;city.monthlyIncome=100;
+  city.airportMonthlyIncome=100; // fuente real: tasas aeroportuarias, no ingreso mensual ficticio
   storage.set('ciudad-viva-offline-v1',JSON.stringify(city));adapter=await createOfflineAdapter();adapter.setRealtimeClock(false);
   const month=(await adapter.request('/api/state')).municipalFinance.forecastMonths.months[0];
   assert.equal(month.programPayments,100);assert.equal(month.programArrears,200);

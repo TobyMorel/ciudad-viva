@@ -18,7 +18,7 @@ test('Offline: la previsión móvil muestra doce cierres e integra compromisos m
 
 test('Offline: los escenarios fiscales miden tensión sin escribir en la caja guardada',async()=>{
   const oldFetch=globalThis.fetch,oldStorage=globalThis.localStorage,oldNow=Date.now,storage=new Map(),city=structuredClone(seed);
-  city.paused=true;city.money=25000;city.monthlyIncome=12000;city.baseMonthlyGross=12000;city.grossMonthlyIncome=12000;city.monthlyExpenses=8000;storage.set('ciudad-viva-offline-v1',JSON.stringify(city));
+  city.paused=true;city.money=25000;city.airportMonthlyIncome=12000;city.monthlyExpenses=8000;storage.set('ciudad-viva-offline-v1',JSON.stringify(city));
   globalThis.localStorage={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};globalThis.fetch=async()=>({ok:true,json:async()=>structuredClone(seed)});Date.now=()=>5000;
   try{const adapter=await createOfflineAdapter();adapter.setRealtimeClock(false);const before=JSON.parse(storage.get('ciudad-viva-offline-v1')),report=(await adapter.request('/api/state')).municipalFinance.scenarios12,[base,favorable,adverse]=report.scenarios;assert.equal(report.horizonMonths,12);assert.deepEqual([base.id,favorable.id,adverse.id],['base','favorable','adverso']);assert.deepEqual([favorable.incomeChangePct,favorable.expenseChangePct],[10,-5]);assert.deepEqual([adverse.incomeChangePct,adverse.expenseChangePct],[-15,10]);assert.ok(favorable.closingCash>base.closingCash);assert.ok(adverse.closingCash<base.closingCash);assert.equal(JSON.parse(storage.get('ciudad-viva-offline-v1')).money,before.money)}
   finally{globalThis.fetch=oldFetch;Date.now=oldNow;if(oldStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=oldStorage}

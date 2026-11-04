@@ -72,7 +72,7 @@ test('Offline: el corte vial impide respuesta y obras comprometidas impiden equi
 });
 
 test('Offline: la tesorer?a liquida ingresos y gastos durante el avance',async()=>{
- const s=seed();s.day=1;s.lastMonth=0;s.paused=false;s.speed=1;s.monthlyExpenses=1200;
+ const s=seed();s.day=1;s.lastMonth=0;s.paused=false;s.speed=1;s.monthlyExpenses=1200;s.airportMonthlyIncome=300; // ingreso real por tasas, no monthlyIncome de presentación
  await scenario(s,async({next})=>{
   let city=await next();
   city=await next();

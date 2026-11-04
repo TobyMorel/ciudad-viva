@@ -1,7 +1,27 @@
 {
-  "currentVersion": "0.263",
+  "currentVersion": "0.264",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.264",
+      "date": "2026-11-04",
+      "title": "La ciudad respira · colectivos, fábricas, costanera, fauna, escuelas, servicios y sucesos en 3D",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Paradas de colectivos 3D con marquesinas, bancos, señalización, pasajeros animados y puertas articuladas en vehículos reales. Las unidades hacen una detención visual cuando alcanzan paradas de una línea operativa; su efecto es exclusivamente gráfico y no cambia frecuencias, tarifas ni rutas de la simulación.",
+        "Comercios activos con toldos 3D, mesas, productos, escaparates y clientes. Fábricas en operación con portones móviles, montacargas, pallets, trabajadores y chimeneas con vapor solo cuando producen. Las entregas visuales responden a pedidos registrados.",
+        "Costanera del río con olas animadas, estelas, veleros, un pequeño pesquero y aves. Los puertos habilitados incorporan muelles, pilotes, bolardos, cabos, luces, grúas móviles y movimiento de cargas solo con actividad portuaria documentada.",
+        "Fauna urbana en tres dimensiones: perros cerca de viviendas ocupadas y plazas visitadas, gatos en comercios, gaviotas sobre el río y mariposas de temporada en jardines. Movimiento orgánico, proporciones pequeñas y armonía con el mapa.",
+        "Escuelas abiertas y matriculadas con patios, alumnos con mochilas, docentes, pelota y movimientos según horario escolar. No se representan estudiantes donde no existe matrícula.",
+        "Deterioro y recuperación urbana observables: baches en calles con mala condición, residuos en rutas con basura acumulada, contenedores rebalsados y señalización y cuadrillas en averías oficialmente en reparación. Los problemas desaparecen cuando el motor informa mejora o limpieza.",
+        "Reacciones al clima: vecinos con paraguas durante lluvias registradas, reflejos en charcos y aros de gotas en calles, toldos que se mueven y faros iluminados de automóviles y colectivos al llover o anochecer. Se conserva la lluvia y el ciclo de estaciones ya existente.",
+        "Emergencias detalladas: dotaciones de bomberos equipadas, mangueras y chorros de agua para incendios con despacho y llegada confirmados; sanitarios, camillas y luces de emergencia en despachos de ambulancia con traslado registrado.",
+        "Escenas espontáneas ligadas a acontecimientos reales: camión y cajas en mudanzas registradas, músicos y flores en festivales efectivamente realizados y decoración festiva en hitos documentados, sin sumar población ni inventar sucesos económicos.",
+        "Se agrega diagnóstico de la nueva escena, análisis puro de hechos 3D y pruebas de regresión de las nueve mejoras, la integridad de los datos y la interfaz responsive."
+      ],
+      "verification": "Sintaxis JavaScript, regresión Offline/Online, tests puros de escenas 3D, pruebas navegador 390/1440 px, stress de 30 años y despliegue GitHub Pages."
+    },
     {
       "version": "0.263",
       "date": "2026-11-04",

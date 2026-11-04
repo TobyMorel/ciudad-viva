@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.244",
+  "currentVersion": "0.245",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.245",
+      "date": "2026-11-04",
+      "title": "Árboles sin sombra proyectada y contador de FPS",
+      "roadmapPhase": null,
+      "overallProgress": null,
+      "changes": [
+        "Los árboles detallados dejan de proyectar la sombra lateral que aparecía al acercar la cámara; la sombra circular suave debajo del tronco se conserva.",
+        "Una etiqueta discreta sobre el mapa muestra los FPS medidos por el renderizador en escritorio y móvil."
+      ],
+      "verification": "Pasaron node --check, la prueba de versión y tests/test_render_performance.mjs (390 y 1440 px, zoom lejano, intermedio y paneo). Chromium a 390 × 844 confirma que los FPS se actualizan, no se solapan con Demanda y no generan desbordamiento ni errores de JavaScript. Los árboles ya no proyectan sombras; se conserva la sombra circular."
+    },
     {
       "version": "0.244",
       "date": "2026-11-04",

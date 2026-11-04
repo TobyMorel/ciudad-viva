@@ -1,3 +1,7 @@
+## Alfa 0.245 · Árboles y rendimiento del mapa
+
+Los árboles detallados ya no proyectan la sombra oscura que aparece al alejarse del tronco; se conserva el círculo suave debajo de cada árbol. El mapa muestra los FPS medidos en una etiqueta compacta que también cabe en móvil.
+
 ## Alfa 0.244 · Metas voluntarias de desarrollo de ciudad
 
 La fase 14 ahora ofrece cinco objetivos optativos: ciudad funcional, conectada, resiliente, inclusiva y próspera. Cada ficha muestra sus condiciones reales y requiere seis cierres mensuales estables. El equipo puede pausar o cambiar el seguimiento sin penalización; completar objetivos no desbloquea herramientas ni modifica las elecciones. El foco y el progreso se comparten y guardan en LAN y Offline.

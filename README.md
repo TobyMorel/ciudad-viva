@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.244
+# Ciudad Viva · Alfa 0.245
 
 **Metas de desarrollo de ciudad (fase 14):** Gobierno ofrece cinco objetivos voluntarios, con requisitos medibles y continuidad durante seis cierres mensuales. Se pueden pausar o cambiar, se sincronizan en la sala LAN y no alteran elecciones ni bloquean herramientas.
 

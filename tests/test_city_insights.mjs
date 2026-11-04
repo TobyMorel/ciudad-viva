@@ -82,7 +82,7 @@ test('La nueva interfaz está integrada y tiene salida responsive',()=>{
  assert.match(html,/id="plannerToggle"/);
  assert.match(html,/city-companion\.css/);
  assert.match(game,/setupCityCompanion/);
- assert.match(game,/companion\.confirmPlanClick/);
+ assert.match(game,/companion\?\.confirmPlanClick/);
  assert.match(engine,/recordCityProgress\(state\)/);
  assert.match(readFileSync(new URL('../city-companion.css',import.meta.url),'utf8'),/@media\(max-width:650px\)/);
 });

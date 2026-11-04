@@ -5408,6 +5408,150 @@ def accrue_municipal_cash(game_days):
             amount=min(max(0,state["money"]),due);state["money"]-=amount;paid[key]=paid.get(key,0)+amount
             last_paid=ledger.setdefault("lastPaid",{});last_paid[key]=last_paid.get(key,0)+amount
 
+def complete_construction(p, quality=82):
+    """Finalize a completed contractor project or an instantly placed manual building."""
+    day=state["day"]
+    c=CONTRACTORS[p["contractor"]]
+    if p["kind"]=="bridge":
+        for cx in (24,25):
+            if [cx,p["y"]] not in state["roads"]:
+                state["roads"].append([cx,p["y"]])
+                state.setdefault("roadAssets",[]).append({"x":cx,"y":p["y"],"bridge":True,"quality":quality,"monthlyCost":80})
+                state["monthlyExpenses"]+=80
+        ev("Puente vial habilitado",f"Se abrió el cruce del río a la altura {p['y']+1}; dos tramos, mantenimiento $160/mes. La extensión de calles al este ya es posible.")
+    elif p["kind"]=="road":
+        state["roads"].append([p["x"],p["y"]])
+        maintenance=round(70*(1.2-c["quality"]))
+        state["monthlyExpenses"]+=maintenance
+        state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
+    elif p["kind"]=="home":
+        b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
+        ev("Vivienda terminada",f"La vivienda en {p['x']+1},{p['y']+1} superó la inspección y quedó disponible. Los hogares llegarán según demanda y empleos.")
+    elif p["kind"]=="shop":
+        building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
+        building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
+    elif p["kind"]=="factory":
+        industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
+        building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        if industry_type=="concrete":name="Hormigonera de Puerto Claro"
+        building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
+        building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
+        state["buildings"].append(building);state["jobs"]+=20
+        if is_quarry:ev("Cantera local habilitada","20 puestos industriales y una reserva geológica finita de 2.400 unidades. La extracción depende de personal, electricidad, agua y tratamiento cloacal; los áridos se venden por el sistema de pedidos con camiones.")
+        elif industry_type=="concrete":ev("Hormigonera local habilitada","20 puestos y producción de hormigón en proporción 2 áridos por 1 hormigón. Compra a la cantera local por ruta vial; personal y servicios limitan la producción.")
+        elif is_sawmill:ev("Aserradero local habilitado","20 puestos y madera de una reserva forestal finita con regeneración mensual. La producción depende de personal, electricidad, agua y saneamiento; la madera se vende por pedidos con camión.")
+        elif is_metalworks:ev("Metalúrgica local habilitada","20 puestos; compra acero por carretera y lo convierte en componentes de construcción. La producción depende de personal, servicios y caja; los componentes se venden a obras.")
+        else:ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos. Debe comprar grano regional por camión; la producción y venta local dependen de inventario, personal y servicios.")
+    elif p["kind"]=="depot":
+        model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["wasteYard"])
+        if p.get("serviceModel")=="taxiYard":
+            state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":model["label"],"serviceModel":"taxiYard","level":1,"status":"habilitado","taxiCapacity":4,"jobSlots":model["jobs"],"monthlyCost":120,"quality":quality})
+            state["monthlyExpenses"]+=120;state["jobs"]+=model["jobs"]
+            ev("Depósito de taxis habilitado","Quedó conectado a la ciudad con cuatro plazas para taxis. Operación del depósito: $120/mes.")
+        else:
+            capacity=500*model["trucks"]
+            state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":model["label"],"serviceModel":p.get("serviceModel","wasteYard"),"level":1,"status":"habilitado","capacityAdded":capacity,"jobSlots":model["jobs"],"quality":quality})
+            depot_id=f"depot-{p['x']}-{p['y']}"
+            state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":capacity,"label":model["label"],"stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
+            state["supply"]["storageCapacity"]+=capacity;state["monthlyExpenses"]+=180*model["trucks"];state["jobs"]+=model["jobs"]
+            ev("Depósito logístico habilitado",f"El depósito abre con 500 unidades de capacidad adicional. Operación y seguridad $ 180/mes.")
+    elif p["kind"]=="busGarage":
+        state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
+        state["monthlyExpenses"]+=50
+        ev("Cochera habilitada",f"La cochera ofrece cuatro plazas para colectivos con acceso vial. Mantenimiento $ 50/mes; cada vehículo alojado ahorra $ 30/mes frente al alquiler externo.")
+    elif p["kind"]=="powerPlant":
+        plant={"x":p["x"],"y":p["y"],"kind":"powerPlant","name":"Central eléctrica","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"generationKw":900,"monthlyCost":460}
+        state["buildings"].append(plant);state["jobs"]+=18;state["monthlyExpenses"]+=460
+        ev("Central eléctrica habilitada",f"Aporta hasta 900 kW si se conecta a las redes eléctrica y de agua. Operación $460/mes; 18 puestos técnicos.")
+    elif p["kind"]=="gasPlant":
+        plant={"x":p["x"],"y":p["y"],"kind":"gasPlant","name":"Planta de suministro de gas","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"gasCapacityM3Day":160,"monthlyCost":320}
+        state["buildings"].append(plant);state["jobs"]+=10;state["monthlyExpenses"]+=320
+        ev("Planta de gas habilitada","Aporta 160 m³/día de gas a los edificios conectados; necesita energía y red de gas. Operación $320/mes.")
+    elif p["kind"]=="waterPlant":
+        plant={"x":p["x"],"y":p["y"],"kind":"waterPlant","name":"Planta potabilizadora","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"treatmentM3Day":220,"monthlyCost":340}
+        state["buildings"].append(plant);state["jobs"]+=12;state["monthlyExpenses"]+=340
+        ev("Planta potabilizadora habilitada",f"Trata hasta 220 m³/día si tiene conexiones de electricidad y agua. Operación $340/mes; 12 puestos técnicos.")
+    elif p["kind"]=="wastewaterPlant":
+        plant={"x":p["x"],"y":p["y"],"kind":"wastewaterPlant","name":"Planta depuradora","level":1,"status":"habilitado","quality":quality,"jobSlots":14,"treatmentM3Day":260,"monthlyCost":380}
+        state["buildings"].append(plant);state["jobs"]+=14;state["monthlyExpenses"]+=380
+    elif p["kind"]=="recyclingPlant":
+        facility={"x":p["x"],"y":p["y"],"kind":"recyclingPlant","name":"Planta municipal de reciclaje","level":1,"status":"habilitado","quality":quality,"jobSlots":16,"processingTonsDay":1.25,"monthlyCost":650}
+        state["buildings"].append(facility);state["jobs"]+=16
+        ev("Planta de reciclaje habilitada","Puede clasificar hasta 1,25 t/día: recupera 35% de lo recolectado y vende material recuperado. Operación $650/mes; 16 puestos.")
+    elif p["kind"]=="landfill":
+        facility={"x":p["x"],"y":p["y"],"kind":"landfill","name":"Relleno sanitario municipal","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"capacityAdded":1800,"monthlyCost":420}
+        state["buildings"].append(facility);state["jobs"]+=12
+        ev("Celda sanitaria habilitada",f"El nuevo relleno amplía la disposición final en 1.800 toneladas y suma 12 puestos. Operación $420/mes.")
+        ev("Planta depuradora habilitada",f"Trata hasta 260 m³/día si está conectada a cloacas, energía y agua. Operación $380/mes; 14 puestos técnicos.")
+    elif p["kind"]=="hotel":
+        opening=min(4500,max(0,state.get("privateCapital",0)));state["privateCapital"]-=opening
+        hotel={"x":p["x"],"y":p["y"],"kind":"hotel","name":"Hotel Independiente","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"rooms":24,"beds":48,"nightlyRate":90,"monthlyGuests":0,"monthlyGuestNights":0,"business":{**new_business({"x":p["x"],"y":p["y"],"name":"Hotel Independiente"},10,opening),"wage":10,"fixedCost":260,"closureMonths":0,"lastTourismTax":0}}
+        state["buildings"].append(hotel);state["jobs"]+=10
+        ev("Hotel privado habilitado",f"Abrió con 24 habitaciones, 48 plazas y 10 empleos. Depende de llegadas, acceso vial y caja privada para seguir operando.")
+    elif p["kind"]=="airport":
+        airport={"x":p["x"],"y":p["y"],"kind":"airport","name":"Aeropuerto regional","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"passengerCapacity":800,"runwayMovements":12,"monthlyPassengers":0,"monthlyArrivals":0,"monthlyDepartures":0,"monthlyFlights":0,"airportFeeIncome":0,"monthlyCost":600,"operational":False}
+        state["buildings"].append(airport);state["jobs"]+=18;state["monthlyExpenses"]+=600
+        ev("Aeropuerto regional habilitado",f"Pista y terminal pasan a pruebas. Capacidad 800 pasajeros y 12 vuelos por mes; 18 puestos y $ 600/mes de operación.")
+    elif p["kind"]=="port":
+        port={"x":p["x"],"y":p["y"],"kind":"port","name":"Terminal portuaria","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"cargoCapacity":500,"cargoStored":0,"shipCapacity":180,"shipsDeparted":0,"lastShipDay":0,"monthlyCost":320,"feeIncome":0}
+        state["buildings"].append(port);state["jobs"]+=12;state["monthlyExpenses"]+=320
+        ev("Terminal portuaria habilitada",f"Muelle y patio de 500 unidades abiertos; 12 puestos logísticos y costo operativo $ 320/mes. Requiere ruta vial para recibir cargas.")
+    elif p["kind"]=="busStop":
+        state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busStop","name":"Parada de colectivo","level":1,"status":"habilitado","quality":quality,"monthlyCost":25})
+        state["monthlyExpenses"]+=25
+        ev("Parada de colectivo habilitada",f"La parada abrió junto a la vía con calidad {quality}%. Operación y mantenimiento $ 25/mes.")
+    elif p["kind"]=="civic":
+        model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["clinic"])
+        operating_cost=round((320+model["jobs"]*23)*(1.4-c["quality"]*.5))
+        building={"x":p["x"],"y":p["y"],"kind":"civic","name":model["label"],"serviceModel":p.get("serviceModel","clinic"),"level":1,
+             "occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":operating_cost,"quality":quality}
+        if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":day}
+        if model.get("socialCare"):
+            building["socialShelter"]={"beds":model["beds"],"residents":[],"openedDay":day}
+            building["monthlyCost"]=model["monthlyCost"]
+            operating_cost=building["monthlyCost"]
+        elif model.get("elderCare"):
+            building["elderCare"]={"careSlots":model["careSlots"],"openedDay":day}
+            building["monthlyCost"]=model["monthlyCost"]
+            operating_cost=building["monthlyCost"]
+        elif model.get("funeralType"):
+            building["funeralService"]={"burials":[]} if model["funeralType"]=="cemetery" else {"year":2026+(max(0,day-1)//360),"cremationsThisYear":0,"totalCremations":0,"history":[]}
+            building["monthlyCost"]=model["monthlyCost"];operating_cost=model["monthlyCost"]
+        elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
+        state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
+        ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
+    elif p["kind"]=="school":
+        if p.get("projectType")=="schoolExpansion":complete_school_expansion(p,quality)
+        else:
+            model=SCHOOL_MODELS.get(p.get("serviceModel"))
+            jobs=model["jobs"] if model else 12
+            monthly=model["monthlyCost"] if model else 820
+            building={"x":p["x"],"y":p["y"],"kind":"school","name":model["label"] if model else "Escuela primaria municipal",
+                      "level":1,"occupants":0,"jobSlots":jobs,"classrooms":model["classrooms"] if model else 4,
+                      "status":"habilitado","monthlyCost":monthly,"quality":quality}
+            if model:building["serviceModel"]=p["serviceModel"]
+            state["buildings"].append(building);state["jobs"]+=jobs;state["monthlyExpenses"]+=monthly
+            ev("Centro educativo habilitado",f"{building['name']}: {jobs} puestos y {building['classrooms']} aulas. Operación $ {monthly}/mes; se requieren docentes, rutas y servicios.")
+    elif p["kind"]=="fireStation":
+        model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["firePost"])
+        monthly=round(model["cost"]*.065)
+        state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":model["label"],"serviceModel":p.get("serviceModel","firePost"),"level":1,
+            "occupants":0,"jobSlots":model["jobs"],"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"],
+            "status":"habilitado","monthlyCost":monthly,"quality":quality});state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
+        ev("Cuartel de bomberos habilitado","El cuartel ofrece 12 puestos y hasta tres dotaciones de cuatro bomberos. Sin personal cualificado o ruta no puede responder; operación y mantenimiento $950/mes.")
+    if p["kind"] not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","gasPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
+    retention_pct=max(0,min(.2,float(p.get("retentionPct",0))))
+    retained=min(max(0,round(p.get("cost",0)-p.get("paid",0))),round(p.get("cost",0)*retention_pct))
+    if not p.get("privatePaid") and retained:
+        state["money"]=max(0,state["money"]-retained)
+        state["finance"].setdefault("contractEscrow",{"balance":0})["balance"]+=retained
+        contractor=CONTRACTORS.get(p.get("contractor"),CONTRACTORS["Constructora Delta"])
+        guarantee={"id":f"garantia-{p['id']}","projectId":p["id"],"label":p["label"],"contractor":p["contractor"],"x":p["x"],"y":p["y"],"kind":p["kind"],"retained":retained,"status":"garantia","startDay":day,"reviewDay":day+30,"initialQuality":quality,"defectChance":.025+(1-quality/100)*.18+(1-contractor["reliability"])*.12}
+        state.setdefault("contractGuarantees",[]).append(guarantee)
+        ev("Recepción provisional de obra",f"{p['label']}: inspección de entrega aprobada. $ {retained:,} quedan retenidos hasta el control de garantía del día {day+30}.".replace(",","."))
+    state["projects"].remove(p)
+
 def tick_one_day():
     if state["paused"]: return
     ensure_supply_state()
@@ -5625,146 +5769,7 @@ def tick_one_day():
         stage=int(p["progress"]*len(p["stages"]))
         p["stageIndex"]=min(len(p["stages"])-1,stage)
         if p["progress"]>=1:
-            quality=max(35,round(c["quality"]*100-p.get("qualityPenalty",0)))
-            if p["kind"]=="bridge":
-                for cx in (24,25):
-                    if [cx,p["y"]] not in state["roads"]:
-                        state["roads"].append([cx,p["y"]])
-                        state.setdefault("roadAssets",[]).append({"x":cx,"y":p["y"],"bridge":True,"quality":quality,"monthlyCost":80})
-                        state["monthlyExpenses"]+=80
-                ev("Puente vial habilitado",f"Se abrió el cruce del río a la altura {p['y']+1}; dos tramos, mantenimiento $160/mes. La extensión de calles al este ya es posible.")
-            elif p["kind"]=="road":
-                state["roads"].append([p["x"],p["y"]])
-                maintenance=round(70*(1.2-c["quality"]))
-                state["monthlyExpenses"]+=maintenance
-                state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
-            elif p["kind"]=="home":
-                b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
-                ev("Vivienda terminada",f"La vivienda en {p['x']+1},{p['y']+1} superó la inspección y quedó disponible. Los hogares llegarán según demanda y empleos.")
-            elif p["kind"]=="shop":
-                building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
-                opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
-                building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
-            elif p["kind"]=="factory":
-                industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
-                building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
-                if industry_type=="concrete":name="Hormigonera de Puerto Claro"
-                building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
-                building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
-                state["buildings"].append(building);state["jobs"]+=20
-                if is_quarry:ev("Cantera local habilitada","20 puestos industriales y una reserva geológica finita de 2.400 unidades. La extracción depende de personal, electricidad, agua y tratamiento cloacal; los áridos se venden por el sistema de pedidos con camiones.")
-                elif industry_type=="concrete":ev("Hormigonera local habilitada","20 puestos y producción de hormigón en proporción 2 áridos por 1 hormigón. Compra a la cantera local por ruta vial; personal y servicios limitan la producción.")
-                elif is_sawmill:ev("Aserradero local habilitado","20 puestos y madera de una reserva forestal finita con regeneración mensual. La producción depende de personal, electricidad, agua y saneamiento; la madera se vende por pedidos con camión.")
-                elif is_metalworks:ev("Metalúrgica local habilitada","20 puestos; compra acero por carretera y lo convierte en componentes de construcción. La producción depende de personal, servicios y caja; los componentes se venden a obras.")
-                else:ev("Fábrica habilitada",f"{building['name']} abre con 20 puestos. Debe comprar grano regional por camión; la producción y venta local dependen de inventario, personal y servicios.")
-            elif p["kind"]=="depot":
-                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["wasteYard"])
-                if p.get("serviceModel")=="taxiYard":
-                    state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":model["label"],"serviceModel":"taxiYard","level":1,"status":"habilitado","taxiCapacity":4,"jobSlots":model["jobs"],"monthlyCost":120,"quality":quality})
-                    state["monthlyExpenses"]+=120;state["jobs"]+=model["jobs"]
-                    ev("Depósito de taxis habilitado","Quedó conectado a la ciudad con cuatro plazas para taxis. Operación del depósito: $120/mes.")
-                else:
-                    capacity=500*model["trucks"]
-                    state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"depot","name":model["label"],"serviceModel":p.get("serviceModel","wasteYard"),"level":1,"status":"habilitado","capacityAdded":capacity,"jobSlots":model["jobs"],"quality":quality})
-                    depot_id=f"depot-{p['x']}-{p['y']}"
-                    state["supply"].setdefault("depots",[]).append({"id":depot_id,"x":p["x"],"y":p["y"],"capacity":capacity,"label":model["label"],"stocks":{name:{key:0 for key in MATERIAL_NAMES} for name in CONTRACTOR_NAMES}})
-                    state["supply"]["storageCapacity"]+=capacity;state["monthlyExpenses"]+=180*model["trucks"];state["jobs"]+=model["jobs"]
-                    ev("Depósito logístico habilitado",f"El depósito abre con 500 unidades de capacidad adicional. Operación y seguridad $ 180/mes.")
-            elif p["kind"]=="busGarage":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busGarage","name":"Cochera municipal","level":1,"status":"habilitado","busBayCapacity":4,"monthlyCost":50,"quality":quality})
-                state["monthlyExpenses"]+=50
-                ev("Cochera habilitada",f"La cochera ofrece cuatro plazas para colectivos con acceso vial. Mantenimiento $ 50/mes; cada vehículo alojado ahorra $ 30/mes frente al alquiler externo.")
-            elif p["kind"]=="powerPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"powerPlant","name":"Central eléctrica","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"generationKw":900,"monthlyCost":460}
-                state["buildings"].append(plant);state["jobs"]+=18;state["monthlyExpenses"]+=460
-                ev("Central eléctrica habilitada",f"Aporta hasta 900 kW si se conecta a las redes eléctrica y de agua. Operación $460/mes; 18 puestos técnicos.")
-            elif p["kind"]=="gasPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"gasPlant","name":"Planta de suministro de gas","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"gasCapacityM3Day":160,"monthlyCost":320}
-                state["buildings"].append(plant);state["jobs"]+=10;state["monthlyExpenses"]+=320
-                ev("Planta de gas habilitada","Aporta 160 m³/día de gas a los edificios conectados; necesita energía y red de gas. Operación $320/mes.")
-            elif p["kind"]=="waterPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"waterPlant","name":"Planta potabilizadora","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"treatmentM3Day":220,"monthlyCost":340}
-                state["buildings"].append(plant);state["jobs"]+=12;state["monthlyExpenses"]+=340
-                ev("Planta potabilizadora habilitada",f"Trata hasta 220 m³/día si tiene conexiones de electricidad y agua. Operación $340/mes; 12 puestos técnicos.")
-            elif p["kind"]=="wastewaterPlant":
-                plant={"x":p["x"],"y":p["y"],"kind":"wastewaterPlant","name":"Planta depuradora","level":1,"status":"habilitado","quality":quality,"jobSlots":14,"treatmentM3Day":260,"monthlyCost":380}
-                state["buildings"].append(plant);state["jobs"]+=14;state["monthlyExpenses"]+=380
-            elif p["kind"]=="recyclingPlant":
-                facility={"x":p["x"],"y":p["y"],"kind":"recyclingPlant","name":"Planta municipal de reciclaje","level":1,"status":"habilitado","quality":quality,"jobSlots":16,"processingTonsDay":1.25,"monthlyCost":650}
-                state["buildings"].append(facility);state["jobs"]+=16
-                ev("Planta de reciclaje habilitada","Puede clasificar hasta 1,25 t/día: recupera 35% de lo recolectado y vende material recuperado. Operación $650/mes; 16 puestos.")
-            elif p["kind"]=="landfill":
-                facility={"x":p["x"],"y":p["y"],"kind":"landfill","name":"Relleno sanitario municipal","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"capacityAdded":1800,"monthlyCost":420}
-                state["buildings"].append(facility);state["jobs"]+=12
-                ev("Celda sanitaria habilitada",f"El nuevo relleno amplía la disposición final en 1.800 toneladas y suma 12 puestos. Operación $420/mes.")
-                ev("Planta depuradora habilitada",f"Trata hasta 260 m³/día si está conectada a cloacas, energía y agua. Operación $380/mes; 14 puestos técnicos.")
-            elif p["kind"]=="hotel":
-                opening=min(4500,max(0,state.get("privateCapital",0)));state["privateCapital"]-=opening
-                hotel={"x":p["x"],"y":p["y"],"kind":"hotel","name":"Hotel Independiente","level":1,"status":"habilitado","quality":quality,"jobSlots":10,"rooms":24,"beds":48,"nightlyRate":90,"monthlyGuests":0,"monthlyGuestNights":0,"business":{**new_business({"x":p["x"],"y":p["y"],"name":"Hotel Independiente"},10,opening),"wage":10,"fixedCost":260,"closureMonths":0,"lastTourismTax":0}}
-                state["buildings"].append(hotel);state["jobs"]+=10
-                ev("Hotel privado habilitado",f"Abrió con 24 habitaciones, 48 plazas y 10 empleos. Depende de llegadas, acceso vial y caja privada para seguir operando.")
-            elif p["kind"]=="airport":
-                airport={"x":p["x"],"y":p["y"],"kind":"airport","name":"Aeropuerto regional","level":1,"status":"habilitado","quality":quality,"jobSlots":18,"passengerCapacity":800,"runwayMovements":12,"monthlyPassengers":0,"monthlyArrivals":0,"monthlyDepartures":0,"monthlyFlights":0,"airportFeeIncome":0,"monthlyCost":600,"operational":False}
-                state["buildings"].append(airport);state["jobs"]+=18;state["monthlyExpenses"]+=600
-                ev("Aeropuerto regional habilitado",f"Pista y terminal pasan a pruebas. Capacidad 800 pasajeros y 12 vuelos por mes; 18 puestos y $ 600/mes de operación.")
-            elif p["kind"]=="port":
-                port={"x":p["x"],"y":p["y"],"kind":"port","name":"Terminal portuaria","level":1,"status":"habilitado","quality":quality,"jobSlots":12,"cargoCapacity":500,"cargoStored":0,"shipCapacity":180,"shipsDeparted":0,"lastShipDay":0,"monthlyCost":320,"feeIncome":0}
-                state["buildings"].append(port);state["jobs"]+=12;state["monthlyExpenses"]+=320
-                ev("Terminal portuaria habilitada",f"Muelle y patio de 500 unidades abiertos; 12 puestos logísticos y costo operativo $ 320/mes. Requiere ruta vial para recibir cargas.")
-            elif p["kind"]=="busStop":
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"busStop","name":"Parada de colectivo","level":1,"status":"habilitado","quality":quality,"monthlyCost":25})
-                state["monthlyExpenses"]+=25
-                ev("Parada de colectivo habilitada",f"La parada abrió junto a la vía con calidad {quality}%. Operación y mantenimiento $ 25/mes.")
-            elif p["kind"]=="civic":
-                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["clinic"])
-                operating_cost=round((320+model["jobs"]*23)*(1.4-c["quality"]*.5))
-                building={"x":p["x"],"y":p["y"],"kind":"civic","name":model["label"],"serviceModel":p.get("serviceModel","clinic"),"level":1,
-                     "occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":operating_cost,"quality":quality}
-                if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":day}
-                if model.get("socialCare"):
-                    building["socialShelter"]={"beds":model["beds"],"residents":[],"openedDay":day}
-                    building["monthlyCost"]=model["monthlyCost"]
-                    operating_cost=building["monthlyCost"]
-                elif model.get("elderCare"):
-                    building["elderCare"]={"careSlots":model["careSlots"],"openedDay":day}
-                    building["monthlyCost"]=model["monthlyCost"]
-                    operating_cost=building["monthlyCost"]
-                elif model.get("funeralType"):
-                    building["funeralService"]={"burials":[]} if model["funeralType"]=="cemetery" else {"year":2026+(max(0,day-1)//360),"cremationsThisYear":0,"totalCremations":0,"history":[]}
-                    building["monthlyCost"]=model["monthlyCost"];operating_cost=model["monthlyCost"]
-                elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
-                state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
-                ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
-            elif p["kind"]=="school":
-                if p.get("projectType")=="schoolExpansion":complete_school_expansion(p,quality)
-                else:
-                    model=SCHOOL_MODELS.get(p.get("serviceModel"))
-                    jobs=model["jobs"] if model else 12
-                    monthly=model["monthlyCost"] if model else 820
-                    building={"x":p["x"],"y":p["y"],"kind":"school","name":model["label"] if model else "Escuela primaria municipal",
-                              "level":1,"occupants":0,"jobSlots":jobs,"classrooms":model["classrooms"] if model else 4,
-                              "status":"habilitado","monthlyCost":monthly,"quality":quality}
-                    if model:building["serviceModel"]=p["serviceModel"]
-                    state["buildings"].append(building);state["jobs"]+=jobs;state["monthlyExpenses"]+=monthly
-                    ev("Centro educativo habilitado",f"{building['name']}: {jobs} puestos y {building['classrooms']} aulas. Operación $ {monthly}/mes; se requieren docentes, rutas y servicios.")
-            elif p["kind"]=="fireStation":
-                model=SERVICE_MODELS.get(p.get("serviceModel"),SERVICE_MODELS["firePost"])
-                monthly=round(model["cost"]*.065)
-                state["buildings"].append({"x":p["x"],"y":p["y"],"kind":"fireStation","name":model["label"],"serviceModel":p.get("serviceModel","firePost"),"level":1,
-                    "occupants":0,"jobSlots":model["jobs"],"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"],
-                    "status":"habilitado","monthlyCost":monthly,"quality":quality});state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
-                ev("Cuartel de bomberos habilitado","El cuartel ofrece 12 puestos y hasta tres dotaciones de cuatro bomberos. Sin personal cualificado o ruta no puede responder; operación y mantenimiento $950/mes.")
-            if p["kind"] not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","hotel","powerPlant","waterPlant","gasPlant","wastewaterPlant"): ev(f"{p['label']} habilitado",f"{p['contractor']} entregó la obra con calidad {quality}%. Su mantenimiento afecta el balance municipal." if p["kind"]=="road" else f"{p['contractor']} completó la inspección y entregó la obra con calidad {quality}%.")
-            retention_pct=max(0,min(.2,float(p.get("retentionPct",0))))
-            retained=min(max(0,round(p.get("cost",0)-p.get("paid",0))),round(p.get("cost",0)*retention_pct))
-            if not p.get("privatePaid") and retained:
-                state["money"]=max(0,state["money"]-retained)
-                state["finance"].setdefault("contractEscrow",{"balance":0})["balance"]+=retained
-                contractor=CONTRACTORS.get(p.get("contractor"),CONTRACTORS["Constructora Delta"])
-                guarantee={"id":f"garantia-{p['id']}","projectId":p["id"],"label":p["label"],"contractor":p["contractor"],"x":p["x"],"y":p["y"],"kind":p["kind"],"retained":retained,"status":"garantia","startDay":day,"reviewDay":day+30,"initialQuality":quality,"defectChance":.025+(1-quality/100)*.18+(1-contractor["reliability"])*.12}
-                state.setdefault("contractGuarantees",[]).append(guarantee)
-                ev("Recepción provisional de obra",f"{p['label']}: inspección de entrega aprobada. $ {retained:,} quedan retenidos hasta el control de garantía del día {day+30}.".replace(",","."))
-            state["projects"].remove(p)
+            complete_construction(p,max(35,round(c["quality"]*100-p.get("qualityPenalty",0))))
     if day%30==0 and state["projects"]: ev("Revisión de contratos",f"{len(state['projects'])} obra(s) activa(s). El avance depende del tiempo y de los pagos disponibles.")
 
 # Fase 28: hospitalización municipal y ambulancias asociadas a centros de salud.
@@ -7210,8 +7215,8 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="port" and any(b.get("kind")=="port" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene una terminal portuaria."}); return
                     if kind=="airport" and any(b.get("kind")=="airport" for b in state["buildings"]): self._send(409,{"error":"La ciudad ya tiene un aeropuerto regional."}); return
                     contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    if not instant_public and not contractor_has_capacity(contractor): self._send(409,{"error":f"{contractor} no tiene cuadrillas disponibles. Elegí otra empresa o esperá la entrega de una obra."}); return
-                    if not instant_public and contractor_free_workers(contractor)<LABOR_NEEDS[kind]: self._send(409,{"error":f"{contractor} necesita {LABOR_NEEDS[kind]} trabajadores para esta obra y solo tiene {contractor_free_workers(contractor)} libres."}); return
+                    # Igual que Offline: la colocación manual no reserva cuadrillas ni cupos.
+                    # Rescates, rehabilitaciones y obras automáticas mantienen su control de capacidad.
                     if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])): self._send(409,{"error":"La parcela ya está ocupada"}); return
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
@@ -7234,10 +7239,7 @@ class Handler(BaseHTTPRequestHandler):
                         if not any(abs(rx-x)+abs(ry-y)<=1 for rx,ry in state["roads"]): self._send(409,{"error":"La calle debe conectar con la red existente"}); return
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     elif kind in ("home","shop","hotel","factory"):
-                        # Promotor privado financia la inversión; el municipio cubre permisos e inspección.
-                        need=PROJECTS[kind]["cost"]*.12
-                        if state["money"]<need: self._send(409,{"error":f"Fondos municipales insuficientes para permisos ($ {need:.0f})"}); return
-                        state["money"]-=need
+                        # Los permisos se cobran después de validar el capital de la operación.
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     else:
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
@@ -7264,26 +7266,33 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="factory":
                         p["industryType"]=industry_choice or next_factory_industry()
                         p["label"]=FACTORY_LABELS[p["industryType"]]
+                    # Igual que Offline: una obra puesta manualmente se habilita en este clic.
+                    # Las obras automáticas de promotores conservan sus cronogramas.
                     if kind in ("home","shop","hotel","factory"):
-                        p["privatePaid"]=True; p["municipalPermitPaid"]=round(spec["cost"]*.12); p["cost"]=total-p["municipalPermitPaid"]
+                        permit=max(50,round(spec["cost"]*.12))
+                        p["privatePaid"]=True;p["municipalPermitPaid"]=permit;p["cost"]=total-permit
                         operating_reserve=4200 if kind=="factory" else 0
+                        if state["money"]<permit:
+                            self._send(409,{"error":f"Fondos municipales insuficientes para permisos ($ {permit:,}).".replace(",","." )});return
                         if state["privateCapital"]<p["cost"]+operating_reserve:
-                            state["money"]+=round(spec["cost"]*.12); self._send(409,{"error":f"Los promotores necesitan $ {p['cost']+operating_reserve:,}, incluido el capital operativo inicial.".replace(",",".")}); return
+                            self._send(409,{"error":f"Los promotores necesitan $ {p['cost']+operating_reserve:,}, incluido el capital operativo inicial.".replace(",","." )});return
+                        state["money"]-=permit
                         state["privateCapital"]-=p["cost"]+operating_reserve
                         if operating_reserve:p["operatingReserve"]=operating_reserve
-                        advance=round(p["cost"]*.2);p["paid"]=advance
-                        state["supply"]["contractorCash"][contractor]+=advance
                     else:
                         reserved=sum(max(0,pending["cost"]-pending.get("paid",0)) for pending in state["projects"] if not pending.get("privatePaid"))
                         available=max(0,state["money"]-reserved)
-                        if available<total: self._send(409,{"error":f"Fondos disponibles insuficientes. Contrato: $ {total:,}; disponible después de compromisos: $ {available:,}.".replace(",",".")}); return
-                        advance=round(total*.2)
-                        state["money"]-=advance; p["paid"]=advance
-                        state["supply"]["contractorCash"][contractor]+=advance
-                    p["retentionPct"]=0 if p.get("privatePaid") else .1
-                    state["projects"].append(p); ev(f"Contrato adjudicado: {spec['label']}",f"{contractor} · $ {total:,} · {LABOR_NEEDS[kind]} trabajadores · plazo estimado {duration} días. Se reservó el anticipo.".replace(",","."))
+                        if available<total:
+                            self._send(409,{"error":f"Fondos disponibles insuficientes. Construcción: $ {total:,}; disponible después de compromisos: $ {available:,}.".replace(",","." )});return
+                        state["money"]-=total
+                    state["supply"]["contractorCash"][contractor]+=p["cost"]
+                    p["paid"]=p["cost"];p["elapsed"]=p["duration"];p["progress"]=1
+                    p["stageIndex"]=max(0,len(p["stages"])-1)
+                    p["workersAssigned"]=0;p["retentionPct"]=0
+                    state["projects"].append(p)
+                    complete_construction(p,quality=82)
                     if investment_id:
-                        investment_offer["status"]="aceptada";investment_offer["decisionDay"]=state["day"];investment_offer["projectId"]=p["id"];investment_book.setdefault("history",[]).append(dict(investment_offer));investment_book["history"]=investment_book["history"][-24:];investment_book["nextOfferDay"]=state["day"]+90;investment_book["reason"]="La obra comercial está contratada; la empresa abrirá después de construcción e inspección.";ev("Inversión comercial adjudicada",f"El promotor invierte $ {p['cost']:,}; se aprobó el permiso por $ {p['municipalPermitPaid']}. La apertura depende de materiales, cuadrilla, etapas e inspección.".replace(",","."))
+                        investment_offer["status"]="aceptada";investment_offer["decisionDay"]=state["day"];investment_offer["projectId"]=p["id"];investment_book.setdefault("history",[]).append(dict(investment_offer));investment_book["history"]=investment_book["history"][-24:];investment_book["nextOfferDay"]=state["day"]+90;investment_book["reason"]="La obra comercial se habilitó al instante.";ev("Inversión comercial adjudicada",f"El promotor invirtió $ {p['cost']:,}; se aprobó el permiso por $ {p['municipalPermitPaid']}. El comercio quedó habilitado al instante.".replace(",","."))
                 elif action=="orderMaterials":
                     project=next((p for p in state["projects"] if p["id"]==str(data.get("projectId"))),None)
                     supplier=data.get("supplier");items=data.get("items")

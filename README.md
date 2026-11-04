@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.256
+# Ciudad Viva · Alfa 0.257
+
+**Construcciones instantáneas y ambulancias en misión (0.257):** las obras colocadas directamente desde el catálogo se habilitan al instante también en salas LAN, sin ocupar cuadrillas ni solicitar materiales; se conservan los plazos para obras automáticas y trabajos especiales. Los hospitales dejan de generar ambulancias estacionadas en la calzada al construirse. Se añadieron pruebas de paridad del catálogo y de cobertura de acciones. La simulación Online y Offline aún utiliza motores distintos: esta revisión corrige casos concretos y no presupone equivalencia integral.
 
 **Presencia LAN en tiempo real (0.256):** el servidor transmite inmediatamente las posiciones del mouse por un canal SSE independiente de la simulación, en vez de esperar sondeos HTTP y bloqueos prolongados; hay un sondeo de respaldo si se corta. El nombre y la parcela siguen junto a cada cursor, pero el texto de actividad aparece al lado de cada jugador conectado, arriba del chat. Para usar el nuevo servidor, el anfitrión debe actualizar el ejecutable Windows.
 

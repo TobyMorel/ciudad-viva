@@ -1155,19 +1155,18 @@ export function createWorld(canvas){
     for(const incident of state.roadIncidentReport?.activeIncidents||[]){if(incident.status!=='en_respuesta'||!incident.responseRoute?.length)continue;const route=incident.responseRoute.map(([x,y])=>tilePos(x,y));add('Rescate vial',makeFireEngine(),route,{title:`Rescate vial · ${incident.x+1},${incident.y+1}`,description:`Unidad municipal responde a un choque por ${incident.cause}. La calle está cerrada mientras se limpia el tramo.`,metrics:[['Causa',incident.cause],['Estado',incident.status],['Respuesta',incident.station||'Cuartel municipal'],['Cierre estimado',`${incident.remainingDays} día(s)`]]},incident.id,{side:.24})}
     const recentMedical=(state.healthReport?.hospital?.ambulanceDispatches||[]).filter(x=>x.status==='traslado'
       &&Number.isInteger(x.day)&&state.day-x.day>=0&&state.day-x.day<=2&&x.route?.length>1);
+    // Ambulances appear on streets only for real dispatches. Building a hospital
+    // must not create parked vehicles on road tiles in either game mode.
     for(const unit of state.healthReport?.hospital?.hospitals||[]){
       const from=[unit.x,unit.y],missions=recentMedical.filter(x=>x.stationX===unit.x&&x.stationY===unit.y);
-      for(let i=0;i<Math.min(3,unit.ambulances||0);i++){
-        const mission=i<unit.activeAmbulances?missions[i]:null;
-        const trip=mission?serviceRoadPath(from,[mission.x,mission.y],openRoads):null;
-        const path=trip;
-        const idle=!trip;
+      for(const [i,mission] of missions.slice(0,Math.min(3,unit.ambulances||0)).entries()){
+        const trip=serviceRoadPath(from,[mission.x,mission.y],openRoads);
+        if(!trip?.length||trip.length<2)continue;
         const m=makeAmbulance();
-        add('Ambulancia',m,path,{title:mission&&trip?`Traslado sanitario · ${unit.name}`:`Ambulancia ${i+1} · ${unit.name}`,
-          description:mission&&trip?'Traslado registrado hacia un barrio conectado, reproducido en la ciudad 3D.':'Unidad sanitaria estacionada, disponible sólo con equipo, servicios y calle.',
-          metrics:[['Camas',unit.beds],['Dotación operativa',unit.activeAmbulances],['Estado',idle?'En base':'Traslado reciente']]},
-          `amb-${unit.x}-${unit.y}-${i}`,{idle,side:i*.24,...(mission&&trip?{deliveryStartDay:mission.day,deliveryEndDay:mission.day+1}:{})});
-        if(idle){const a=serviceRoadPath(from,[4,10],openRoads),p=a?.[0]||tilePos(unit.x,unit.y);m.position.set(p[0]+i*.4,0,p[1]-.22)}
+        add('Ambulancia',m,trip,{title:`Traslado sanitario · ${unit.name}`,
+          description:'Traslado registrado hacia un barrio conectado, reproducido en la ciudad 3D.',
+          metrics:[['Camas',unit.beds],['Dotación operativa',unit.activeAmbulances],['Estado','Traslado reciente']]},
+          `amb-${unit.x}-${unit.y}-${i}`,{side:i*.24,deliveryStartDay:mission.day,deliveryEndDay:mission.day+1});
       }
     }
   }

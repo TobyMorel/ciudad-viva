@@ -16,7 +16,10 @@ try{
   await page.waitForFunction(()=>window.__ciudadVivaProjectTile?.(14,10,.2)?.visible,{timeout:30000});const point=await page.evaluate(()=>{const p=window.__ciudadVivaProjectTile(14,10,.2),r=document.querySelector('#city').getBoundingClientRect();return{x:r.left+p.x,y:r.top+p.y,visible:p.visible,canvas:{left:r.left,top:r.top,width:r.width,height:r.height},project:p}});if(!point.visible){await page.screenshot({path:'work/instant-build-failure.png'});throw Error(`${viewport.width}x${viewport.height}: parcela fuera de c?mara ${JSON.stringify(point)}`)}
   await page.mouse.click(point.x,point.y);
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).buildings.some(b=>b.serviceModel==='generalHospital'),{timeout:4000}).catch(async error=>{await page.screenshot({path:'work/instant-build-failure.png'});throw Error(`no se habilit? el hospital; aviso ${await page.locator('#toast').textContent().catch(()=>'(sin aviso)')} ? proyectos ${await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).projects.map(p=>p.kind+':'+p.x+','+p.y).join('|'))} ? ${error.message}`)});
-  const city=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')));assert.equal(city.money,74500);assert.equal(city.projects.length,0);assert.deepEqual(errors,[]);
+  const city=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')));assert.equal(city.money,74500);assert.equal(city.projects.length,0);
+  const idleAmbulances=await page.evaluate(()=>window.__ciudadViva3D().filter(actor=>actor.type==='Ambulancia'));
+  assert.equal(idleAmbulances.length,0,'No deben aparecer ambulancias sobre la calle solo por construir un hospital');
+  assert.deepEqual(errors,[]);
   await page.close();
  }
  console.log('Hospital inmediato y tooltip sin plazo de obra verificados en Chromium mÃ³vil y escritorio.');

@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.256",
+  "currentVersion": "0.257",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.257",
+      "date": "2026-11-04",
+      "title": "Construcciones instantáneas en Online y ambulancias sólo en servicio",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Las construcciones colocadas manualmente se habilitan en la misma acción en Online, como ya sucedía en Offline: sin esperar días de obra ni pedidos de materiales.",
+        "La colocación manual ya no exige cuadrillas ni cupos de constructoras. Rescates, rehabilitaciones, estaciones ferroviarias y obras privadas automáticas mantienen sus reglas especiales.",
+        "El renderizado 3D deja de colocar ambulancias estacionadas en las calles sólo por inaugurar un hospital; ahora aparecen únicamente cuando existen traslados sanitarios reales.",
+        "Se agregan pruebas de construcción instantánea para todo el catálogo de edificios, puentes, puertos y paradas, más una auditoría estructural de acciones disponibles en ambos modos."
+      ],
+      "verification": "Pruebas de construcción sin cuadrillas y materiales, cobros, ausencia de proyectos pendientes, pruebas visuales de ambulancias y auditoría de acciones Offline/Online agregadas. Las pruebas verifican estos casos, pero no garantizan equivalencia completa de todos los sistemas de simulación."
+    },
     {
       "version": "0.256",
       "date": "2026-11-04",

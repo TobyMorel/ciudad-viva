@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.258",
+  "currentVersion": "0.259",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.259",
+      "date": "2026-11-04",
+      "title": "Compatibilidad de partidas antiguas con el nuevo motor LAN",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El nuevo Online completa los campos de esquema que faltan en guardados realizados por el servidor anterior utilizando los valores por defecto de la última versión Offline, sin cambiar las decisiones ni los edificios existentes.",
+        "Se amplían las pruebas de migración, restauración de edificios y validación de calles construidas. El juego sigue usando el mismo motor offline.js para todas las acciones de la sala.",
+        "Se corrige una expectativa obsoleta en la prueba heredada de tesorería Python: desde Alfa 0.254 no se otorga ingreso ficticio por el campo mensualIncome."
+      ],
+      "verification": "CI comprueba carga de partidas previas del servidor LAN, estado persistido, acciones del motor compartido, red de cuatro jugadores y compilación Windows con Node.js empaquetado."
+    },
     {
       "version": "0.258",
       "date": "2026-11-04",

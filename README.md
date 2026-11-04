@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.258
+# Ciudad Viva · Alfa 0.259
+
+**Compatibilidad de partidas LAN antiguas (0.259):** el nuevo motor compartido reconoce snapshots creados por el servidor anterior y completa las propiedades necesarias usando el esquema más reciente de Offline. Los edificios, las calles y la tesorería guardados tienen prioridad; además se mantiene la copia de seguridad previa a la migración.
 
 **Nuevo Online con motor único de Offline (0.258):** ahora las salas LAN ejecutan el mismo archivo `offline.js` que la partida local. Un proceso Node.js en el anfitrión aplica las acciones, las simulaciones diarias y los reportes; Python maneja únicamente jugadores, red, chat, cursores y guardados. Se conservan copias previas de los guardados de Online antes de su importación. El ejecutable Windows incluye Node.js. Los jugadores comparten un único estado autoritativo, por lo que las reglas futuras pasan automáticamente a los dos modos.
 

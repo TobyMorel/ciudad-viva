@@ -28,13 +28,24 @@ globalThis.fetch=async(url,options)=>{
   throw Error('Recurso no disponible en el motor compartido: '+url);
 };
 let adapter=null;
-
+function fillMissingFields(value,defaults){
+  // Upgrade snapshots from the former Python LAN engine without replacing any
+  // existing city, money, buildings, roads or player-made decisions.
+  if(!defaults||typeof defaults!=='object'||Array.isArray(defaults))return value;
+  const result=value&&typeof value==='object'&&!Array.isArray(value)?{...value}:{};
+  for(const [key,defaultValue] of Object.entries(defaults)){
+    if(result[key]===undefined||result[key]===null)result[key]=structuredClone(defaultValue);
+    else if(defaultValue&&typeof defaultValue==='object'&&!Array.isArray(defaultValue))
+      result[key]=fillMissingFields(result[key],defaultValue);
+  }
+  return result;
+}
 async function initialize(snapshot=null){
   if(snapshot!==null&&(typeof snapshot!=='object'||Array.isArray(snapshot)))throw Error('El guardado compartido debe ser un objeto JSON.');
   const previous=memory.get(SAVE_KEY),oldAdapter=adapter;
   try{
     memory.clear();
-    if(snapshot)memory.set(SAVE_KEY,JSON.stringify(snapshot));
+    if(snapshot)memory.set(SAVE_KEY,JSON.stringify(fillMissingFields(snapshot,seed)));
     const next=await createOfflineAdapter();
     next.setRealtimeClock(true);
     const view=await next.request('/api/state');

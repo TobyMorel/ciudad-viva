@@ -9,6 +9,8 @@ class DailyCashAndBuildingActions(unittest.TestCase):
         server.state = server.new_settlement_state()
         city = server.state
         city.update(money=1000, monthlyIncome=300, monthlyExpenses=150, newSettlement=False)
+        # The legacy Python cash helper no longer invents income from the
+        # monthlyIncome display field. Actual municipal sales/fare receipts are zero.
         city["utilities"]["report"] = {"monthlyMaintenance": 0}
         city["waste"]["report"] = {"monthlyOperatingCost": 0}
         with patch.object(server, "police_service_report", return_value={"monthlyOperatingCost": 0}), patch.object(server, "road_maintenance_report", return_value={"monthlyRequired": 0}):
@@ -17,12 +19,12 @@ class DailyCashAndBuildingActions(unittest.TestCase):
                 server.settle_daily_municipal_cash({"workplaces": []})
                 server.accrue_municipal_cash(1)
                 if day == 2:
-                    self.assertEqual(city["money"], 1005)
+                    self.assertEqual(city["money"], 995)
                     server.settle_daily_municipal_cash({"workplaces": []})
-                    self.assertEqual(city["money"], 1005)
-        self.assertEqual(city["dailyCashFlow"]["income"], 300)
+                    self.assertEqual(city["money"], 995)
+        self.assertEqual(city["dailyCashFlow"]["income"], 0)
         self.assertEqual(city["dailyCashFlow"]["paid"]["services"], 150)
-        self.assertEqual(city["money"], 1150)
+        self.assertEqual(city["money"], 850)
 
     def test_move_then_demolish_does_not_refund_construction(self):
         server.state = server.initial_state()

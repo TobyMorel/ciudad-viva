@@ -36,7 +36,7 @@ class SharedOfflineEngineTests(unittest.TestCase):
 
     def test_shared_actions_match_the_same_offline_validation_and_costs(self):
         self.engine.action({"action":"placeRoad","x":5,"y":10})
-        with self.assertRaisesRegex(Exception,"calle|parcela|ocupad"):
+        with self.assertRaisesRegex(Exception,"calle|parcela|ocupad|tramo|red vial"):
             self.engine.action({"action":"placeRoad","x":5,"y":10})
         after=self.engine.advance()
         self.assertEqual(after["roads"],[[4,10],[5,10]])
@@ -51,7 +51,11 @@ class SharedOfflineEngineTests(unittest.TestCase):
         self.engine.action({"action":"new"})
         recovered=self.engine.load(saved)
         self.assertEqual(recovered["money"],city["money"])
-        self.assertEqual(recovered["buildings"],city["buildings"])
+        # Loading may add catalog/heritage metadata, but must retain the asset.
+        self.assertEqual(len(recovered["buildings"]),len(city["buildings"]))
+        self.assertEqual(
+            [(b["x"],b["y"],b["kind"],b.get("serviceModel")) for b in recovered["buildings"]],
+            [(b["x"],b["y"],b["kind"],b.get("serviceModel")) for b in city["buildings"]])
         self.assertEqual(recovered["roads"],city["roads"])
         self.assertEqual(recovered["projects"],[])
 

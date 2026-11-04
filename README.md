@@ -1,6 +1,10 @@
+# Ciudad Viva · Alfa 0.261
+
+**Asesor municipal, misiones, previsión de obras y barrios (0.261):** el botón **Asesor** del menú inferior explica los problemas reales de la ciudad, muestra sus causas y lleva a la herramienta o parcela correspondiente. Incluye 12 misiones voluntarias y medibles, que quedan registradas con el guardado y no regalan fondos ni limitan construcciones. Al elegir una obra, mover el puntero por el mapa presenta precio, coste de operación conocido, acceso vial y edificios potencialmente alcanzables; el botón **Planificar** activa voluntariamente una confirmación en dos toques para obras puntuales. En **Barrios** se consultan Oeste, Centro y Puerto, con identidad según actividad real, población, plazas, servicios y un diario de evolución mensual persistente también en partidas LAN. Las estimaciones de la vista previa no prometen cobertura operativa ni sustituyen las reglas reales del motor.
+
 # Ciudad Viva · Alfa 0.260
 
-**Tutorial para empezar (0.260):** al crear una ciudad aparece una guía opcional de 13 pasos en español. Señala los botones reales del juego, explica cómo hacer calles, conectar los servicios, zonificar viviendas y comercios, colocar plazas, leer la demanda y controlar los gastos. Tiene narración con voces del navegador, controles para escuchar de nuevo o silenciar, y un botón **Guía** en el menú inferior para reiniciarla.
+**Tutorial para empezar (0.260):** al crear una ciudad aparece una guía opcional de 14 pasos en español. Señala los botones reales del juego, explica cómo hacer calles, conectar los servicios, zonificar viviendas y comercios, colocar plazas, leer la demanda y controlar los gastos. Tiene narración con voces del navegador, controles para escuchar de nuevo o silenciar, y un botón **Guía** en el menú inferior para reiniciarla.
 
 # Ciudad Viva · Alfa 0.259
 

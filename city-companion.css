@@ -1,0 +1,72 @@
+/* Alfa 0.261: asesor, misiones, planificación y barrios. No intercepta el mapa salvo el modo planificar voluntario. */
+#cityCompanion[hidden],#cityPlanPreview[hidden],#neighborhoodMarkers[hidden],#cityCompanionButton .companion-indicator[hidden]{display:none!important}
+#cityCompanionButton{position:relative}
+#cityCompanionButton .companion-dock-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;background:#dceefa;color:#285777;font-weight:850;font-size:24px}
+#cityCompanionButton .companion-indicator{position:absolute;top:0;right:2px;min-width:17px;height:17px;display:grid;place-items:center;padding:0 3px;background:#c44c40;color:white;border-radius:12px;font-size:10px;font-weight:900}
+#cityCompanion{position:fixed;z-index:990;top:clamp(75px,13vh,115px);right:12px;bottom:110px;display:flex;flex-direction:column;width:min(372px,calc(100vw - 24px));min-height:250px;max-height:calc(100dvh - 140px);border:1px solid #a3cabb;border-radius:17px;background:#fbfdf7;color:#25493f;box-shadow:0 16px 50px #102a3155;font:13px/1.48 system-ui,-apple-system,sans-serif;overflow:hidden}
+#cityCompanion .companion-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px 10px;background:#eaf6ec;border-bottom:1px solid #d0e5d7}
+#cityCompanion .companion-head small{font-size:9px;font-weight:850;letter-spacing:.07em;color:#397f64}
+#cityCompanion .companion-head h2{font-size:18px;letter-spacing:-.025em;line-height:1.2;margin:2px 0}
+#cityCompanion [data-close]{font-size:27px;line-height:1;background:transparent;border:0;color:#376758;min-width:30px}
+#cityCompanion .companion-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:8px 12px;background:#f0f9f2}
+#cityCompanion .companion-tabs button{border-radius:7px;padding:8px 4px;font-size:12px;font-weight:750;color:#48675e;border:1px solid transparent}
+#cityCompanion .companion-tabs button[aria-selected=true]{background:#377e62;color:white}
+#cityCompanion .companion-content{overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1;padding:12px}
+#cityCompanion .companion-intro{margin:0 0 12px;padding:12px;border:1px solid #d0e5d7;background:#f2faf3;border-radius:11px}
+#cityCompanion .companion-intro strong{font-size:14px}
+#cityCompanion p{margin:5px 0 8px}
+#cityCompanion .companion-item{margin:0 0 10px;padding:11px 12px;border:1px solid #d3e3d8;border-radius:11px;background:#fff}
+#cityCompanion .companion-primary,#cityCompanion .companion-mission.is-next{border-color:#77b29b;background:#f1faf2}
+#cityCompanion .companion-step{display:inline-block;font-size:9px;font-weight:850;letter-spacing:.045em;color:#2f7b5a}
+#cityCompanion h3{margin:4px 0 6px;font-size:14px;line-height:1.3}
+#cityCompanion .companion-item p{font-size:12px;line-height:1.48;color:#466358}
+#cityCompanion .companion-item small,#cityCompanion .companion-note{color:#608075;font-size:11px}
+#cityCompanion .companion-action,#cityCompanion .companion-layer{display:inline-flex;align-items:center;justify-content:center;padding:8px 11px;border:1px solid #80b69e;border-radius:8px;color:#245c49;background:#e8f5ed;font-weight:750;font-size:11px;line-height:1.2;margin-top:5px}
+#cityCompanion .companion-action:hover,#cityCompanion .companion-layer:hover{background:#cbead9}
+#cityCompanion button:focus-visible,#plannerToggle:focus-visible,.neighborhood-marker:focus-visible{outline:3px solid #edb760;outline-offset:2px}
+#cityCompanion .companion-progress{height:7px;border-radius:10px;overflow:hidden;background:#dae9df;margin:8px 0}
+#cityCompanion .companion-progress i{display:block;height:100%;background:#398b68;border-radius:10px}
+#cityCompanion .companion-mission-top{display:flex;justify-content:space-between;gap:10px;color:#477c66;font-size:11px}
+#cityCompanion .is-done{background:#f5f8f4;opacity:.84}
+#cityCompanion .companion-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0}
+#cityCompanion .companion-stats span{display:flex;flex-direction:column;gap:1px;background:#eef7ef;padding:7px 5px;border-radius:7px;color:#59736a;font-size:10px;text-align:center}
+#cityCompanion .companion-stats span b{font-size:15px;color:#285d47}
+#cityCompanion .companion-history{font-size:11px;color:#48695d;margin:7px 0}
+#cityCompanion .companion-history summary{cursor:pointer;font-weight:800}
+#cityCompanion .companion-history ul{padding-left:18px;margin:7px 0}
+#cityCompanion .companion-history li{margin:4px 0}
+#cityCompanion .companion-empty{padding:16px;text-align:center;background:#eaf5ef;border-radius:10px}
+#plannerToggle{min-width:76px!important;width:auto!important;padding:3px 7px!important;white-space:nowrap;border-radius:8px;font:700 10px system-ui!important;background:#f1f8ee!important;color:#315648!important}
+#plannerToggle[aria-pressed=true]{background:#24785c!important;color:#fff!important}
+#cityPlanPreview{position:absolute;z-index:30;top:78px;right:12px;width:min(288px,calc(100% - 24px));max-height:42%;overflow:auto;pointer-events:none;background:#fcfff6ed;backdrop-filter:blur(9px);color:#244438;border:1px solid #8dbca8;border-radius:13px;padding:11px 12px;font:11px/1.42 system-ui,-apple-system,sans-serif;box-shadow:0 10px 34px #143c2b30}
+#cityPlanPreview header{display:flex;align-items:start;justify-content:space-between;gap:8px;margin-bottom:7px}
+#cityPlanPreview header b{font-size:13px}
+#cityPlanPreview header span{font-size:9px;font-weight:750;white-space:nowrap;color:#5a8071}
+#cityPlanPreview p{margin:6px 0}
+#cityPlanPreview .plan-stats{display:grid;gap:4px;margin:7px 0}
+#cityPlanPreview .plan-stats span{display:flex;gap:8px;justify-content:space-between;border-bottom:1px solid #cfdfd3;padding:2px 0}
+#cityPlanPreview .plan-stats b{text-align:right}
+#cityPlanPreview small{font-size:10px;color:#4e7463}
+#cityPlanPreview .plan-warning{border-radius:7px;background:#ffe9d9;color:#8a3d2a;padding:6px}
+#cityPlanPreview .plan-confirm{border-radius:7px;background:#d7f0de;color:#235840;padding:6px;font-weight:800}
+#neighborhoodMarkers{position:absolute;inset:0;pointer-events:none;z-index:24;overflow:hidden}
+#neighborhoodMarkers .neighborhood-marker{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;border:1px solid #6d9d8b;border-radius:30px;background:#f5fff2e8;color:#245641;font:800 10px system-ui;white-space:nowrap;padding:5px 9px;box-shadow:0 4px 14px #073d3240;max-width:165px;text-overflow:ellipsis;overflow:hidden}
+body[data-theme=dark] #cityCompanion{background:#193332;color:#e4f6eb;border-color:#739e8a}
+body[data-theme=dark] #cityCompanion .companion-head,body[data-theme=dark] #cityCompanion .companion-tabs,body[data-theme=dark] #cityCompanion .companion-intro{background:#294a40;border-color:#426f5c}
+body[data-theme=dark] #cityCompanion .companion-item,body[data-theme=dark] #cityCompanion .companion-stats span{background:#24443c;color:#e4f6eb;border-color:#476c5d}
+body[data-theme=dark] #cityCompanion .companion-item p,body[data-theme=dark] #cityCompanion .companion-note{color:#bdd6c9}
+body[data-theme=dark] #cityCompanion .companion-stats b{color:#cbf3db}
+body[data-theme=dark] #cityPlanPreview{background:#203b34ed;color:#edfff0;border-color:#709f87}
+body[data-theme=dark] #cityPlanPreview small{color:#bbd3c1}
+@media(max-width:650px){
+ #cityCompanionButton .companion-dock-icon{width:28px;height:28px;font-size:20px}
+ #cityCompanion{top:62px;right:8px;bottom:88px;width:min(340px,calc(100vw - 16px));max-height:calc(100dvh - 150px);font-size:12px}
+ #cityCompanion .companion-head{padding:9px 12px}
+ #cityCompanion .companion-head h2{font-size:16px}
+ #cityCompanion .companion-content{padding:8px 10px}
+ #plannerToggle{min-width:49px!important;padding:2px 4px!important;font-size:8px!important;max-width:64px}
+ #cityPlanPreview{top:64px;right:6px;width:min(230px,calc(100vw - 80px));max-height:30%;padding:7px 9px;font-size:10px}
+ #cityPlanPreview header b{font-size:12px}
+ #cityPlanPreview .plan-stats{gap:2px}
+ #neighborhoodMarkers .neighborhood-marker{padding:4px 6px;max-width:112px;font-size:9px}
+}

@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.260",
+  "currentVersion": "0.261",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.261",
+      "date": "2026-11-04",
+      "title": "Asesor contextual, misiones verificables, planificación previa y barrios con historia",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El nuevo panel Asesor identifica déficits reales de calles, electricidad, agua, saneamiento, vivienda, servicios y tesorería; explica causas y lleva a herramientas, informes o edificios sin modificar la partida por sí solo.",
+        "Se incorporan 12 misiones voluntarias con progreso medido desde el motor. Los hitos completados se conservan en los guardados Offline y LAN; no entregan fondos ficticios ni restringen herramientas.",
+        "La vista previa de obras muestra precio, acceso por calle, radio vial de servicios, vecinos y edificios potencialmente alcanzables y carencias ya observadas; distingue expresamente estimaciones de cobertura real. El modo Planificar permite confirmar un edificio mediante dos toques sin alterar el modo de construcción por defecto.",
+        "Oeste, Centro y Puerto obtienen paneles de barrio, personalidad según residentes y actividades, marcadores de nombres activables en el mapa y un diario mensual persistente de cambios demográficos y urbanísticos.",
+        "Se agregan pruebas del diagnóstico y del cálculo de alcance, persistencia del diario y misiones, y recorrido Playwright en móvil y escritorio."
+      ],
+      "verification": "GitHub Actions ejecuta node --check, regresiones del motor, pruebas funcionales de cityInsights.js y Playwright para las cuatro mejoras en 390 y 1440 px. Las previsiones del mapa son orientativas."
+    },
     {
       "version": "0.260",
       "date": "2026-11-04",

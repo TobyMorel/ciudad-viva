@@ -1037,6 +1037,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [ ] Incorporar trenes/metros con obra e inspección completas, capacidad y transbordos.
 - [ ] Separar flujos de viajeros y mercancías, con ocupación física compartida de corredores cuando aplique.
 - [x] Mostrar paradas reales con apertura de puertas y embarque/desembarque basado en la demanda de pasajeros simulada.
+- [x] Representar el acceso peatonal a viajes en colectivo y la llegada a los edificios de origen y destino según las rutinas existentes (Alfa 0.268; visual, sin cambiar la demanda ni los tiempos simulados).
 
 ### Criterios de aceptación
 

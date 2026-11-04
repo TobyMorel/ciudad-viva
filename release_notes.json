@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.267",
+  "currentVersion": "0.268",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.268",
+      "date": "2026-11-04",
+      "title": "Trayectos y actividad de barrio",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los peatones recorren los accesos desde y hacia las paradas de colectivo, y completan sus viajes diarios entrando y saliendo de las parcelas de origen y destino según el horario real de cada rutina.",
+        "Las cafeterías con ventas reales muestran clientes sentados y atendidos en sus mesas durante el horario de apertura; la cantidad de figuras tiene un límite para cuidar el rendimiento en móviles.",
+        "Los camiones municipales ahora frenan en los contenedores asignados a sus rutas y representan la maniobra de carga antes de continuar al siguiente punto.",
+        "Con lluvia, las ruedas de vehículos en circulación levantan pequeñas salpicaduras sobre las calles mojadas; el efecto se procesa en una sola tanda de instancias y tiene un cupo menor en móviles."
+      ],
+      "verification": "Revisión estática de sintaxis JavaScript, formato del diff y referencias de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.267",
       "date": "2026-11-04",

@@ -112,6 +112,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   }
  }
  function shops3D(){
+  let cafeGuests=0;const cafeGuestCap=smallScreen?4:10;
   for(const s of plan.industries){
    const [x,z]=point(s.x,s.y),g=place(layers.commerce,x,0,z),industrial=s.kind==='factory';
    if(industrial){
@@ -148,6 +149,18 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
       cylinder(g,.035,.035,.36,'#806750',sx,.24,1.12,10);
       box(g,.32,.07,.18,'#ac8a6b',sx,.2,1.44);
      }
+      if(s.identity==='cafe'&&s.open&&s.sales>0&&cafeGuests<cafeGuestCap){
+       for(const sx of [-.42,.42]){
+        if(cafeGuests>=cafeGuestCap)break;
+        cylinder(g,.035,.04,.055,'#efe3c9',sx+.10,.48,1.12,10);
+        cylinder(g,.026,.03,.012,'#74523c',sx+.10,.515,1.12,10);
+        const guest=person(g,sx,1.43,s.x*53+s.y*17+sx*9,{umbrella:false});
+        guest.role='cafe';guest.g.position.y=.075;guest.g.rotation.y=Math.PI;
+        for(const leg of guest.legs)leg.rotation.x=1.16;
+        for(const arm of guest.arms)arm.rotation.x=-.90;
+        cafeGuests++;
+       }
+      }
     }else if(s.identity==='flores'){
      for(let i=0;i<8;i++){
       cylinder(g,.016,.015,.3,'#518b68',-.53+i*.14,.29,1.07,7);
@@ -495,8 +508,9 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    const wind=Number(plan.windStrength)||.58,windAngle=(Number(plan.windDirection)||0)*Math.PI/180,windX=Math.cos(windAngle),windZ=Math.sin(windAngle);
   for(const f of figures){
     const v=clock*(f.role==='school'?(schoolRush?7.3:3.8):3.6)+f.seed*.27;
-   f.g.visible=f.role==='school'?schoolTime:!['fire','crew','medic'].includes(f.role)?
+    f.g.visible=f.role==='cafe'?hour>=8&&hour<=21:f.role==='school'?schoolTime:!['fire','crew','medic'].includes(f.role)?
      hour>=5.5&&hour<=23.5:true;
+    if(f.role==='cafe'){f.legs[0].rotation.x=1.16;f.legs[1].rotation.x=1.16;f.arms[0].rotation.x=-.90+Math.sin(v*.25)*.035;f.arms[1].rotation.x=-.90+Math.sin(v*.25+1.7)*.035;continue}
    f.legs[0].rotation.x=Math.sin(v)*.17;f.legs[1].rotation.x=-Math.sin(v)*.17;
    f.arms[0].rotation.x=-Math.sin(v)*.22;f.arms[1].rotation.x=Math.sin(v)*.22;
   }

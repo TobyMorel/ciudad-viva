@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.268
+
+**Trayectos y actividad de barrio (0.268):** peatones completan el acceso a colectivos y entran o salen de las parcelas según los horarios de sus viajes. Las cafeterías con ventas muestran clientes sentados; los camiones recolectores hacen una pausa y levantan los contenedores de sus rutas; y los autos dejan pequeñas salpicaduras al cruzar calles mojadas. Las escenas se basan en actividad registrada y los efectos tienen límites de rendimiento para móviles. Son cambios visuales: no alteran la simulación ni la economía.
+
 # Ciudad Viva · Alfa 0.267
 
 **Rutinas diarias y clima vivo (0.267):** residentes y viajes 3D siguen los horarios de trabajo, regreso, escuela, compras, servicios y paseo. Los peatones esperan el semáforo al cruzar; en las paradas, las puertas de los colectivos se abren y los pasajeros suben y bajan según los viajes de la línea. Viento y estación animan árboles, hojas, banderas, humo, barcos y ondas del río. Comercios, escuelas y plazas muestran actividad en sus horarios de mayor movimiento. Cambios visuales, sin efectos nuevos en la economía.

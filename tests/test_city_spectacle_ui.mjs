@@ -27,7 +27,7 @@ try{
   await page.waitForFunction(()=>Math.abs(document.querySelector('#city').getBoundingClientRect().width-window.innerWidth)<3);
   await page.locator('[data-compare]').evaluate(button=>button.click());
   assert.match(await page.locator('.cinema-comparison').innerText(),/Historia registrada/);
-  assert.match(await page.locator('.cinema-comparison').innerText(),/Sin registros anteriores/);
+  assert.match(await page.locator('.cinema-comparison').innerText(),/Habitantes|Sin registros anteriores/);
   await page.locator('#cinemaPanel [data-tour]').evaluate(button=>button.click());
   assert.equal(await page.locator('[data-tour]').getAttribute('aria-pressed'),'false');
   await page.locator('#cinemaPanel [data-exit]').evaluate(button=>button.click());

@@ -93,7 +93,7 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: Tutorial narrado: móvil y escritorio
+      - name: "Tutorial narrado: móvil y escritorio"
         run: node tests/test_beginner_tutorial_ui.mjs
       - name: Validar construcción en sector remoto
         run: node tests/test_distant_land_ui.mjs

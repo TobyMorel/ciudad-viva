@@ -1,3 +1,7 @@
+## Alfa 0.253 · Cursores compartidos en la sala LAN
+
+Los jugadores pueden ver en el mapa 3D el puntero, nombre y parcela de los demás. La posición usa coordenadas del terreno, por lo que se proyecta correctamente con distintos zoom y ángulos. El intercambio usa mensajes pequeños e independientes de las acciones y no se guarda con la ciudad.
+
 ## Alfa 0.252 · Protección de partidas offline
 
 La selección de partida vuelve a leer el snapshot completo de IndexedDB. Antes de escribir, comprueba que la ciudad abierta corresponda con el guardado. La creación de una ciudad usa otro slot; hay copias de seguridad periódicas y una opción para eliminar partidas desde el selector. El botón Cargar partida offline abre ese mismo selector.

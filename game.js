@@ -1,6 +1,6 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {createWorld} from './world3d.js?v=0.252';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.252';
+import {createWorld} from './world3d.js?v=0.253';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.253';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
 import {growthDemand} from './growth_demand.js';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -30,6 +30,25 @@ function renderMetricDetails(){if(!S)return;const homes=(S.buildings||[]).filter
 const pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).slice(2,9));sessionStorage.setItem('cv-player',pid);
 let placementQueue=Promise.resolve();
 let S=null,gameMode=null,offlineAdapter=null,modeGeneration=0,disconnectToast=false,selectedActor=null,tool='inspect',toolVariant=null,toolIndustry=null,hoverServiceTile=null,selected=null,zoom=window.innerWidth<650?1.08:2.05,panX=0,panY=0,rotation=0,drag=null,toastTimer,orderProjectId=null;
+const sharedCursorLayer=document.createElement('div'),sharedCursorNodes=new Map();sharedCursorLayer.className='shared-cursor-layer';sharedCursorLayer.setAttribute('aria-hidden','true');document.body.append(sharedCursorLayer);
+let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0;
+function renderSharedCursors(){
+ const bounds=canvas.getBoundingClientRect(),seen=new Set();
+ for(const cursor of gameMode==='online'?sharedCursors:[]){
+  const x=Number(cursor.x),y=Number(cursor.y);if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+  let marker=sharedCursorNodes.get(cursor.id);if(!marker){marker=document.createElement('div');marker.className='shared-cursor';const arrow=document.createElement('span'),label=document.createElement('b');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker)}
+  marker.querySelector('b').textContent=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
+  const colors=['#ffd16d','#85dcff','#ff9ec6','#bba8ff','#97e69e'],hash=[...String(cursor.id)].reduce((n,c)=>n+c.charCodeAt(0),0);marker.style.setProperty('--cursor-color',colors[hash%colors.length]);
+  const point=world.projectTile(x-.5,y-.5,.2);marker.hidden=!point.visible;if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}seen.add(cursor.id);
+ }
+ for(const [id,marker] of sharedCursorNodes)if(!seen.has(id)){marker.remove();sharedCursorNodes.delete(id)}
+}
+canvas.addEventListener('pointermove',event=>{if(gameMode!=='online'||document.hidden||performance.now()-lastCursorSample<65)return;lastCursorSample=performance.now();const bounds=canvas.getBoundingClientRect(),[x,y]=world.screenToMap(event.clientX-bounds.left,event.clientY-bounds.top);if(Number.isFinite(x)&&Number.isFinite(y)){ownCursor={x,y};cursorDirty=true}});
+canvas.addEventListener('pointerleave',()=>{if(gameMode==='online'){ownCursor=null;cursorDirty=true}});
+canvas.addEventListener('pointerup',event=>{if(gameMode==='online'&&event.pointerType==='touch'){ownCursor=null;cursorDirty=true}});
+window.addEventListener('blur',()=>{ownCursor=null;cursorDirty=true});document.addEventListener('visibilitychange',()=>{if(document.hidden){ownCursor=null;cursorDirty=true;sharedCursors=[];renderSharedCursors()}});
+setInterval(async()=>{if(gameMode!=='online'||cursorSending||(!cursorDirty&&(!ownCursor||Date.now()-lastCursorSent<1000)))return;cursorSending=true;const position=ownCursor;cursorDirty=false;try{await fetch('/api/cursors',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify(position||{}),cache:'no-store'});lastCursorSent=Date.now()}catch{cursorDirty=true}finally{cursorSending=false}},120);
+setInterval(async()=>{if(gameMode!=='online'||document.hidden||cursorReading)return;cursorReading=true;try{const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});if(response.ok){sharedCursors=(await response.json()).cursors||[];renderSharedCursors()}}catch{}finally{cursorReading=false}},220);
 const offers=['Sur Obras','Constructora Delta','Estudio y Obra Norte'],laborNeeds={road:4,bridge:10,home:6,shop:7,factory:12,civic:11,school:12,fireStation:12,depot:8,busStop:4,landfill:12,recyclingPlant:16,port:14,airport:16,hotel:10,powerPlant:18,waterPlant:12,gasPlant:10,wastewaterPlant:14};
 const SERVICE_MODELS={
  tvHeadend:{kind:'civic',label:'Cabecera municipal de TV por cable',cost:13800,days:72,radius:20},
@@ -302,9 +321,9 @@ function cadastralRecord(x,y){const claims=S?.landClaims||{},plot=landPlotAt(x,y
 function cadastralUse(x,y){const b=(S?.buildings||[]).find(q=>q.x===x&&q.y===y),p=(S?.projects||[]).find(q=>q.x===x&&q.y===y),z=(S?.zones||[]).find(q=>q.x===x&&q.y===y),road=(S?.roads||[]).some(q=>q[0]===x&&q[1]===y),abandoned=(S?.abandoned||[]).find(q=>q.x===x&&q.y===y);if(road)return'Calle y espacio público';if(b)return b.kind==='home'?'Vivienda':b.kind==='factory'?'Industria':b.kind==='shop'?'Comercio':b.kind==='hotel'?'Turismo':'Edificio o servicio municipal';if(p)return`Obra: ${p.label||p.kind}`;if(abandoned)return'Obra inconclusa';if(z)return`Permiso ${z.kind==='home'?'residencial':z.kind==='shop'?'comercial':'industrial'}`;return'Suelo sin asignación'}
 function showLandUnlock(plot){const cost=plot.unlockable?`$ ${nfmt(plot.cost)}`:'Desbloqueá primero un sector vecino';ui.selection.innerHTML=`<div class="land-unlock-card"><span class="eyebrow">🗺️ NUEVO TERRENO · SECTOR ${plot.chunkX}, ${plot.chunkY}</span><h3>🔒 Zona construible bloqueada</h3><p>Este sector contiene ${plot.chunkSize*plot.chunkSize} parcelas nuevas. El mapa se genera en todas las direcciones y no tiene un borde final; cada expansión se guarda con la ciudad.</p><div class="detail-grid"><div><span>Desbloqueo</span><b>${cost}</b></div><div><span>Tamaño</span><b>${plot.chunkSize} × ${plot.chunkSize} parcelas</b></div><div><span>Estado</span><b>${plot.unlockable?'Conectado a tu territorio':'Requiere conexión vecina'}</b></div></div>${plot.unlockable?`<button class="primary-action" data-unlock-land data-chunk-x="${plot.chunkX}" data-chunk-y="${plot.chunkY}">Desbloquear por $ ${nfmt(plot.cost)}</button>`:'<small>Desbloqueá el candado de un sector que toque tu terreno actual para continuar expandiéndote.</small>'}</div>`}
 function viewParams(){return {trafficOverlay,zoom,panX,panY,rotation,servicePreview:toolVariant&&SERVICE_MODELS[toolVariant]&&hoverServiceTile?{...hoverServiceTile,serviceModel:toolVariant}:null,utilityLayer:tool==='powerLine'?'power':tool==='waterPipe'?'water':tool==='sewerLine'?'sewer':tool==='drainLine'?'drainage':tool==='gasLine'?'gas':tool==='telecomLine'?'telecom':null}}
-function draw(){if(S){const displayState=S.projects?.length?{...S,projects:S.projects.map(p=>({...p,progress:visualProjectProgress(p,S.timeOfDayMinutes)}))}:S;world.sync(displayState,selected,viewParams());updateSoundscape(S);renderAlertMarkers();renderBusRouteMarkers();if(trafficOverlay)renderTrafficPanel()}}
+function draw(){if(S){const displayState=S.projects?.length?{...S,projects:S.projects.map(p=>({...p,progress:visualProjectProgress(p,S.timeOfDayMinutes)}))}:S;world.sync(displayState,selected,viewParams());updateSoundscape(S);renderAlertMarkers();renderBusRouteMarkers();renderSharedCursors();if(trafficOverlay)renderTrafficPanel()}}
 let alertProjectionFrame=0;
-function setCameraView(){world.setView(viewParams());if(alertProjectionFrame)return;alertProjectionFrame=requestAnimationFrame(()=>{alertProjectionFrame=0;renderAlertMarkers();renderBusRouteMarkers()})}
+function setCameraView(){world.setView(viewParams());if(alertProjectionFrame)return;alertProjectionFrame=requestAnimationFrame(()=>{alertProjectionFrame=0;renderAlertMarkers();renderBusRouteMarkers();renderSharedCursors()})}
 function screenToTile(px,py){return world.screenToTile(px,py)}
 function isTrafficIntersection(x,y){if(!S?.roads?.some(r=>r[0]===x&&r[1]===y))return false;return [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>S.roads.some(r=>r[0]===x+dx&&r[1]===y+dy)).length>=3}
 function showTrafficSignalSelection(x,y){const k=`${x},${y}`,enabled=(S.trafficSignalOverrides||{})[k]!==false;ui.selection.innerHTML=`<span class="eyebrow">🚦 GESTIÓN DEL TRÁNSITO</span><h2>Intersección ${x+1} · ${y+1}</h2><p>${enabled?'El semáforo está instalado y regula el paso de los vehículos.':'Este cruce no tiene semáforo; los vehículos lo atraviesan con prioridad compartida.'} Podés cambiarlo cuando quieras.</p><div class="detail-grid"><div><span>Estado</span><b>${enabled?'Semáforo activo':'Sin semáforo'}</b></div><div><span>Costo</span><b>Sin costo de instalación</b></div></div><button class="primary-action" data-toggle-traffic-signal data-x="${x}" data-y="${y}">${enabled?'🚫 Retirar semáforo':'🚦 Instalar semáforo'}</button>`}

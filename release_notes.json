@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.252",
+  "currentVersion": "0.253",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.253",
+      "date": "2026-11-04",
+      "title": "Cursores compartidos en el mapa 3D",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Cada jugador de una sala LAN ve el cursor de los demás, con nombre y parcela, sobre el mapa 3D.",
+        "Las posiciones se proyectan según la cámara local y se actualizan varias veces por segundo mediante mensajes pequeños.",
+        "Los cursores desaparecen al salir del mapa o desconectarse y no forman parte del guardado de la ciudad."
+      ],
+      "verification": "Revisión del intercambio de coordenadas, caducidad de presencia y proyección sobre el mapa."
+    },
     {
       "version": "0.252",
       "date": "2026-11-04",

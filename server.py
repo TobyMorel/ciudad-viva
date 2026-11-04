@@ -27,6 +27,7 @@ ROOM_OPEN = False
 STATE_REVISION = 0
 ROOM_CODE = uuid.uuid4().hex[:6].upper()
 DISCOVERED_ROOMS = {}
+PLAYER_CURSORS = {}
 ACTIVE_SLOT_ID = None
 DISCOVERY_PORT = 8766
 PORT = int(os.environ.get("CIUDAD_VIVA_PORT", "8765"))
@@ -6716,6 +6717,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self): self._send(405,{"error":"Método no permitido"})
     def do_GET(self):
         path=unquote(self.path.split("?",1)[0])
+        if path=="/api/cursors":
+            pid=self.headers.get("X-Player-Id","jugador-local")
+            with LOCK:
+                if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para ver los cursores."});return
+                now=time.time();names=state.get("playerNames",{})
+                cursors=[{"id":other,"name":names.get(other,"Jugador"),"x":point["x"],"y":point["y"]} for other,point in PLAYER_CURSORS.items() if other!=pid and now-point["at"]<3 and state["players"].get(other,0)>now-25]
+            self._send(200,{"cursors":cursors});return
         if path=="/api/sync":
             pid=self.headers.get("X-Player-Id","jugador-local")
             try:requested=int(parse_qs(self.path.partition("?")[2]).get("revision",["0"])[0])
@@ -6765,15 +6773,24 @@ class Handler(BaseHTTPRequestHandler):
         typ="text/html; charset=utf-8" if suffix==".html" else "text/css; charset=utf-8" if suffix==".css" else "application/javascript; charset=utf-8" if suffix in (".js",".mjs") else "application/json; charset=utf-8" if suffix==".json" else "image/svg+xml; charset=utf-8" if suffix==".svg" else mimetypes.guess_type(str(file))[0] or "application/octet-stream"
         self._send(200,file.read_bytes(),typ)
     def do_POST(self):
-        global state,STATE_REVISION,ACTIVE_SLOT_ID
+        global state,STATE_REVISION,ACTIVE_SLOT_ID,ROOM_OPEN
         try: data=json.loads(self.rfile.read(int(self.headers.get("Content-Length","0"))) or b"{}")
         except Exception: self._send(400,{"error":"JSON inválido"}); return
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
         with LOCK:
+            if path=="/api/cursors":
+                if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para mover el cursor."});return
+                try:
+                    x=float(data["x"]);y=float(data["y"])
+                    if not math.isfinite(x) or not math.isfinite(y) or abs(x)>1000 or abs(y)>1000:raise ValueError()
+                except (KeyError,TypeError,ValueError):
+                    PLAYER_CURSORS.pop(pid,None)
+                    self._send(200,{"ok":True});return
+                PLAYER_CURSORS[pid]={"x":round(x,3),"y":round(y,3),"at":time.time()}
+                self._send(200,{"ok":True});return
             if path in ("/api/action","/api/load"):
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
-            global ROOM_OPEN
             if path=="/api/room/create":
                 if self.client_address[0] not in ("127.0.0.1","::1"):
                     self._send(403,{"error":"La sala solo puede crearla el anfitrión desde su equipo."});return
@@ -6791,6 +6808,7 @@ class Handler(BaseHTTPRequestHandler):
                     chosen=save_slot(name=str(data["newSlotName"]).strip() or "Nueva partida")
                     state["roomName"]=chosen["name"]
                 ROOM_OPEN=True;state["host"]=pid;state["players"][pid]=time.time()
+                PLAYER_CURSORS.clear()
                 state.setdefault("playerNames",{})[pid]=clean_player_name(data.get("name"))
                 state["chatMessages"]=[];state["actionFeed"]=[]
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()

@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.252
+# Ciudad Viva · Alfa 0.253
+
+**Cursores compartidos (0.253):** En partidas LAN, cada jugador ve el puntero y el nombre de los demás sobre la parcela del mapa 3D. La posición se actualiza varias veces por segundo y sigue la cámara local de cada jugador.
 
 **Guardados offline protegidos (0.252):** El selector carga el contenido completo de cada slot antes de iniciar la simulación y comprueba el estado antes de permitir el guardado automático. Las partidas nuevas usan un slot separado, hay copias de seguridad automáticas y se puede eliminar un slot desde el selector.
 

@@ -1,6 +1,7 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
 import {createWorld} from './world3d.js?v=0.254';
 import {smoothRemoteCursor} from './cursor_motion.js';
+import {cursorView,cursorStatusText} from './cursor_presence.js';
 import {createOfflineWorkerAdapter} from './offline_client.js?v=0.254';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
 import {growthDemand} from './growth_demand.js';
@@ -32,7 +33,7 @@ const pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36
 let placementQueue=Promise.resolve();
 let S=null,gameMode=null,offlineAdapter=null,modeGeneration=0,disconnectToast=false,selectedActor=null,tool='inspect',toolVariant=null,toolIndustry=null,hoverServiceTile=null,selected=null,zoom=window.innerWidth<650?1.08:2.05,panX=0,panY=0,rotation=0,drag=null,toastTimer,orderProjectId=null;
 const sharedCursorLayer=document.createElement('div'),sharedCursorNodes=new Map(),sharedCursorPositions=new Map();sharedCursorLayer.className='shared-cursor-layer';sharedCursorLayer.setAttribute('aria-hidden','true');document.body.append(sharedCursorLayer);
-let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,cursorAnimationFrame=0,lastCursorFrame=0;
+let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,lastCursorView='',cursorOverCanvas=false,cursorAnimationFrame=0,lastCursorFrame=0;
 // Render in map coordinates so camera movements do not add a second visual delay.
 function renderSharedCursors(){
  const bounds=canvas.getBoundingClientRect(),seen=new Set();
@@ -42,11 +43,14 @@ function renderSharedCursors(){
   let marker=sharedCursorNodes.get(cursor.id);
   if(!marker){
    marker=document.createElement('div');marker.className='shared-cursor';
-   const arrow=document.createElement('span'),label=document.createElement('b');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker);
+   const arrow=document.createElement('span'),label=document.createElement('b'),name=document.createElement('span'),status=document.createElement('small');arrow.className='shared-cursor-arrow';label.className='shared-cursor-name';name.className='shared-cursor-label';status.className='shared-cursor-status';status.hidden=true;label.append(name,status);marker.append(arrow,label);sharedCursorLayer.append(marker);sharedCursorNodes.set(cursor.id,marker);
    const colors=['#ffd16d','#85dcff','#ff9ec6','#bba8ff','#97e69e'],hash=[...String(cursor.id)].reduce((n,c)=>n+c.charCodeAt(0),0);marker.style.setProperty('--cursor-color',colors[hash%colors.length]);
   }
   const label=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
-  if(marker.querySelector('b').textContent!==label)marker.querySelector('b').textContent=label;
+  const name=marker.querySelector('.shared-cursor-label'),status=marker.querySelector('.shared-cursor-status'),description=cursorStatusText(cursor.view);
+  if(name.textContent!==label)name.textContent=label;
+  if(status.textContent!==description)status.textContent=description;
+  status.hidden=!description;
   const point=world.projectTile(motion.x-.5,motion.y-.5,.2);marker.hidden=!point.visible;
   if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}
   seen.add(cursor.id);
@@ -81,11 +85,36 @@ function acceptSharedCursors(cursors){
   cursorAnimationFrame=requestAnimationFrame(animateSharedCursors);
  }
 }
-canvas.addEventListener('pointermove',event=>{const now=performance.now();if(gameMode!=='online'||document.hidden||now-lastCursorSample<16)return;lastCursorSample=now;const bounds=canvas.getBoundingClientRect(),[x,y]=world.screenToMap(event.clientX-bounds.left,event.clientY-bounds.top);if(Number.isFinite(x)&&Number.isFinite(y)){ownCursor={x,y};cursorDirty=true}});
-canvas.addEventListener('pointerleave',()=>{if(gameMode==='online'){ownCursor=null;cursorDirty=true}});
-canvas.addEventListener('pointerup',event=>{if(gameMode==='online'&&event.pointerType==='touch'){ownCursor=null;cursorDirty=true}});
-window.addEventListener('blur',()=>{ownCursor=null;cursorDirty=true});document.addEventListener('visibilitychange',()=>{if(document.hidden){ownCursor=null;cursorDirty=true;sharedCursors=[];renderSharedCursors()}});
-setInterval(async()=>{if(gameMode!=='online'||cursorSending||(!cursorDirty&&(!ownCursor||Date.now()-lastCursorSent<1000)))return;cursorSending=true;const position=ownCursor;cursorDirty=false;try{await fetch('/api/cursors',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify(position||{}),cache:'no-store'});lastCursorSent=Date.now()}catch{cursorDirty=true}finally{cursorSending=false}},60);
+function localCursorView(){
+ const popup=document.getElementById('panelPopup');
+ return cursorView({
+  popup:popup&&!popup.classList.contains('hidden')?document.getElementById('popupTitle').textContent:'',
+  supply:!ui.supplyBackdrop.classList.contains('hidden'),
+  traffic:!document.getElementById('trafficPanel')?.classList.contains('hidden'),
+  menu:!document.getElementById('modeBackdrop').classList.contains('hidden'),
+  overMap:cursorOverCanvas,
+  hidden:document.hidden
+ });
+}
+canvas.addEventListener('pointerenter',()=>{if(gameMode==='online'){cursorOverCanvas=true;cursorDirty=true}});
+canvas.addEventListener('pointermove',event=>{const now=performance.now();if(gameMode!=='online'||document.hidden||now-lastCursorSample<16)return;cursorOverCanvas=true;lastCursorSample=now;const bounds=canvas.getBoundingClientRect(),[x,y]=world.screenToMap(event.clientX-bounds.left,event.clientY-bounds.top);if(Number.isFinite(x)&&Number.isFinite(y)){ownCursor={x,y};cursorDirty=true}});
+canvas.addEventListener('pointerleave',()=>{if(gameMode==='online'){cursorOverCanvas=false;cursorDirty=true}});
+canvas.addEventListener('pointerup',event=>{if(gameMode==='online'&&event.pointerType==='touch'){cursorOverCanvas=false;cursorDirty=true}});
+window.addEventListener('blur',()=>{cursorDirty=true});
+document.addEventListener('visibilitychange',()=>{cursorDirty=true;if(document.hidden){sharedCursors=[];renderSharedCursors()}});
+setInterval(async()=>{
+ if(gameMode!=='online'||cursorSending)return;
+ const view=localCursorView();
+ if(!cursorDirty&&view===lastCursorView&&(!ownCursor||Date.now()-lastCursorSent<1000))return;
+ cursorSending=true;
+ const position=ownCursor;
+ cursorDirty=false;
+ try{
+  const response=await fetch('/api/cursors',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify(position?{...position,view}:{view}),cache:'no-store'});
+  if(!response.ok)throw Error('No se pudo compartir el cursor');
+  lastCursorSent=Date.now();lastCursorView=view;
+ }catch{cursorDirty=true}finally{cursorSending=false}
+},60);
 setInterval(async()=>{if(gameMode!=='online'||document.hidden||cursorReading)return;cursorReading=true;try{const response=await fetch('/api/cursors',{headers:{'X-Player-Id':pid},cache:'no-store'});if(response.ok){const data=await response.json();if(gameMode==='online'&&!document.hidden)acceptSharedCursors(data.cursors)}}catch{}finally{cursorReading=false}},75);
 const offers=['Sur Obras','Constructora Delta','Estudio y Obra Norte'],laborNeeds={road:4,bridge:10,home:6,shop:7,factory:12,civic:11,school:12,fireStation:12,depot:8,busStop:4,landfill:12,recyclingPlant:16,port:14,airport:16,hotel:10,powerPlant:18,waterPlant:12,gasPlant:10,wastewaterPlant:14};
 const SERVICE_MODELS={

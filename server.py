@@ -6717,7 +6717,7 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para ver los cursores."});return
                 now=time.time();names=state.get("playerNames",{})
-                cursors=[{"id":other,"name":names.get(other,"Jugador"),"x":point["x"],"y":point["y"]} for other,point in PLAYER_CURSORS.items() if other!=pid and now-point["at"]<3 and state["players"].get(other,0)>now-25]
+                cursors=[{"id":other,"name":names.get(other,"Jugador"),"x":point["x"],"y":point["y"],"view":point.get("view","")} for other,point in PLAYER_CURSORS.items() if other!=pid and now-point["at"]<(12 if point.get("view") else 3) and state["players"].get(other,0)>now-25]
             self._send(200,{"cursors":cursors});return
         if path=="/api/sync":
             pid=self.headers.get("X-Player-Id","jugador-local")
@@ -6776,13 +6776,18 @@ class Handler(BaseHTTPRequestHandler):
         with LOCK:
             if path=="/api/cursors":
                 if not ROOM_OPEN or pid not in state.get("players",{}):self._send(409,{"error":"Entrá a la sala para mover el cursor."});return
+                view=" ".join(str(data.get("view") or "").strip().split())[:60]
+                previous=PLAYER_CURSORS.get(pid)
                 try:
                     x=float(data["x"]);y=float(data["y"])
                     if not math.isfinite(x) or not math.isfinite(y) or abs(x)>1000 or abs(y)>1000:raise ValueError()
                 except (KeyError,TypeError,ValueError):
-                    PLAYER_CURSORS.pop(pid,None)
+                    # Leaving the canvas or opening a UI does not remove the last position.
+                    if previous:
+                        previous["view"]=view or "Fuera del mapa 3D"
+                        previous["at"]=time.time()
                     self._send(200,{"ok":True});return
-                PLAYER_CURSORS[pid]={"x":round(x,3),"y":round(y,3),"at":time.time()}
+                PLAYER_CURSORS[pid]={"x":round(x,3),"y":round(y,3),"view":view,"at":time.time()}
                 self._send(200,{"ok":True});return
             if path in ("/api/action","/api/load"):
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()

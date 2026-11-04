@@ -23,6 +23,7 @@ class LANMultiplayerTests(unittest.TestCase):
             "save": server.SAVE,
             "save_root": server.SAVE_ROOT,
             "rooms": server.DISCOVERED_ROOMS,
+            "cursors": server.PLAYER_CURSORS,
             "cache_revision": server._PUBLIC_STATE_CACHE_REVISION,
             "cache_view": server._PUBLIC_STATE_CACHE_VIEW,
         }
@@ -33,6 +34,7 @@ class LANMultiplayerTests(unittest.TestCase):
         server.STATE_REVISION = 0
         server.ROOM_CODE = "TEST42"
         server.DISCOVERED_ROOMS = {}
+        server.PLAYER_CURSORS = {}
         server._PUBLIC_STATE_CACHE_REVISION = -1
         server._PUBLIC_STATE_CACHE_VIEW = None
         self.http = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
@@ -52,6 +54,7 @@ class LANMultiplayerTests(unittest.TestCase):
         server.SAVE = self.old["save"]
         server.SAVE_ROOT = self.old["save_root"]
         server.DISCOVERED_ROOMS = self.old["rooms"]
+        server.PLAYER_CURSORS = self.old["cursors"]
         server._PUBLIC_STATE_CACHE_REVISION = self.old["cache_revision"]
         server._PUBLIC_STATE_CACHE_VIEW = self.old["cache_view"]
         self.tempdir.cleanup()
@@ -127,6 +130,32 @@ class LANMultiplayerTests(unittest.TestCase):
                         for z in snapshot["zones"]),
                     f"{kind} at {(x, y)} was not shared with every player",
                 )
+
+    def test_cursor_remains_visible_and_reports_player_view_when_leaving_map(self):
+        self.request("/api/room/create", "host", {"name": "Ana"})
+        self.request("/api/room/join", "guest", {"code": "TEST42", "name": "Bruno"})
+
+        self.request("/api/cursors", "host", {"x": 12.5, "y": 8.25})
+        initial = self.request("/api/cursors", "guest")["cursors"]
+        self.assertEqual(len(initial), 1)
+        self.assertEqual((initial[0]["x"], initial[0]["y"]), (12.5, 8.25))
+        self.assertEqual(initial[0]["view"], "")
+
+        # UI navigation does not send a new map coordinate.
+        self.request("/api/cursors", "host", {"view": "Movilidad"})
+        viewing = self.request("/api/cursors", "guest")["cursors"][0]
+        self.assertEqual(viewing["name"], "Ana")
+        self.assertEqual((viewing["x"], viewing["y"]), (12.5, 8.25))
+        self.assertEqual(viewing["view"], "Movilidad")
+
+        self.request("/api/cursors", "host", {"view": "Tráfico"})
+        self.assertEqual(self.request("/api/cursors", "guest")["cursors"][0]["view"], "Tráfico")
+
+        # Reentering the 3D map clears the activity message.
+        self.request("/api/cursors", "host", {"x": 13.0, "y": 9.0, "view": ""})
+        returned = self.request("/api/cursors", "guest")["cursors"][0]
+        self.assertEqual((returned["x"], returned["y"]), (13.0, 9.0))
+        self.assertEqual(returned["view"], "")
 
     def test_large_state_is_compressed_for_browser_clients(self):
         self.request("/api/room/create", "host", {})

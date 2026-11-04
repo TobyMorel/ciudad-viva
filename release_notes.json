@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.271",
+  "currentVersion": "0.272",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.272",
+      "date": "2026-11-04",
+      "title": "Jerarquía vial, estacionamiento y densidad urbana",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Las calles locales, avenidas, rutas regionales y autopistas tienen costos, capacidad, velocidad, mantenimiento y acceso a parcelas propios. Las rutas más rápidas y las autopistas no permiten zonificar parcelas directamente; hacen falta calles locales o avenidas.",
+        "El estacionamiento ahora tiene capacidad física compartida entre destinos cercanos. Los viajes asignan espacios de calle o de garajes municipales; si faltan, aumenta el tiempo de búsqueda. Cada garaje admite 24 autos y cobra $5 por plaza ocupada al día, con ingresos calculados según su ocupación pico.",
+        "La zonificación ofrece baja o alta densidad residencial, comercial e industrial. Las viviendas altas admiten más residentes; los comercios y fábricas densos abren más puestos y usan modelos 3D correspondientes.",
+        "Cada tramo puede tener sentido único, carril reservado para autobuses o restricción de camiones. La ruta y el mapa 3D reflejan esas reglas; colectivos, vehículos particulares y entregas calculan sus recorridos según la categoría de vía."
+      ],
+      "verification": "Revisión del diff y de las referencias de versión. No se ejecutaron pruebas automatizadas locales, según lo pedido."
+    },
     {
       "version": "0.271",
       "date": "2026-11-04",
@@ -3383,8 +3397,8 @@
     {
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
-      "progress": 60,
-      "summary": "Promotores residenciales, comerciales e industriales inician obras según demanda, población, ventas, parcela permitida y conexión vial. Insumos de vivienda/comercio/fábrica incluidos en capital privado.",
+      "progress": 65,
+      "summary": "Promotores residenciales, comerciales e industriales inician obras según demanda, población, ventas, parcela permitida y conexión vial; las zonas permiten elegir baja o alta densidad.",
       "pending": [
         "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas.",
         "Demanda/viabilidad residencial y comercial más amplia, incluyendo empleos y servicios sin bloquear la demanda inicial."
@@ -3562,8 +3576,8 @@
     {
       "phase": 22,
       "title": "Movilidad avanzada: autos, autobuses, trenes, metro y carga",
-      "progress": 53,
-      "summary": "Viajes por origen, destino, motivo y ventana horaria; pasajeros visibles en colectivos y cruces peatonales señalizados.",
+      "progress": 60,
+      "summary": "Viajes por origen, destino, motivo y franja horaria; tipologías viales, capacidad de estacionamiento, reglas de circulación y zonas de varias densidades.",
       "pending": [
         "Integrar completamente metro y tren en todos los viajes; resolver accidentes y capacidad vial detallada."
       ]

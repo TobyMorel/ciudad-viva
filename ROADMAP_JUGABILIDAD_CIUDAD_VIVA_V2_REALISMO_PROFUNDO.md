@@ -310,6 +310,7 @@ Ninguna empresa debe ser siempre óptima. La contratación varía según disponi
 - [ ] Exigir constructora y tiempo también para crecimiento privado.
 - [ ] Crear estados de parcela: disponible, anunciada, solicitada, en obra, ocupada, vacía y abandonada.
 - [ ] Distinguir propiedad privada de inversión pública, para no cobrar al municipio cada casa privada.
+- [x] Elegir zonificación de baja o alta densidad para viviendas, comercios e industrias; ajustar capacidad de residentes y empleos y reflejarla en sus modelos 3D (Alfa 0.272).
 
 ### Criterios de aceptación
 
@@ -413,6 +414,7 @@ Ninguna empresa debe ser siempre óptima. La contratación varía según disponi
 ### Tareas para la IA
 
 - [ ] Representar viajes por origen/destino y carga por vías.
+- [x] Diferenciar calles locales, avenidas, rutas regionales y autopistas por precio, mantenimiento, capacidad, velocidad, estacionamiento y acceso a parcelas (Alfa 0.272).
 - [x] Animar recorridos peatonales y de otros modos dentro de sus ventanas de trabajo, regreso, escuela, compras, servicios y paseo.
 - [x] Hacer que los peatones cedan el paso en intersecciones señalizadas y que los colectivos se detengan para embarcar y desembarcar pasajeros.
 - [ ] Mostrar congestión, tiempos de viaje y zonas aisladas.
@@ -1042,6 +1044,8 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [x] Animar la llegada de trenes a estaciones operativas con pasajeros en andenes y descensos hacia la calle, condicionados por el servicio y la demanda existentes (Alfa 0.269; solo visual).
 - [x] Ampliar las celdas 50% y los modelos del mundo 3D 35%, conservando selección, cámara y coordenadas de juego (Alfa 0.270; base espacial para incorporar más categorías viales).
 - [x] Ensanchar las calles con veredas, un carril de circulación por sentido y una franja de estacionamiento junto a cada vereda; animar la entrada en reversa y la salida de los autos estacionados (Alfa 0.271; visual, sin cambiar la economía).
+- [x] Asignar espacios de estacionamiento físicos de calles y garajes a los viajes; la falta de plazas añade búsqueda y los garajes municipales cobran solo por su ocupación pico (Alfa 0.272).
+- [x] Permitir configurar sentido único, carril de autobús y restricción de camiones por tramo; las rutas de autos, colectivos y carga obedecen las reglas y muestran la dirección en el mapa (Alfa 0.272).
 
 ### Criterios de aceptación
 

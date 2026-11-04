@@ -1208,14 +1208,15 @@ def road_maintenance_report(funding_factor=None,advance=False):
         assets[:]=[asset for asset in assets if (asset.get("x"),asset.get("y"))!=(4,10)]
     for x,y in roads:
         if state.get("newSettlement") and (x,y)==(4,10):continue
-        if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15})
+        if not any(a.get("x")==x and a.get("y")==y for a in assets):assets.append({"x":x,"y":y,"quality":82,"monthlyCost":15,"roadType":"local"})
     policy=max(0,min(200,int(state.get("roadMaintenancePct",100))))
     road_set={tuple(r) for r in roads};road_rows=[];required=0
     for asset in assets:
+        asset.setdefault("roadType","local");asset.setdefault("oneWay",None);asset.setdefault("busLane",False);asset.setdefault("truckRestricted",False)
         x,y=asset["x"],asset["y"];adjacent=sum(1 for b in state.get("buildings",[]) if abs(b.get("x",-99)-x)+abs(b.get("y",-99)-y)<=1)
         degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)))
         load=1+min(2,adjacent*.25+degree*.08);quality=max(0,min(100,float(asset.get("quality",82))))
-        base=round(8+load*4);required+=round(base*policy/100)
+        base=round((8+load*4)*ROAD_TYPES.get(asset.get("roadType","local"),ROAD_TYPES["local"])["maintenance"]/15);required+=round(base*policy/100)
         if advance:
             quality=max(0,quality-(.22+load*.12))
             if funding_factor is not None:quality=min(100,quality+(.72*policy/100*max(0,min(1,float(funding_factor)))))
@@ -2123,6 +2124,8 @@ CONTRACTORS = {
  "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
  "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
+ROAD_TYPES={"local":{"label":"Calle local","cost":1200,"maintenance":15,"capacity":1.2,"speed":1.0,"parking":2,"access":True,"lanes":1},"avenue":{"label":"Avenida","cost":3200,"maintenance":36,"capacity":2.7,"speed":1.28,"parking":0,"access":True,"lanes":2},"route":{"label":"Ruta regional","cost":2500,"maintenance":28,"capacity":2.2,"speed":1.58,"parking":0,"access":False,"lanes":1},"highway":{"label":"Autopista","cost":4800,"maintenance":52,"capacity":4.6,"speed":2.12,"parking":0,"access":False,"lanes":2}}
+ROAD_DIRECTION_DELTAS={"east":(1,0),"west":(-1,0),"south":(0,1),"north":(0,-1)}
 PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Asignación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y movilización","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
 PROJECTS["bridge"]={"label":"Puente vial sobre el río","cost":13000,"days":84,"stageNames":["Estudio de suelo y permisos","Pilotes y estribos","Estructura metálica","Tablero y señalización","Inspección y habilitación"]}
 PROJECTS["factory"]={"label":"Procesadora de alimentos","cost":9200,"days":68,"stageNames":["Licencia y capital privado","Cimentación y nave","Maquinaria y servicios","Pruebas de producción","Inspección y apertura"]}
@@ -2151,6 +2154,7 @@ SERVICE_MODELS={
  "socialShelter":{"kind":"civic","label":"Centro de acogida temporal","cost":14800,"days":92,"radius":8,"jobs":12,"beds":30,"socialCare":True,"monthlyCost":1180},
  "elderCare":{"kind":"civic","label":"Centro de acompañamiento domiciliario","cost":12600,"days":78,"radius":10,"jobs":10,"careSlots":36,"elderCare":True,"monthlyCost":1450},
  "urbanPark":{"kind":"civic","label":"Plaza barrial","cost":2400,"days":0,"radius":8,"jobs":0,"recreation":True,"visitorCapacity":90,"monthlyCost":90},
+ "parkingGarage":{"kind":"civic","label":"Estacionamiento municipal","cost":11500,"days":0,"radius":4,"jobs":0,"parkingSpaces":24,"dailyFee":5,"monthlyCost":180},
  "cemetery":{"kind":"civic","label":"Cementerio municipal","cost":11800,"days":78,"radius":14,"jobs":8,"funeralType":"cemetery","graveCapacity":120,"monthlyCost":520},
  "crematorium":{"kind":"civic","label":"Crematorio municipal","cost":16400,"days":92,"radius":16,"jobs":10,"funeralType":"crematorium","annualCapacity":24,"monthlyCost":760},
  "policePost":{"kind":"civic","label":"Puesto de vigilancia","cost":9200,"days":64,"radius":6,"jobs":12,"police":1},
@@ -2467,7 +2471,7 @@ def validate_bridge_site(x,y):
         ):
             raise ValueError("El corredor del puente ya está ocupado.")
 
-INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand","urbanPark"}
+INSTANT_PUBLIC_MODELS={"clinic","medicalCenter","generalHospital","policePost","policeStation","policeHQ","firePost","fireStationPlus","fireCommand","urbanPark","parkingGarage"}
 
 def place_instant_public_service(kind,x,y,service_id):
     model=SERVICE_MODELS[service_id]
@@ -2480,6 +2484,7 @@ def place_instant_public_service(kind,x,y,service_id):
     building={"x":x,"y":y,"kind":kind,"name":model["label"],"serviceModel":service_id,"level":1,"occupants":0,"jobSlots":model["jobs"],"status":"habilitado","monthlyCost":monthly,"quality":82}
     if model.get("police"):building["policeUnit"]={"vehicles":model["police"],"priority":"mixto","equippedDay":state["day"]}
     if model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":state["day"]}
+    if model.get("parkingSpaces"):building.update({"parkingSpaces":model["parkingSpaces"],"dailyFee":model.get("dailyFee",5),"parkingOccupied":0,"parkingRevenue":0})
     if kind=="fireStation":building.update({"fireEngineCapacity":model["engines"],"dispatchReadyDay":state["day"]})
     state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=monthly
     if model.get("recreation"):
@@ -2488,8 +2493,9 @@ def place_instant_public_service(kind,x,y,service_id):
         ev("Servicio público habilitado",f"{model['label']} abrió al colocarse por $ {model['cost']:,}. Costo operativo $ {monthly:,}/mes; su respuesta requiere personal, redes y acceso vial.".replace(",","."))
     return building
 
-def route_between(start_coord, destination_coord):
-    condition={(a.get("x"),a.get("y")):float(a.get("quality",82)) for a in state.get("roadAssets",[])}
+def route_between(start_coord, destination_coord, mode="car"):
+    road_assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])}
+    condition={point:float(asset.get("quality",82)) for point,asset in road_assets.items()}
     accident_closures={(i.get("x"),i.get("y")) for i in state.get("roadIncidents",{}).get("events",[]) if i.get("closed") and i.get("status") in ("en_respuesta","sin_respuesta")}
     roads={tuple(r) for r in state["roads"] if condition.get(tuple(r),82)>=25 and tuple(r) not in accident_closures}
     adjacent=lambda point:{(point[0]+dx,point[1]+dy) for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))}
@@ -2503,7 +2509,7 @@ def route_between(start_coord, destination_coord):
         queue_state={edge:float(row.get("queueAfter",0)) for edge,row in traffic.get("queueReport",{}).get("segments",{}).items()}
     active_roadworks=[p for p in state.get("projects",[]) if p.get("kind")=="road" and p.get("status") not in ("pausada","cancelada","suspendida","finalizada")]
     def edge_cost(a,b):
-        capacity=road_traffic_capacity(a,b)*6
+        capacity=road_traffic_capacity(a,b,road_assets)*6
         congestion=min(4.0,max(0.0,float(queue_state.get(traffic_edge_key(a,b),0)))/max(1,capacity))
         worksite=any(min(abs(a[0]-p.get("x",0))+abs(a[1]-p.get("y",0)),abs(b[0]-p.get("x",0))+abs(b[1]-p.get("y",0)))<=1 for p in active_roadworks)
         return 1.0+congestion*1.25+(1.25 if worksite else 0.0)
@@ -2516,8 +2522,9 @@ def route_between(start_coord, destination_coord):
         if current in goals:target=current;break
         for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)):
             neighbor=(x+dx,y+dy)
-            if neighbor not in roads:continue
-            candidate=cost+edge_cost(current,neighbor)
+            if neighbor not in roads or not road_step_allowed(current,neighbor,mode,road_assets):continue
+            speed=sum(ROAD_TYPES.get(road_assets.get(p,{}).get("roadType","local"),ROAD_TYPES["local"])["speed"]*(1.35 if mode=="bus" and road_assets.get(p,{}).get("busLane") else 1) for p in (current,neighbor))/2
+            candidate=cost+edge_cost(current,neighbor)/max(.5,speed)
             if candidate+1e-9<best.get(neighbor,float("inf")):
                 best[neighbor]=candidate;previous[neighbor]=current;heapq.heappush(frontier,(candidate,neighbor[0],neighbor[1]))
     if target is None:return None
@@ -2539,7 +2546,7 @@ def build_waste_collection_routes(containers,depots,facilities):
         for index,truck in enumerate(trucks):
             if len(truck["bins"])*.15>=truck["payloadTons"]-.001:continue
             origin=truck["bins"][-1] if truck["bins"] else truck["start"]
-            path=route_between((origin["x"],origin["y"]),(container["x"],container["y"]))
+            path=route_between((origin["x"],origin["y"]),(container["x"],container["y"]),mode="truck")
             if path and service_route_within(truck["depot"],container):options.append((len(path)+len(truck["bins"])*5,index))
         if options:
             _,index=min(options);trucks[index]["bins"].append(container)
@@ -2547,20 +2554,20 @@ def build_waste_collection_routes(containers,depots,facilities):
     for truck in trucks:
         start=truck["start"];destination=truck["depot"]
         if destination is None:
-            destination=min(depots,key=lambda b:len(route_between((4,10),(b["x"],b["y"])) or [0])) if depots else None
+            destination=min(depots,key=lambda b:len(route_between((4,10),(b["x"],b["y"]),mode="truck") or [0])) if depots else None
         if destination is None and facilities:
-            reachable=[(len(route_between((4,10),(b["x"],b["y"])) or []),b) for b in facilities]
+            reachable=[(len(route_between((4,10),(b["x"],b["y"]),mode="truck") or []),b) for b in facilities]
             reachable=[row for row in reachable if row[0]>0]
             if reachable:destination=min(reachable,key=lambda row:row[0])[1]
         path=[];stops=[];current=start
         for container in truck["bins"]:
-            segment=route_between((current["x"],current["y"]),(container["x"],container["y"]))
+            segment=route_between((current["x"],current["y"]),(container["x"],container["y"]),mode="truck")
             if not segment:continue
             path.extend(segment if not path else segment[1:]);stops.append({"kind":"container","x":container["x"],"y":container["y"],"id":container.get("id",f"bin-{container['x']}-{container['y']}")});current=container
         if destination:
-            segment=route_between((current["x"],current["y"]),(destination["x"],destination["y"]))
+            segment=route_between((current["x"],current["y"]),(destination["x"],destination["y"]),mode="truck")
             if segment:path.extend(segment if not path else segment[1:]);stops.append({"kind":"transfer" if destination.get("kind")=="depot" else "disposal","x":destination["x"],"y":destination["y"],"name":destination.get("name","Destino final")});current=destination
-        back=route_between((current["x"],current["y"]),(start["x"],start["y"]))
+        back=route_between((current["x"],current["y"]),(start["x"],start["y"]),mode="truck")
         if back:path.extend(back if not path else back[1:])
         if truck["bins"] and destination is None:stops.append({"kind":"base","x":start["x"],"y":start["y"],"name":"Base municipal"})
         bin_ids={stop["id"] for stop in stops if stop["kind"]=="container"}
@@ -3188,8 +3195,9 @@ def bus_line_route(line):
     # Las líneas trazadas por el jugador conservan su itinerario exacto y no
     # incorporan por proximidad las paradas de otro servicio.
     if line.get("manualRoute") and len(line.get("route", [])) > 1:
-        return [list(point) for point in line["route"]]
-    base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[]))) if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
+        path=[list(point) for point in line["route"]]
+        return path if all(road_step_allowed(tuple(a),tuple(b),"bus") for a,b in zip(path,path[1:])) else None
+    base=route_between(tuple(line.get("from",[])),tuple(line.get("to",[])),mode="bus") if len(line.get("from",[]))==2 and len(line.get("to",[]))==2 else None
     if not base:return None
     stops=[]
     for building in state.get("buildings",[]):
@@ -3199,10 +3207,10 @@ def bus_line_route(line):
         if access<=1:stops.append((index,building["x"],building["y"]))
     route=[list(line["from"])]
     for _,x,y in sorted(set(stops)):
-        point=(x,y);segment=route_between(tuple(route[-1]),point)
+        point=(x,y);segment=route_between(tuple(route[-1]),point,mode="bus")
         if not segment:return None
         route.extend(segment[1:])
-    segment=route_between(tuple(route[-1]),tuple(line["to"]))
+    segment=route_between(tuple(route[-1]),tuple(line["to"]),mode="bus")
     if not segment:return None
     route.extend(segment[1:])
     return route
@@ -3511,6 +3519,7 @@ def commute_model():
         line["forecastMonthlyFareRevenue"]=0
         if not line["operational"]:line.update({"monthlyOperatingCost":0,"monthlyFareRevenue":0})
     key=(state["day"],state["jobs"],state["employment"],tuple(sorted(roads)),
+         tuple(sorted((a.get("x"),a.get("y"),a.get("roadType","local"),a.get("oneWay"),bool(a.get("busLane")),bool(a.get("truckRestricted")),round(float(a.get("quality",82)),1)) for a in state.get("roadAssets",[]))),
          tuple((b.get("x"),b.get("y"),b.get("kind"),b.get("occupants",0),b.get("status"),b.get("business",{}).get("status"),b.get("business",{}).get("jobSlots"),b.get("business",{}).get("wage"),tuple((r.get("id"),r.get("workerEligible"),r.get("status"),tuple(sorted(r.get("skills",{}).items())),r.get("expectedMonthlyWage")) for r in b.get("residents",[]))) for b in homes+sites),
          tuple((o.get("id"),o.get("status"),round(o.get("travelledDistance",0),1)) for o in state.get("supply",{}).get("orders",[]) if o.get("status")=="en tránsito"),
          tuple((b.get("id"),b.get("status"),b.get("buses"),b.get("fare"),tuple(map(tuple,b.get("route",[])))) for b in state.get("busRoutes",[])),
@@ -3839,6 +3848,7 @@ def commute_model():
     model["leisureTransitPassengers"]=model["leisureBusPassengers"]+model["leisureMetroPassengers"]+model["leisureRailPassengers"]+model["leisureTaxiPassengers"]
     model["leisureEmissionsKg"]=round(sum(t["dailyEmissionsKg"] for t in recreation),2)
     model["dailyTrips"] = sum(t["workers"] for t in commutes)
+    assign_parking_capacity(commutes)
     model["routes"]=commutes
     eligible_people=[person for home in homes for person in home.get("residents",[]) if person.get("workerEligible")]
     jobseekers=[person for person in eligible_people if person.get("status")=="buscando"]
@@ -3982,9 +3992,11 @@ def toggle_traffic_signal(x,y):
     return enabled
 
 ROAD_BUILD_COST=PROJECTS["road"]["cost"]
-def place_road_instantly(x,y):
-    """Construye un tramo municipal al instante, sin contratista, materiales ni proyecto."""
-    x=int(x);y=int(y)
+def place_road_instantly(x,y,road_type="local"):
+    """Instala un tramo vial tipado con su costo, capacidad y mantenimiento propios."""
+    x=int(x);y=int(y);road_type=str(road_type or "local")
+    spec=ROAD_TYPES.get(road_type)
+    if not spec:raise ValueError("Tipo de vía desconocido.")
     if not land_tile_unlocked(x,y):raise ValueError("La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir.")
     if is_water(x,y):raise ValueError("No se puede construir una calle sobre agua.")
     if [x,y] in state.get("roads",[]):raise ValueError("Ese tramo ya forma parte de la red vial.")
@@ -3993,20 +4005,44 @@ def place_road_instantly(x,y):
     if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state.get("roads",[])):
         raise ValueError("La calle debe conectar con la red existente.")
     reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"))
-    available=max(0,int(state.get("money",0))-reserved)
-    if available<ROAD_BUILD_COST:raise ValueError(f"Quedan $ {available}; construir este tramo cuesta $ {ROAD_BUILD_COST}.")
-    state["money"]-=ROAD_BUILD_COST
-    state.setdefault("roads",[]).append([x,y])
-    state.setdefault("roadAssets",[]).append({"x":x,"y":y,"quality":82,"monthlyCost":15})
-    state["monthlyExpenses"]=state.get("monthlyExpenses",0)+15
-    ev("Calle construida",f"Tramo {x+1},{y+1} habilitado al instante · inversión municipal $ {ROAD_BUILD_COST} · sin materiales ni cuadrilla.")
-    return ROAD_BUILD_COST
+    available=max(0,int(state.get("money",0))-reserved);cost=int(spec["cost"])
+    if available<cost:raise ValueError(f"Quedan $ {available}; construir {spec['label'].lower()} cuesta $ {cost}.")
+    state["money"]-=cost;state.setdefault("roads",[]).append([x,y])
+    asset={"x":x,"y":y,"roadType":road_type,"quality":82,"monthlyCost":spec["maintenance"],"oneWay":None,"busLane":False,"truckRestricted":False}
+    state.setdefault("roadAssets",[]).append(asset);state["monthlyExpenses"]=state.get("monthlyExpenses",0)+spec["maintenance"]
+    ev("Vía construida",f"{spec['label']} en {x+1},{y+1} · inversión $ {cost} · capacidad {spec['capacity']} · mantenimiento $ {spec['maintenance']}/mes.")
+    return cost
+
+
+def configure_road(x,y,setting,value):
+    x=int(x);y=int(y);asset=next((a for a in state.get("roadAssets",[]) if a.get("x")==x and a.get("y")==y),None)
+    if [x,y] not in state.get("roads",[]) or not asset:raise ValueError("Seleccioná un tramo vial construido.")
+    if setting=="oneWay":
+        if value not in (None,"","east","west","north","south"):raise ValueError("Sentido vial inválido.")
+        asset["oneWay"]=value or None
+    elif setting in ("busLane","truckRestricted"):
+        asset[setting]=bool(value)
+    else:raise ValueError("Ajuste vial desconocido.")
+    label={"east":"este","west":"oeste","north":"norte","south":"sur"}.get(asset.get("oneWay"),"doble sentido")
+    ev("Regla vial actualizada",f"Tramo {x+1},{y+1}: sentido {label}, carril de colectivo {'activo' if asset.get('busLane') else 'inactivo'} y restricción de camiones {'activa' if asset.get('truckRestricted') else 'inactiva'}.")
+    return asset
+
+
+def road_step_allowed(a,b,mode="car",assets=None):
+    dx,dy=b[0]-a[0],b[1]-a[1]
+    assets=assets if assets is not None else {(item.get("x"),item.get("y")):item for item in state.get("roadAssets",[])}
+    for point in (a,b):
+        asset=assets.get(tuple(point),{})
+        if mode=="truck" and asset.get("truckRestricted"):return False
+        direction=asset.get("oneWay")
+        if direction and ROAD_DIRECTION_DELTAS.get(direction)!=(dx,dy):return False
+    return True
 
 
 def traffic_factor(route, exclude_order=None):
     """Tiempo relativo por tramo: empleo local más camiones que ocupan ese tramo hoy."""
     if not route or len(route)<2:return 1.0
-    factors=[]
+    factors=[];assets={(item.get("x"),item.get("y")):item for item in state.get("roadAssets",[])}
     supply=state.get("supply",{})
     active=[o for o in supply.get("orders",[])+supply.get("marketOrders",[])
             if o is not exclude_order and o.get("status")=="en tránsito" and state["day"]>o.get("supplierReadyDay",o.get("orderedDay",0)) and len(o.get("route",[]))>1]
@@ -4014,21 +4050,72 @@ def traffic_factor(route, exclude_order=None):
         a=tuple(route[i]);b=tuple(route[i+1]);edge=tuple(sorted((a,b)))
         arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
         background=(_commute_cache or commute_model())["segmentFlow"].get(edge,0)
-        capacity=road_traffic_capacity(a,b)
+        capacity=road_traffic_capacity(a,b,assets)
         trucks=0
         for order in active:
             path=order.get("route",[]);idx=min(len(path)-2,max(0,int(order.get("travelledDistance",0))))
             if tuple(sorted((tuple(path[idx]),tuple(path[idx+1]))))==edge:trucks+=1
         ratio=(background+trucks)/capacity
-        factors.append(1+.35*ratio*ratio+2.4*max(0,ratio-1)**2)
+        speed=sum(ROAD_TYPES.get(assets.get(point,{}).get("roadType","local"),ROAD_TYPES["local"])["speed"] for point in (a,b))/2;factors.append(max(.48,(1+.35*ratio*ratio+2.4*max(0,ratio-1)**2)/speed))
     return sum(factors)/len(factors)
 
-def road_traffic_capacity(a,b):
+def assign_parking_capacity(trips):
+    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])};roads=[tuple(r) for r in state.get("roads",[])];road_set=set(roads);groups={};destinations={}
+    for trip in trips or []:
+        if trip.get("mode")!="auto" or trip.get("reason")=="regreso" or int(trip.get("vehicles",0))<=0:continue
+        destination=trip.get("to") or [];window=trip.get("departureWindowKey","midday")
+        if len(destination)!=2:continue
+        x,y=int(destination[0]),int(destination[1]);destination_key=(x,y);key=(x,y,window);row=groups.setdefault(key,{"x":x,"y":y,"window":window,"destination":destination_key,"demand":0,"trips":[]});row["demand"]+=max(0,math.ceil(trip.get("vehicles",0)));row["trips"].append(trip);destinations[destination_key]=None
+    rows=list(groups.values());road_pools={}
+    for x,y in roads:
+        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)));road_type=assets.get((x,y),{}).get("roadType","local");spaces=ROAD_TYPES.get(road_type,ROAD_TYPES["local"])["parking"]*(0 if degree>=3 else 1)
+        if spaces:road_pools[(x,y)]={"x":x,"y":y,"spaces":spaces}
+    garages=[b for b in state.get("buildings",[]) if b.get("serviceModel")=="parkingGarage" and b.get("status") in ("habilitado","operativo")];garage_destinations={}
+    for index,garage in enumerate(garages):
+        nearby=sorted(((abs(x-garage["x"])+abs(y-garage["y"]),y,x) for x,y in destinations if abs(x-garage["x"])+abs(y-garage["y"])<=4))
+        garage_destinations[index]=(nearby[0][2],nearby[0][1]) if nearby else None
+    windows=set(row["window"] for row in rows);garage_peaks={index:0 for index in range(len(garages))};peak_demand=peak_occupied=peak_shortfall=0
+    for window in windows:
+        street_remaining={point:pool["spaces"] for point,pool in road_pools.items()};garage_remaining={index:max(0,int(garage.get("parkingSpaces",24))) for index,garage in enumerate(garages)};stats={"demand":0,"occupied":0,"shortfall":0}
+        for row in sorted((row for row in rows if row["window"]==window),key=lambda item:(item["y"],item["x"])):
+            remaining=row["demand"];street_used=garage_used=0
+            nearby_streets=[]
+            for point in ((row["x"],row["y"]),(row["x"]+1,row["y"]),(row["x"]-1,row["y"]),(row["x"],row["y"]+1),(row["x"],row["y"]-1)):
+                pool=road_pools.get(point)
+                if pool and street_remaining.get(point,0)>0:nearby_streets.append((abs(point[0]-row["x"])+abs(point[1]-row["y"]),point[1],point[0],point))
+            for _,__,___,point in sorted(nearby_streets):
+                if not remaining:break
+                used=min(remaining,street_remaining.get(point,0));street_remaining[point]-=used;street_used+=used;remaining-=used
+            nearby_garages=[(abs(g["x"]-row["x"])+abs(g["y"]-row["y"]),g["y"],g["x"],i,g) for i,g in enumerate(garages) if garage_destinations.get(i)==row["destination"] and abs(g["x"]-row["x"])+abs(g["y"]-row["y"])<=4]
+            for _,__,___,index,garage in sorted(nearby_garages):
+                if not remaining:break
+                used=min(remaining,garage_remaining.get(index,0));garage_remaining[index]-=used;garage_used+=used;remaining-=used
+            occupied=street_used+garage_used;missing=max(0,row["demand"]-occupied);potential=sum(road_pools[p]["spaces"] for p in ((row["x"],row["y"]),(row["x"]+1,row["y"]),(row["x"]-1,row["y"]),(row["x"],row["y"]+1),(row["x"],row["y"]-1)) if p in road_pools)+sum(max(0,int(g.get("parkingSpaces",24))) for _,__,___,_,g in nearby_garages);search=min(18,2+math.ceil(missing/max(1,potential)*8)) if missing else 0
+            trip_spaces=occupied
+            for trip in row["trips"]:
+                used=min(math.ceil(trip.get("vehicles",0)),trip_spaces);trip_spaces-=used;trip.update({"parkingCapacity":potential,"parkingSpacesUsed":used,"parkingShortfall":missing,"parkingMinutes":2+search,"estimatedMinutes":trip.get("estimatedMinutes",0)+search,"trafficFactor":trip.get("trafficFactor",1)+search/10})
+            for _,__,___,index,garage in nearby_garages:garage_peaks[index]=max(garage_peaks[index],max(0,int(garage.get("parkingSpaces",24))-garage_remaining.get(index,0)))
+            stats["demand"]+=row["demand"];stats["occupied"]+=occupied;stats["shortfall"]+=missing
+        peak_demand=max(peak_demand,stats["demand"]);peak_occupied=max(peak_occupied,stats["occupied"]);peak_shortfall=max(peak_shortfall,stats["shortfall"])
+    municipal_occupied=monthly_fee=0
+    for index,garage in enumerate(garages):
+        occupied=garage_peaks[index];fee=max(0,int(garage.get("dailyFee",5)));municipal_occupied+=occupied;monthly_fee+=occupied*fee*30;garage["parkingOccupied"]=occupied;garage["parkingRevenue"]=occupied*fee*30
+    report={"demand":peak_demand,"capacity":sum(pool["spaces"] for pool in road_pools.values())+sum(max(0,int(garage.get("parkingSpaces",24))) for garage in garages),"occupied":peak_occupied,"shortfall":peak_shortfall,"municipalCapacity":sum(max(0,int(garage.get("parkingSpaces",24))) for garage in garages),"municipalOccupied":municipal_occupied,"monthlyFee":monthly_fee,"garages":[{"x":garage["x"],"y":garage["y"],"capacity":garage.get("parkingSpaces",24),"occupied":garage.get("parkingOccupied",0),"feePerDay":garage.get("dailyFee",5)} for garage in garages]}
+    state.setdefault("traffic",{})["parking"]=report;return report
+
+
+def zoning_road_access(x,y):
+    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])}
+    return any(abs(rx-x)+abs(ry-y)==1 and ROAD_TYPES.get(assets.get((rx,ry),{}).get("roadType","local"),ROAD_TYPES["local"])["access"] for rx,ry in state.get("roads",[]))
+
+def road_traffic_capacity(a,b,assets=None):
     """Capacidad relativa por tramo; calzadas deterioradas admiten menos flujo."""
     arterial=a[1]==10 or b[1]==10 or a[0]==12 or b[0]==12
-    assets={(x.get("x"),x.get("y")):float(x.get("quality",82)) for x in state.get("roadAssets",[])}
-    quality=min(assets.get(a,82),assets.get(b,82))
-    return (2.4 if arterial else 1.2)*max(.35,min(1,quality/82))
+    assets=assets if assets is not None else {(item.get("x"),item.get("y")):item for item in state.get("roadAssets",[])}
+    first=assets.get(tuple(a),{});second=assets.get(tuple(b),{});quality=min(float(first.get("quality",82)),float(second.get("quality",82)))
+    first_capacity=ROAD_TYPES.get(first.get("roadType","local"),ROAD_TYPES["local"])["capacity"];second_capacity=ROAD_TYPES.get(second.get("roadType","local"),ROAD_TYPES["local"])["capacity"]
+    scale=(first_capacity+second_capacity)/(2*1.2);bus_lane=any(item.get("busLane") for item in (first,second))
+    return (2.4 if arterial else 1.2)*scale*max(.35,min(1,quality/82))*(.78 if bus_lane else 1)
 
 def traffic_edge_key(a,b):
     return "|".join(f"{x},{y}" for x,y in sorted((tuple(a),tuple(b))))
@@ -4042,7 +4129,7 @@ def traffic_queue_delay(route,report,window):
     return round(sum(float(report.get("segments",{}).get(traffic_edge_key(a,b),{}).get("windows",{}).get(window,{}).get("delayMinutes",0)) for a,b in zip(route or [],(route or [])[1:])),1)
 
 def advance_traffic_queues(commutes,roads):
-    traffic=state.setdefault("traffic",{});queue_state=traffic.setdefault("queueState",{"lastDay":0,"queues":{}});day=int(state.get("day",1))
+    traffic=state.setdefault("traffic",{});queue_state=traffic.setdefault("queueState",{"lastDay":0,"queues":{}});day=int(state.get("day",1));road_assets={(asset.get("x"),asset.get("y")):asset for asset in state.get("roadAssets",[])}
     if queue_state.get("lastDay")==day and traffic.get("queueReport"):return traffic["queueReport"]
     windows=[row[0] for row in BUS_WINDOW_DEPARTURES];road_set={tuple(r) for r in roads};demand={}
     def add_route(route,window,amount):
@@ -4072,7 +4159,7 @@ def advance_traffic_queues(commutes,roads):
         try:a,b=(tuple(map(int,point.split(","))) for point in edge.split("|"))
         except (ValueError,TypeError):continue
         if a not in road_set or b not in road_set or abs(a[0]-b[0])+abs(a[1]-b[1])!=1:continue
-        capacity=road_traffic_capacity(a,b)*6;queue=float(previous.get(edge,0));periods={}
+        capacity=road_traffic_capacity(a,b,road_assets)*6;queue=float(previous.get(edge,0));periods={}
         for window in windows:
             arrivals=float(demand.get(window,{}).get(edge,0));before=queue;queue,delay=traffic_queue_step(queue,arrivals,capacity)
             periods[window]={"vehicles":round(arrivals,2),"queueBefore":round(before,2),"queueAfter":round(queue,2),"capacity":round(capacity,2),"delayMinutes":delay}
@@ -4181,7 +4268,7 @@ def process_market_orders():
     for order in state["supply"].get("marketOrders",[]):
         advance_factory_truck_return(order)
         if order.get("status")!="en tránsito":continue
-        route=route_between(tuple(order.get("source",(4,10))),(order["x"],order["y"]))
+        route=route_between(tuple(order.get("source",(4,10))),(order["x"],order["y"]),mode="truck")
         if not route:
             if order.get("statusCause")!="Sin acceso vial":ev("Entrega comercial demorada",f"{order['supplier']} no encuentra una ruta vial hasta {order['businessName']}; la mercadería espera una calle conectada.")
             order["route"]=[];order["statusCause"]="Sin acceso vial";order["arrivalDay"]=state["day"]+1;continue
@@ -4524,7 +4611,7 @@ def simulate_business_month(workforce):
     regional_report.update({"capturedUnits":regional_sold,"revenue":regional_revenue,"unmetOffer":max(0,regional_report["cityOffer"]-regional_sold),"localUnmet":local_unmet});state["regionalMarketReport"]=regional_report;state["regionalMarket"]["lastReport"]=regional_report;state["regionalMarket"]["history"].append({k:regional_report[k] for k in ("month","regionalDemand","cityOffer","capturedUnits","capturePct","revenue")});state["regionalMarket"]["history"]=state["regionalMarket"]["history"][-24:];refresh_private_investment_opportunity(regional_report,local_unmet)
     return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed,"regionalUnits":regional_sold,"regionalRevenue":regional_revenue}
 
-def route_to_project(project):return route_between((4,10),(project["x"],project["y"]))
+def route_to_project(project):return route_between((4,10),(project["x"],project["y"]),mode="truck")
 
 def storage_location(location_id):
     if not location_id or location_id=="yard":return {"id":"yard","x":4,"y":10,"capacity":state["supply"].get("yardCapacity",240),"label":"Patio de constructoras"}
@@ -4835,12 +4922,12 @@ def advance_zoned_development():
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
     for kind,shortage in (("home",supply["housing"]["shortage"]),("shop",supply["commercial"]["shortage"]),("factory",supply["industry"]["shortage"])):
         if shortage<=0:continue
-        zones=[z for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and any(abs(rx-z["x"])+abs(ry-z["y"])==1 for rx,ry in state.get("roads",[])) and route_between((z["x"],z["y"]),(4,10))]
+        zones=[z for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and zoning_road_access(z["x"],z["y"]) and route_between((z["x"],z["y"]),(4,10))]
         if not zones:continue
         zone=min(zones,key=lambda z:(z["y"],z["x"]))
         name=min(CONTRACTORS,key=lambda n:(sum(p.get("contractor")==n and p.get("status") not in ("finalizada","cancelada") for p in state.get("projects",[])),n))
         company=CONTRACTORS[name];spec=PROJECTS[kind];cost=round(spec["cost"]*company["price"]);zero={key:0 for key in MATERIAL_NAMES};advance=round(cost*.2)
-        project={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"ownerType":"private","ownerName":name,"cost":cost,"duration":construction_duration_days(kind,spec["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":"Demanda activa en parcela zonificada; inversión privada externa","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":zero.copy(),"materialsUsed":zero.copy(),"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":0,"zonedDevelopment":True,"retentionPct":0}
+        project={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"ownerType":"private","ownerName":name,"cost":cost,"duration":construction_duration_days(kind,spec["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":"Demanda activa en parcela zonificada; inversión privada externa","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":zero.copy(),"materialsUsed":zero.copy(),"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":0,"zonedDevelopment":True,"density":zone.get("density","low"),"retentionPct":0}
         if kind=="factory":
             project["operatingReserve"]=4200;project["industryType"]=next_factory_industry();project["label"]=FACTORY_LABELS[project["industryType"]]
         state["projects"].append(project);zone["status"]="en obra";reserved.add((zone["x"],zone["y"]))
@@ -5169,7 +5256,7 @@ def process_port_logistics():
             order["railArrived"]=True
             resolve_freight_arrival(order,port,line)
             continue
-        route=route_between((source["x"],source["y"]),(port["x"],port["y"]))
+        route=route_between((source["x"],source["y"]),(port["x"],port["y"]),mode="truck")
         if not route:order.update({"status":"esperando acceso","route":[]});continue
         order["route"]=route;order["roadRoute"]=[list(point) for point in route];distance=max(1,len(route)-1);order["status"]="en tránsito"
         order["travelledDistance"]=min(distance,order.get("travelledDistance",0)+6/max(1,traffic_factor(route)))
@@ -5433,7 +5520,7 @@ def municipal_cash_rates(economic):
     waste=state.get("waste",{}).get("report",{})
     workplaces=economic.get("workplaces",[])
     return {
-        "income":max(0,sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)),
+        "income":max(0,sum(r.get("monthlyFareRevenue",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyFareRevenue",0) for r in state.get("metroLines",[]) if r.get("operational"))+state.get("airportMonthlyIncome",0)+waste.get("recyclingRevenueMonth",0)+state.get("traffic",{}).get("parking",{}).get("monthlyFee",0)),
         "services":max(0,municipal_building_operations()+state.get("publicPayroll",0)+police_service_report(workplaces).get("monthlyOperatingCost",0)+fire_service_report(workplaces).get("monthlyOperatingCost",0)),
         "mobility":max(0,sum(r.get("monthlyOperatingCost",0) for r in state.get("busRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("taxiRoutes",[]) if r.get("operational"))+sum(r.get("monthlyOperatingCost",0) for r in state.get("metroLines",[]) if r.get("operational"))),
         "networks":max(0,utility.get("monthlyMaintenance",0)+waste.get("monthlyOperatingCost",0)+road_maintenance_report().get("monthlyRequired",0)),
@@ -5489,23 +5576,23 @@ def complete_construction(p, quality=82):
         ev("Puente vial habilitado",f"Se abrió el cruce del río a la altura {p['y']+1}; dos tramos, mantenimiento $160/mes. La extensión de calles al este ya es posible.")
     elif p["kind"]=="road":
         state["roads"].append([p["x"],p["y"]])
-        maintenance=round(70*(1.2-c["quality"]))
+        road_type=p.get("roadType","local");road_spec=ROAD_TYPES.get(road_type,ROAD_TYPES["local"]);maintenance=road_spec["maintenance"]
         state["monthlyExpenses"]+=maintenance
-        state["roadAssets"].append({"x":p["x"],"y":p["y"],"quality":quality,"monthlyCost":maintenance})
+        state["roadAssets"].append({"x":p["x"],"y":p["y"],"roadType":road_type,"quality":quality,"monthlyCost":maintenance,"oneWay":None,"busLane":False,"truckRestricted":False})
     elif p["kind"]=="home":
-        b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":1,"occupants":0,"capacity":28,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
+        b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":3 if p.get("density")=="high" else 1,"occupants":0,"capacity":64 if p.get("density")=="high" else 28,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
         ev("Vivienda terminada",f"La vivienda en {p['x']+1},{p['y']+1} superó la inspección y quedó disponible. Los hogares llegarán según demanda y empleos.")
     elif p["kind"]=="shop":
-        building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"jobSlots":24 if p.get("density")=="high" else 12,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
-        building["business"]=new_business(building,12,opening_capital);state["buildings"].append(building);state["jobs"]+=12
+        building["business"]=new_business(building,building["jobSlots"],opening_capital);state["buildings"].append(building);state["jobs"]+=building["jobSlots"]
     elif p["kind"]=="factory":
         industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
-        building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":20,"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":32 if p.get("density")=="high" else 20,"density":p.get("density","low"),"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         if industry_type=="concrete":name="Hormigonera de Puerto Claro"
         building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
-        building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":20,"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
-        state["buildings"].append(building);state["jobs"]+=20
+        building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":building["jobSlots"],"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
+        state["buildings"].append(building);state["jobs"]+=building["jobSlots"]
         if is_quarry:ev("Cantera local habilitada","20 puestos industriales y una reserva geológica finita de 2.400 unidades. La extracción depende de personal, electricidad, agua y tratamiento cloacal; los áridos se venden por el sistema de pedidos con camiones.")
         elif industry_type=="concrete":ev("Hormigonera local habilitada","20 puestos y producción de hormigón en proporción 2 áridos por 1 hormigón. Compra a la cantera local por ruta vial; personal y servicios limitan la producción.")
         elif is_sawmill:ev("Aserradero local habilitado","20 puestos y madera de una reserva forestal finita con regeneración mensual. La producción depende de personal, electricidad, agua y saneamiento; la madera se vende por pedidos con camión.")
@@ -5587,6 +5674,7 @@ def complete_construction(p, quality=82):
             building["funeralService"]={"burials":[]} if model["funeralType"]=="cemetery" else {"year":2026+(max(0,day-1)//360),"cremationsThisYear":0,"totalCremations":0,"history":[]}
             building["monthlyCost"]=model["monthlyCost"];operating_cost=model["monthlyCost"]
         elif model.get("beds"):building["hospitalWard"]={"beds":model["beds"],"ambulances":model.get("ambulances",0),"equippedDay":day}
+        if model.get("parkingSpaces"):building.update({"parkingSpaces":model["parkingSpaces"],"dailyFee":model.get("dailyFee",5),"parkingOccupied":0,"parkingRevenue":0})
         state["buildings"].append(building);state["jobs"]+=model["jobs"];state["monthlyExpenses"]+=operating_cost
         ev("Equipamiento público habilitado",f"{model['label']}: {model['jobs']} puestos, radio vial {model['radius']} calles. Operación $ {operating_cost}/mes; necesita empleados y redes para servir.")
     elif p["kind"]=="school":
@@ -5731,7 +5819,7 @@ def tick_one_day():
         road_maintenance=road_maintenance_report().get("monthlyRequired",0)
         waste_report=calculate_waste_balance()
         recycling_income=waste_report.get("recyclingRevenueMonth",0)
-        monthly_income+=recycling_income
+        monthly_income+=recycling_income+int(state.get("traffic",{}).get("parking",{}).get("monthlyFee",0))
         waste_cost=waste_report.get("monthlyOperatingCost",0)
         health_summary=health_service_report(economic["workplaces"]);health_cost=health_summary.get("monthlySupplyCost",0)+health_summary.get("hospital",{}).get("monthlyOperatingCost",0);education_cost=education_service_report(economic["workplaces"]).get("monthlySuppliesCost",0)
         # Cobrar alquileres antes de planificar ayuda; la transferencia solo atiende deuda vigente.
@@ -6980,12 +7068,16 @@ class Handler(BaseHTTPRequestHandler):
                     try:unlock_land_chunk(data.get("chunkX"),data.get("chunkY"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
+                if action=="configureRoad":
+                    try:configure_road(data.get("x"),data.get("y"),str(data.get("setting","")),data.get("value"))
+                    except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="toggleTrafficSignal":
                     try:toggle_traffic_signal(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="placeRoad":
-                    try:place_road_instantly(data.get("x"),data.get("y"))
+                    try:place_road_instantly(data.get("x"),data.get("y"),data.get("roadType","local"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action in POLICE_COSTS or action=="setPolicePriority":
@@ -7283,7 +7375,7 @@ class Handler(BaseHTTPRequestHandler):
                     instant_public=service_id in INSTANT_PUBLIC_MODELS and (SERVICE_MODELS.get(service_id) or {}).get("kind")==kind
                     if kind not in PROJECTS: self._send(400,{"error":"Proyecto o parcela inválidos"}); return
                     if kind=="road":
-                        try:place_road_instantly(x,y)
+                        try:place_road_instantly(x,y,data.get("roadType","local"))
                         except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
                         self._send(200,public_state(pid,use_cache=True));return
                     if not land_tile_unlocked(x,y):self._send(409,{"error":"La parcela pertenece a una zona bloqueada. Tocá el candado y pagá su desbloqueo antes de construir."});return
@@ -7303,7 +7395,7 @@ class Handler(BaseHTTPRequestHandler):
                     if any(b["x"]==x and b["y"]==y for b in state["buildings"]) or any(p["x"]==x and p["y"]==y for p in state["projects"]) or any(a["x"]==x and a["y"]==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])): self._send(409,{"error":"La parcela ya está ocupada"}); return
                     if kind!="road" and [x,y] in state["roads"]: self._send(409,{"error":"No se puede construir sobre una calle existente."}); return
                     if kind=="road" and [x,y] in state["roads"]: self._send(409,{"error":"Ese tramo ya forma parte de la red vial."}); return
-                    if kind!="road" and not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]): self._send(409,{"error":"La parcela necesita acceso a una calle terminada"}); return
+                    if kind not in ("road","bridge") and not zoning_road_access(x,y): self._send(409,{"error":"La parcela necesita una calle local o avenida al lado; las rutas y autopistas no dan acceso directo."}); return
                     if (instant_public or kind in ("bridge","airport","hotel","school","fireStation","powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill","recyclingPlant")) and not route_between((4,10),(x,y)): self._send(409,{"error":"La obra necesita una conexión vial continua con la ciudad."}); return
                     bus_line=None
                     if kind=="busStop":
@@ -7523,8 +7615,8 @@ class Handler(BaseHTTPRequestHandler):
                     waste["containers"].append({"id":f"bin-{x}-{y}","x":x,"y":y,"capacityTons":2,"storedTons":0,"installedDay":state["day"]});state["money"]-=cost
                     ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversión $350 · capacidad de recolección +0,15 t/día. Cada depósito conectado suma además una estación de transferencia con 12 t de almacenamiento y despacho de 1,5 t/día.")
                 elif action=="zone":
-                    kind=data.get("kind")
-                    if kind not in ("home","shop","factory","clear"):self._send(400,{"error":"Uso de suelo inválido"});return
+                    kind=data.get("kind");density=str(data.get("density","low"))
+                    if kind not in ("home","shop","factory","clear") or density not in ("low","high"):self._send(400,{"error":"Uso de suelo inválido"});return
                     cells=data.get("cells") or [[data.get("x",-1),data.get("y",-1)]]
                     if not isinstance(cells,list) or not cells or len(cells)>560:self._send(400,{"error":"La pintura debe incluir entre 1 y 560 parcelas."});return
                     normalized=[];seen=set()
@@ -7535,13 +7627,13 @@ class Handler(BaseHTTPRequestHandler):
                         if kind!="clear":
                             if is_water(x,y):self._send(409,{"error":"La franja incluye una parcela de agua."});return
                             if any(b.get("x")==x and b.get("y")==y for b in state["buildings"]) or any(p.get("x")==x and p.get("y")==y for p in state["projects"]) or any(a.get("x")==x and a.get("y")==y for a in state.get("abandoned",[])) or any(site["x"]==x and site["y"]==y for site in state.get("railStations",[])) or [x,y] in state["roads"]:self._send(409,{"error":f"La parcela {x+1},{y+1} está ocupada."});return
-                            if not any(abs(rx-x)+abs(ry-y)==1 for rx,ry in state["roads"]):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle terminada al lado."});return
+                            if not zoning_road_access(x,y):self._send(409,{"error":f"La parcela {x+1},{y+1} necesita una calle local o avenida al lado; las rutas y autopistas no dan acceso directo."});return
                         if (x,y) not in seen:normalized.append((x,y));seen.add((x,y))
                     zones=state.setdefault("zones",[]);before=len(zones);state["zones"]=[z for z in zones if (z.get("x"),z.get("y")) not in seen]
                     if kind=="clear":
                         ev("Permisos de suelo eliminados",f"Se quitaron permisos de zona en {before-len(state['zones'])} parcela(s).")
                     else:
-                        for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
+                        for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"density":density if kind=="home" else density,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
                         label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
                         ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). Con demanda y calle conectada, un promotor financia viviendas, comercios e industrias; el municipio no paga esas obras ni su mantenimiento.")
                         advance_zoned_development()

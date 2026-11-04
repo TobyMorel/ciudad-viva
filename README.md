@@ -1,6 +1,7 @@
-# Ciudad Viva · Alfa 0.271
+# Ciudad Viva · Alfa 0.272
 
-**Calles con estacionamiento y maniobras (0.271):** cada calle tiene veredas, espacios señalizados para estacionar y un carril de circulación por sentido. Los autos avanzan, maniobran marcha atrás para estacionarse y se incorporan otra vez al salir.
+**Jerarquía vial, estacionamiento y densidad urbana (0.272):** calles locales, avenidas, rutas regionales y autopistas tienen costos, velocidad, capacidad y mantenimiento distintos. Los viajes compiten por espacios de estacionamiento reales; los garajes municipales cobran por ocupación. Las reglas de sentido, carril de autobús y acceso de camiones cambian las rutas. Las zonas permiten elegir baja o alta densidad para viviendas, comercios e industrias.
+
 
 # Ciudad Viva · Alfa 0.270
 

@@ -1182,7 +1182,7 @@ export function createWorld(canvas){
   function makeWalker(color,shopping=false){
     const modelKey=`${color}|${shopping?'shopping':'walking'}`,recycled=walkerModelPool.get(modelKey);
     if(recycled?.length){const g=recycled.pop();if(!recycled.length)walkerModelPool.delete(modelKey);g.userData.shoppingBags?.forEach(mesh=>mesh.visible=false);trafficRoot.add(g);return g}
-    const g=new THREE.Group(),skin='#d8aa83',pants=['#405360','#47584b','#625260'][Math.abs(String(color).length+String(color).charCodeAt(0))%3],shoe='#384044',shoppingBags=[],arms=[],legs=[];g.scale.setScalar(.68);
+    const g=new THREE.Group(),skin='#d8aa83',pants=['#405360','#47584b','#625260'][Math.abs(String(color).length+String(color).charCodeAt(0))%3],shoe='#384044',shoppingBags=[],arms=[],legs=[];g.scale.setScalar(.4);
     const pelvis=roundedBox(g,.21,.15,.15,pants,0,.51,0,.055);roundedBox(g,.31,.34,.19,color,0,.75,0,.075);roundedBox(g,.19,.11,.2,'#e4d7bd',0,.59,.01,.035);
     for(const side of [-1,1]){
       const leg=new THREE.Group();leg.position.set(side*.065,.49,0);g.add(leg);roundedBox(leg,.13,.25,.135,pants,0,-.12,0,.05);
@@ -1199,7 +1199,7 @@ export function createWorld(canvas){
   }
   function makeBicycle(color='#287b80'){
     const recycled=bicycleModelPool.get(color);if(recycled?.length){const g=recycled.pop();if(!recycled.length)bicycleModelPool.delete(color);trafficRoot.add(g);return g}
-    const g=new THREE.Group(),rubber=mat('#26343a'),metal=mat('#bec6bd',{metalness:.55,roughness:.48}),darkMetal=mat('#4a5553',{metalness:.38,roughness:.58}),frame=mat(color,{metalness:.22,roughness:.56}),front=0.47,rear=-0.47,wheelY=.36,wheelRadius=.31,wheels=[];g.scale.setScalar(.6);
+    const g=new THREE.Group(),rubber=mat('#26343a'),metal=mat('#bec6bd',{metalness:.55,roughness:.48}),darkMetal=mat('#4a5553',{metalness:.38,roughness:.58}),frame=mat(color,{metalness:.22,roughness:.56}),front=0.47,rear=-0.47,wheelY=.36,wheelRadius=.31,wheels=[];g.scale.setScalar(.3);
     for(const z of [rear,front]){
       const tire=new THREE.Mesh(geometry('bicycle-tire',()=>new THREE.TorusGeometry(wheelRadius,.034,8,28)),rubber);tire.rotation.y=Math.PI/2;tire.position.set(0,wheelY,z);tire.castShadow=false;g.add(tire);wheels.push(tire);
       const rim=new THREE.Mesh(geometry('bicycle-rim',()=>new THREE.TorusGeometry(.267,.009,5,28)),metal);rim.rotation.y=Math.PI/2;rim.position.set(0,wheelY,z);g.add(rim);

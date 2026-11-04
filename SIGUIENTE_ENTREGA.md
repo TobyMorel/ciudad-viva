@@ -1,4 +1,8 @@
-## Alfa 0.247 · Escala, cámara y crecimiento urbano
+## Alfa 0.248 · Ajuste de escala peatonal
+
+Se redujo el tamaño de peatones y ciclistas para que queden por debajo de los autos en altura y ocupación visual. Se mantienen los modelos detallados, la animación al caminar y el pedaleo.
+
+## Alfa 0.247 · Cámara y crecimiento urbano
 
 Peatones y ciclistas bajan a una escala proporcionada frente a los autos. Los camiones de transferencia tienen un diseño propio; los edificios públicos se pueden girar en cuartos de vuelta; mantener la rueda central y arrastrar gira la cámara libremente. La tesorería acomoda sus cifras sin solaparlas y liquida los ingresos y egresos a medida que avanza el reloj. La vivienda zonificada se inicia con inversión privada o con fondos municipales libres cuando falta capital promotor.
 

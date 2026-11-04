@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.247",
+  "currentVersion": "0.248",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.248",
+      "date": "2026-11-04",
+      "title": "Escala corregida de peatones y ciclistas",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los peatones bajan a una escala visual acorde al tamaño de los autos.",
+        "Las bicicletas y sus ciclistas se reducen para no superar a los autos y conservar una proporción legible sobre las calles.",
+        "Se mantienen los detalles de los modelos y las animaciones de caminar y pedalear."
+      ],
+      "verification": "Corrección limitada a la escala raíz de los modelos 3D de peatones y ciclistas; no altera sus animaciones, recorridos ni lógica de movilidad."
+    },
     {
       "version": "0.247",
       "date": "2026-11-04",

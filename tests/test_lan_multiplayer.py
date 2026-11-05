@@ -7,6 +7,7 @@ import time
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 import server
@@ -148,6 +149,42 @@ class LANMultiplayerTests(unittest.TestCase):
             self.assertEqual(view["money"],placed["money"])
             self.assertTrue(any(b.get("serviceModel")=="generalHospital" for b in view["buildings"]))
             self.assertEqual(view["simulationEngine"],"offline.js")
+
+    def test_thirteenth_player_is_allowed_and_fourteenth_race_is_rejected(self):
+        self.request("/api/room/create", "host", {"name": "Anfitrión"})
+        for index in range(1, 11):
+            self.request("/api/room/join", f"guest-{index}",
+                         {"code": "TEST42", "name": f"Invitado {index}"})
+        self.request("/api/room/join", "guest-11",
+                     {"code": "TEST42", "name": "Invitado 11"})
+        self.assertEqual(len(server.player_list()), 12)
+
+        ready = threading.Barrier(3)
+
+        def join(player_id):
+            ready.wait(timeout=5)
+            try:
+                result = self.request("/api/room/join", player_id,
+                                      {"code": "TEST42", "name": player_id})
+                return 200, result
+            except HTTPError as error:
+                return error.code, json.loads(error.read())
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            last_players = [pool.submit(join, f"guest-{index}") for index in (12, 13)]
+            ready.wait(timeout=5)
+            results = [future.result(timeout=8) for future in last_players]
+
+        self.assertEqual(sorted(status for status, _ in results), [200, 429])
+        self.assertEqual(len(server.player_list()), 13)
+        rejected = next(body for status, body in results if status == 429)
+        self.assertIn("13 jugadores", rejected["error"])
+
+        admitted = next(player_id for player_id in ("guest-12", "guest-13")
+                        if player_id in server.state["players"])
+        reconnected = self.request("/api/room/join", admitted,
+                                   {"code": "TEST42", "name": admitted})
+        self.assertEqual(reconnected["online"], 13)
 
     def test_cursor_remains_visible_and_reports_player_view_when_leaving_map(self):
         self.request("/api/room/create", "host", {"name": "Ana"})

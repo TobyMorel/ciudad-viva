@@ -135,6 +135,7 @@ jobs:
             tests/test_school_commute_ui.mjs
             tests/test_build_preview_ui.mjs
             tests/test_property_acquisition_ui.mjs
+            tests/test_public_room_directory_ui.mjs
             tests/test_port_import_ui.mjs
             tests/test_funeral_ui.mjs
             tests/test_land_expansion_ui.mjs

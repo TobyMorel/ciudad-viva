@@ -75,6 +75,11 @@ def main():
         assert status == 200 and answer.get("ok"), f"No admite 13 jugadores: {status} {answer}"
         status, rooms = list_room()
         assert status == 200 and rooms[0]["players"] == 13 and rooms[0]["max_players"] == 13
+        status, answer = publish(secret, players=4)
+        assert status == 200 and answer.get("ok"), f"No se renovó el anuncio: {status} {answer}"
+        status, rooms = list_room()
+        assert status == 200 and len(rooms) == 1 and rooms[0]["players"] == 4, (
+            f"El heartbeat duplicó o no actualizó la sala: {status} {rooms}")
         status, answer = publish(secret, players=14)
         assert status == 400, f"Debe rechazar 14 jugadores: {status} {answer}"
         status, answer = publish(secrets.token_hex(32))

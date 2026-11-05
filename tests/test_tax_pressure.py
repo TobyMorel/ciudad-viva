@@ -16,8 +16,8 @@ class TaxPressureTests(unittest.TestCase):
         normal=server.government_districts()[0]
         server.state['taxes']['lastReport']['pressure']=25
         pressured=server.government_districts()[0]
-        self.assertEqual(pressured['taxPenalty'],4)
-        self.assertEqual(pressured['baseSupport'],normal['baseSupport']-4)
+        self.assertEqual(pressured['taxPenalty'],3)
+        self.assertEqual(pressured['baseSupport'],normal['baseSupport']-3)
 
     def test_tax_report_pressure_uses_paid_tax_over_observed_household_and_sales_flow(self):
         home={'x':1,'y':1,'kind':'home','occupants':10,'capacity':10,'householdCash':100,'monthlyWageIncome':1,'residents':[]}

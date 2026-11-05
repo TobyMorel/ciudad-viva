@@ -235,10 +235,19 @@ class PublicProxy(BaseHTTPRequestHandler):
                     self.wfile.write(chunk)
                     self.wfile.flush()
                 return
-            payload = response.read(6000000)
-            if len(payload) >= 6000000:
+            payload = response.read(32000000)
+            if len(payload) >= 32000000:
                 self._json(502, {"error": "Respuesta demasiado grande."})
                 return
+            if new_session and response.status == 200:
+                # Sincronizar la identidad de la UI con la identidad segura del proxy.
+                try:
+                    joined = json.loads(payload)
+                    if isinstance(joined, dict):
+                        joined["publicPlayerId"] = identity
+                        payload = json.dumps(joined, ensure_ascii=False).encode("utf-8")
+                except (ValueError, UnicodeDecodeError):
+                    pass
             self.send_response(response.status)
             self.send_header("Content-Type", response.getheader("Content-Type", "application/json"))
             self.send_header("Content-Length", str(len(payload)))

@@ -8,7 +8,7 @@ import {createWorld} from './world3d.js?v=0.282';
 import {smoothRemoteCursor} from './cursor_motion.js?v=0.282';
 import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.282';
 import {createOfflineWorkerAdapter} from './offline_client.js?v=0.282';
-import {startRtcHost,connectRtcRoom} from './public_rtc.js?v=0.282';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.282';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
 import {growthDemand} from './growth_demand.js?v=0.282';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
@@ -42,7 +42,7 @@ let pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).
 let rtcSession=null,rtcHost=null,rtcFallbackRoom=null;
 const unmodifiedFetch=window.fetch.bind(window);
 window.fetch=(resource,options)=>{
- if(rtcSession?.active&&typeof resource==='string'&&/^\/api\//.test(resource))
+ if(rtcSession&&typeof resource==='string'&&/^\/api\//.test(resource))
   return rtcSession.fetch(resource,options);
  return unmodifiedFetch(resource,options);
 };
@@ -946,10 +946,56 @@ async function enterRoom(create=false,code='',slotSelection={}){
     }catch(error){showToast('La sala LAN funciona, pero no se pudo publicar: '+error.message)}
    }else showToast(`Sala LAN creada · código ${reply.roomCode}`);
   }
-  poll(generation);return true
+  poll(generation);
+  if(!create&&!rtcSession&&location.hostname.toLowerCase().endsWith('.trycloudflare.com'))
+   setTimeout(upgradeTunnelToRtc,1200);
+  return true
  }catch(e){if(generation===modeGeneration)error.textContent=e.message;return false}
 }
 
+// También optimizar a WebRTC las sesiones abiertas inicialmente por enlace
+// Cloudflare. Si el P2P falla, mantener la sesión de túnel sin interrumpirla.
+let tunnelUpgradeRunning=false;
+async function upgradeTunnelToRtc(){
+ if(tunnelUpgradeRunning||rtcSession||gameMode!=='online'||
+    !location.hostname.toLowerCase().endsWith('.trycloudflare.com'))return;
+ tunnelUpgradeRunning=true;
+ let transport=null;
+ try{
+  // Obtener la configuración mientras el túnel aún funciona; queda cacheada
+  // y permite usar señalización aunque Cloudflare caiga posteriormente.
+  await loadRtcConfig();
+  const info=await unmodifiedFetch('/api/info',{cache:'no-store'}).then(r=>r.json());
+  if(!info?.rtcRoomId||!info?.rtcPublicKey)return;
+  const room={id:info.rtcRoomId,url:info.publicUrl||location.origin,
+   rtcEnabled:true,rtcPublicKey:info.rtcPublicKey};
+  transport=await connectRtcRoom(room,{timeoutMs:11000,onDisconnected:()=>{
+   setTimeout(()=>{if(rtcSession&&!rtcSession.active)rtcFallback(rtcFallbackRoom)},3500);
+  }});
+  const name=document.getElementById('playerName').value.trim()||
+    localStorage.getItem('ciudad-viva-player-name')||'Jugador';
+  const join=await transport.fetch('/api/room/join',{method:'POST',body:JSON.stringify({name})});
+  if(!join.ok)return;
+  const reply=await join.json();
+  if(!reply.publicPlayerId)return;
+  const stateResponse=await transport.fetch('/api/state');
+  if(!stateResponse.ok)return;
+  const state=await stateResponse.json();
+  if(!state||gameMode!=='online')return;
+  // Cambiar ruta de forma atómica. Los sondeos antiguos quedan invalidados
+  // por modeGeneration y no pueden sobreescribir el estado nuevo.
+  const generation=++modeGeneration;
+  rtcSession=transport;rtcFallbackRoom=room;
+  transport=null;
+  pid=reply.publicPlayerId;sessionStorage.setItem('cv-player',pid);
+  S=state;
+  startCursorStream();renderUI();world.invalidate();draw();
+  showToast('Conexión mejorada: WebRTC directo, Cloudflare de respaldo.');
+  poll(generation);
+ }catch(error){
+  console.info('WebRTC no disponible desde el túnel; se mantiene Cloudflare.',error);
+ }finally{transport?.close();tunnelUpgradeRunning=false}
+}
 async function connectPublicRoom(room){
  const error=document.getElementById('modeError');
  const name=document.getElementById('playerName').value.trim();

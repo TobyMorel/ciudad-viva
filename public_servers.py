@@ -47,7 +47,7 @@ class PublicDirectory:
         parsed = urlsplit(self.url)
         self.enabled = bool(self.url and self.key and parsed.scheme == "https"
                             and (parsed.hostname or "").endswith(".supabase.co"))
-        self._checked_remote = 0.0
+        self._checked_remote = float('-inf')  # La primera consulta remota debe ser inmediata.
         self._config_lock = threading.Lock()
 
     def ensure_config(self):

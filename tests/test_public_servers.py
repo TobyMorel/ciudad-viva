@@ -1,10 +1,13 @@
 """La puerta pública no expone APIs administrativas ni identidades ajenas."""
 import http.client
+import io
 import json
 import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
+from urllib.error import URLError
 
 from public_servers import PublicDirectory, PublicProxy
 
@@ -14,7 +17,64 @@ class PublicHostingSecurity(unittest.TestCase):
         with TemporaryDirectory() as folder:
             directory = PublicDirectory(folder)
             self.assertFalse(directory.enabled)
-            self.assertEqual(directory.browse()["rooms"], [])
+            with patch("public_servers.urlopen", side_effect=URLError("sin Internet")):
+                self.assertEqual(directory.browse()["rooms"], [])
+
+    def test_directory_fetches_public_config_without_installing_new_exe(self):
+        with TemporaryDirectory() as folder:
+            directory = PublicDirectory(folder)
+            config = {"supabaseUrl": "https://ciudadviva-demo.supabase.co",
+                      "supabaseAnonKey": "sb_publishable_test_example"}
+            with patch("public_servers.urlopen", return_value=io.BytesIO(json.dumps(config).encode())) as get:
+                self.assertTrue(directory.ensure_config())
+                self.assertEqual(directory.url, config["supabaseUrl"])
+                self.assertEqual(directory.key, config["supabaseAnonKey"])
+                self.assertTrue(directory.enabled)
+                self.assertEqual(get.call_count, 1)
+                self.assertTrue(directory.ensure_config())
+                self.assertEqual(get.call_count, 1)
+
+    def test_directory_rejects_untrusted_remote_configuration(self):
+        for config in ([], {"supabaseUrl": "http://evil.example", "supabaseAnonKey": "abc"},
+                       {"supabaseUrl": "https://evil.example", "supabaseAnonKey": "abc"},
+                       {"supabaseUrl": "https://ciudadviva.supabase.co", "supabaseAnonKey": ""}):
+            with self.subTest(config=config), TemporaryDirectory() as folder:
+                directory = PublicDirectory(folder)
+                with patch("public_servers.urlopen", return_value=io.BytesIO(json.dumps(config).encode())):
+                    self.assertFalse(directory.ensure_config())
+                    self.assertFalse(directory.enabled)
+
+    def test_edge_publish_requires_random_secret_without_user_accounts(self):
+        with TemporaryDirectory() as folder:
+            directory = PublicDirectory(folder)
+            directory.enabled = True
+            room = {
+                "id": "4a8cf9a4-22d6-4f1f-a0b6-c8acb23a8d99",
+                "token": "ab" * 32, "city": "Ciudad del Puerto",
+                "host_name": "Anfitrión", "players": 2,
+                "url": "https://ciudad-viva-demo.trycloudflare.com",
+            }
+            with patch.object(directory, "_request", return_value={"ok": True}) as request:
+                directory.publish(room)
+                args = request.call_args.args
+                self.assertEqual(args[:2], ("/functions/v1/public-rooms", "POST"))
+                self.assertEqual(args[2]["action"], "publish")
+                self.assertEqual(args[2]["token"], room["token"])
+                self.assertNotIn("owner_id", args[2])
+                directory.unpublish(room["id"], room["token"])
+                self.assertEqual(request.call_args.args[2]["action"], "unpublish")
+
+    def test_public_browse_filters_untrusted_hosts(self):
+        with TemporaryDirectory() as folder:
+            directory = PublicDirectory(folder)
+            directory.enabled = True
+            safe = {"id": "a", "city": "Puerto",
+                    "host_name": "Pepe", "join_url": "https://good.trycloudflare.com",
+                    "players": 1, "max_players": 12}
+            evil = {**safe, "id": "b", "join_url": "https://phishing.example"}
+            with patch.object(directory, "_request", return_value=[safe, evil]):
+                rooms = directory.browse()["rooms"]
+            self.assertEqual([x["id"] for x in rooms], ["a"])
 
     def test_public_proxy_rejects_admin_and_unauthenticated_calls(self):
         class Controller:
@@ -37,6 +97,11 @@ class PublicHostingSecurity(unittest.TestCase):
                 ("GET", "/api/saves", None, 403),
                 ("GET", "/%61pi/saves", None, 403),
                 ("GET", "/api/%73aves", None, 403),
+                ("GET", "/%2561pi/saves", None, 403),
+                ("GET", "/api%2Fsaves", None, 403),
+                ("GET", "/server.py", None, 403),
+                ("GET", "/public_directory.json", None, 403),
+                ("GET", "/%252e%252e/api/saves", None, 403),
                 ("GET", "/api/public/status", None, 403),
                 ("POST", "/api/room/create", "{}", 403),
                 ("POST", "/api/save", "{}", 403),

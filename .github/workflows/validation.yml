@@ -24,7 +24,7 @@ jobs:
       - name: Sintaxis y JSON
         id: syntax
         run: |
-          python -m py_compile server.py desktop_app.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py rail_freight.py essential_services.py
+          python -m py_compile server.py public_servers.py scripts/smoke_public_directory.py desktop_app.py taxi_passengers.py growth_demand.py bus_nonwork.py metro.py rail_bus_intermodal.py rail_sites.py rail_freight.py essential_services.py
           node --check offline.js
           node --check taxi_passengers.js
           node --check bus_nonwork.js
@@ -58,6 +58,7 @@ jobs:
           python -m py_compile shared_engine.py
           node --check cityGuide.js
           node --check reference-ui.js
+          python -m json.tool public_directory.json > /dev/null
           python -m json.tool release_notes.json > /dev/null
           python -m json.tool offline_seed.json > /dev/null
       - name: Regresión Online
@@ -65,6 +66,8 @@ jobs:
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - name: "Directorio Supabase en vivo: publicar, leer, proteger y retirar"
+        run: python scripts/smoke_public_directory.py
       - name: Regresión Offline
         run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tutorial.mjs tests/test_city_insights.mjs tests/test_city_spectacle.mjs tests/test_living_city.mjs tests/test_city_immersive.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs
       - name: Cursores multijugador y presencia
@@ -75,7 +78,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.279
+          name: ciudad-viva-alfa-0.280
           path: |
             .
             !.git/**
@@ -151,7 +154,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.279-responsive
+          name: ciudad-viva-alfa-0.280-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

@@ -1,3 +1,9 @@
+# Ciudad Viva · Alfa 0.280
+
+**Preparación del directorio global sin configuración manual (0.280):** el ejecutable consulta automáticamente la configuración pública de Supabase publicada por Ciudad Viva; los anfitriones no tienen que introducir URL o claves en su PC. También se pueden buscar salas desde la web en GitHub Pages, aunque sólo el .exe crea un servidor alojado localmente. Seguridad del proxy reforzada para impedir cualquier acceso a API administrativas mediante rutas codificadas. Las partidas y guardados siguen exclusivamente en la PC del anfitrión. **Directorio global activado:** se usa el proyecto CiudadViva y su clave publicable, sin instalar ni configurar servicios en las computadoras de los jugadores. Los anuncios se autorizan por un token secreto de cada sala mediante una Edge Function de Supabase, sin cuentas de usuario. Consulta `PUBLIC_SERVERS.md`.
+
+**Esta versión no convierte Cloudflare Quick Tunnels en infraestructura de producción:** los enlaces automáticos son experimentales y requieren probarse desde otra red real.
+
 # Ciudad Viva · Alfa 0.279
 
 **Servidores públicos alojados por jugadores (0.279, experimental):** el .exe de Windows permite abrir una sala LAN o compartirla por un enlace HTTPS público temporal sin VPN ni abrir puertos. La partida, simulación y guardados siguen en el equipo anfitrión. El .exe incorpora cloudflared y un proxy que bloquea las operaciones administrativas a visitantes de Internet. La pantalla Servidores públicos consulta Supabase cuando esté configurado el directorio común; sin esa configuración, la sala se comparte por enlace directo y no aparece en el listado. Los Quick Tunnels no están destinados a producción. Ver `PUBLIC_SERVERS.md`.

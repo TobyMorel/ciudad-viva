@@ -1,18 +1,18 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.279';
-import {setupCityCompanion} from './city-companion.js?v=0.279';
-import {setupCinematicCamera} from './city_cinema.js?v=0.279';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.279';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.279';
-import {createWorld} from './world3d.js?v=0.279';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.279';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.279';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.279';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.280';
+import {setupCityCompanion} from './city-companion.js?v=0.280';
+import {setupCinematicCamera} from './city_cinema.js?v=0.280';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.280';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.280';
+import {createWorld} from './world3d.js?v=0.280';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.280';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.280';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.280';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.279';
+import {growthDemand} from './growth_demand.js?v=0.280';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.279';
-import {ROAD_TYPES} from './road_network.js?v=0.279';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.280';
+import {ROAD_TYPES} from './road_network.js?v=0.280';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -777,7 +777,7 @@ function showBuildHelp(button,temporary=false){
  buildHelp.replaceChildren();const heading=document.createElement('b'),description=document.createElement('p'),list=document.createElement('ul'),hint=document.createElement('small');heading.textContent=title;description.textContent=paragraph;for(const value of [...new Set(items)]){const li=document.createElement('li');li.textContent=value;list.append(li)}hint.textContent=['busStop','taxiStop'].includes(kind)?'Elegí un depósito en el mapa y después marcá las paradas en orden.':kind==='bridge'?'Elegí una celda x=24 del cauce frente a una calle conectada en x=23.':'Seleccioná esta opción y tocá una parcela disponible para ubicarla.';buildHelp.append(heading,description,list,hint);buildHelp.hidden=false;const r=button.getBoundingClientRect(),w=Math.min(300,innerWidth-24);buildHelp.style.width=`${w}px`;const left=Math.max(12,Math.min(r.left,innerWidth-w-12));buildHelp.style.left=`${left}px`;const h=buildHelp.getBoundingClientRect().height,below=r.bottom+8,top=below+h<=innerHeight-8?below:Math.max(8,r.top-h-8);buildHelp.style.top=`${top}px`;clearTimeout(buildHelpTimer);if(temporary)buildHelpTimer=setTimeout(()=>buildHelp.hidden=true,2600)}
 document.querySelectorAll('.tool').forEach(b=>{b.addEventListener('click',()=>{playSound('tool');tool=b.dataset.tool;updateDemolishTool();toolVariant=b.dataset.model||null;toolIndustry=b.dataset.industry||null;toolRoadType=ROAD_TYPES[b.dataset.roadType]?b.dataset.roadType:'local';toolDensity=['low','medium','high'].includes(b.dataset.density)?b.dataset.density:'low';hoverServiceTile=null;closePopup();companion?.previewTool(tool,toolVariant);document.querySelectorAll('.tool').forEach(x=>x.classList.toggle('active',x===b));canvas.style.cursor=tool==='inspect'?'crosshair':'cell';if(tool==='busStop')showToast('Tocá el depósito de colectivos en el mapa y después marcá sus paradas sobre calles.');if(tool==='taxiStop')showToast('Tocá el depósito de taxis en el mapa y después marcá su circuito.');if(tool==='metroLink'||tool==='railLink'){railLinkDraft=null;showToast('Tocá dos estaciones físicas terminadas para construir una línea ferroviaria.')}if(tool==='metroStation'||tool==='railStation')showToast('Elegí una parcela libre con calle adyacente para construir la estación 3D.')});b.addEventListener('pointerenter',()=>showBuildHelp(b));b.addEventListener('pointerleave',()=>{if(document.activeElement!==b)buildHelp.hidden=true});b.addEventListener('focus',()=>showBuildHelp(b));b.addEventListener('blur',()=>buildHelp.hidden=true);b.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')showBuildHelp(b,true)})});
 document.querySelectorAll('.speed').forEach(b=>b.onclick=()=>send('speed',{value:+b.dataset.speed}));document.getElementById('pauseBtn').onclick=()=>send('pause');document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(4,zoom*1.15);playSound('zoom');setCameraView()};document.getElementById('rotateLeft').onclick=()=>{rotation--;setCameraView()};document.getElementById('rotateRight').onclick=()=>{rotation++;setCameraView()};document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(.43,zoom/1.15);playSound('zoom');setCameraView()};
-document.getElementById('saveBtn').onclick=async()=>{try{await api('/api/save',{});showToast('Ciudad guardada. La partida compartida está actualizada.')}catch(e){showToast(e.message)}};document.getElementById('loadBtn').onclick=async()=>{if(gameMode==='offline'){saveChoiceReturnToGame=true;document.getElementById('modeBackdrop').classList.remove('hidden');await showSaveChoices('offline');return}try{S=await api('/api/load',{});renderUI();draw();showToast('Ciudad guardada cargada.')}catch(e){showToast(e.message)}};document.getElementById('newBtn').onclick=async()=>{if(!confirm('¿Iniciar una nueva ciudad? El estado guardado existente se conserva.'))return;const button=document.getElementById('newBtn');button.disabled=true;try{if(gameMode==='offline'){const previousSlot=activeOfflineSlot;document.getElementById('newSlotName').value='Nueva partida';await startOffline();if(activeOfflineSlot===previousSlot)return}else S=await api('/api/action',{action:'new'});closeAllScreens();playSound('tap');draw();showToast('Nueva ciudad iniciada. El mapa está listo.')}catch(e){showToast(e.message)}finally{button.disabled=false}};document.getElementById('copyInvite').onclick=async()=>{const ips=window.cvInfo?.ips||[],base=window.cvInfo?.publicUrl|| (ips.length?`http://${ips[0]}:${window.cvInfo.port}/`:`${location.protocol}//${location.host}/`),url=window.cvPublicInvite||(window.cvInfo?.publicUrl?base.replace(/\/$/,'')+'/?join=1':window.cvInfo?.roomCode?base+'?join=1&code='+encodeURIComponent(window.cvInfo.roomCode):base);try{await navigator.clipboard.writeText(url);showToast('Invitación LAN copiada: '+url)}catch{showToast('Dirección para compartir: '+url)}};
+document.getElementById('saveBtn').onclick=async()=>{try{await api('/api/save',{});showToast('Ciudad guardada. La partida compartida está actualizada.')}catch(e){showToast(e.message)}};document.getElementById('loadBtn').onclick=async()=>{if(gameMode==='offline'){saveChoiceReturnToGame=true;document.getElementById('modeBackdrop').classList.remove('hidden');await showSaveChoices('offline');return}try{S=await api('/api/load',{});renderUI();draw();showToast('Ciudad guardada cargada.')}catch(e){showToast(e.message)}};document.getElementById('newBtn').onclick=async()=>{if(!confirm('¿Iniciar una nueva ciudad? El estado guardado existente se conserva.'))return;const button=document.getElementById('newBtn');button.disabled=true;try{if(gameMode==='offline'){const previousSlot=activeOfflineSlot;document.getElementById('newSlotName').value='Nueva partida';await startOffline();if(activeOfflineSlot===previousSlot)return}else S=await api('/api/action',{action:'new'});closeAllScreens();playSound('tap');draw();showToast('Nueva ciudad iniciada. El mapa está listo.')}catch(e){showToast(e.message)}finally{button.disabled=false}};document.getElementById('copyInvite').onclick=async()=>{const ips=window.cvInfo?.ips||[],base=window.cvInfo?.publicUrl|| (ips.length?`http://${ips[0]}:${window.cvInfo.port}/`:`${location.protocol}//${location.host}/`),url=window.cvPublicInvite||(window.cvInfo?.publicUrl?base.replace(/\/$/,'')+'/?join=1':window.cvInfo?.roomCode?base+'?join=1&code='+encodeURIComponent(window.cvInfo.roomCode):base);try{await navigator.clipboard.writeText(url);showToast('Invitación copiada: '+url)}catch{showToast('Dirección para compartir: '+url)}};
 window.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const t={1:'inspect',2:'road',3:'zoneHome',4:'zoneShop',i:'zoneFactory',o:'zoneOffice',5:'civic',y:'school',6:'depot',7:'busGarage',8:'port',9:'airport',0:'hotel',b:'fireStation',f:'powerPlant',u:'waterPlant',v:'wastewaterPlant',c:'wasteContainer',l:'landfill',r:'recyclingPlant'}[e.key];if(t)document.querySelector(`.tool[data-tool="${t}"]`).click();if(e.key.toLowerCase()==='q'){rotation--;setCameraView()}if(e.key.toLowerCase()==='e'){rotation++;setCameraView()}if(e.key==='Escape'){tool='inspect';document.querySelector('.tool[data-tool="inspect"]').click()}});window.addEventListener('resize',()=>{resizeCityReportRail();draw()});document.addEventListener('fullscreenchange',resizeCityReportRail);
 async function poll(generation=modeGeneration){
  if(!gameMode||generation!==modeGeneration)return;
@@ -917,14 +917,43 @@ document.getElementById('newSlotButton').addEventListener('click',()=>saveChoice
 document.getElementById('lanBack').addEventListener('click',()=>{document.getElementById('lanChoices').classList.add('hidden');document.getElementById('modeOptions').classList.remove('hidden');document.getElementById('modeTitle').textContent='¿Cómo querés jugar?';document.getElementById('modeIntro').textContent='Elegí una modalidad para iniciar la ciudad.'});
 document.getElementById('createRoom').addEventListener('click',()=>{if(document.getElementById('playerName').value.trim().length<2){document.getElementById('modeError').textContent='Elegí tu nombre antes de abrir una sala.';return}publicHostingRequested=false;showSaveChoices('online')});
 document.getElementById('createPublicRoom').addEventListener('click',()=>{if(document.getElementById('playerName').value.trim().length<2){document.getElementById('modeError').textContent='Elegí tu nombre antes de abrir una sala pública.';return}publicHostingRequested=true;showSaveChoices('online')});
+async function fetchPublicDirectory(){
+ // El .exe usa su backend local; desde GitHub Pages se consulta la API pública
+ // del mismo proyecto Supabase, sin exponer ninguna clave de administrador.
+ try{
+  const response=await fetch('/api/public/rooms',{cache:'no-store'});
+  if(response.ok)return await response.json();
+ }catch{}
+ let config;
+ try{
+  const response=await fetch('public_directory.json',{cache:'no-store'});
+  if(!response.ok)throw Error();
+  config=await response.json();
+ }catch{throw Error('Todavía no está configurado el directorio global de servidores.')}
+ const base=String(config?.supabaseUrl||''),key=String(config?.supabaseAnonKey||'');
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(base)||!key)
+  return {rooms:[],configured:false,message:'El directorio global todavía no fue activado.'};
+ const cutoff=new Date(Date.now()-90000).toISOString();
+ const params=new URLSearchParams({
+  select:'id,city,host_name,join_url,players,max_players,last_seen',
+  last_seen:'gte.'+cutoff,order:'last_seen.desc',limit:'60'
+ });
+ const headers={apikey:key};
+ if(!key.startsWith('sb_publishable_'))headers.Authorization='Bearer '+key;
+ const response=await fetch(base.replace(/\/$/,'')+'/rest/v1/public_rooms?'+params.toString(),{headers,cache:'no-store'});
+ if(!response.ok)throw Error('No se pudo consultar Supabase (HTTP '+response.status+').');
+ const rows=await response.json();
+ return {configured:true,rooms:(Array.isArray(rows)?rows:[]).filter(row=>/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(row.join_url||'')).map(row=>({
+  id:row.id,name:row.city||'Ciudad Viva',host:row.host_name||'Anfitrión',
+  url:row.join_url,players:row.players||1,capacity:row.max_players||12
+ }))};
+}
 document.getElementById('browsePublicRoom').addEventListener('click',async()=>{
  const list=document.getElementById('roomList');
  list.classList.remove('hidden');document.getElementById('lanJoinForm').classList.add('hidden');
  list.textContent='Buscando servidores públicos…';
  try{
-  const response=await fetch('/api/public/rooms',{cache:'no-store'});
-  const directory=await response.json();
-  if(!response.ok)throw Error(directory.error||'Directorio temporalmente inaccesible.');
+  const directory=await fetchPublicDirectory();
   list.replaceChildren();
   for(const room of directory.rooms||[]){
    const button=document.createElement('button');button.type='button';button.className='room-result';

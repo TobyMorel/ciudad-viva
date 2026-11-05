@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.279",
+  "currentVersion": "0.280",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.280",
+      "date": "2026-11-05",
+      "title": "Directorio global autoconfigurable para ejecutables y GitHub Pages",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El ejecutable puede descargar automáticamente la URL y clave pública de Supabase desde la configuración oficial de Ciudad Viva, sin modificar nada en cada PC.",
+        "La pantalla Servidores públicos también consulta directamente Supabase desde GitHub Pages, con filtros por actividad y enlace HTTPS validado.",
+        "El proxy de acceso externo rechaza rutas codificadas, archivos reservados y operaciones administrativas; se agregan pruebas contra rutas con doble codificación.",
+        "Las sesiones de invitados pueden mantenerse durante partidas largas y el servidor libera sesiones expiradas.",
+        "Las ciudades, simulación y guardados siguen siendo locales. Se activa el proyecto CiudadViva en Supabase con políticas RLS; una Edge Function controla anuncios por secreto de sala sin exigir cuentas a los jugadores.",
+        "La conexión mediante Quick Tunnel continúa siendo experimental y no garantiza disponibilidad comercial permanente."
+      ],
+      "verification": "Supabase y la función de publicación están desplegadas. CI verificará el directorio en vivo; falta la prueba de túnel en dos redes reales."
+    },
     {
       "version": "0.279",
       "date": "2026-11-05",

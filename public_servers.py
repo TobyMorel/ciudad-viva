@@ -193,7 +193,8 @@ class PublicProxy(BaseHTTPRequestHandler):
         if path == "/api/info":
             self._json(200, {"roomOpen": self.controller.room_info().get("roomOpen", False),
                              "publicUrl": self.controller.url, "ips": [],
-                             "rtcRoomId": self.controller.room_id})
+                             "rtcRoomId": self.controller.room_id,
+                             "rtcPublicKey": self.controller.rtc_public_key})
             return
         if path == "/api/public/config":
             directory = self.controller.directory

@@ -177,7 +177,10 @@ class PublicProxy(BaseHTTPRequestHandler):
         if path in ("/api/state", "/api/sync", "/api/cursors", "/api/cursors/stream") and not identity:
             self._json(401, {"error": "Primero tenés que entrar a la sala pública."})
             return
-        self._forward("GET", identity=identity, streamed=path == "/api/cursors/stream")
+        if path == "/api/cursors/stream":
+            self._json(501, {"error": "El túnel público no admite SSE. La interfaz usa sondeo HTTP de cursores."})
+            return
+        self._forward("GET", identity=identity)
 
     def do_POST(self):
         path = unquote(urlsplit(self.path).path)

@@ -6,6 +6,8 @@ La persona que crea una partida usa **Crear servidor público** en el ejecutable
 
 La versión Windows incluye el programa auxiliar `cloudflared.exe`. Al publicar, la app abre un túnel saliente hacia un proxy HTTP local que expone sólo los recursos y acciones que necesita un invitado. El anfitrión no tiene que abrir puertos del router ni instalar una VPN. Se genera un enlace HTTPS temporal para invitar a otras personas. Al cerrar el ejecutable se cierra el túnel.
 
+**Cursores por Internet:** los túneles rápidos no admiten SSE, por eso la versión pública usa el sondeo HTTP periódico del juego; las salas LAN conservan SSE para menor latencia.
+
 **Advertencia:** este primer soporte usa Cloudflare Quick Tunnels. Cloudflare indica que son para desarrollo/pruebas, no para producción, y no ofrecen una URL estable ni garantías de continuidad. Para sostener un directorio público a gran escala debe adoptarse un servicio de túnel/retransmisión adecuado para producción. La simulación puede seguir alojada exclusivamente en la PC del anfitrión.
 
 ## Directorio global de salas (configuración única)

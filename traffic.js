@@ -1,6 +1,6 @@
 // Capacidades relativas por tramo. Los corredores estructurales soportan el doble
 // de flujo; el deterioro de la calzada reduce la capacidad disponible.
-import {ROAD_TYPES} from './road_network.js?v=0.277';
+import {ROAD_TYPES} from './road_network.js?v=0.278';
 export const TRAFFIC_TIME_WINDOWS=['early','morningPeak','dayMorning','dayNoon','midday','afternoon','eveningPeak','evening','late'];
 export const trafficEdgeKey=(a,b)=>[`${a[0]},${a[1]}`,`${b[0]},${b[1]}`].sort().join('|');
 const roadAssetCache=new WeakMap();

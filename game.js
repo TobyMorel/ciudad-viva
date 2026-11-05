@@ -1,18 +1,18 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.277';
-import {setupCityCompanion} from './city-companion.js?v=0.277';
-import {setupCinematicCamera} from './city_cinema.js?v=0.277';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.277';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.277';
-import {createWorld} from './world3d.js?v=0.277';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.277';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.277';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.277';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.278';
+import {setupCityCompanion} from './city-companion.js?v=0.278';
+import {setupCinematicCamera} from './city_cinema.js?v=0.278';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.278';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.278';
+import {createWorld} from './world3d.js?v=0.278';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.278';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.278';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.278';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.277';
+import {growthDemand} from './growth_demand.js?v=0.278';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.277';
-import {ROAD_TYPES} from './road_network.js?v=0.277';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.278';
+import {ROAD_TYPES} from './road_network.js?v=0.278';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -26,7 +26,9 @@ window.__ciudadVivaSetZoomForDiagnostics=value=>{zoom=Math.max(.43,Math.min(4,Nu
 window.__ciudadVivaPanForDiagnostics=(dx,dy)=>{panX+=Number(dx)||0;panY+=Number(dy)||0;draw()};
 window.__ciudadVivaEntryTraffic=()=>world.getEntryTrafficRoutes();
 window.__ciudadVivaMode=()=>gameMode;
+window.__ciudadVivaState=()=>S;
 window.__ciudadVivaProjectTile=(x,y,height=0)=>world.projectTile(x,y,height);
+window.__ciudadVivaFocusTileForDiagnostics=(x,y)=>{const focused=world.focusTile(x,y,viewParams());panX=focused.panX;panY=focused.panY;setCameraView();return world.projectTile(x,y,0)};
 window.__ciudadVivaCoverage=(x,y,serviceModel)=>{if(!S)return [];world.sync(S,{x,y},{...viewParams(),servicePreview:serviceModel?{x,y,serviceModel}:null});return world.getCoverageTiles()};
 const ui={};['cityName','mapCityName','dateLabel','mapDate','mapTime','money','budgetFlow','treasuryDetails','treasuryPopover','population','jobs','employment','employmentNote','services','serviceNote','approval','approvalCause','netLabel','inviteAddress','selection','supply','projects','projectCount','events','playersLabel','speedLabel','pauseBtn','toast','fileInput','supplyBackdrop','orderClose','orderProject','orderSupplier','orderDestination','orderPriority','orderSupplierNote','orderItems','orderError','orderConfirm'].forEach(id=>ui[id]=document.getElementById(id));
 ui.treasuryDetails.addEventListener('click',event=>{event.stopPropagation();ui.treasuryPopover.hidden=!ui.treasuryPopover.hidden;ui.treasuryDetails.setAttribute('aria-expanded',String(!ui.treasuryPopover.hidden))});ui.treasuryPopover.addEventListener('click',event=>{if(!event.target.closest('[data-treasury-close]'))return;ui.treasuryPopover.hidden=true;ui.treasuryDetails.setAttribute('aria-expanded','false')});document.addEventListener('pointerdown',event=>{if(event.target.closest('.metric-treasury'))return;ui.treasuryPopover.hidden=true;ui.treasuryDetails.setAttribute('aria-expanded','false')});document.addEventListener('keydown',event=>{if(event.key!=='Escape'||ui.treasuryPopover.hidden)return;ui.treasuryPopover.hidden=true;ui.treasuryDetails.setAttribute('aria-expanded','false')});
@@ -540,7 +542,7 @@ function renderAlertMarkers(){
  if(!S||!markerLayer)return;
  cityAlerts=cityAlertCards();const retained=new Set(),existing=new Map([...markerLayer.children].map(node=>[node.dataset.cityAlertTile,node]));
  for(const group of groupAlertsByTile(cityAlerts)){
-  const alert=group.items[(Math.floor(Date.now()/3500)+Math.abs(group.x*31+group.y*17))%group.items.length];
+  const alert=group.items.slice().sort((a,b)=>a.priority-b.priority||Number(b.kind==='service')-Number(a.kind==='service'))[0];
   const roadAlert=['litter','waste','road','traffic'].includes(alert.kind)&&!S.buildings?.some(b=>b.x===group.x&&b.y===group.y);
   const pos=world.projectTile(group.x,group.y,roadAlert?.42:1.75);
   if(!pos?.visible)continue;

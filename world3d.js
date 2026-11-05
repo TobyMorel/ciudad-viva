@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
-import {daylightIntensity} from './simulation_time.js?v=0.277';
+import {daylightIntensity} from './simulation_time.js?v=0.278';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.277';
-import {createLivingCity3D} from './living_city_3d.js?v=0.277';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.277';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.278';
+import {createLivingCity3D} from './living_city_3d.js?v=0.278';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.278';
 
 // La cuadrícula lógica conserva sus celdas; en escena, cada celda mide 3
 // unidades y los modelos crecen un 35%, dejando más espacio entre ellos.
@@ -13,6 +13,7 @@ const ROAD_TYPES_RENDER={local:{lanes:1,parking:2},avenue:{lanes:2,parking:0},ro
 const STREET_SECTION=Object.freeze({walk:2.30,asphalt:1.96,parkingCenter:.71,parkingDivider:.46,curb:.96,trafficLane:.29});
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
 const key=(x,y)=>`${x},${y}`;
+function riverEdges(z){const center=49+.45*Math.sin(z*.055)+.18*Math.sin(z*.13+1),half=2.25+.12*Math.sin(z*.083+2);return[center-half,center+half]}
 function waterTile(x,y){
   if(x===24||x===25)return true;
   const [cx,cz]=tilePos(x,y),[west,east]=riverEdges(cz),bankBuffer=.7;
@@ -44,9 +45,12 @@ function seeded(n){let x=Math.sin(n*127.1+78.233)*43758.5453;return x-Math.floor
 
 export function createWorld(canvas){
   const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+  const gl=renderer.getContext(),rendererInfo=gl.getExtension('WEBGL_debug_renderer_info');
+  const softwareRenderer=Boolean(rendererInfo&&/swiftshader|llvmpipe|software/i.test(String(gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL))));
   const smallScreen=window.innerWidth<650;
-  const minPixelRatio=smallScreen ? .78 : .8,maxPixelRatio=smallScreen ? 1.25 : 1.5;
+  const minPixelRatio=softwareRenderer?.28:smallScreen?.78:.8,maxPixelRatio=softwareRenderer?.4:smallScreen?1.25:1.5;
   let renderPixelRatio=clamp(window.devicePixelRatio||1,minPixelRatio,maxPixelRatio);
+  let lastSoftwareRender=0;
   renderer.setPixelRatio(renderPixelRatio);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -177,7 +181,6 @@ export function createWorld(canvas){
 
   // Río continuo de norte a sur: cauce sinuoso y dos riberas sobre terreno jugable.
   const waterMat=mat(COLORS.water,{metalness:.08,roughness:.28,transparent:true,opacity:.97});
-  function riverEdges(z){const center=49+.45*Math.sin(z*.055)+.18*Math.sin(z*.13+1),half=2.25+.12*Math.sin(z*.083+2);return[center-half,center+half]}
   function riverStrip(kind){const vertices=[],indices=[];for(let i=0;i<=5000;i++){const z=-20000+i*8,[west,east]=riverEdges(z);let left,right,height;if(kind==='water'){left=west;right=east;height=-.095}else if(kind==='west'){left=west-.56;right=west+.07;height=-.065}else{left=east-.07;right=east+.56;height=-.065}vertices.push(left,height,z,right,height,z);if(i<5000){const k=i*2;indices.push(k,k+2,k+1,k+1,k+2,k+3)}}const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setIndex(indices);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,kind==='water'?waterMat:mat('#d9c9a3',{side:THREE.DoubleSide}));mesh.receiveShadow=true;staticRoot.add(mesh)}
   riverStrip('water');riverStrip('west');riverStrip('east');
   const waves=[];
@@ -369,7 +372,7 @@ export function createWorld(canvas){
   }
   const spectacle=createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,box,sphere,cylinder,mat,tilePos,seeded,smallScreen,geometry});
   const living3d=createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen,worldScale:MAP_WORLD_SCALE,tileSize:TILE});
-  const immersive3d=createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear,worldScale:MAP_WORLD_SCALE});
+  const immersive3d=createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,tilePos,clear,smallScreen,worldScale:MAP_WORLD_SCALE});
   let poweredStreetlights=new Set();
   const routeActors=[],fireVisuals=[],signalBulbs=[],streetLights=[],signalTiles=new Set(),wasteContainerModels=new Map();
   // Presupuesto acotado de luces de faros: fuentes reales, sin mapas de sombra.
@@ -1957,7 +1960,9 @@ export function createWorld(canvas){
   }
   function animate(now){
     requestAnimationFrame(animate);
-    const wallDelta=Math.min(.1,Math.max(0,(now-lastFrame)/1000));
+    if(softwareRenderer&&now-lastSoftwareRender<400)return;
+    if(softwareRenderer)lastSoftwareRender=now;
+    const wallDelta=Math.min(softwareRenderer?.25:.1,Math.max(0,(now-lastFrame)/1000));
     lastFrame=now;adaptRenderResolution(now);updateWind(wallDelta);
     if(simulationPaused){resize();updateVegetation();spectacle.tick(0,visualTimeOfDayMinutes,true);living3d.tick(0,visualTimeOfDayMinutes,true);immersive3d.tick(0,visualTimeOfDayMinutes,true,routeActors);const pausedHeadlights=visualTimeOfDayMinutes>=1110||visualTimeOfDayMinutes<350||Number(lastSceneState?.utilities?.report?.drainage?.rainfallMm||0)>0;updateTrafficHeadlights(routeActors,pausedHeadlights,now);updateTireSprays(now);renderer.render(scene,camera);return}
     simulationClock+=wallDelta*simulationSpeed;visualTimeOfDayMinutes=(visualTimeOfDayMinutes+wallDelta*simulationSpeed*15)%1440;visualGameDay+=wallDelta*simulationSpeed/96;updateLighting(visualTimeOfDayMinutes);resize();updateVegetation();spectacle.tick(wallDelta,visualTimeOfDayMinutes);living3d.tick(wallDelta,visualTimeOfDayMinutes);

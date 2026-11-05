@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.277",
+  "currentVersion": "0.278",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.278",
+      "date": "2026-11-05",
+      "title": "Revisión integral de lógica e interfaz",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La escena 3D vuelve a cargar sin errores de referencias y las aves reciben correctamente la configuración de pantalla.",
+        "Las ventanas de gestión y el editor de rutas quedan por encima del mapa, los mensajes y la barra inferior.",
+        "Los avisos de edificios se priorizan de forma estable y las escenas con renderizado por software reducen su resolución y frecuencia para evitar bloqueos.",
+        "Se están ejecutando todas las pruebas de lógica y navegador; esta misma versión recibirá las correcciones adicionales de la revisión."
+      ],
+      "verification": "Revisión integral en curso; verificaciones finales pendientes."
+    },
     {
       "version": "0.277",
       "date": "2026-11-05",

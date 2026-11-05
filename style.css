@@ -198,6 +198,10 @@ body{background:#fcf5f7;color:#332a35}
 .game-dock .time-controls button,.time-controls button{border-color:#eddae5;color:#7c566e;background:#fffafc;border-radius:9px}
 .game-dock .time-controls button.selected,.time-controls .selected{background:#efd2e1;color:#64354e;border-color:#e3b4cb}
 .popup-backdrop,.modal-backdrop,.mode-backdrop{background:#3d263a88;backdrop-filter:blur(7px)}
+#panelPopup:not(.hidden){z-index:100}
+#supplyBackdrop:not(.hidden){z-index:110}
+#modeBackdrop:not(.hidden){z-index:120}
+#busRouteComposer:not([hidden]){z-index:90}
 .popup-window,.bid-modal,.mode-card{background:#fffafb;color:#40343f;border:1px solid #f0dfe8;border-radius:20px;box-shadow:0 26px 90px #38233742}
 .popup-header{border-color:#efdee5}
 .popup-header h2,.modal-head h2{color:#533a4a;letter-spacing:-.035em}

@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.277
+# Ciudad Viva · Alfa 0.278
+
+**Revisión integral en curso (0.278):** se corrigieron errores de carga del mundo 3D, la ubicación de avisos y las capas de ventanas y editor de rutas. La revisión de sistemas y pruebas continúa en esta versión.
 
 **Reloj y estacionamiento coherentes (0.277):** el servidor LAN y el modo offline usan el mismo ciclo de 4:48 minutos por día a x1. Los autos solo reservan plazas a las que pueden llegar por calles conectadas y abiertas; una plaza aislada o separada por un corte vial no aparenta estar disponible para ese viaje. El regreso conserva el faltante de estacionamiento, y las estadísticas de caminata y permanencia promedian únicamente los autos que realmente estacionaron.
 

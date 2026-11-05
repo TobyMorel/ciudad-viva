@@ -2,12 +2,12 @@ import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_
 import {gameMinutesForElapsedSeconds} from './simulation_time.js';
 import {assignTaxiPassengers} from './taxi_passengers.js?v=0.245';
 import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.245';
-import {growthDemand} from './growth_demand.js?v=0.274';
-import {recordCityProgress} from './cityInsights.js?v=0.274';
+import {growthDemand} from './growth_demand.js?v=0.275';
+import {recordCityProgress} from './cityInsights.js?v=0.275';
 import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.245';
 import {freightRouteForFactoryPort,freightRoutesForFactoryPort,freightRoutesFromStationToPort,freightLegRoute,serializeFreightLegs,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.245';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';
-import {ROAD_TYPES,assignParking} from './road_network.js?v=0.274';
+import {ROAD_TYPES,assignParking} from './road_network.js?v=0.275';
 export function taxAdjustedBusinessCreditLimit(baseLimit,taxArrears=0,consecutiveMissedTaxMonths=0){const base=Math.max(0,Math.trunc(baseLimit||0));if((consecutiveMissedTaxMonths||0)>=3)return 0;return Math.max(0,base-Math.max(0,Math.trunc(taxArrears||0)))}
 export function taxPressurePenalty(pressure){return Math.min(5,Math.max(0,Math.floor((Math.max(0,Math.trunc(pressure||0))-5)/5)))}
 export function taxAdjustedMigrationDemand(approval,pressure,relief=0){const base=Math.round(((approval||0)-45)/8);if(base<=0)return Math.max(-5,base);return Math.max(0,Math.min(12,base-Math.max(0,taxPressurePenalty(pressure)-Math.max(0,Math.trunc(relief)))))}

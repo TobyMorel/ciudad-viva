@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.274
+# Ciudad Viva · Alfa 0.275
+
+**Estacionamiento, luces y fauna urbana (0.275):** las plazas de estacionamiento dejan espacio para autos de tamaño normal y los vehículos visibles corresponden a viajes reales. Los autos de búsqueda muestran una P más pequeña solo mientras circulan; los faros bajan de intensidad, se apagan al estacionar y no iluminan el túnel. Se completan farolas en calles cortas, los árboles respetan el cauce del río y las aves vuelven a sobrevolar el centro construido.
 
 **Zonificación detallada y sincronización de calles (0.274):** la demanda de oficinas sigue a universitarios desempleados y descuenta vacantes reales; las zonas ofrecen densidad baja, media y alta, herramientas de pincel, rectángulo y relleno, y una capa de aptitud. Las calles aparecen con sus marcas y cruces pavimentados; las farolas quedan sobre la vereda. Los peatones recuperan una escala coherente y vuelve la mezcla de autos y bicicletas. LAN usa el mismo motor `offline.js` que Offline.
 

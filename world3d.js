@@ -2,18 +2,22 @@ import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
 import {daylightIntensity} from './simulation_time.js';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.274';
-import {createLivingCity3D} from './living_city_3d.js?v=0.274';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.274';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.275';
+import {createLivingCity3D} from './living_city_3d.js?v=0.275';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.275';
 
 // La cuadrícula lógica conserva sus celdas; en escena, cada celda mide 3
 // unidades y los modelos crecen un 35%, dejando más espacio entre ellos.
 const MAP_WORLD_SCALE=1.35, MAP_CELL_WORLD_SIZE=3, TILE=MAP_CELL_WORLD_SIZE/MAP_WORLD_SCALE, LAND_CHUNK_SIZE=8;
 const ROAD_TYPES_RENDER={local:{lanes:1,parking:2},avenue:{lanes:2,parking:0},route:{lanes:1,parking:0},highway:{lanes:2,parking:0}};
-const STREET_SECTION=Object.freeze({walk:2.12,asphalt:1.72,parkingCenter:.66,parkingDivider:.48,curb:.85,trafficLane:.29});
+const STREET_SECTION=Object.freeze({walk:2.30,asphalt:1.96,parkingCenter:.71,parkingDivider:.46,curb:.96,trafficLane:.29});
 const COLORS={grass:'#80af70',sand:'#e4d3ae',water:'#389dac',road:'#3f464b',walk:'#d5ccba',line:'#f2df9c',home:'#e9c99e',shop:'#a3c9bd',civic:'#e7d1b0'};
 const key=(x,y)=>`${x},${y}`;
-const waterTile=(x,y)=>x===24||x===25;
+function waterTile(x,y){
+  if(x===24||x===25)return true;
+  const [cx,cz]=tilePos(x,y),[west,east]=riverEdges(cz),bankBuffer=.7;
+  return cx>=west-bankBuffer&&cx<=east+bankBuffer;
+}
 const tilePos=(x,y)=>[(x+.5)*TILE,(y+.5)*TILE];
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 const TRIP_WINDOWS=Object.freeze({early:[300,420],morningPeak:[420,570],midday:[660,840],afternoon:[840,1020],afternoonReturn:[960,1080],eveningPeak:[1020,1170],late:[1170,1320],dayNoon:[570,1020]});
@@ -370,14 +374,19 @@ export function createWorld(canvas){
   const routeActors=[],fireVisuals=[],signalBulbs=[],streetLights=[],signalTiles=new Set(),wasteContainerModels=new Map();
   // Presupuesto acotado de luces de faros: fuentes reales, sin mapas de sombra.
   const headlightCarBudget=smallScreen?5:10,headlightLightPool=Array.from({length:headlightCarBudget*2},()=>{
-    const light=new THREE.PointLight('#ffe1a4',0,4.6*MAP_WORLD_SCALE,2);light.castShadow=false;light.visible=false;scene.add(light);return light;
+    const light=new THREE.PointLight('#ffe1a4',0,3.2*MAP_WORLD_SCALE,2);light.castShadow=false;light.visible=false;scene.add(light);return light;
   });
   const headlightProjection=new THREE.Vector3();let activeHeadlightActors=[],nextHeadlightRefresh=0;
+  function actorInsideGatewayTunnel(actor){
+    if(!gatewayTunnel.visible)return false;
+    const p=actor.mesh.position,left=gatewayTunnel.position.x+tunnelStart-.12,right=gatewayTunnel.position.x+tunnelEnd+.12;
+    return p.x>=left&&p.x<=right&&Math.abs(p.z-gatewayTunnel.position.z)<=1.18;
+  }
   function updateTrafficHeadlights(actors,enabled,now){
     if(!enabled){for(const light of headlightLightPool){light.visible=false;light.intensity=0}return}
     if(now>=nextHeadlightRefresh){
       const candidates=[];camera.updateMatrixWorld(true);
-      for(const actor of actors){const offsets=actor.mesh?.userData.headlightOffsets;if(!offsets||actor.mesh.visible===false)continue;
+      for(const actor of actors){const offsets=actor.mesh?.userData.headlightOffsets;if(!offsets||actor.mesh.visible===false||actor.parked||actor.parkingPhase==='parked'||actorInsideGatewayTunnel(actor))continue;
         const projected=headlightProjection.copy(actor.mesh.position).multiplyScalar(MAP_WORLD_SCALE).project(camera);
         if(projected.z< -1||projected.z>1||Math.abs(projected.x)>1.08||Math.abs(projected.y)>1.08)continue;
         candidates.push({actor,distance:projected.x*projected.x+projected.y*projected.y});
@@ -388,9 +397,10 @@ export function createWorld(canvas){
     }
     let index=0;
     for(const actor of activeHeadlightActors){
+      if(actor.parked||actor.parkingPhase==='parked'||actorInsideGatewayTunnel(actor)||actor.mesh.visible===false)continue;
       for(const offset of actor.mesh.userData.headlightOffsets||[]){const light=headlightLightPool[index++];if(!light)break;
         light.position.set(offset[0],offset[1],offset[2]);actor.mesh.localToWorld(light.position);light.position.multiplyScalar(1/MAP_WORLD_SCALE);
-        light.visible=true;light.intensity=1.45;
+        light.visible=true;light.intensity=.58;
       }
     }
     for(;index<headlightLightPool.length;index++){headlightLightPool[index].visible=false;headlightLightPool[index].intensity=0}
@@ -408,9 +418,10 @@ export function createWorld(canvas){
     return{total,phase:direction<0?2*total-bestAlong:bestAlong}
   }
   const tripSelection=(trip,modeLabel)=>({type:modeLabel,title:modeLabel==='Ciclistas'?'Ciclistas en camino':trip.reason==='educacion'?'Estudiantes en camino':trip.reason==='ocio'?'Vecinos de paseo':modeLabel==='Peatones'?'Personas caminando':'Vehículo particular',description:`Viaje de ${trip.reason==='trabajo'?'trabajo':trip.reason==='compras'?'compras':trip.reason==='educacion'?'estudio':trip.reason==='ocio'?'ocio':'servicios'} en la simulación actual.`,metrics:[[trip.mode==='bicycle'?'Ciclistas':trip.reason==='educacion'?'Estudiantes':'Pasajeros',Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)-(trip.taxiRiders||0))],...((trip.busRiders||trip.metroRiders||trip.intermodalRiders||trip.taxiRiders)?[['En transporte p\u00fablico',(trip.busRiders||0)+(trip.metroRiders||0)+(trip.intermodalRiders||0)+(trip.taxiRiders||0)]]:[]),[trip.mode==='bicycle'?'Bicicletas':'Veh\u00edculos',trip.mode==='bicycle'?(trip.workers||0):(trip.vehicles||0)],['Origen',trip.from?`${trip.from[0]+1}, ${trip.from[1]+1}`:'—'],['Destino',trip.destinationName|| (trip.to?`${trip.to[0]+1}, ${trip.to[1]+1}`:'—')],['Distancia',`${trip.distance||0} tramos`],['Tiempo estimado',`${trip.estimatedMinutes||0} min`]],people:trip.people||[]});
-  function parkingSlotPose(slot){if(!slot)return null;const gx=Number(slot.road?.[0]??slot.x),gy=Number(slot.road?.[1]??slot.y),[x,z]=tilePos(gx,gy),roads=new Set((lastSceneState?.roads||[]).map(p=>key(p[0],p[1]))),horizontal=roads.has(key(gx-1,gy))||roads.has(key(gx+1,gy)),side=Number(slot.index)%2===0?1:-1,offset=.69*side;return{x:x+(horizontal?0:offset),z:z+(horizontal?offset:0),yaw:horizontal?Math.PI/2:0}}
+  function tripActorKey(trip,scope){return `${scope}:${trip.reason||'viaje'}:${trip.mode||'auto'}:${trip.from?.join(',')||'sin-origen'}>${trip.to?.join(',')||'sin-destino'}`}
+  function parkingSlotPose(slot){if(!slot)return null;const gx=Number(slot.road?.[0]??slot.x),gy=Number(slot.road?.[1]??slot.y),[x,z]=tilePos(gx,gy),roads=new Set((lastSceneState?.roads||[]).map(p=>key(p[0],p[1]))),horizontal=roads.has(key(gx-1,gy))||roads.has(key(gx+1,gy)),side=Number(slot.index)%2===0?1:-1,offset=STREET_SECTION.parkingCenter*side;return{x:x+(horizontal?0:offset),z:z+(horizontal?offset:0),yaw:horizontal?Math.PI/2:0}}
   function parkingDrivingRoute(roadPath,origin,destination){const points=(roadPath||[]).map(([x,y],index,path)=>{const before=path[Math.max(0,index-1)],after=path[Math.min(path.length-1,index+1)],dx=(after[0]-before[0]),dz=(after[1]-before[1]),length=Math.hypot(dx,dz)||1,[xw,zw]=tilePos(x,y);return[xw-dz/length*.29,zw+dx/length*.29]});const first=parkingSlotPose(origin),last=parkingSlotPose(destination);if(first)points.unshift([first.x,first.z]);if(last)points.push([last.x,last.z]);return points.filter((p,i)=>i===0||Math.hypot(p[0]-points[i-1][0],p[1]-points[i-1][1])>.025)}
-  function addParkingSearchVehicle(trip,index,tag='work'){if(!Array.isArray(trip.route)||trip.route.length<2)return;const mesh=makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][index%4]),badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge;routeActors.push({mesh,route:trip.route.map(([x,y])=>tilePos(x,y)),offset:index*3.1+.8,speed:1.18,side:index%2?.52:-.52,actorKey:`parking-search:${tag}:${trip.reason}:${trip.from?.join(',')}:${trip.to?.join(',')}`,selection:{type:'Vehículo buscando estacionamiento',title:'Buscando una plaza libre',description:'El destino no tenía lugares suficientes; el auto sigue recorriendo las calles hasta que se libera una plaza reservada.',metrics:[['Plazas que faltan',trip.parkingShortfall||1],['Área revisada','Red vial conectada'],['Destino',trip.destinationName||`${trip.to[0]+1}, ${trip.to[1]+1}`]]}})}
+  function addParkingSearchVehicle(trip,index,tag='work',routine=null){if(!Array.isArray(trip.route)||trip.route.length<2)return;const mesh=makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][index%4]),badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge;routeActors.push({mesh,route:trip.route.map(([x,y])=>tilePos(x,y)),offset:index*3.1+.8,speed:1.18,side:index%2?.23:-.23,dailyRoutine:routine,hideOutsideRoutine:Boolean(routine),actorKey:`parking-search:${tripActorKey(trip,tag)}`,selection:{type:'Vehículo buscando estacionamiento',title:'Buscando una plaza libre',description:'El destino no tenía lugares suficientes; el auto sigue recorriendo las calles hasta que se libera una plaza reservada.',metrics:[['Plazas que faltan',trip.parkingShortfall||1],['Área revisada','Red vial conectada'],['Destino',trip.destinationName||`${trip.to[0]+1}, ${trip.to[1]+1}`]]}})}
   function addParkingPedestrian(trip,back,index,tag='work'){const spot=trip.parkingSlot;if(!spot||!Array.isArray(trip.to))return;const destination=trip.to.map(Number),road=(spot.road||[spot.x,spot.y]).map(Number),a=tilePos(destination[0],destination[1]),b=tilePos(road[0],road[1]);if(Math.hypot(a[0]-b[0],a[1]-b[1])<.05)return;const outbound=trip.departureWindowKey||'morningPeak',returnWindow=back?.departureWindowKey||trip.returnWindowKey||'eveningPeak',walk=makeWalker(['#688b83','#b68162','#718aa2'][index%3]);routeActors.push({mesh:walk,route:[a,b],dailyRoutine:[{window:outbound,reverse:true,fromEnd:true},{window:returnWindow,reverse:false}],routineSpanMinutes:Math.min(12,Math.max(5,Number(trip.parkingWalkDistance||1)*2)),offset:index*1.3,speed:.42,side:0,actorKey:`parking-walk:${tag}:${trip.reason}:${trip.from?.join(',')}:${trip.to?.join(',')}`,selection:{type:'Peatones',title:`Caminata desde estacionamiento · ${trip.destinationName||'destino'}`,description:'La persona deja el auto en una plaza reservada y camina hasta el destino; al regreso vuelve a pie hasta el mismo vehículo.',metrics:[['Caminata',`${trip.parkingWalkDistance||0} cuadras`],['Estacionamiento',`${spot.x+1}, ${spot.y+1}`],['Destino',`${destination[0]+1}, ${destination[1]+1}`]]}})}
   const raycaster=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0),hit=new THREE.Vector3();
   let view={zoom:1,panX:0,panY:0,rotation:0},cameraAnchor={x:14,y:10},lastFrame=0,simulationClock=0,simulationSpeed=1,simulationPaused=false,visualTimeOfDayMinutes=360,visualGameDay=1,visualSignature='',lastProjection='',fpsWindowStart=performance.now(),fpsWindowFrames=0,renderFps=0,lastSceneSyncMs=0,sceneSyncRebuilds=0,sceneSyncFastPaths=0;
@@ -486,10 +497,10 @@ export function createWorld(canvas){
     }
     // Las farolas solo van en tramos rectos, separadas de cruces y esquinas.
     // El poste queda en el centro de la vereda, fuera del estacionamiento y la calzada.
-    const straightHorizontal=e&&w&&!n&&!s,straightVertical=n&&s&&!e&&!w;
+    const hasHorizontal=e||w,hasVertical=n||s,straightHorizontal=hasHorizontal&&!hasVertical,straightVertical=hasVertical&&!hasHorizontal;
     const nearIntersection=[[0,-1,n],[0,1,s],[-1,0,w],[1,0,e]].some(([dx,dy,on])=>on&&roadDegreeAt(x+dx,y+dy)>=3);
-    const lightCandidate=straightHorizontal||straightVertical;
-    if(lightCandidate&&!nearIntersection&&((x*7+y*11)%3+3)%3===0){const horizontal=straightHorizontal,side=((x*31+y*17)&1)?1:-1,offset=STREET_SECTION.walk/2-.09,px=horizontal?cx:cx+side*offset,pz=horizontal?cz+side*offset:cz,headX=horizontal?cx:px-side*.27,headZ=horizontal?pz:cz;box(root,.065,1.34,.065,'#4b5755',px,.69,pz);const arm=box(root,.06,.045,.48,'#4b5755',(px+headX)/2,1.34,(pz+headZ)/2);if(!horizontal)arm.rotation.y=Math.PI/2;const bulb=sphere(root,.115,'#ffe4a6',headX,1.3,headZ,2);bulb.material=mat('#ffe4a6',{emissive:'#ffc76b',emissiveIntensity:0});const light=new THREE.PointLight('#ffca70',0,8*MAP_WORLD_SCALE,2);light.position.set(headX,1.2,headZ);root.add(light);const pool=new THREE.Mesh(new THREE.CircleGeometry(1.45,20),new THREE.MeshBasicMaterial({color:'#ffd17a',transparent:true,opacity:0,depthWrite:false,toneMapped:false}));pool.rotation.x=-Math.PI/2;pool.position.set(headX,.072,headZ);root.add(pool);streetLights.push({light,bulb,pool,x,y})
+    const endpoint=degree===1,lightCandidate=(straightHorizontal||straightVertical)&&(endpoint||nearIntersection||(degree===2&&((x*7+y*11)%2===0)));
+    if(lightCandidate){const horizontal=straightHorizontal,side=((x*31+y*17)&1)?1:-1,offset=STREET_SECTION.asphalt/2+.10,px=horizontal?cx:cx+side*offset,pz=horizontal?cz+side*offset:cz,headX=horizontal?cx:px-side*.27,headZ=horizontal?pz-side*.27:cz;box(root,.065,1.34,.065,'#4b5755',px,.69,pz);const arm=box(root,.06,.045,.48,'#4b5755',(px+headX)/2,1.34,(pz+headZ)/2);if(!horizontal)arm.rotation.y=Math.PI/2;const bulb=sphere(root,.115,'#ffe4a6',headX,1.3,headZ,2);bulb.material=mat('#ffe4a6',{emissive:'#ffc76b',emissiveIntensity:0});const light=new THREE.PointLight('#ffca70',0,8*MAP_WORLD_SCALE,2);light.position.set(headX,1.2,headZ);root.add(light);const pool=new THREE.Mesh(new THREE.CircleGeometry(1.45,20),new THREE.MeshBasicMaterial({color:'#ffd17a',transparent:true,opacity:0,depthWrite:false,toneMapped:false}));pool.rotation.x=-Math.PI/2;pool.position.set(headX,.072,headZ);root.add(pool);streetLights.push({light,bulb,pool,x,y})
       roundedBox(root,.18,.13,.18,'#66766c',px,.085,pz,.035);
       rodBetween(root,[px,.99,pz],[headX,1.31,headZ],.018,'#64746b',6);
       roundedBox(root,.22,.085,.19,'#f2daa0',headX,1.2,headZ,.04);
@@ -1238,7 +1249,7 @@ export function createWorld(canvas){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;const ctx=canvas.getContext('2d');
     ctx.fillStyle='rgba(18,45,47,.94)';ctx.beginPath();ctx.roundRect(10,14,236,100,28);ctx.fill();
     ctx.strokeStyle='#f3c95f';ctx.lineWidth=8;ctx.stroke();ctx.fillStyle='#ffe28b';ctx.font='bold 76px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('P',128,66);
-    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.scale.set(.9,.45,1);sprite.userData.release=()=>{texture.dispose();sprite.material.dispose()};return sprite;
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));sprite.scale.set(.62,.31,1);sprite.userData.release=()=>{texture.dispose();sprite.material.dispose()};return sprite;
   }
   function makeDeliveryTruck(color='#c78c50',role=null,id=null,withCargo=false){const g=new THREE.Group();box(g,.38,.2,.7,color,0,.27,-.08);box(g,.3,.22,.28,'#c9e4e3',0,.3,.36);box(g,.4,.035,.72,'#e5d2aa',0,.39,-.08);for(const x of [-.23,.23])for(const z of [-.28,.32])box(g,.075,.12,.13,'#303f43',x,.13,z);const cargoMeshes=[];if(withCargo){for(const [x,y,z,color] of [[-.11,.49,-.21,'#bd8650'],[.05,.49,-.22,'#72947a'],[0,.61,-.2,'#d0a153'],[.12,.49,-.04,'#b96d58']]){const crate=roundedBox(g,.14,.13,.15,color,x,y,z,.025);roundedBox(g,.145,.022,.16,'#e6d2ac',x,y+.035,z,.012);cargoMeshes.push(crate,g.children.at(-1))}for(const x of [-.18,.18])rodBetween(g,[x,.44,-.31],[x,.66,-.31],.012,'#e8d7b2',5)}g.userData.cargoMeshes=cargoMeshes;if(role){g.userData.emergencyRole=role;g.userData.emergencyId=id}trafficRoot.add(g);vehicleFinish(g,'delivery');return g}
   function makeHearse(){const g=makeVehicle('#343c40');box(g,.32,.17,.34,'#273034',0,.47,-.04,{cast:true});box(g,.26,.08,.3,'#aeb8b3',0,.59,-.04,{cast:true});box(g,.12,.035,.035,'#e7e4da',0,.65,-.04,{cast:false});g.userData.emergencyRole='Coche fúnebre';vehicleFinish(g,'delivery');return g}
@@ -1761,22 +1772,22 @@ export function createWorld(canvas){
         if(path.length<2||trip.mode==='bus')continue;
         const mesh=trip.mode==='walk'?makeWalker(['#476d83','#b46f62','#d3a05a'][i%3]):trip.mode==='bicycle'?makeBicycle(['#287b80','#398e68','#d39b39'][i%3]):makeVehicle(['#d89368','#f1d493','#75ada8','#c66d63'][i%4]);
         const routine=trip.mode==='auto'&&trip.reason==='trabajo'?[{window:trip.departureWindowKey||'morningPeak',reverse:false},{window:back?.departureWindowKey||trip.returnWindowKey||'eveningPeak',reverse:true}]:tripRoutine(trip);
-        const actor={mesh,route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:routine,offset:i*3.7,speed:(trip.mode==='walk'?.5:trip.mode==='bicycle'?1.05:1.55)/Math.max(1,trip.trafficFactor||1),side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.83:-.83):hasParkingRoute?0:(i%2?.23:-.23),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Vehículo particular')};
+        const actor={mesh,route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:routine,hideOutsideRoutine:Boolean(trip.mode==='auto'&&trip.parkingSearching),offset:i*3.7,speed:(trip.mode==='walk'?.5:trip.mode==='bicycle'?1.05:1.55)/Math.max(1,trip.trafficFactor||1),side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.83:-.83):hasParkingRoute?0:(i%2?.23:-.23),actorKey:tripActorKey(trip,'commute'),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Vehículo particular')};
         if(trip.mode==='auto'){
           actor.parkingSearching=Boolean(trip.parkingSearching&&!trip.parkingSlot);
-          if(actor.parkingSearching){actor.dailyRoutine=null;const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge}
+          if(actor.parkingSearching){const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge}
           if(trip.parkingSlot){actor.parkingVehicle={origin:trip.parkingOriginSlot||null,destination:trip.parkingSlot,outboundWindow:trip.departureWindowKey||'morningPeak',returnWindow:back?.departureWindowKey||trip.returnWindowKey||'eveningPeak'};addParkingPedestrian(trip,back,i,'commute')}
         }
-        routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'commute');
+        routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'commute',routine);
       }
       const nonworkRoutes=(state.commutes||[]).filter(t=>['compras','servicios','ocio'].includes(t.reason)).sort((a,b)=>(b.reason==='ocio')-(a.reason==='ocio')).slice(0,8);
     for(let i=0;i<nonworkRoutes.length;i++){
       const trip=nonworkRoutes[i],rawPath=trip.mode==='auto'&&trip.parkingRoute?.length>1?trip.parkingRoute:trip.route,hasParkingRoute=trip.mode==='auto'&&trip.parkingRoute?.length>1&&trip.parkingSlot,path=hasParkingRoute?parkingDrivingRoute(rawPath,trip.parkingOriginSlot,trip.parkingSlot):rawPath.map(([x,y])=>tilePos(x,y)),service=trip.reason==='servicios',leisure=trip.reason==='ocio',shopping=trip.reason==='compras',roadUsers=Math.max(0,(trip.workers||0)-(trip.busRiders||0)-(trip.metroRiders||0)-(trip.taxiRiders||0));if(trip.busRiders>0||trip.mode==='bus')addTransitAccessActors(trip,i,'nonwork');
       if(path.length<2||!(trip.mode==='walk'||trip.mode==='bicycle'?roadUsers>0:trip.mode==='auto'?(trip.vehicles||0)>0:false))continue;
       const mesh=trip.mode==='walk'?makeWalker(service?['#8c83bd','#6f93ae','#9e779d'][i%3]:leisure?['#68a66e','#78b874','#4d9472'][i%3]:['#e3bd73','#b88158','#8a9c66'][i%3],shopping):trip.mode==='bicycle'?makeBicycle('#438a67'):makeVehicle(service?['#8c83bd','#6f93ae','#9e779d'][i%3]:leisure?['#68a66e','#78b874','#4d9472'][i%3]:['#e2a54d','#d37e53','#75a6a1'][i%3]);
-      const actor={mesh,route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:tripRoutine(trip),offset:i*2.9,speed:trip.mode==='walk'?.43:trip.mode==='bicycle'?.95:1.25,side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.72:-.72):hasParkingRoute?0:(i%2?.3:-.3),...(shopping?{actorKey:`shopping-trip:${trip.mode}:${trip.from?.join(',')}:${trip.to?.join(',')}`}:{ }),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Vehículo particular')};if(trip.mode==='auto'){actor.parkingSearching=Boolean(trip.parkingSearching&&!trip.parkingSlot);if(actor.parkingSearching){actor.dailyRoutine=null;const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge}if(trip.parkingSlot){actor.parkingVehicle={origin:trip.parkingOriginSlot||null,destination:trip.parkingSlot,outboundWindow:'midday',returnWindow:'afternoonReturn'};addParkingPedestrian(trip,null,i,'visit')}}
+      const visitRoutine=tripRoutine(trip),actor={mesh,route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:visitRoutine,hideOutsideRoutine:Boolean(trip.mode==='auto'&&trip.parkingSearching),offset:i*2.9,speed:trip.mode==='walk'?.43:trip.mode==='bicycle'?.95:1.25,side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.72:-.72):hasParkingRoute?0:(i%2?.3:-.3),actorKey:shopping?`shopping-trip:${tripActorKey(trip,'visit')}`:tripActorKey(trip,'visit'),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Vehículo particular')};if(trip.mode==='auto'){actor.parkingSearching=Boolean(trip.parkingSearching&&!trip.parkingSlot);if(actor.parkingSearching){const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);mesh.add(badge);mesh.userData.parkingSearchBadge=badge}if(trip.parkingSlot){actor.parkingVehicle={origin:trip.parkingOriginSlot||null,destination:trip.parkingSlot,outboundWindow:'midday',returnWindow:'afternoonReturn'};addParkingPedestrian(trip,null,i,'visit')}}
       if(shopping&&trip.mode==='walk'&&mesh.userData.shoppingBags?.length){actor.shoppingBags=mesh.userData.shoppingBags;actor.shoppingReturnAt=TILE*Math.max(1,path.length-1)}
-      routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'visit');
+      routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'visit',visitRoutine);
       if(shopping&&trip.mode!=='walk'&&trip.mode!=='bus'){
         const access=trip.route.slice(-2).map(([x,y])=>tilePos(x,y));
         if(access.length===2){const shopper=makeWalker(['#e3bd73','#b88158','#8a9c66'][i%3],true),shoppingPath=access;
@@ -1784,7 +1795,7 @@ export function createWorld(canvas){
             selection:{type:'Peatones',title:`Compras · ${trip.destinationName||'comercio local'}`,description:'Visitante real del viaje de compras del hogar; camina desde la calle al comercio y sale con bolsas.',metrics:[['Visitantes simulados',trip.workers||0],['Destino',trip.destinationName||'Comercio local'],['Modo de llegada',trip.mode==='bicycle'?'Bicicleta':trip.mode==='bus'?'Colectivo':trip.mode==='metro'?'Subte':trip.mode==='taxi'?'Taxi':'Automóvil']]}})}
       }
     }
-    const schoolRoutes=(state.commutes||[]).filter(t=>t.reason==='educacion').slice(0,10);for(let i=0;i<schoolRoutes.length;i++){const trip=schoolRoutes[i],hasParkingRoute=trip.mode==='auto'&&trip.parkingRoute?.length>1&&trip.parkingSlot,path=hasParkingRoute?parkingDrivingRoute(trip.parkingRoute,trip.parkingOriginSlot,trip.parkingSlot):trip.route.map(([x,y])=>tilePos(x,y));if(trip.busRiders>0||trip.mode==='bus')addTransitAccessActors(trip,i,'school');const roadUsers=Math.max(0,(trip.workers||0)-(trip.busRiders||0));if(path.length>1&&['walk','bicycle','auto'].includes(trip.mode)&&(trip.mode==='auto'?(trip.vehicles||0)>0:roadUsers>0)){const actor={mesh:trip.mode==='walk'?makeWalker(['#5a9bd5','#75c4d1','#f0c85a'][i%3]):trip.mode==='bicycle'?makeBicycle('#3288aa'):makeVehicle(['#4f91c6','#66b6c4','#e3ba54'][i%3]),route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:tripRoutine(trip),offset:i*2.4,speed:trip.mode==='walk'?.58:trip.mode==='bicycle'?1.05:1.45,side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.7:-.7):hasParkingRoute?0:(i%2?.28:-.28),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Veh\u00edculo particular')};if(trip.mode==='auto'){actor.parkingSearching=Boolean(trip.parkingSearching&&!trip.parkingSlot);if(actor.parkingSearching){actor.dailyRoutine=null;const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);actor.mesh.add(badge);actor.mesh.userData.parkingSearchBadge=badge}if(trip.parkingSlot){actor.parkingVehicle={origin:trip.parkingOriginSlot||null,destination:trip.parkingSlot,outboundWindow:trip.departureWindowKey||'morningPeak',returnWindow:trip.returnWindowKey||'eveningPeak'};addParkingPedestrian(trip,null,i,'school')}}routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'school')}}for(const line of (state.busRoutes||[]).filter(b=>b.operational&&b.route?.length>1))for(let i=0;i<Math.min(line.effectiveBuses||0,3);i++){const path=line.route.map(([x,y])=>tilePos(x,y)),drivers=(line.driverIds||[]).map(id=>{for(const h of state.buildings||[])for(const p of h.residents||[])if(p.id===id)return{id,name:p.name||`Vecino #${String(id).slice(-5)}`,age:p.age,status:'Conductor/a',employerName:p.employerName,monthlyWage:p.monthlyWage,home:[h.x,h.y]};return{id,name:`Conductor #${String(id).slice(-5)}`,status:'Conductor/a'}});routeActors.push({actorKey:`bus-${line.id}-${i}`,mesh:makeBus('#e7a958',Math.min(3,Math.ceil((line.dailyRiders||line.ridersThisPass||0)/Math.max(1,(line.effectiveBuses||1)*7)))),route:path,offset:i*7.4,speed:1.15,side:0,
+    const schoolRoutes=(state.commutes||[]).filter(t=>t.reason==='educacion').slice(0,10);for(let i=0;i<schoolRoutes.length;i++){const trip=schoolRoutes[i],hasParkingRoute=trip.mode==='auto'&&trip.parkingRoute?.length>1&&trip.parkingSlot,path=hasParkingRoute?parkingDrivingRoute(trip.parkingRoute,trip.parkingOriginSlot,trip.parkingSlot):trip.route.map(([x,y])=>tilePos(x,y));if(trip.busRiders>0||trip.mode==='bus')addTransitAccessActors(trip,i,'school');const roadUsers=Math.max(0,(trip.workers||0)-(trip.busRiders||0));if(path.length>1&&['walk','bicycle','auto'].includes(trip.mode)&&(trip.mode==='auto'?(trip.vehicles||0)>0:roadUsers>0)){const actor={mesh:trip.mode==='walk'?makeWalker(['#5a9bd5','#75c4d1','#f0c85a'][i%3]):trip.mode==='bicycle'?makeBicycle('#3288aa'):makeVehicle(['#4f91c6','#66b6c4','#e3ba54'][i%3]),route:path,parkingDriving:Boolean(hasParkingRoute),dailyRoutine:tripRoutine(trip),offset:i*2.4,speed:trip.mode==='walk'?.58:trip.mode==='bicycle'?1.05:1.45,hideOutsideRoutine:Boolean(trip.mode==='auto'&&trip.parkingSearching),side:trip.mode==='walk'||trip.mode==='bicycle'?(i%2?.7:-.7):hasParkingRoute?0:(i%2?.28:-.28),actorKey:tripActorKey(trip,'school'),selection:tripSelection(trip,trip.mode==='walk'?'Peatones':trip.mode==='bicycle'?'Ciclistas':'Veh\u00edculo particular')};if(trip.mode==='auto'){actor.parkingSearching=Boolean(trip.parkingSearching&&!trip.parkingSlot);if(actor.parkingSearching){const badge=makeParkingSearchBadge();badge.position.set(0,1.15,0);actor.mesh.add(badge);actor.mesh.userData.parkingSearchBadge=badge}if(trip.parkingSlot){actor.parkingVehicle={origin:trip.parkingOriginSlot||null,destination:trip.parkingSlot,outboundWindow:trip.departureWindowKey||'morningPeak',returnWindow:trip.returnWindowKey||'eveningPeak'};addParkingPedestrian(trip,null,i,'school')}}routeActors.push(actor);if(trip.mode==='auto'&&trip.parkingSearching&&trip.parkingSlot)addParkingSearchVehicle(trip,i,'school',tripRoutine(trip))}}for(const line of (state.busRoutes||[]).filter(b=>b.operational&&b.route?.length>1))for(let i=0;i<Math.min(line.effectiveBuses||0,3);i++){const path=line.route.map(([x,y])=>tilePos(x,y)),drivers=(line.driverIds||[]).map(id=>{for(const h of state.buildings||[])for(const p of h.residents||[])if(p.id===id)return{id,name:p.name||`Vecino #${String(id).slice(-5)}`,age:p.age,status:'Conductor/a',employerName:p.employerName,monthlyWage:p.monthlyWage,home:[h.x,h.y]};return{id,name:`Conductor #${String(id).slice(-5)}`,status:'Conductor/a'}});routeActors.push({actorKey:`bus-${line.id}-${i}`,mesh:makeBus('#e7a958',Math.min(3,Math.ceil((line.dailyRiders||line.ridersThisPass||0)/Math.max(1,(line.effectiveBuses||1)*7)))),route:path,offset:i*7.4,speed:1.15,side:0,
   busStopKeys:new Set((line.stops||[]).map(s=>Array.isArray(s)?s.join(','):Array.isArray(s?.at)?s.at.join(','):'')),
   selection:{type:'Colectivo municipal',title:`${line.originName||'Línea'} → ${line.destinationName||'corredor'} · unidad ${i+1}`,description:'Vehículo asignado a una línea real con turnos y capacidad por sentido.',metrics:[['Pasajeros del d\u00eda',line.dailyRiders||line.ridersThisPass||0],['Capacidad',`${line.capacity||0} asientos`],['Conductores',drivers.length],['Frecuencia',`${line.headwayMinutes||0} min`],['Paradas',(line.stops||[]).length],['Pasaje del último mes',`$${line.monthlyFareRevenue||0}`]],people:drivers}})}for(const taxi of (state.taxiRoutes||[]).filter(t=>t.operational&&t.route?.length>1)){const path=taxi.route.map(([x,y])=>tilePos(x,y));for(const stop of taxi.stops||[]){const [sx,sz]=tilePos(...stop.at),sign=new THREE.Group();sign.position.set(sx+.52,.08,sz+.48);roundedBox(sign,.1,.09,.1,'#6a7469',0,.05,0,.02);cylinder(sign,.028,.035,.38,'#5d5544',0,.24,0,10);roundedBox(sign,.3,.23,.08,'#dca94b',0,.45,0,.025);roundedBox(sign,.2,.13,.025,'#f2e8d1',0,.45,.05,.014);ring(sign,.052,.012,'#5e8c8b',0,.45,.068);sphere(sign,.024,'#f3e5bc',0,.45,.083,2);dynamicRoot.add(sign)}routeActors.push({mesh:makeVehicle('#e4b144'),route:path,offset:taxi.offset||0,speed:1.4,side:.18,selection:{type:'Taxi municipal',title:`Taxi · depósito ${taxi.depotX+1},${taxi.depotY+1}`,description:'Vehículo que recorre su circuito y vuelve al depósito por calles conectadas.',metrics:[['Paradas',taxi.stops?.length||0],['Circuito',`${path.length-1} tramos`],['Estado','En servicio'],['Operación mensual',`$${taxi.monthlyOperatingCost||260}`]]}})}const wasteRoutes=(state.waste?.routes||[]).filter(r=>r.reachable&&r.path?.length>1);
     for(let i=0;i<Math.min(4,wasteRoutes.length);i++){
@@ -1848,6 +1859,7 @@ export function createWorld(canvas){
     const stay=actor.parkingStay,parking=actor.parking,mesh=actor.mesh;
     const phase=actor.parkingPhase||'waiting';
     if(minute<stay.start){
+      actor.parked=false;
       if(phase==='gone'||phase==='parked'||phase==='departing'){actor.parkingPhase='waiting';actor.parkingElapsed=0;actor.parkingDeparturePending=false}
       mesh.visible=false;setParkingIndicators(actor,false,now);return;
     }
@@ -1863,7 +1875,7 @@ export function createWorld(canvas){
       mesh.rotation.y=yaw;
     };
     if(actor.parkingPhase==='arriving'){
-      mesh.visible=true;actor.parkingElapsed=(actor.parkingElapsed||0)+wallDelta;
+      actor.parked=false;mesh.visible=true;actor.parkingElapsed=(actor.parkingElapsed||0)+wallDelta;
       const progress=clamp(actor.parkingElapsed/2.15,0,1),steerSign=Math.sign(parking.side),rollEnd=.42;
       if(progress<rollEnd){
         const t=progress/rollEnd,smooth=t*t*(3-2*t),along=-.58+1.01*smooth;
@@ -1880,10 +1892,10 @@ export function createWorld(canvas){
       return;
     }
     if(actor.parkingPhase==='parked'){
-      mesh.visible=true;setPose(0,parking.side,parking.yaw);actor.parkingSteer=0;setParkingIndicators(actor,false,now);return;
+      actor.parked=true;mesh.visible=true;setPose(0,parking.side,parking.yaw);actor.parkingSteer=0;setParkingIndicators(actor,false,now);return;
     }
     if(actor.parkingPhase==='departing'){
-      mesh.visible=true;actor.parkingElapsed=(actor.parkingElapsed||0)+wallDelta;
+      actor.parked=false;mesh.visible=true;actor.parkingElapsed=(actor.parkingElapsed||0)+wallDelta;
       const progress=clamp(actor.parkingElapsed/2.05,0,1),steerSign=Math.sign(parking.side),reverseEnd=.48;
       if(progress<reverseEnd){
         const t=progress/reverseEnd,smooth=t*t*(3-2*t),along=-.48*smooth,lateral=parking.side+(parking.laneSide-parking.side)*smooth;
@@ -1918,10 +1930,10 @@ export function createWorld(canvas){
       if(a.parkingStay){const minute=((visualTimeOfDayMinutes%1440)+1440)%1440;updateParkingActor(a,minute,wallDelta,now);continue}
       if(a.parkingVehicle){
         const minute=((visualTimeOfDayMinutes%1440)+1440)%1440,total=Math.max(TILE,(a.route.length-1)*TILE),ride=routineTravel(a,minute,total),vehicle=a.parkingVehicle,badge=a.mesh.userData.parkingSearchBadge;
-        if(ride?.visible){if(badge)badge.visible=false}
+        if(ride?.visible){a.parked=false;if(badge)badge.visible=false}
         else{
           const outbound=TRIP_WINDOWS[vehicle.outboundWindow]||TRIP_WINDOWS.morningPeak,back=TRIP_WINDOWS[vehicle.returnWindow]||TRIP_WINDOWS.eveningPeak,between=minute>=outbound[1]&&minute<back[0],slot=between?vehicle.destination:vehicle.origin,pose=parkingSlotPose(slot),fallback=between?a.route.at(-1):a.route[0];
-          a.mesh.visible=true;if(pose){a.mesh.position.set(pose.x,.025,pose.z);a.mesh.rotation.y=pose.yaw}else if(fallback){a.mesh.position.set(fallback[0],.025,fallback[1]);if(a.route[1])a.mesh.rotation.y=Math.atan2(a.route[1][0]-fallback[0],a.route[1][1]-fallback[1])}
+          a.parked=true;a.mesh.visible=true;if(pose){a.mesh.position.set(pose.x,.025,pose.z);a.mesh.rotation.y=pose.yaw}else if(fallback){a.mesh.position.set(fallback[0],.025,fallback[1]);if(a.route[1])a.mesh.rotation.y=Math.atan2(a.route[1][0]-fallback[0],a.route[1][1]-fallback[1])}
           if(badge)badge.visible=false;setParkingIndicators(a,false,now);continue;
         }
       }
@@ -1978,7 +1990,7 @@ export function createWorld(canvas){
         if(!kind)a.lastServiceStopKey='';
       }
       const count=a.route.length-1,total=count*TILE;if(count<1)continue;
-      const routine=routineTravel(a,visualTimeOfDayMinutes,total);if(routine){a.mesh.visible=routine.visible;if(!routine.visible){for(const bag of a.shoppingBags||[])bag.visible=false;continue}}
+      const routine=routineTravel(a,visualTimeOfDayMinutes,total);if(a.hideOutsideRoutine&&!routine){a.mesh.visible=false;for(const bag of a.shoppingBags||[])bag.visible=false;continue}if(routine){a.mesh.visible=routine.visible;if(!routine.visible){for(const bag of a.shoppingBags||[])bag.visible=false;continue}}
       const travel=routine?routine.travel:((simulationClock*a.speed+a.offset)%(2*total)+2*total)%(2*total),direction=travel>total?-1:1,distance=travel>total?2*total-travel:travel;
       if(a.shoppingBags){const leavingStore=routine?routine.leg>0:direction===-1;for(const bag of a.shoppingBags)bag.visible=leavingStore}
       let index=Math.min(count-1,Math.floor(distance/TILE)),f=(distance-index*TILE)/TILE;

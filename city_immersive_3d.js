@@ -208,14 +208,14 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   boats.push({g,x,z,seed});return g;
  }
  function gull(parent,x,z,seed,species='gull'){
-  const g=place(parent,x,3.2,z);
-  const urban=species==='pigeon',body=sphere(g,urban?.105:.12,urban?'#89949a':'#faf6e6',0,0,0,1);body.scale.set(1,urban?.78:.7,urban?1.08:1.28);
-  sphere(g,.065,urban?'#b9bec0':'#edbf66',0,-.016,.15,1);
+  const g=place(parent,x,4.8,z),coast=species==='gull',cityGull=species==='city-gull',gullSpecies=coast||cityGull,urban=!gullSpecies,sparrow=species==='sparrow',body=sphere(g,sparrow?.085:urban?.105:.12,sparrow?'#987956':urban?'#89949a':'#faf6e6',0,0,0,1);body.scale.set(1,urban?.78:.7,urban?1.08:1.28);
+  sphere(g,.065,sparrow?'#bd8953':urban?'#b9bec0':'#edbf66',0,-.016,.15,1);
   for(const sx of [-1,1]){
    const wing=place(g,sx*.12,.02,0);
-   const plane=box(wing,urban?.34:.42,urban?.028:.035,urban?.14:.17,urban?'#777f84':'#f2f5ec',sx*(urban?.15:.19),0,0);
+   const plane=box(wing,sparrow?.27:urban?.34:.42,urban?.028:.035,urban?.14:.17,sparrow?'#806343':urban?'#777f84':'#f2f5ec',sx*(urban?.15:.19),0,0);
    plane.rotation.z=sx*.1;
-   wings.push({wing,g,sx,seed,x,z,kind:'bird',species,radiusX:9+rnd(seed+91)*8,radiusZ:5+rnd(seed+92)*7,period:30+rnd(seed+93)*22,phase:rnd(seed+94)*Math.PI*2});
+   const radiusX=coast?8+rnd(seed+91)*7:cityGull?4.3+rnd(seed+91)*2.8:sparrow?3.2+rnd(seed+91)*2.1:2.8+rnd(seed+91)*2.1,radiusZ=coast?4.5+rnd(seed+92)*5:cityGull?2.8+rnd(seed+92)*2.2:sparrow?2+rnd(seed+92)*1.5:1.8+rnd(seed+92)*1.6;
+   wings.push({wing,g,sx,seed,x,z,kind:'bird',species,baseY:coast?5.15:cityGull?5.25:sparrow?4.45:4.75,radiusX,radiusZ,period:coast?32+rnd(seed+93)*24:20+rnd(seed+93)*18,phase:rnd(seed+94)*Math.PI*2});
   }
  }
  function coast3D(){
@@ -334,6 +334,14 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    dog(layers.animals,x+.57,z-.45,i*37+p.x*11,false);
    butterflies(layers.animals,x-.29,z+.38,i*37+p.y);
    if(i<5)gull(layers.animals,x,z,i*73+p.y,'pigeon');
+  }
+  const sites=[...plan.animals.homes,...plan.animals.shops,...plan.industries,...plan.schools];
+  const source=sites.length?sites:(state?.buildings||[]).filter(b=>['home','shop','factory','office','school'].includes(b.kind));
+  const center=source.length?source.reduce((a,b)=>({x:a.x+Number(b.x||0)/source.length,y:a.y+Number(b.y||0)/source.length}),{x:0,y:0}):{x:12,y:10};
+  const flightPattern=[[-1.4,-.7],[.8,-1.1],[1.5,.5],[-.5,1.3],[.2,.1],[-1.2,.8],[1.1,1.1]],count=smallScreen?5:7;
+  for(let i=0;i<count;i++){
+   const [dx,dy]=flightPattern[i],[x,z]=point(center.x+dx,center.y+dy),species=i%4===0?'city-gull':i%3===0?'sparrow':'pigeon';
+   gull(layers.animals,x,z,Math.round((center.x+center.y)*91)+i*37,species);
   }
  }
  function school3D(){
@@ -605,7 +613,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
     item.g.visible=plan.season!=='invierno'&&!rain&&hour>=8&&hour<19;
    }else{
     const phase=clock/item.period*Math.PI*2+item.phase,dx=-Math.sin(phase)*item.radiusX,dz=Math.cos(phase)*item.radiusZ;
-    item.g.position.set(item.x+Math.cos(phase)*item.radiusX,3.25+Math.sin(phase*2+item.phase)*.42,item.z+Math.sin(phase)*item.radiusZ);
+    item.g.position.set(item.x+Math.cos(phase)*item.radiusX,item.baseY+Math.sin(phase*2+item.phase)*.42,item.z+Math.sin(phase)*item.radiusZ);
     item.g.rotation.y=Math.atan2(dx,dz);
     item.g.rotation.z=Math.sin(phase)*.045;
    }

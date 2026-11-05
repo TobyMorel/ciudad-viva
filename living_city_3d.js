@@ -1,14 +1,14 @@
-import {residentDirectory,residentCommute,parkActivityPlan,rushHourPlan,livingMomentVisuals,citizenName,commuteWindow} from './living_city.js';
+import {residentDirectory,residentCommute,parkActivityPlan,livingMomentVisuals,citizenName,commuteWindow} from './living_city.js';
 
 // Solo geometría Three.js procedimental, separada de la física y economía.
 // Dibujos únicamente a partir de proyectos, viajes y acontecimientos de la partida.
 export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinder,mat,geometry,tilePos,clear,smallScreen,worldScale=1,tileSize=2}){
  const root=new THREE.Group();root.name='Alfa 0.263 · Historias y sucesos';
  scene.add(root);
- const projectsRoot=new THREE.Group(),parkRoot=new THREE.Group(),citizenRoot=new THREE.Group(),trafficRoot=new THREE.Group(),momentsRoot=new THREE.Group();
- root.add(projectsRoot,parkRoot,citizenRoot,trafficRoot,momentsRoot);
+ const projectsRoot=new THREE.Group(),parkRoot=new THREE.Group(),citizenRoot=new THREE.Group(),momentsRoot=new THREE.Group();
+ root.add(projectsRoot,parkRoot,citizenRoot,momentsRoot);
  const residents=new Map(),animations=[],projectAnimations=[],parkAnimations=[],exerciseFigures=[],celebrations=[];
- let signature='',state=null,clock=0,peakVisible=false,activeParkVisitors=0,activeProjects=0;
+ let signature='',state=null,clock=0,activeParkVisitors=0,activeProjects=0;
  const C=['#d48e65','#6797a0','#d8b76d','#9e7ba8','#6aa27d','#c48078'];
  const palette=['#dba67c','#aa7657','#e5bd94'];
  function hash(s){let h=2166136261;for(let i=0;i<String(s).length;i++)h=Math.imul(h^String(s).charCodeAt(i),16777619);return h>>>0}
@@ -157,27 +157,6 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
    }
   }
  }
- function createTraffic(data){
-  const hotspotPlan=rushHourPlan(data,480),roads=new Set((data.roads||[]).map(p=>p.join(',')));
-  for(const h of hotspotPlan.hotspots.slice(0,smallScreen?4:9)){
-   const [cx,cz]=tilePos(h.x,h.y);
-   const horizontal=roads.has((h.x+1)+','+h.y)||roads.has((h.x-1)+','+h.y);
-   const n=Math.min(3,Math.max(1,Math.floor(h.vehicles/6)));
-   for(let i=0;i<n;i++){
-    const car=new THREE.Group();car.position.set(cx+(horizontal?(i-1)*.38:-.18),.08,cz+(horizontal?.17:(i-1)*.38));
-    car.rotation.y=horizontal?Math.PI/2:0;trafficRoot.add(car);
-    const color=C[(i+h.x+h.y+100)%C.length];
-    box(car,.27,.13,.32,color,0,.14,0);
-    box(car,.22,.09,.15,'#9cbec2',0,.25,-.01);
-    for(const side of [-1,1]){
-     cylinder(car,.053,.053,.044,'#344047',side*.135,.105,-.09,8).rotation.z=Math.PI/2;
-     cylinder(car,.053,.053,.044,'#344047',side*.135,.105,.105,8).rotation.z=Math.PI/2;
-     box(car,.055,.033,.017,mat('#f17669',{emissive:'#ec584b',emissiveIntensity:1.2}),side*.083,.16,-.17);
-    }
-   }
-  }
-  trafficRoot.visible=false;
- }
  function createMoments(data){
   for(const item of livingMomentVisuals(data).slice(-2)){
    const [x,z]=tilePos(item.x,item.y),g=new THREE.Group();g.position.set(x,3.45,z);momentsRoot.add(g);
@@ -201,28 +180,25 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
   });
   const people=residentDirectory(data,Math.min(950,Math.max(110,Number(data.population)||110))).map(p=>[p.id,p.home.join(','),p.status,p.employerName]);
   const parks=parkActivityPlan(data).map(p=>[p.x,p.y,p.visitors,p.activities]);
-  const hotspots=rushHourPlan(data,480).hotspots.map(p=>[p.x,p.y,Math.floor(p.vehicles/6)]);
   const moments=livingMomentVisuals(data).map(p=>[p.id,p.day,p.x,p.y]);
-  return JSON.stringify([Boolean(preview),pro,people,parks,hotspots,moments]);
+  return JSON.stringify([Boolean(preview),pro,people,parks,moments]);
  }
  function sceneSync(data,{preview=false}={}){
   state=data;const sig=planSignature(data,preview);
   if(sig===signature)return;
   signature=sig;
-  for(const group of [projectsRoot,parkRoot,citizenRoot,trafficRoot,momentsRoot])clear(group);
+  for(const group of [projectsRoot,parkRoot,citizenRoot,momentsRoot])clear(group);
   residents.clear();animations.length=0;projectAnimations.length=0;parkAnimations.length=0;exerciseFigures.length=0;celebrations.length=0;
   activeParkVisitors=0;activeProjects=0;
   if(preview)return;
   createCitizens(data);
   for(const p of (data.projects||[]).filter(p=>['home','shop','factory'].includes(p.kind)).slice(0,smallScreen?5:11))createProjectModel(p);
-  createParks(data);createTraffic(data);createMoments(data);
+  createParks(data);createMoments(data);
  }
  function tick(delta,minutes,paused=false){
   if(!state)return;
   if(!paused)clock+=Math.max(0,Math.min(.1,Number(delta)||0));
   const h=((Number(minutes)||0)%1440+1440)%1440/60;
-  trafficRoot.visible=(h>=7&&h<9.5)||(h>=17&&h<19.5);
-  peakVisible=trafficRoot.visible&&trafficRoot.children.length>0;
   for(const r of residents.values()){
    const movement=r.commute?scheduledProgress(r.commute,minutes):null,moving=Number.isFinite(movement?.progress);
    r.g.visible=h>=5.5&&h<=23||Boolean(r.commute&&moving);
@@ -297,7 +273,7 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
    if(vals.some(value=>!Number.isFinite(value))||object.scale.x<=0||object.scale.y<=0||object.scale.z<=0)invalidLivingTransforms++;
   });
   return {invalidLivingTransforms,livingResidentFigures:residents.size,animatedHomeShopFactorySites:activeProjects,
-  parkVisitors3D:activeParkVisitors,visualQueueCars:trafficRoot.children.length,peakTrafficVisible:peakVisible,
+  parkVisitors3D:activeParkVisitors,visualQueueCars:0,peakTrafficVisible:false,
   cityCelebrations3D:celebrations.length}}
  return {sceneSync,tick,diagnostics,getResidentLocation,residentHit};
 }

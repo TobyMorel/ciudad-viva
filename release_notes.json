@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.274",
+  "currentVersion": "0.275",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.275",
+      "date": "2026-11-05",
+      "title": "Estacionamiento, faros, farolas y fauna urbana corregidos",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "La franja de estacionamiento y la calzada ahora tienen anchura suficiente para autos del tamaño normal. Se eliminaron los autos estáticos diminutos que se generaban por hora pico y confundían la ocupación real.",
+        "Cada auto de viaje conserva una identidad propia al actualizar la escena. Los marcadores de búsqueda son más discretos, circulan por el carril de tránsito y aparecen durante el viaje en que se está buscando lugar.",
+        "Los faros iluminan con menos intensidad, se apagan cuando el vehículo queda estacionado y no alumbran dentro del túnel de entrada.",
+        "Las farolas se distribuyen también en los extremos de calles y cerca de los cruces; sus postes quedan sobre la vereda.",
+        "La vegetación ahora respeta el cauce sinuoso real del río y su ribera. Gaviotas, palomas y pájaros vuelven a volar sobre el centro construido además de la zona costera."
+      ],
+      "verification": "Revisión estática del diff y formato; no se ejecutó la suite de pruebas."
+    },
     {
       "version": "0.274",
       "date": "2026-11-04",

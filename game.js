@@ -1,18 +1,18 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.274';
-import {setupCityCompanion} from './city-companion.js?v=0.274';
-import {setupCinematicCamera} from './city_cinema.js?v=0.274';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.274';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.274';
-import {createWorld} from './world3d.js?v=0.274';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.274';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.274';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.274';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.275';
+import {setupCityCompanion} from './city-companion.js?v=0.275';
+import {setupCinematicCamera} from './city_cinema.js?v=0.275';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.275';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.275';
+import {createWorld} from './world3d.js?v=0.275';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.275';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.275';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.275';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.274';
+import {growthDemand} from './growth_demand.js?v=0.275';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
 import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js';
-import {ROAD_TYPES} from './road_network.js?v=0.274';
+import {ROAD_TYPES} from './road_network.js?v=0.275';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.

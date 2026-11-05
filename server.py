@@ -1162,6 +1162,11 @@ def restore_municipal_network_data(snapshot):
 def municipal_action_cost(data):
     """Known city-funded purchases that can be placed behind an optional team vote."""
     action=data.get("action");kind=data.get("kind")
+    if action=="surveyParcel":return 250
+    if action=="fileContractDispute":
+        project_id=str(data.get("projectId") or "")
+        target=next((row for row in state.get("projects",[])+state.get("contractHistory",[]) if str(row.get("id") or row.get("projectId") or "")==project_id),None)
+        return max(50,min(250,round((float(target.get("cost",0)) if target else 0)*.002)))
     if action=="place":
         if kind in ("home","shop","office","factory","hotel"):return 0
         model=SERVICE_MODELS.get(str(data.get("serviceModel") or "")) or SCHOOL_MODELS.get(str(data.get("serviceModel") or ""))
@@ -1179,7 +1184,7 @@ def municipal_action_cost(data):
     return 0
 
 def municipal_action_payload(data):
-    action=data.get("action");keys={"place":{"action","kind","x","y","serviceModel","industryType","contractor","busLineId"},"placeRoad":{"action","x","y","roadType"},"openHospitalWard":{"action","x","y"},"expandHospitalWard":{"action","x","y"},"addAmbulance":{"action","x","y"},"openPoliceUnit":{"action","x","y"},"addPoliceVehicle":{"action","x","y"},"expandSchool":{"action","x","y","contractor"}}
+    action=data.get("action");keys={"place":{"action","kind","x","y","serviceModel","industryType","contractor","busLineId"},"placeRoad":{"action","x","y","roadType"},"openHospitalWard":{"action","x","y"},"expandHospitalWard":{"action","x","y"},"addAmbulance":{"action","x","y"},"openPoliceUnit":{"action","x","y"},"addPoliceVehicle":{"action","x","y"},"expandSchool":{"action","x","y","contractor"},"surveyParcel":{"action","x","y"},"fileContractDispute":{"action","projectId","claim"}}
     allowed=keys.get(action,set())
     return {key:value for key,value in data.items() if key in allowed and isinstance(value,(str,int,float,bool,type(None)))}
 
@@ -2426,7 +2431,7 @@ def clean_player_name(value):
 
 def action_description(data):
     action=str(data.get("action", ""))
-    labels={"placeRoad":"construyó una calle","place":"inició una construcción","zone":"cambió la zona","demolishAt":"demolió una construcción","demolishBuilding":"demolió un edificio","speed":"cambió la velocidad","pause":"cambió la pausa","new":"inició una ciudad nueva","toggleTrafficSignal":"cambió un semáforo","unlockLand":"desbloqueó terreno","rotateBuilding":"giró un edificio","adjustTax":"modificó un impuesto","municipalLoan":"solicitó un crédito"}
+    labels={"placeRoad":"construyó una calle","place":"inició una construcción","zone":"cambió la zona","demolishAt":"demolió una construcción","demolishBuilding":"demolió un edificio","speed":"cambió la velocidad","pause":"cambió la pausa","new":"inició una ciudad nueva","toggleTrafficSignal":"cambió un semáforo","unlockLand":"desbloqueó terreno","rotateBuilding":"giró un edificio","adjustTax":"modificó un impuesto","municipalLoan":"solicitó un crédito","surveyParcel":"encargó un estudio geotécnico","fileContractDispute":"abrió una mediación contractual"}
     detail=labels.get(action,"realizó una acción municipal")
     if action in ("demolishAt","demolishBuilding"):
         target=next((b for b in state.get("buildings",[]) if b.get("x")==data.get("x") and b.get("y")==data.get("y")),None)

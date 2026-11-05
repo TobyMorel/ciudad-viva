@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.286",
+  "currentVersion": "0.287",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.287",
+      "date": "2026-11-05",
+      "title": "Estudios geotécnicos, mediación de obras y aeropuerto sensible al clima",
+      "roadmapPhase": 19,
+      "phaseProgress": 60,
+      "overallProgress": null,
+      "changes": [
+        "El estudio geotécnico cuesta $250 y tarda siete días de juego. Antes del resultado muestra rangos inciertos; el informe persistente revela cota, pendiente, resistencia, permeabilidad y riesgo de inundación/asentamiento.",
+        "Los hallazgos de suelo modifican el costo y plazo de cimentación de las obras del sitio, además de su escorrentía y evaluación de inundación. El riesgo hidráulico local aparece en el informe ambiental.",
+        "Se pueden abrir reclamos contractuales por demora, certificación de pagos o calidad. La mediación compara registros del contrato, avance, plazo e inspecciones, aplica multas sustentadas y registra resolución, deuda y confiabilidad del contratista.",
+        "Las tormentas reducen pasajeros y agregan demoras a las operaciones aeroportuarias. La estacionalidad altera visitantes aéreos, y los vuelos contribuyen al ruido y a la contaminación local alrededor del aeropuerto.",
+        "La cobertura sube con alcance acotado: fase 16 a 30%, fase 19 a 60%, fase 24 a 45%, fase 25 a 45% y fase 27 a 55%. Las fases 16–33 todavía no están todas en 95%; las brechas vigentes se muestran en Cambios."
+      ],
+      "verification": "Validación local completa: 241 pruebas Python, 192 pruebas Offline/JavaScript, sintaxis y JSON, integración de navegador WebRTC DTLS y directorio público de salas. Prueba de estrés de 30 años, responsive completa y prueba física entre cuatro equipos no forman parte de esta validación."
+    },
     {
       "version": "0.286",
       "date": "2026-11-05",
@@ -3576,7 +3592,7 @@
       "detail": "Comprobar durante varios años casas automáticas, demanda comercial e industrial, carretera exterior, costos de servicios y rendimiento de cámara/guardado al comprar sectores."
     }
   ],
-  "roadmapProgressMethod": "Estimación orientativa de cobertura funcional contrastada con el roadmap y las pruebas locales. Las fases 1–15 llegaron al menos al 95% en esta entrega; el remanente corresponde principalmente a pruebas de campo, accesibilidad y partidas largas. Se redondea a 5 puntos; 100% requiere validar también esos escenarios. No se calcula promedio global porque el roadmap no define pesos comparables.",
+  "roadmapProgressMethod": "Estimación orientativa de cobertura funcional contrastada con el roadmap y las pruebas locales. Las fases 1–15 llegaron al menos al 95% en Alfa 0.286. En 0.287 se amplía parcialmente el alcance de las fases 16, 19, 24, 25 y 27; las fases 16–33 aún no alcanzan todas el 95%. Se redondea a 5 puntos y no se calcula promedio global porque el roadmap no define pesos comparables.",
   "roadmapPhases": [
     {
       "phase": 0,
@@ -3726,10 +3742,10 @@
     {
       "phase": 16,
       "title": "Geografía, geología, catastro y derecho de suelo",
-      "progress": 20,
-      "summary": "Parcela zonificable y permisos por uso, con acceso vial como requisito.",
+      "progress": 30,
+      "summary": "Parcelas zonificables con acceso vial y estudio geotécnico pagado; el informe del sitio modifica cimentación y escorrentía.",
       "pending": [
-        "Geología, titularidad, catastro legal y derechos de suelo."
+        "Pendientes catastro legal y titularidad, adquisición de suelo, restricciones naturales, movimiento de tierra y estudios definitivos de ríos/costas."
       ]
     },
     {
@@ -3756,12 +3772,10 @@
     {
       "phase": 19,
       "title": "Licitaciones avanzadas y dirección de obras complejas",
-      "progress": 50,
-      "summary": "Licitaciones, calendario, hitos certificados, garantía/reparación y órdenes de cambio con presupuesto/plazo/penalidad",
+      "progress": 60,
+      "summary": "Licitaciones, hitos, garantías y órdenes de cambio; mediación formal con evidencia para atraso, certificación de pagos y calidad, con multas y recuperación trazables.",
       "pending": [
-        "Disputas formales, evidencia contradictoria y mediación/arbitraje",
-        "Multas por incumplimiento y rescisión contractual con efectos económicos",
-        "Pruebas de paridad prolongadas y contratos dependientes durante varios mandatos"
+        "Pendientes tareas con ruta crítica, subcontratación, evidencia contradictoria, rescisión/reemplazo de contratista y paridad prolongada entre mandatos."
       ]
     },
     {
@@ -3804,21 +3818,19 @@
     {
       "phase": 24,
       "title": "Aeropuertos y redes aéreas que funcionan de verdad",
-      "progress": 35,
-      "summary": "Aeropuerto con obras, personal, vuelos, demanda, pasajeros y tasas",
+      "progress": 45,
+      "summary": "Aeropuerto con personal, vuelos, pasajeros, tasas, demoras por tormenta y aporte local de ruido/emisiones.",
       "pending": [
-        "Carga aérea, cartera de aerolíneas, clima, ruido y accesos especializados."
+        "Pendientes carga aérea, cartera competitiva de aerolíneas, accesos especializados y operación completa en ambos motores."
       ]
     },
     {
       "phase": 25,
       "title": "Turismo, hoteles, eventos y economía visitante",
-      "progress": 40,
-      "summary": "Hoteles y vuelos con resultado económico, más ferias, festivales y congresos municipales con aforo, presupuesto, visitantes y compras en comercios físicos",
+      "progress": 45,
+      "summary": "Hoteles, vuelos, eventos y actividad visitante; la demanda aérea considera estaciones del año.",
       "pending": [
-        "Equipamientos turísticos especializados y estacionalidad de eventos",
-        "Visitantes por origen, presión territorial y limpieza con capacidad física de plantas",
-        "Promotores privados de hoteles y regulación de alquiler temporario más profunda"
+        "Pendientes equipamientos turísticos, visitantes trazados por origen, presión territorial/limpieza y regulación profunda de alquiler temporario."
       ]
     },
     {
@@ -3833,10 +3845,10 @@
     {
       "phase": 27,
       "title": "Clima, hidrología, desastres y resiliencia urbana",
-      "progress": 52,
-      "summary": "Lluvia y estación vinculadas con viento visual direccional en arbolado, hojas, humo, banderas y oleaje.",
+      "progress": 55,
+      "summary": "Estaciones y tormentas afectan operaciones aeroportuarias; permeabilidad y riesgo de inundación del suelo estudiado influyen en escorrentía local.",
       "pending": [
-        "Faltan variaciones regionales, incendios y reconstrucción de resiliencia a largo plazo."
+        "Pendientes hidrología de cuencas y efectos aguas abajo, variación regional, incendios y recuperación resiliente plurianual."
       ]
     },
     {

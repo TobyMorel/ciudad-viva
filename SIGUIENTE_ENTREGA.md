@@ -1,4 +1,12 @@
-## Alfa 0.286 · Desarrollo transversal de las fases 1–15
+## Alfa 0.287 · Desarrollo parcial de las fases 16–33
+
+Esta entrega agrega estudios de suelo con incertidumbre, tiempo y costo; sus resultados afectan cimentación, plazo y escorrentía. También incorpora mediación contractual basada en registros para reclamos de demora, certificación y calidad. El aeropuerto responde a tormentas y estacionalidad, y sus movimientos contribuyen a los indicadores ambientales locales.
+
+Las fases 16, 19, 24, 25 y 27 avanzan a 30%, 60%, 45%, 45% y 55%. Las fases 16–33 todavía no están todas al 95%; `release_notes.json` muestra los pendientes por fase y esta entrega no declara completado ese objetivo.
+
+La validación local completa pasó. La publicación de GitHub Pages se comprobará después del push de esta versión.
+
+## Historial · Alfa 0.286 · Desarrollo transversal de las fases 1–15
 
 La cobertura funcional de las primeras quince fases llega al 95% o más en Alfa 0.286. Se agregan ventas privadas de inmuebles con historial de titularidad, ingreso salarial familiar sin duplicación, formación técnica y docente asociada a habilidades de empleo, y votos online de jugadores en consultas vecinales, separados de la muestra simulada de residentes. La batería local recorre contratos, equipos, migración, servicios, economía, movilidad, gobierno y presentación responsive. El residuo de cada fase se reserva para validación entre redes/dispositivos reales, accesibilidad y partidas prolongadas. El estrés económico de 30 años termina con caja $0 en cuatro perfiles heredados de baja financiación; queda calibrar esa sostenibilidad.
 

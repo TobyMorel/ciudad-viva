@@ -744,3 +744,10 @@ Al cargar partidas antiguas, una migracion de una sola vez crea los titulos falt
 ## Alfa 0.286 · economía familiar, mercado privado y consultas online
 
 Las billeteras familiares reciben cada salario una sola vez y conservan fondos para pagar alquiler; la venta privada registra el ingreso del titular y cambia el folio catastral sin mover caja municipal. Los cursos técnicos y docentes modifican las habilidades requeridas por los puestos. Las consultas distinguen respuestas simuladas de residentes de los votos emitidos por jugadores conectados al abrirse la consulta. Los votos de equipo no alteran el sondeo vecinal ni el escrutinio electoral.
+
+
+## Alfa 0.287 · geotecnia, mediación y aeropuerto
+
+Los perfiles de terreno son deterministas para conservar sincronía Offline/LAN. La inspección entrega primero una estimación acotada y, tras siete días de juego y un pago, habilita el perfil del sitio. Sus factores ajustan cimentación y escorrentía, sin simular todavía una cuenca completa.
+
+Los reclamos contractuales comparan únicamente datos observados de plazo, certificación, calidad e inspección. Las multas se limitan por contrato y se cobran de la caja/retenciones disponibles, con saldo pendiente si no alcanza. La operación aeroportuaria aplica la meteorología registrada y una estación de 90 días; no representa todavía rutas de carga ni aerolíneas competidoras.

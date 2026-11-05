@@ -68,6 +68,16 @@ class MunicipalApprovalTests(unittest.TestCase):
         self.assertEqual(server.municipal_action_cost({"action":"placeRoad","x":5,"y":10,"roadType":"avenue"}),3200)
         status,body=self.request("guest",{"action":"setMunicipalApprovalThreshold","threshold":10000})
         self.assertEqual(status,403);self.assertIn("anfitrión",body["error"])
+
+    def test_geotechnical_study_and_contract_mediation_respect_team_approval(self):
+        server.state["projects"]=[{"id":"road-1","cost":10000,"contractor":"Sur Obras"}]
+        self.assertEqual(server.municipal_action_cost({"action":"surveyParcel","x":8,"y":9}),250)
+        decision=server.create_municipal_decision("host",{"action":"surveyParcel","x":8,"y":9,"ignored":"stripped"},250)
+        self.assertEqual(decision["cost"],250)
+        self.assertEqual(decision["action"],{"action":"surveyParcel","x":8,"y":9})
+        self.assertEqual(server.municipal_action_cost({"action":"fileContractDispute","projectId":"road-1","claim":"delay"}),50)
+        payload=server.municipal_action_payload({"action":"fileContractDispute","projectId":"road-1","claim":"delay","money":999999})
+        self.assertEqual(payload,{"action":"fileContractDispute","projectId":"road-1","claim":"delay"})
     def test_pause_and_speed_votes_apply_only_after_current_connected_majority(self):
         status,view=self.request("host",{"action":"proposeSimulationControl","control":"pause","value":True})
         self.assertEqual(status,200)

@@ -2,7 +2,7 @@
 
 **13 jugadores y directorio público bajo demanda:** las salas LAN e Internet admiten hasta 13 jugadores incluido el anfitrión. Las búsquedas públicas sólo consultan Supabase al abrir «Servidores públicos» o pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Los anfitriones mantienen sus anuncios activos con una señal cada 5 minutos; desaparecen a los 12 minutos si la conexión cae. No hay un máximo global artificial de servidores. La conexión WebRTC P2P sigue siendo una alternativa futura que requiere pruebas de NAT y TURN. Ver `PUBLIC_SERVERS.md`.
 
-# Ciudad Viva · Alfa 0.281
+# Ciudad Viva · Alfa 0.280
 
 **Preparación del directorio global sin configuración manual (0.281):** el ejecutable consulta automáticamente la configuración pública de Supabase publicada por Ciudad Viva; los anfitriones no tienen que introducir URL o claves en su PC. También se pueden buscar salas desde la web en GitHub Pages, aunque sólo el .exe crea un servidor alojado localmente. Seguridad del proxy reforzada para impedir cualquier acceso a API administrativas mediante rutas codificadas. Las partidas y guardados siguen exclusivamente en la PC del anfitrión. **Directorio global activado:** se usa el proyecto CiudadViva y su clave publicable, sin instalar ni configurar servicios en las computadoras de los jugadores. Los anuncios se autorizan por un token secreto de cada sala mediante una Edge Function de Supabase, sin cuentas de usuario. Consulta `PUBLIC_SERVERS.md`.
 

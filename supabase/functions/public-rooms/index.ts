@@ -5,7 +5,7 @@ const URL_BASE = Deno.env.get("SUPABASE_URL") || "";
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const REST = URL_BASE + "/rest/v1/public_rooms";
 const JSON_HEADERS = {"content-type":"application/json; charset=utf-8","cache-control":"no-store","access-control-allow-origin":"*","access-control-allow-headers":"apikey,content-type","access-control-allow-methods":"POST,OPTIONS"};
-const LIMIT = 12;
+const LIMIT = 13;
 function respond(code: number, data: Record<string,unknown>) {
   return new Response(JSON.stringify(data), {status:code,headers:JSON_HEADERS});
 }
@@ -88,7 +88,7 @@ Deno.serve(async req=>{
     if(ip){
       const pepper=SERVICE_KEY.slice(0,32);
       record.owner_ip_hash=await digest(ip+"|"+pepper);
-      const cutoff=new Date(Date.now()-90000).toISOString();
+      const cutoff=new Date(Date.now()-12*60*1000).toISOString();
       const filter="?select=id&owner_ip_hash=eq."+record.owner_ip_hash+"&last_seen=gte."+encodeURIComponent(cutoff)+"&limit=4";
       const check=await fetch(REST+filter,{headers:headers()});
       if(check.ok){

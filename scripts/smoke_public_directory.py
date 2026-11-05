@@ -46,11 +46,11 @@ def list_room():
     return call(base + "/rest/v1/public_rooms" + q)
 
 
-def publish(token):
+def publish(token, players=1):
     return call(endpoint, "POST", {
         "action": "publish", "id": room_id, "token": token,
         "city": "CI Ciudad Viva", "host_name": "Prueba automatizada",
-        "join_url": "https://ciudad-viva-ci.trycloudflare.com", "players": 1,
+        "join_url": "https://ciudad-viva-ci.trycloudflare.com", "players": players,
     })
 
 
@@ -71,6 +71,12 @@ def main():
             f"Anuncio no visible vía cliente público: {status} {rooms}")
         assert rooms[0]["id"] == room_id
         assert "owner_secret_hash" not in rooms[0], "El token de autenticación no debe ser público"
+        status, answer = publish(secret, players=13)
+        assert status == 200 and answer.get("ok"), f"No admite 13 jugadores: {status} {answer}"
+        status, rooms = list_room()
+        assert status == 200 and rooms[0]["players"] == 13 and rooms[0]["max_players"] == 13
+        status, answer = publish(secret, players=14)
+        assert status == 400, f"Debe rechazar 14 jugadores: {status} {answer}"
         status, answer = publish(secrets.token_hex(32))
         assert status == 403, f"Se pudo suplantar al anfitrión: {status} {answer}"
         status, answer = unpublish(secrets.token_hex(32))

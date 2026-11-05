@@ -1,4 +1,4 @@
-# Ciudad Viva · Directorio online autoalojado (Alfa 0.280)
+# Ciudad Viva · Directorio online autoalojado (Alfa 0.281)
 
 ## Estado real
 
@@ -10,10 +10,10 @@ La **clave publicable** en `public_directory.json` es segura para distribuir. La
 
 ## Seguridad de publicación y descubrimiento
 
-- La tabla `public.public_rooms` tiene RLS habilitada y sólo concede `SELECT` sobre columnas públicas, para filas activas de los últimos 90 segundos. Nadie puede leer `owner_secret_hash` ni escribir directamente desde una clave pública.
+- La tabla `public.public_rooms` tiene RLS habilitada y sólo concede `SELECT` sobre columnas públicas, para filas activas de los últimos 12 minutos. Nadie puede leer `owner_secret_hash` ni escribir directamente desde una clave pública.
 - La función `public-rooms` permite `publish` y `unpublish` desde el backend local. El anfitrión genera un identificador UUIDv4 y un secreto aleatorio de 256 bits por sesión; Supabase almacena únicamente el hash SHA-256. Las actualizaciones y bajas requieren conocer el secreto original. Es un protocolo por sala, sin registro de usuario ni autenticación de Supabase en cada PC.
-- El anuncio se renueva cada 24 segundos y deja de ser visible automáticamente tras 90 segundos sin actividad.
-- La función valida el hostname `*.trycloudflare.com`, los límites de jugadores y nombres y restringe la creación de varias salas desde una conexión.
+- El anuncio se renueva cada 5 minutos, mientras que los invitados consultan las salas sólo al abrir el listado o al pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Un anuncio deja de mostrarse tras 12 minutos sin actividad; esto evita que una desconexión abrupta quede publicada para siempre.
+- La función valida el hostname `*.trycloudflare.com`, el límite de 13 jugadores por sala y los nombres y restringe la creación de varias salas desde una conexión.
 - El proxy local, accesible desde el túnel, sólo entrega archivos públicos y rutas de jugador permitidas. Impide consultar guardados, crear otra sala o ejecutar funciones administrativas. Cada invitado obtiene su propio ID de jugador y una cookie `HttpOnly` y `Secure`.
 - LAN, Radmin VPN y Hamachi siguen funcionando como antes. Los cursores públicos utilizan HTTP polling, debido a la restricción de SSE en Cloudflare Quick Tunnels.
 
@@ -50,4 +50,4 @@ GitHub Pages y CiudadViva.exe → leen el directorio público
 
 El prototipo todavía no incluye bloqueo/baneo, moderación de chat, sistema antitrampas, reconexión persistente entre reinicios ni defensas completas contra abuso masivo. Quien entra en una partida pública participa en las decisiones, como en LAN.
 
-La base Supabase del plan Free tiene cuotas y límites; si el número de salas y consultas crece, habrá que supervisar su consumo. La simulación nunca deberá trasladarse a esa base.
+No hay límite global artificial de servidores públicos. Sí se limita la creación de varias salas por una misma conexión para reducir el abuso. La base Supabase del plan Free tiene cuotas y límites; si el número de salas y consultas crece, habrá que supervisar su consumo. La simulación nunca deberá trasladarse a esa base.

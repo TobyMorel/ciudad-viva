@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.280",
+  "currentVersion": "0.281",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.281",
+      "date": "2026-11-05",
+      "title": "13 jugadores y lista global por recarga manual",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Las partidas LAN y públicas admiten hasta 13 jugadores incluido el anfitrión; se impide superar esa capacidad desde el servidor.",
+        "El buscador de salas públicas sólo consulta la lista al abrirla o pulsar Recargar servidores, con 30 segundos mínimos entre búsquedas.",
+        "Los anfitriones renuevan su anuncio cada 5 minutos; las salas sin actividad se ocultan tras 12 minutos para evitar entradas huérfanas.",
+        "Se quita la idea de limitar globalmente a 10 los servidores; el cupo de 13 jugadores se aplica por partida.",
+        "Supabase actualiza restricciones, permisos y la Edge Function para aceptar 13 jugadores y el nuevo vencimiento.",
+        "WebRTC sigue siendo una propuesta futura por validar en redes diferentes; el enlace Cloudflare continúa experimental."
+      ],
+      "verification": "Esquema y función Supabase actualizados; pruebas automáticas y conexión entre redes pendientes."
+    },
     {
       "version": "0.280",
       "date": "2026-11-05",

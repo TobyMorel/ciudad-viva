@@ -19,7 +19,7 @@
       "verification": "Esquema y función Supabase actualizados; pruebas automáticas y conexión entre redes pendientes."
     },
     {
-      "version": "0.281",
+      "version": "0.280",
       "date": "2026-11-05",
       "title": "Directorio global autoconfigurable para ejecutables y GitHub Pages",
       "roadmapPhase": 12,

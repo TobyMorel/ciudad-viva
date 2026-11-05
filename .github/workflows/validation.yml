@@ -66,7 +66,7 @@ jobs:
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python -m unittest discover -s tests -p 'test_*.py' -v
-      - name: Directorio Supabase en vivo: publicar, leer, proteger y retirar
+      - name: "Directorio Supabase en vivo: publicar, leer, proteger y retirar"
         run: python scripts/smoke_public_directory.py
       - name: Regresión Offline
         run: node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tutorial.mjs tests/test_city_insights.mjs tests/test_city_spectacle.mjs tests/test_living_city.mjs tests/test_city_immersive.mjs tests/test_traffic_model.mjs tests/test_simulation_time.mjs tests/test_metro_visuals.mjs

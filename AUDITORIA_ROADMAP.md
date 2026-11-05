@@ -1,4 +1,4 @@
-# Auditoría integral de las fases 1–15 · Alfa 0.284
+# Auditoría integral de las fases 1–15 · Alfa 0.285
 
 La revisión contrasta sistemas observables, casos de prueba y pendientes del roadmap maestro. Los porcentajes son orientativos y solo cambian cuando hay una mecánica o evidencia nueva; no se convierten en un promedio global.
 
@@ -14,7 +14,7 @@ La revisión contrasta sistemas observables, casos de prueba y pendientes del ro
 | 8 | 97% | Impuestos por sector, empleo, cuentas municipales, deuda y previsiones con conciliación de caja. | Validar recuperación fiscal completa y continuidad de servicios en una crisis prolongada. |
 | 9 | 80% | Salud, policía, bomberos, residuos, educación, protección social y respuesta física con personal, rutas y presupuesto. | Formación técnica/docente y saturación simultánea de múltiples servicios. |
 | 10 | 80% | Indicadores ambientales por barrio y remediaciones contratadas con fuente, alcance local, duración, costo e historial. | Atender más fuentes y medios, y calibrar efectos acumulados a largo plazo. |
-| 11 | 75% | Apoyo, elecciones, acuerdos y consultas distritales por grupo de edad con resultado estimado e historial. | La participación todavía se estima desde perfiles residentes; faltan respuestas individuales y trazabilidad histórica completa de promesas. |
+| 11 | 80% | Consultas con respuesta individual simulada, muestra estable de hasta 80 residentes con motivo y hogar, resultados por edad; metas con línea de base, revisión mensual y archivo de ocho mandatos. | Promesas propias elegidas por el equipo, confianza separada del apoyo, cronología electoral completa y participación real siguen pendientes. |
 | 12 | 90% | Presencia, chat, cursores, responsabilidades, votación mayoritaria y delegación de anfitrión; se agrega transporte WebRTC firmado desde navegador y respaldo Cloudflare. | Validación sostenida entre redes reales, NAT restrictivo, pérdida y reconexión durante partidas. |
 | 13 | 70% | Centro con 17 categorías de alerta, severidad, evidencia, respuesta recomendada e ingreso a sistemas existentes. | Cada familia todavía necesita su ciclo causal completo de prevención, decisión, recuperación y cierre. |
 | 14 | 70% | Ocho metas de ciudad, seis especializaciones y seguimiento histórico; estrés contable en cinco perfiles y 360 cierres. | Mejorar trayectorias y sostenibilidad en ciudades de escalas distintas; los perfiles de estrés no simulan cada jornada diaria. |
@@ -22,13 +22,13 @@ La revisión contrasta sistemas observables, casos de prueba y pendientes del ro
 
 La meta de 95% para cada fase no se declara alcanzada: las fases 2–6 y 9–15 conservan pendientes funcionales o de validación. El total no se promedia porque las 34 fases no tienen pesos comparables. La batería reproducible está en `scripts/validate_local.sh`; GitHub Actions queda pausado hasta el 1 de diciembre de 2026. La verificación local no sustituye una sesión entre redes reales ni el smoke temporal del directorio global.
 
-## Revisión de alcance · Alfa 0.284
+## Revisión de alcance · Alfa 0.285
 
 WebRTC añade un transporte directo desde la web y la app Windows, con señalización efímera, respuesta firmada, identidad creada por el anfitrión, límites de rutas y respaldo Cloudflare. La caída de un invitado libera su presencia en la sala. Se conserva la fase 12 en 90% porque la conectividad entre redes y bajo NAT restrictivo aún no tiene prueba de campo; no se contabiliza la implementación como conectividad universal.
 
-La base Alfa 0.283 agregó remediación ambiental contratada, consultas estimadas y coordinación cooperativa. Sus verificaciones locales anteriores quedan registradas aquí; las acciones automáticas actuales están pausadas por cuota.
+Alfa 0.285 amplía la fase 11: las consultas producen respuestas simuladas por residente con una muestra explicable y guardan revisiones mensuales de las metas a través de elecciones. Las versiones Online y Offline comparten estos datos. GitHub Actions continúa pausado hasta el 1 de diciembre de 2026. La validación integral de las fases 1–15 queda para el cierre solicitado; no se ejecutaron pruebas en esta entrega.
 
-Evidencia registrada de Alfa 0.283: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. Para 0.284, la validación del protocolo WebRTC se ejecuta con el script local; queda pendiente la prueba entre redes. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
+Evidencia registrada de Alfa 0.283: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. Para 0.284, la validación del protocolo WebRTC se ejecutó con el script local; queda pendiente la prueba entre redes. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
 
 ---
 

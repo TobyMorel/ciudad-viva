@@ -1055,9 +1055,19 @@ def ensure_government_state():
     government.setdefault("complaints",[])
     government.setdefault("complaintSequence",0)
     government.setdefault("agreements",[])
+    government.setdefault("consultationHistory",[])
+    government.setdefault("planHistory",[])
     government.setdefault("responsibilities",{})
     dev=government.setdefault("cityDevelopment",{});dev.setdefault("focus",None);dev.setdefault("streakMonths",0);dev.setdefault("completed",[]);dev.setdefault("lastReviewedDay",None)
-    if "plan" not in government:government["plan"]=new_mandate_plan()
+    if not isinstance(government.get("plan"),dict):government["plan"]=new_mandate_plan()
+    plan=government["plan"]
+    if isinstance(plan,dict):
+        plan.setdefault("history",[]);plan.setdefault("deadlineDay",government["nextElectionDay"])
+        goals=plan.get("goals",[]);legacy_goals=[goal for goal in goals if "baseline" not in goal]
+        metrics=government_plan_metrics() if legacy_goals else {}
+        for goal in goals:
+            if "baseline" not in goal:goal["baseline"]=metrics.get(goal.get("id"),0)
+            goal.setdefault("createdDay",plan.get("createdDay",day));goal.setdefault("deadlineDay",plan["deadlineDay"]);goal.setdefault("status","en curso")
 
 def municipal_team_report(player_id=None):
     government=state.setdefault("government",{})
@@ -1209,14 +1219,38 @@ def government_plan_metrics():
 
 def new_mandate_plan():
     metrics=government_plan_metrics() if "state" in globals() else {"employment":78,"housingReserve":10,"services":76}
-    return {"createdDay":int(state.get("day",1)) if "state" in globals() else 1,"goals":[{"id":"employment","title":"Empleo formal","unit":"% de trabajadores elegibles","target":max(60,min(85,metrics["employment"]+5))},{"id":"housingReserve","title":"Reserva de vivienda","unit":"% de plazas libres","target":min(20,max(5,metrics["housingReserve"]+3))},{"id":"services","title":"Cobertura de servicios","unit":"% de cobertura municipal","target":max(60,min(85,metrics["services"]+5))}]}
+    day=int(state.get("day",1)) if "state" in globals() else 1
+    government=state.get("government",{}) if "state" in globals() else {}
+    deadline=int(government.get("nextElectionDay",day+1440))
+    goals=[("employment","Empleo formal","% de trabajadores elegibles",max(60,min(85,metrics["employment"]+5))),
+           ("housingReserve","Reserva de vivienda","% de plazas libres",min(20,max(5,metrics["housingReserve"]+3))),
+           ("services","Cobertura de servicios","% de cobertura municipal",max(60,min(85,metrics["services"]+5)))]
+    return {"createdDay":day,"deadlineDay":deadline,"history":[],"goals":[{"id":key,"title":title,"unit":unit,"target":target,"baseline":metrics[key],"createdDay":day,"deadlineDay":deadline,"status":"en curso"} for key,title,unit,target in goals]}
 
 def government_plan_report():
     g=state.get("government",{});plan=g.get("plan") or new_mandate_plan();metrics=government_plan_metrics();rows=[]
     for goal in plan.get("goals",[]):
         current=metrics.get(goal["id"],0);target=goal["target"]
-        rows.append({**goal,"current":current,"fulfilled":current>=target,"progress":round(min(100,100*current/max(1,target)))})
-    return {"createdDay":plan.get("createdDay",state.get("day",1)),"goals":rows,"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics}
+        baseline=goal.get("baseline")
+        rows.append({**goal,"current":current,"deltaFromBaseline":None if baseline is None else current-baseline,"fulfilled":current>=target,"progress":round(min(100,100*current/max(1,target)))})
+    return {"createdDay":plan.get("createdDay",state.get("day",1)),"deadlineDay":plan.get("deadlineDay",g.get("nextElectionDay")),"goals":rows,"history":plan.get("history",[])[-60:],"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics}
+
+def record_government_plan_snapshot(report=None):
+    """Keep a dated, per-mandate trail of promise targets and measured outcomes."""
+    ensure_government_state();government=state["government"]
+    if not government.get("plan"):government["plan"]=new_mandate_plan()
+    plan=government["plan"];history=plan.setdefault("history",[]);day=int(state.get("day",1))
+    if history and int(history[-1].get("day",-1))==day:return history[-1]
+    report=report or government_plan_report();previous={row.get("id"):row for row in (history[-1].get("goals",[]) if history else [])};snapshot_goals=[]
+    for goal in report.get("goals",[]):
+        prior=previous.get(goal.get("id"),{});current=int(goal.get("current",0));baseline=goal.get("baseline")
+        snapshot_goals.append({"id":goal.get("id"),"title":goal.get("title"),"unit":goal.get("unit"),"current":current,"target":goal.get("target"),"baseline":baseline,"deltaFromBaseline":None if baseline is None else current-baseline,"deltaFromPrevious":None if not prior else current-int(prior.get("current",current)),"fulfilled":bool(goal.get("fulfilled"))})
+    snapshot={"day":day,"mandate":int(state.get("government",{}).get("mandate",1)),"goals":snapshot_goals}
+    history.append(snapshot);plan["history"]=history[-60:]
+    for row in report.get("goals",[]):
+        stored=next((item for item in plan.get("goals",[]) if item.get("id")==row.get("id")),None)
+        if stored:stored.update({"current":row.get("current"),"fulfilled":row.get("fulfilled"),"lastReviewedDay":day,"status":"cumplida" if row.get("fulfilled") else "en curso"})
+    return snapshot
 
 def government_issue_sources(district_id,issue):
     def in_area(x):return ("oeste" if x<10 else "centro" if x<18 else "puerto")==district_id
@@ -1250,6 +1284,70 @@ def government_issue_sources(district_id,issue):
 def government_agreement_report():
     g=state.get("government",{});items=[a for a in g.get("agreements",[]) if a.get("mandate")==g.get("mandate")]
     return {"items":items[-24:],"active":sum(a.get("status")=="seguimiento" for a in items),"completed":sum(a.get("status")=="cumplido" for a in items),"overdue":sum(a.get("status")=="vencido" for a in items)}
+
+def citizen_consultation_sentiment(topic,home,resident):
+    if topic=="employment":return 78 if resident.get("workerEligible") and resident.get("status")=="empleado" else 24 if resident.get("workerEligible") else 59 if resident.get("retired") else 50
+    if topic=="housing":
+        occupancy=int(home.get("occupants",0))/max(1,int(home.get("capacity",home.get("occupants",1))));return max(15,min(90,78-max(0,occupancy-.75)*100+(float(home.get("quality",70))-70)*.25-(5 if resident.get("housingTenure")=="inquilina" else 0)))
+    if topic=="services":
+        access=home.get("utilityAccess",{});coverage=min(float(access.get("powerServedPct",100)),float(access.get("waterServedPct",100)),float(access.get("wastewaterTreatedPct",100)));return max(10,min(95,coverage*.65+float(state.get("services",0))*.35))
+    if topic=="environment":return max(5,min(95,float(home.get("environmentQuality",70))))
+    if topic=="taxes":
+        arrears=float(state.get("taxes",{}).get("arrearsByAsset",{}).get(f"home-{home.get('x')}-{home.get('y')}",0));income=max(1,float(resident.get("monthlyWage") or resident.get("expectedWage") or 80));return max(5,min(95,67-min(45,arrears/income*8)-max(0,float(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))*.35))
+    return float(state.get("approval",50))
+
+def citizen_consultation_reason(topic,home,resident,sentiment):
+    if topic=="employment":return "Tiene un empleo registrado" if resident.get("workerEligible") and resident.get("status")=="empleado" else "Busca trabajo" if resident.get("workerEligible") else "No está en edad laboral"
+    if topic=="housing":
+        occupancy=int(home.get("occupants",0))/max(1,int(home.get("capacity",home.get("occupants",1))))
+        return "La vivienda necesita mantenimiento" if float(home.get("quality",70))<60 else "La vivienda está casi llena" if occupancy>=.9 else "Tiene espacio en su hogar" if occupancy<.7 else "Evalúa el costo y la estabilidad del alquiler"
+    if topic=="services":
+        access=home.get("utilityAccess",{});coverage=min(float(access.get("powerServedPct",100)),float(access.get("waterServedPct",100)),float(access.get("wastewaterTreatedPct",100)))
+        return f"Cobertura domiciliaria {round(coverage)}%" if coverage<90 else f"Servicios municipales {round(float(state.get('services',0)))}%"
+    if topic=="environment":return f"Calidad ambiental de su zona {round(float(home.get('environmentQuality',70)))}%"
+    arrears=float(state.get("taxes",{}).get("arrearsByAsset",{}).get(f"home-{home.get('x')}-{home.get('y')}",0))
+    return f"Deuda tributaria del hogar $ {round(arrears)}" if arrears else f"Presión tributaria percibida {round(max(0,float(state.get('taxes',{}).get('lastReport',{}).get('pressure',0))))}%"
+
+def start_government_consultation(district_id,topic):
+    ensure_government_state();government=state["government"];district_id=str(district_id or "");topic=str(topic or "")
+    labels={"employment":"empleo local","housing":"acceso a vivienda","services":"servicios básicos","environment":"calidad ambiental","taxes":"carga tributaria"}
+    district=next((row for row in government_districts() if row["id"]==district_id),None)
+    if not district:raise ValueError("Elegí un distrito válido para la consulta.")
+    if topic not in labels:raise ValueError("Elegí un tema de consulta disponible.")
+    if government.get("status")!="en_mandato":raise ValueError("El equipo ya no está en funciones.")
+    polls=government.setdefault("consultationHistory",[])
+    if any(poll.get("status")=="abierta" and poll.get("districtId")==district_id for poll in polls):raise ValueError("Ese distrito ya tiene una consulta abierta.")
+    if district["population"]<1:raise ValueError("El distrito todavía no tiene residentes para consultar.")
+    cost=250;reserved=sum(max(0,int(project.get("cost",0))-int(project.get("paid",0))) for project in state.get("projects",[]) if not project.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+    if available<cost:raise ValueError(f"Quedan $ {available}; la audiencia distrital cuesta $ {cost}.")
+    state["money"]-=cost;poll={"id":uuid.uuid4().hex,"districtId":district_id,"district":district["name"],"topic":topic,"topicLabel":labels[topic],"openedDay":int(state.get("day",1)),"deadlineDay":int(state.get("day",1))+7,"status":"abierta","cost":cost,"eligibleResidents":district["population"]}
+    polls.append(poll);government["consultationHistory"]=polls[-24:]
+    ev("Consulta vecinal convocada",f"{district['name']}: audiencia de siete días sobre {labels[topic]}. Responderá una muestra simulada de residentes según las condiciones actuales de sus hogares; costo municipal $ {cost}.")
+    return poll
+
+def advance_government_consultations():
+    ensure_government_state();government=state["government"]
+    for poll in government.setdefault("consultationHistory",[]):
+        if poll.get("status")!="abierta" or int(state.get("day",1))<int(poll.get("deadlineDay",0)):continue
+        district_id=poll.get("districtId");homes=[home for home in state.get("buildings",[]) if home.get("kind")=="home" and ("oeste" if int(home.get("x",0))<10 else "centro" if int(home.get("x",0))<18 else "puerto")==district_id]
+        eligible=sum(max(0,int(home.get("occupants",0))) for home in homes);by_age={key:{"eligible":0,"yes":0,"no":0} for key in ("menores","adultos","mayores")};respondents=[];individual=[]
+        for home in homes:
+            for index,resident in enumerate(home.get("residents",[])):
+                age=max(0,int(resident.get("age",0) or 0));group="menores" if age<18 else "mayores" if age>=65 else "adultos";by_age[group]["eligible"]+=1
+                identity=str(resident.get("id") or f"{home.get('x')}-{home.get('y')}-{index}")
+                if stable_skill(identity,f"consulta-{poll['id']}")%5==0:continue
+                sentiment=citizen_consultation_sentiment(poll.get("topic"),home,resident);yes=sentiment>=50;by_age[group]["yes" if yes else "no"]+=1;respondents.append(yes)
+                detail_rank=stable_skill(identity,f"consulta-detalle-{poll['id']}");name=str(resident.get("name") or f"Vecino #{identity[-5:]}")[:48]
+                row={"residentId":identity,"name":name,"age":age,"group":group,"answer":"a_favor" if yes else "en_contra","sentimentPct":round(sentiment),"reason":citizen_consultation_reason(poll.get("topic"),home,resident,sentiment),"x":int(home.get("x",0)),"y":int(home.get("y",0))}
+                if len(individual)<80:individual.append((detail_rank,row))
+                else:
+                    worst=max(range(len(individual)),key=lambda pos:individual[pos][0])
+                    if detail_rank<individual[worst][0]:individual[worst]=(detail_rank,row)
+        yes=sum(respondents);sample=len(respondents);result={"eligible":max(eligible,sample),"respondents":sample,"participationPct":round(100*sample/max(1,eligible)),"yes":yes,"no":sample-yes,"supportPct":round(100*yes/sample) if sample else None,"individualResponses":[row for _,row in sorted(individual,key=lambda item:item[0])],"individualResponsesTotal":sample,"individualResponsesComplete":sample<=80}
+        result["byAge"]={key:{"eligible":row["eligible"],"respondents":row["yes"]+row["no"],"yes":row["yes"],"no":row["no"],"supportPct":round(100*row["yes"]/(row["yes"]+row["no"])) if row["yes"]+row["no"] else None} for key,row in by_age.items()}
+        poll.update({"status":"cerrada","closedDay":int(state.get("day",1)),"result":result})
+        ev("Consulta ciudadana cerrada",f"{poll['district']}: {sample} respuestas de {eligible} residentes registrados sobre {poll['topicLabel'].lower()}. Apoyo {result['supportPct'] if result['supportPct'] is not None else 'sin muestra'}%. Se conservaron {len(result['individualResponses'])} voces individuales para auditar la muestra; el sondeo no sustituye una votación electoral.")
+    government["consultationHistory"]=government.get("consultationHistory",[])[-24:]
 
 def record_government_agreement(complaint_id,author):
     ensure_government_state();g=state["government"]
@@ -1290,6 +1388,7 @@ def update_government_cycle():
     for goal in reports["goals"]:
         stored=next((x for x in g["plan"]["goals"] if x["id"]==goal["id"]),None)
         if stored:stored["current"]=goal["current"];stored["fulfilled"]=goal["fulfilled"];stored["lastReviewedDay"]=state["day"]
+    record_government_plan_snapshot(reports)
     average=sum(d["support"]*d["population"] for d in districts)/max(1,sum(d["population"] for d in districts))
     severe=state.get("money",0)<=0 and state.get("services",0)<=30 and average<35
     if severe:
@@ -1323,7 +1422,7 @@ def government_report():
         if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
     plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
     vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"cityDevelopment":city_development_report(),"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"planHistory":g.get("planHistory",[])[-8:],"cityDevelopment":city_development_report(),"consultations":g.get("consultationHistory",[])[-24:],"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
 
 def process_government_election():
     ensure_government_state();g=state["government"]
@@ -1335,6 +1434,8 @@ def process_government_election():
     total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
     result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"contractPortfolio":government_contract_portfolio(),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
     g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
+    g.setdefault("planHistory",[]).append({"mandate":int(g.get("mandate",1)),"createdDay":plan.get("createdDay"),"deadlineDay":plan.get("deadlineDay"),"closedDay":int(state.get("day",1)),"outcome":"renovado" if won else "finalizado","fulfilled":plan.get("fulfilled",0),"total":plan.get("total",0),"goals":plan.get("goals",[]),"history":plan.get("history",[])})
+    g["planHistory"]=g["planHistory"][-8:]
     if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elección consideró empleo, vivienda, servicios y confianza de los distritos.")
     else:g["status"]="derrotado";state["paused"]=True;ev("Derrota compartida en las elecciones",f"El gobierno obtuvo {pct}% y perdió la mayoría. Todo el equipo deja el mandato; la ciudad queda pausada en modo observación.")
     if won:g["plan"]=new_mandate_plan();g["complaints"]=[c for c in g.get("complaints",[]) if c.get("status")=="abierto"]
@@ -5945,6 +6046,7 @@ def tick_one_day():
     ensure_supply_state()
     state["day"] += 1
     day=state["day"]
+    advance_government_consultations()
     advance_metro_day(state)
     if (day-1)//30>state.get("lastMonth",0):
         state["metroMonthSettlement"]=settle_metro_month(state)
@@ -7540,6 +7642,10 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="setCityDevelopmentFocus":
                     try:set_city_development_focus(data.get("goalId"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid,use_cache=True));return
+                if action=="startCitizenConsultation":
+                    try:start_government_consultation(data.get("districtId"),data.get("topic"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="recordGovernmentAgreement":

@@ -616,6 +616,10 @@ En cada distrito se estima la intención de voto gubernamental a partir de **sat
 
 ---
 
+### Estado de implementación · Alfa 0.285
+
+Se cierra una consulta distrital a los siete días con respuestas simuladas por residente, conteo por edad y una muestra estable de hasta 80 voces con motivo, apoyo y hogar. Las metas del mandato registran línea de base y avance mensual; su historial se conserva al terminar una elección. Esto no implementa todavía promesas elegidas por los jugadores, cambios reales de confianza ni encuestas respondidas por personas.
+
 ## FASE 12 — JUEGO COOPERATIVO: DECISIONES Y RESPONSABILIDADES
 
 **Prioridad:** crítica para la experiencia social.  

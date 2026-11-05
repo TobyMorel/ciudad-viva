@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.284",
+  "currentVersion": "0.285",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.285",
+      "date": "2026-11-05",
+      "title": "Consultas vecinales con voces individuales e historial de compromisos",
+      "roadmapPhase": 11,
+      "overallProgress": null,
+      "changes": [
+        "Al cerrar una consulta distrital, cada residente simulado responde según su empleo, vivienda, servicios, entorno o presión tributaria; el informe conserva resultados a favor/en contra y desglose por edad.",
+        "Cada consulta guarda hasta 80 respuestas individuales con grupo de edad, motivo, nivel de apoyo y hogar. Si la participación supera ese tamaño, se conserva una muestra estable y se indica su cobertura.",
+        "Las metas del mandato registran su línea de base y una revisión en cada cierre mensual. Al finalizar una elección, se archivan los objetivos y su evolución para consultar hasta ocho mandatos anteriores.",
+        "Offline y Online comparten el nuevo esquema; las partidas existentes reciben los campos faltantes al cargarse.",
+        "La fase 11 avanza de 75% a 80%. Las respuestas siguen siendo una simulación del juego, y las promesas elegidas por el equipo y la participación real continúan pendientes."
+      ],
+      "verification": "Pendiente de validación integral junto con el resto de las fases 1–15. Según el flujo acordado, no se ejecutaron pruebas en esta entrega."
+    },
     {
       "version": "0.284",
       "date": "2026-11-05",
@@ -3650,10 +3665,11 @@
     {
       "phase": 11,
       "title": "Apoyo ciudadano, elecciones y destitución",
-      "progress": 75,
-      "summary": "Apoyo distrital, elecciones, reclamos, acuerdos y consultas con muestras estimadas por edad; los resultados y la participación quedan registrados.",
+      "progress": 80,
+      "summary": "Apoyo distrital, elecciones, reclamos y acuerdos; consultas con respuestas simuladas individuales, muestra auditable por edad y motivos, y seguimiento mensual de compromisos archivado al cambiar de mandato.",
       "pending": [
-        "Las respuestas son estimaciones de perfiles residentes, no votos individuales; falta participación real y seguimiento histórico completo de promesas y consultas."
+        "El equipo todavía no puede elegir sus 2–4 promesas de mandato ni fijar plazos y umbrales propios.",
+        "Las consultas son respuestas simuladas a partir de hogares; falta incorporar participación real de jugadores y una evolución completa de confianza separada del apoyo."
       ]
     },
     {

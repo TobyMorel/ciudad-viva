@@ -1,6 +1,8 @@
-# Ciudad Viva · Alfa 0.284
+# Ciudad Viva · Alfa 0.285
 
 **WebRTC directo desde navegador con Cloudflare de respaldo:** Servidores públicos puede conectar por P2P desde GitHub Pages o la app Windows. Supabase sólo lleva señalización efímera; el anfitrión conserva la simulación y valida cada ruta. Si el P2P falla, se usa el túnel disponible. La compatibilidad con redes domésticas depende del NAT y aún necesita una prueba de campo; WebRTC sin TURN no garantiza conexión en todas las redes. La cuota de GitHub Actions está agotada hasta el 1 de diciembre de 2026: Vercel sigue desplegando `main`, las verificaciones se pueden correr localmente con `bash scripts/validate_local.sh` o `scripts/validate_local.ps1`, y el `.exe` se empaqueta en Windows con `scripts/build_windows_host.ps1`.
+
+**Consultas vecinales e historial del mandato (fase 11: 75% → 80%):** los sondeos ahora guardan un total por respuesta y edad, junto con una muestra estable de hasta 80 voces simuladas, su motivo y hogar. Las metas muestran su línea de base y quedan registradas mes a mes; los mandatos cerrados conservan sus revisiones. El resultado modela residentes del juego, no respuestas reales de jugadores. Offline y Online usan el mismo flujo. La validación integral queda para el cierre de las fases 1–15; GitHub Actions sigue pausado hasta el 1 de diciembre de 2026.
 
 ## Ciudad Viva · Alfa 0.283
 

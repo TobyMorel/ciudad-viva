@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.289",
+  "currentVersion": "0.290",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.290",
+      "date": "2026-11-05",
+      "title": "Recuperación de rendimiento 3D",
+      "overallProgress": null,
+      "changes": [
+        "El mapa y las vistas del catálogo vuelven al renderer WebGL 2 clásico. Se retiró la espera de inicialización WebGPU que demoraba el primer dibujo y dejaba pausas al mover la cámara.",
+        "El módulo WebGPU ya no forma parte de la carga inicial; queda pendiente perfilarlo en equipos reales antes de volver a activarlo.",
+        "Se conserva el buscador de rutas offline compilado desde Rust/WASM en Alfa 0.289."
+      ],
+      "verification": "Chromium confirmó WebGL 2 con soporte WebGPU presente y ausente, primer dibujo con llamadas a escena y cero solicitudes al módulo three.webgpu.js. También pasó la verificación de versión publicada. No se midió en una GPU física."
+    },
     {
       "version": "0.289",
       "date": "2026-11-05",

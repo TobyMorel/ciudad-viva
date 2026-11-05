@@ -1,8 +1,12 @@
-## Alfa 0.289 · WebGPU y rutas Rust/WASM
+## Alfa 0.290 · Recuperación de rendimiento 3D
 
-El mapa 3D y sus previews prefieren WebGPU y caen a WebGL 2 cuando hace falta. El buscador ponderado de caminos de la simulación offline corre en Rust/WASM, con respaldo JS para compatibilidad y mapas que superen 16.384 nodos. Se mantuvieron los modelos y sistemas actuales de Three.js. La autoridad de rutas Online y el resto de la lógica siguen en sus runtimes existentes: esta versión cambia el backend de dibujo y migra un cálculo intensivo, no todo el juego.
+El mapa y las vistas de construcción vuelven al renderer WebGL 2 que usaba la versión anterior. La ruta WebGPU dejó pausas perceptibles al mover la cámara y tardaba en mostrar el primer cuadro en el equipo del jugador. El módulo WebGPU ya no se descarga al abrir el juego. El pathfinder Rust/WASM de Alfa 0.289 se conserva para las rutas de la simulación offline.
 
-Próximo trabajo de rendimiento: medir el mismo mapa grande en PC y A54 con diagnóstico de backend activo, localizar los costos restantes de simulación/escena y migrar otros cálculos sólo cuando el perfil lo justifique. Un traslado completo a PlayCanvas/Babylon o de toda la simulación requeriría reconstruir sistemas y datos además del renderer.
+WebGPU queda pendiente hasta perfilar la misma partida en dispositivos reales y reducir el costo de compilación de materiales antes de volver a activarlo.
+
+## Alfa 0.289 · WebGPU experimental y rutas Rust/WASM
+
+Se probó WebGPU con WebGL 2 como respaldo y se migró a Rust/WASM la búsqueda ponderada de rutas viales offline. El backend WebGPU se desactivó en la entrega siguiente al observar pausas fuertes en la cámara y una carga 3D demasiado lenta. La ruta WASM permanece activa; la autoridad Online y el resto de la simulación siguen en sus runtimes existentes.
 
 ## Alfa 0.288 · Gestión segura de partidas recuperadas
 

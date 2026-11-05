@@ -763,3 +763,8 @@ Los respaldos automáticos se limitan globalmente a los dos más recientes y se 
 El mapa existente usa la API de Three.js en cientos de constructores y efectos. Se cambia el renderer por `WebGPURenderer`, cuyo backend intenta WebGPU y selecciona WebGL 2 si el navegador no expone WebGPU; el mismo renderer alimenta las vistas del catálogo. Se conserva la escena procedural para no duplicar modelos y reglas mientras se cambia el backend.
 
 El Dijkstra ponderado que utiliza la simulación offline se compila como Rust `no_std` a `wasm32-unknown-unknown`. El ABI recibe aristas y costos compactos; el límite de 16.384 nodos acota memoria y una ciudad mayor usa el buscador JavaScript. El server de sala mantiene su implementación autoritativa existente; todavía no se migraron todos los subsistemas de simulación a WASM.
+
+
+## Alfa 0.290 · Renderer WebGL restaurado
+
+Se volvió al `WebGLRenderer` clásico como renderer activo, igual que antes del experimento WebGPU. La carga inicial ya no importa `three.webgpu.js` ni espera la inicialización asíncrona del backend; esto revierte la regresión de pausas al mover cámara y demora de primer dibujo reportadas después de Alfa 0.289. WebGPU queda sin uso hasta perfilar sus pipelines y confirmar rendimiento en equipos reales. El pathfinder Rust/WASM de rutas offline se conserva.

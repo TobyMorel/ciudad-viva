@@ -1,4 +1,4 @@
-import * as THREE from './vendor/three.webgpu.js';
+import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
 import {daylightIntensity} from './simulation_time.js?v=0.289';
 import {metroVisualPlan} from './metro_visuals.js';
@@ -44,9 +44,11 @@ function routineTravel(actor,minutes,total){
 function seeded(n){let x=Math.sin(n*127.1+78.233)*43758.5453;return x-Math.floor(x)}
 
 export function createWorld(canvas){
-  const renderer=new THREE.WebGPURenderer({canvas,antialias:true,powerPreference:'high-performance'});
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+  const gl=renderer.getContext(),rendererInfo=gl.getExtension('WEBGL_debug_renderer_info');
+  const softwareRenderer=Boolean(rendererInfo&&/swiftshader|llvmpipe|software/i.test(String(gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL))));
   const smallScreen=window.innerWidth<650;
-  let softwareRenderer=false,minPixelRatio=smallScreen?0.78:0.8,maxPixelRatio=smallScreen?1.25:1.5;
+  const minPixelRatio=softwareRenderer?0.28:smallScreen?0.78:0.8,maxPixelRatio=softwareRenderer?0.4:smallScreen?1.25:1.5;
   let renderPixelRatio=clamp(window.devicePixelRatio||1,minPixelRatio,maxPixelRatio);
   let lastSoftwareRender=0;
   renderer.setPixelRatio(renderPixelRatio);
@@ -59,25 +61,9 @@ export function createWorld(canvas){
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   const scene=new THREE.Scene();scene.scale.setScalar(MAP_WORLD_SCALE);scene.background=new THREE.Color('#bcd9df');scene.fog=new THREE.Fog('#bcd9df',132*MAP_WORLD_SCALE,240*MAP_WORLD_SCALE);
   const camera=new THREE.OrthographicCamera(-40,40,30,-30,.1,350*MAP_WORLD_SCALE);
-  let rendererReady=false,pendingRendererFrame=false,rendererBackend='inicializando',rendererInitError='';
-  function renderScene(){if(!rendererReady){pendingRendererFrame=true;return}renderer.render(scene,camera)}
-  const rendererReadyPromise=renderer.init().then(()=>{
-    rendererReady=true;
-    const backend=renderer.backend;
-    rendererBackend=backend?.isWebGPUBackend?'WebGPU':backend?.isWebGLBackend?'WebGL 2':'desconocido';
-    canvas.dataset.renderBackend=rendererBackend;
-    if(backend?.isWebGLBackend){
-      const gl=renderer.getContext(),rendererInfo=gl?.getExtension?.('WEBGL_debug_renderer_info');
-      softwareRenderer=Boolean(rendererInfo&&/swiftshader|llvmpipe|software/i.test(String(gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL))));
-      if(softwareRenderer){minPixelRatio=.28;maxPixelRatio=.4;renderPixelRatio=Math.min(renderPixelRatio,maxPixelRatio);renderer.setPixelRatio(renderPixelRatio)}
-    }
-    if(pendingRendererFrame){pendingRendererFrame=false;renderScene()}
-    window.dispatchEvent(new CustomEvent('ciudad-viva-render-backend',{detail:{backend:rendererBackend,software:softwareRenderer}}));
-  }).catch(error=>{
-    rendererInitError=error?.message||String(error);rendererBackend='error';canvas.dataset.renderBackend='error';
-    console.error('No se pudo iniciar WebGPU ni su respaldo WebGL 2.',error);
-    const counter=document.getElementById('fpsCounter');if(counter)counter.textContent='3D no disponible';
-  });
+  const rendererReady=true,rendererBackend='WebGL 2',rendererInitError='';
+  canvas.dataset.renderBackend=rendererBackend;
+  function renderScene(){renderer.render(scene,camera)}
   const hemi=new THREE.HemisphereLight('#fff5e5','#597d6e',.94);scene.add(hemi);
   const sun=new THREE.DirectionalLight('#ffe4bb',2.65);sun.position.set(3,31,28);sun.castShadow=false;scene.add(sun);sun.target.position.set(28,0,20);scene.add(sun.target);
   const staticRoot=new THREE.Group(),vegetationRoot=new THREE.Group(),landShadeRoot=new THREE.Group(),buildingRoot=new THREE.Group(),dynamicRoot=new THREE.Group(),trafficRoot=new THREE.Group(),selectionRoot=new THREE.Group(),weatherSprayRoot=new THREE.Group();scene.add(staticRoot,vegetationRoot,landShadeRoot,buildingRoot,dynamicRoot,trafficRoot,selectionRoot,weatherSprayRoot);const buildingModels=new Map();
@@ -2103,7 +2089,7 @@ export function createWorld(canvas){
     for(let i=0;i<waves.length;i++)waves[i].material.opacity=.23+.11*Math.sin(now*.0014+i);
     renderScene();
   }
-  rendererReadyPromise.then(()=>requestAnimationFrame(animate));
+  requestAnimationFrame(animate);
   function projectLocalPosition(position){return position.clone().multiplyScalar(MAP_WORLD_SCALE).project(camera)}
   function projectTile(x,y,height=2.5){
     updateCamera();
@@ -2121,7 +2107,7 @@ export function createWorld(canvas){
     updateCamera();updateVegetation();updateLandShading(landShadeState);renderScene()
   }
   function focusTile(x,y,nextView=view){view={...nextView};updateShadowQuality();resize();updateVegetation();const yaw=Math.PI/4+view.rotation*Math.PI/2,right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),span=58/clamp(view.zoom,.43,4),units=span/Math.max(1,canvas.clientHeight),dx=(cameraAnchor.x*TILE-(Number(x)+.5)*TILE)*MAP_WORLD_SCALE,dz=(cameraAnchor.y*TILE-(Number(y)+.5)*TILE)*MAP_WORLD_SCALE;view.panX=(dx*right.x+dz*right.z)/units;view.panY=(dx*upGround.x+dz*upGround.z)/units;updateCamera();updateLandShading(landShadeState);renderScene();return{panX:view.panX,panY:view.panY}}
-  const buildPreviewCache=new Map(),previewWidth=144,previewHeight=100,previewCanvas=document.createElement('canvas');let previewRenderer=null,previewRendererReady=null;
+  const buildPreviewCache=new Map(),previewWidth=144,previewHeight=100,previewCanvas=document.createElement('canvas');let previewRenderer=null;
   const previewScene=new THREE.Scene();previewScene.background=new THREE.Color('#dce9da');previewScene.add(new THREE.HemisphereLight('#fff8e7','#637b68',1.3));const previewSun=new THREE.DirectionalLight('#fff0cd',2.1);previewSun.position.set(4,8,6);previewScene.add(previewSun);const previewCamera=new THREE.PerspectiveCamera(32,previewWidth/previewHeight,.1,30);previewCamera.position.set(3.7,3.1,4.8);previewCamera.lookAt(0,1,0);
 
   function finishBuildPreview(group,item){
@@ -2215,9 +2201,8 @@ export function createWorld(canvas){
     const todo=items.filter(({canvas:target,item})=>target&&item&&!buildPreviewCache.has(JSON.stringify(item)));
     if(!todo.length){for(const entry of items)paintBuildPreview(entry);return}
     try{
-      if(!previewRenderer){previewRenderer=new THREE.WebGPURenderer({canvas:previewCanvas,antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'low-power'});previewRenderer.setPixelRatio(1);previewRenderer.setSize(previewWidth,previewHeight,false);previewRenderer.outputColorSpace=THREE.SRGBColorSpace;previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;previewRenderer.toneMappingExposure=.98;previewRendererReady=previewRenderer.init()}
-      await previewRendererReady;
-      for(const {item} of todo){let model=null;try{const key=JSON.stringify(item);model=makeBuildPreview(item);previewRenderer.render(previewScene,previewCamera);await previewRenderer.backend?.device?.queue?.onSubmittedWorkDone?.();const snapshot=document.createElement('canvas');snapshot.width=previewWidth;snapshot.height=previewHeight;const context=snapshot.getContext('2d');context.drawImage(previewCanvas,0,0,previewWidth,previewHeight);buildPreviewCache.set(key,new Uint8ClampedArray(context.getImageData(0,0,previewWidth,previewHeight).data))}catch(error){console.warn(`No se pudo dibujar la vista 3D de ${item.title}`,error)}finally{if(model){previewScene.remove(model);model.traverse(object=>{if(object.geometry&&!object.geometry.userData.shared)object.geometry.dispose()})}}}
+      if(!previewRenderer){previewRenderer=new THREE.WebGLRenderer({canvas:previewCanvas,antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'low-power'});previewRenderer.setPixelRatio(1);previewRenderer.setSize(previewWidth,previewHeight,false);previewRenderer.outputColorSpace=THREE.SRGBColorSpace;previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;previewRenderer.toneMappingExposure=.98}
+      for(const {item} of todo){let model=null;try{const key=JSON.stringify(item);model=makeBuildPreview(item);previewRenderer.render(previewScene,previewCamera);const snapshot=document.createElement('canvas');snapshot.width=previewWidth;snapshot.height=previewHeight;const context=snapshot.getContext('2d');context.drawImage(previewCanvas,0,0,previewWidth,previewHeight);buildPreviewCache.set(key,new Uint8ClampedArray(context.getImageData(0,0,previewWidth,previewHeight).data))}catch(error){console.warn(`No se pudo dibujar la vista 3D de ${item.title}`,error)}finally{if(model){previewScene.remove(model);model.traverse(object=>{if(object.geometry&&!object.geometry.userData.shared)object.geometry.dispose()})}}}
     }catch(error){console.warn('No se pudo renderizar la galería 3D',error)}for(const entry of items)paintBuildPreview(entry);
   }
   function paintBuildPreview({canvas:target,item}){if(!target||!item)return;const data=buildPreviewCache.get(JSON.stringify(item));if(!data)return;const ctx=target.getContext('2d');if(!ctx)return;target.width=previewWidth;target.height=previewHeight;ctx.putImageData(new ImageData(data,previewWidth,previewHeight),0,0)}

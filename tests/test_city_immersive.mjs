@@ -118,5 +118,5 @@ test('Los nueve elementos 3D están integrados en una escena procedimental y tie
  assert.match(world,/immersive3d\.tick/);
  assert.match(world,/busStopKeys/);
  assert.match(world,/userData\.passengerDoor/);
- assert.match(world,/userData\.nightLamps/);
+ assert.match(world,/poweredStreetlights/); // Alimentación efectiva de farolas de la red
 });

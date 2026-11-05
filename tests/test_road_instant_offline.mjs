@@ -17,7 +17,7 @@ test('Offline: coloca varios tramos al instante y solo cobra el costo vial',asyn
   assert.equal(city.money,45600);
   assert.equal(city.projects.length,0);
   assert.ok([[5,10],[6,10]].every(([x,y])=>city.roadAssets.some(asset=>asset.x===x&&asset.y===y)));
-  assert.ok(city.events.filter(event=>event.title==='Calle construida').length>=2);
+  assert.ok(city.events.filter(event=>event.title==='Vía construida').length>=2);
   await assert.rejects(adapter.request('/api/action',{action:'placeRoad',x:6,y:10}),/ya forma parte/);
   await assert.rejects(adapter.request('/api/action',{action:'placeRoad',x:8,y:10}),/conectar con la red/);
  }finally{globalThis.fetch=old.fetch;globalThis.localStorage=old.localStorage}

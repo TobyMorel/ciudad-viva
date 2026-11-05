@@ -35,6 +35,9 @@ class PublicHostingSecurity(unittest.TestCase):
         try:
             cases = [
                 ("GET", "/api/saves", None, 403),
+                ("GET", "/%61pi/saves", None, 403),
+                ("GET", "/api/%73aves", None, 403),
+                ("GET", "/api/public/status", None, 403),
                 ("POST", "/api/room/create", "{}", 403),
                 ("POST", "/api/save", "{}", 403),
                 ("POST", "/api/load", "{}", 403),

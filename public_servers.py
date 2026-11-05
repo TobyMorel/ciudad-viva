@@ -8,7 +8,7 @@ from http.client import HTTPConnection
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import quote, unquote, urlsplit
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import json
@@ -161,7 +161,9 @@ class PublicProxy(BaseHTTPRequestHandler):
             return entry[0]
 
     def do_GET(self):
-        path = urlsplit(self.path).path
+        path = unquote(urlsplit(self.path).path)
+        # El servidor original decodifica URL; autorizar sobre la MISMA ruta
+        # evita sortear /api/saves con /%61pi/saves y otros escapes.
         if path == "/api/info":
             self._json(200, {"roomOpen": self.controller.room_info().get("roomOpen", False),
                              "publicUrl": self.controller.url, "ips": []})
@@ -178,7 +180,7 @@ class PublicProxy(BaseHTTPRequestHandler):
         self._forward("GET", identity=identity, streamed=path == "/api/cursors/stream")
 
     def do_POST(self):
-        path = urlsplit(self.path).path
+        path = unquote(urlsplit(self.path).path)
         if path not in ("/api/room/join", "/api/action", "/api/chat", "/api/cursors"):
             self._json(403, {"error": "Operación reservada al anfitrión."})
             return

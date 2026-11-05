@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.290",
+  "currentVersion": "0.291",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.291",
+      "date": "2026-11-05",
+      "title": "HUD del mapa sin solapamientos",
+      "overallProgress": null,
+      "changes": [
+        "Clima y FPS ahora aparecen en dos posiciones distintas y fáciles de leer sobre el mapa.",
+        "El panel de avisos vecinales se ubica debajo de esos indicadores, con alto y ancho adaptados a escritorio y móvil.",
+        "Se conserva visible la demanda del mapa en la esquina opuesta."
+      ],
+      "verification": "No se ejecutaron pruebas automatizadas en esta entrega."
+    },
     {
       "version": "0.290",
       "date": "2026-11-05",

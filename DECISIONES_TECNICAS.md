@@ -768,3 +768,8 @@ El Dijkstra ponderado que utiliza la simulación offline se compila como Rust `n
 ## Alfa 0.290 · Renderer WebGL restaurado
 
 Se volvió al `WebGLRenderer` clásico como renderer activo, igual que antes del experimento WebGPU. La carga inicial ya no importa `three.webgpu.js` ni espera la inicialización asíncrona del backend; esto revierte la regresión de pausas al mover cámara y demora de primer dibujo reportadas después de Alfa 0.289. WebGPU queda sin uso hasta perfilar sus pipelines y confirmar rendimiento en equipos reales. El pathfinder Rust/WASM de rutas offline se conserva.
+
+
+## Alfa 0.291 · Posiciones del HUD
+
+Los indicadores de clima y FPS usan dos filas fijas debajo de la barra del mapa; el panel de avisos vecinales empieza debajo de ellas y limita su tamaño en pantallas pequeñas. Así se evita que sus áreas transparentes o niveles de apilado oculten el FPS.

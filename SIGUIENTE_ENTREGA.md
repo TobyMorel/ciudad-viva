@@ -1,3 +1,7 @@
+## Alfa 0.291 · HUD del mapa sin solapamientos
+
+Se separaron clima y FPS en una columna con posiciones propias, y se movió el panel de mensajes vecinales debajo de ambos. El ajuste mantiene la demanda en la esquina opuesta y adapta el panel al ancho disponible del mapa.
+
 ## Alfa 0.290 · Recuperación de rendimiento 3D
 
 El mapa y las vistas de construcción vuelven al renderer WebGL 2 que usaba la versión anterior. La ruta WebGPU dejó pausas perceptibles al mover la cámara y tardaba en mostrar el primer cuadro en el equipo del jugador. El módulo WebGPU ya no se descarga al abrir el juego. El pathfinder Rust/WASM de Alfa 0.289 se conserva para las rutas de la simulación offline.

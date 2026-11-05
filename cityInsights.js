@@ -1,4 +1,4 @@
-import {growthDemand} from './growth_demand.js?v=0.290';
+import {growthDemand} from './growth_demand.js?v=0.291';
 import {recordLivingCity} from './living_city.js';
 
 // Lecturas deterministas de la ciudad: nunca crean residentes, dinero ni cobertura.

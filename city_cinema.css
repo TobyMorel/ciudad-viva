@@ -46,6 +46,16 @@ body[data-theme=dark] #cinemaPanel .cinema-history b{color:#d3edd6}
 }
 @media(prefers-reduced-motion:reduce){#cinemaPanel{backdrop-filter:none}}
 
+/* HUD del mapa: clima, FPS y avisos ocupan filas separadas. */
+.world-wrap>.city-climate-badge{top:62px;left:12px;right:auto;z-index:16}
+.world-wrap>.fps-counter{top:94px;left:12px;right:auto;z-index:16}
+.world-wrap>.citizen-inbox,.world-wrap>.citizen-inbox.collapsed{top:130px;left:calc(var(--city-report-rail-width,76px) + 12px);right:12px;width:min(330px,calc(100% - var(--city-report-rail-width,76px) - 24px));max-height:min(40dvh,330px);transform:none;z-index:13}
+@media(max-width:650px){
+ .world-wrap>.city-climate-badge{top:54px;left:8px;right:auto;max-width:min(160px,calc(100% - 190px));padding:5px 7px;font-size:9px}
+ .world-wrap>.fps-counter{top:83px;left:8px;right:auto;min-width:53px;padding:5px 7px;font-size:9px}
+ .world-wrap>.citizen-inbox,.world-wrap>.citizen-inbox.collapsed{top:116px;left:calc(var(--city-report-rail-width,58px) + 8px);right:8px;width:min(310px,calc(100% - var(--city-report-rail-width,58px) - 16px));max-height:min(34dvh,220px);transform:none}
+}
+
 .city-climate-badge{position:absolute;z-index:14;top:71px;left:12px;max-width:230px;padding:7px 11px;border-radius:12px;border:1px solid #8bad9b;background:#f9fff1db;color:#2e6452;font:800 10px/1.25 system-ui,-apple-system,sans-serif;pointer-events:none;box-shadow:0 5px 18px #244c3838;backdrop-filter:blur(5px)}
 .city-climate-badge[data-weather=rain]{background:#dcecf0e6;color:#315d76;border-color:#80a8b7}
 body.cinema-mode .city-climate-badge{top:12px;left:auto;right:12px;z-index:10004}

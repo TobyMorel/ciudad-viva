@@ -19,6 +19,8 @@ base = str(cfg["supabaseUrl"]).rstrip("/")
 key = str(cfg["supabaseAnonKey"])
 endpoint = base + "/functions/v1/public-rooms"
 room_id = str(uuid.uuid4())
+rtc_key = json.dumps({"kty": "EC", "crv": "P-256", "x": "A" * 43,
+                      "y": "B" * 43, "ext": True, "key_ops": ["verify"]})
 secret = secrets.token_hex(32)
 public_headers = {"apikey": key, "Content-Type": "application/json"}
 if not key.startswith("sb_publishable_"):
@@ -42,15 +44,17 @@ def call(url, method="GET", payload=None):
 
 
 def list_room():
-    q = "?select=id,city,host_name,join_url,players,max_players&id=eq." + quote(room_id)
+    q = "?select=id,city,host_name,join_url,players,max_players,rtc_enabled,rtc_public_key&id=eq." + quote(room_id)
     return call(base + "/rest/v1/public_rooms" + q)
 
 
-def publish(token, players=1):
+def publish(token, players=1, rtc=False, tunnel=True):
     return call(endpoint, "POST", {
         "action": "publish", "id": room_id, "token": token,
         "city": "CI Ciudad Viva", "host_name": "Prueba automatizada",
-        "join_url": "https://ciudad-viva-ci.trycloudflare.com", "players": players,
+        "join_url": "https://ciudad-viva-ci.trycloudflare.com" if tunnel else "",
+        "rtc_enabled": rtc, "rtc_public_key": rtc_key if rtc else None,
+        "players": players,
     })
 
 
@@ -71,6 +75,17 @@ def main():
             f"Anuncio no visible vía cliente público: {status} {rooms}")
         assert rooms[0]["id"] == room_id
         assert "owner_secret_hash" not in rooms[0], "El token de autenticación no debe ser público"
+        status, answer = publish(secret, rtc=True)
+        assert status == 200 and answer.get("ok"), f"No habilitó WebRTC: {status} {answer}"
+        status, rooms = list_room()
+        assert status == 200 and rooms[0]["rtc_enabled"], f"WebRTC no aparece en el directorio: {status}"
+        status, answer = publish(secret, rtc=True, tunnel=False)
+        assert status == 200 and answer.get("ok"), f"No aceptó WebRTC sin Cloudflare: {status} {answer}"
+        status, rooms = list_room()
+        assert status == 200 and rooms[0]["join_url"] == "" and rooms[0]["rtc_enabled"], (
+            f"No conservó el anuncio exclusivamente P2P: {status} {rooms}")
+        status, answer = publish(secret, rtc=False, tunnel=False)
+        assert status == 400, f"Permitió sala sin transporte: {status} {answer}"
         status, answer = publish(secret, players=13)
         assert status == 200 and answer.get("ok"), f"No admite 13 jugadores: {status} {answer}"
         status, rooms = list_room()

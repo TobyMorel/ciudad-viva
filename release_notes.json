@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.283",
+  "currentVersion": "0.284",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.284",
+      "date": "2026-11-05",
+      "title": "WebRTC directo desde navegador con respaldo Cloudflare",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Los jugadores pueden intentar entrar por WebRTC directo desde GitHub Pages o la app Windows; el tráfico de la partida viaja por un canal cifrado DTLS y Supabase sólo lleva la señalización efímera.",
+        "La identidad de cada invitado la asigna el anfitrión. La negociación verifica la firma ECDSA de la sala y limita las rutas, el tamaño de mensajes y las operaciones administrativas disponibles.",
+        "Si la conexión directa no abre, se usa el enlace Cloudflare publicado; si WebRTC se corta, se intenta volver al túnel. El anfitrión libera la presencia del invitado al cerrarse el canal.",
+        "La carga de configuración pública funciona también bajo la ruta de proyecto de GitHub Pages. La conexión directa sigue siendo experimental: redes con NAT restrictivo pueden necesitar TURN y todavía falta una prueba entre redes domésticas reales.",
+        "La validación automatizada de GitHub está pausada hasta el 1 de diciembre por el límite mensual de minutos. Quedan disponibles la verificación local y el empaquetado de Windows desde PowerShell."
+      ],
+      "verification": "La prueba Playwright local completó WebRTC DTLS con señalización Supabase, respuesta grande fragmentada, rutas permitidas, rechazo de administración y limpieza de presencia al desconectar. La compilación Windows se genera con el script local; no se declara completada una prueba entre redes reales."
+    },
     {
       "version": "0.283",
       "date": "2026-11-05",

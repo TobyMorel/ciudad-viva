@@ -68,14 +68,25 @@ Deno.serve(async req=>{
     return respond(200,{ok:true});
   }
   const city=safeText(body.city,64),host=safeText(body.host_name,32),join_url=String(body.join_url||"");
+  const rtc_enabled=body.rtc_enabled===true;
+  const rtc_public_key=typeof body.rtc_public_key==="string"?body.rtc_public_key:"";
+  if(rtc_enabled){
+    try{
+      const parsed=JSON.parse(rtc_public_key);
+      if(parsed.kty!=="EC"||parsed.crv!=="P-256"||!/^[-_a-zA-Z0-9]{43}$/.test(parsed.x||"")
+       ||!/^[-_a-zA-Z0-9]{43}$/.test(parsed.y||"")||rtc_public_key.length>600)
+        return respond(400,{error:"Clave pública WebRTC inválida"});
+    }catch{return respond(400,{error:"Clave pública WebRTC inválida"})}
+  }
   const players=Number(body.players);
-  if(!city||!host||!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/.test(join_url)
+  if(!city||!host||(join_url&&!/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/.test(join_url))
+     ||(!join_url&&!rtc_enabled)
      ||!Number.isInteger(players)||players<1||players>LIMIT)
      return respond(400,{error:"Metadatos de sala inválidos"});
   if(existing&&!safeEquals(existing.owner_secret_hash,hashed))
      return respond(403,{error:"La sala pertenece a otro anfitrión"});
   const record:Record<string,unknown>={
-    city,host_name:host,join_url,players,max_players:LIMIT,
+    city,host_name:host,join_url,rtc_enabled,rtc_public_key:rtc_enabled?rtc_public_key:null,players,max_players:LIMIT,
     last_seen:new Date().toISOString()
   };
   if(!existing){

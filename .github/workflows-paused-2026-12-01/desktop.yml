@@ -82,7 +82,8 @@ jobs:
           body: |
             Aplicación Windows con motor de ciudad, servidor LAN y conexión pública experimental integrada.
             El anfitrión aloja y guarda la partida en su propia PC. Internet usa un túnel Cloudflare temporal.
-            El directorio global requiere configurar el proyecto Supabase; ver PUBLIC_SERVERS.md.
+            WebRTC directo con señalización Supabase y Cloudflare como respaldo experimental.
+            Cada anfitrión ejecuta y guarda la ciudad en su propia PC. Ver PUBLIC_SERVERS.md.
           files: dist/CiudadViva.exe
           prerelease: true
           fail_on_unmatched_files: true

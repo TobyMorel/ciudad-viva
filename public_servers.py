@@ -62,7 +62,7 @@ class PublicDirectory:
                 return False
             self._checked_remote = now
             try:
-                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.283"})
+                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.284"})
                 with urlopen(req, timeout=4) as response:
                     config = json.loads(response.read(8192))
             except (OSError, TimeoutError, ValueError, TypeError):
@@ -105,7 +105,10 @@ class PublicDirectory:
         response = self._request("/functions/v1/public-rooms", "POST", {
             "action": "publish", "id": room["id"], "token": room["token"],
             "city": str(room["city"])[:64], "host_name": str(room["host_name"])[:32],
-            "join_url": room["url"], "players": max(1, min(13, room["players"])),
+            "join_url": room.get("url") or "",
+            "rtc_enabled": bool(room.get("rtc_public_key")),
+            "rtc_public_key": room.get("rtc_public_key") or None,
+            "players": max(1, min(13, room["players"])),
         })
         if not isinstance(response, dict) or not response.get("ok"):
             raise RuntimeError("Supabase no confirmó la publicación de esta sala.")
@@ -122,19 +125,22 @@ class PublicDirectory:
             return {"configured": False, "rooms": [],
                     "message": "Falta configurar Supabase para mostrar las salas de todos los jugadores."}
         cutoff = quote((datetime.now(timezone.utc) - timedelta(minutes=12)).isoformat(timespec="seconds"), safe="")
-        rows = self._request("/rest/v1/public_rooms?select=id,city,host_name,join_url,players,max_players,last_seen"
+        rows = self._request("/rest/v1/public_rooms?select=id,city,host_name,join_url,players,max_players,last_seen,rtc_enabled,rtc_public_key"
                              "&last_seen=gte." + cutoff + "&order=last_seen.desc&limit=60") or []
         rooms = []
         for row in rows:
             address = str(row.get("join_url") or "")
             parsed = urlsplit(address)
-            if not re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com/?", address, flags=re.I):
+            tunnel_ok = bool(re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com/?", address, flags=re.I))
+            rtc_key = row.get("rtc_public_key") if row.get("rtc_enabled") else None
+            if not tunnel_ok and not rtc_key:
                 continue
             rooms.append({
                 "id": row.get("id"), "name": str(row.get("city") or "Ciudad Viva")[:64],
                 "host": str(row.get("host_name") or "Anfitrión")[:32],
                 "players": row.get("players", 1), "capacity": row.get("max_players", 13),
-                "url": address,
+                "url": address if tunnel_ok else "",
+                "rtcEnabled": bool(rtc_key), "rtcPublicKey": rtc_key,
             })
         return {"configured": True, "rooms": rooms}
 
@@ -186,7 +192,18 @@ class PublicProxy(BaseHTTPRequestHandler):
                          ".ogg",".wav",".json",".bin",".glb",".gltf",".wasm",".webmanifest"}
         if path == "/api/info":
             self._json(200, {"roomOpen": self.controller.room_info().get("roomOpen", False),
-                             "publicUrl": self.controller.url, "ips": []})
+                             "publicUrl": self.controller.url, "ips": [],
+                             "rtcRoomId": getattr(self.controller, "room_id", None),
+                             "rtcPublicKey": getattr(self.controller, "rtc_public_key", None)})
+            return
+        if path == "/api/public/config":
+            directory = self.controller.directory
+            if not directory.ensure_config():
+                self._json(503, {"error": "No se pudo leer la configuración pública de Supabase."})
+            else:
+                # Sólo clave publicable, nunca token de sala ni credencial de servicio.
+                self._json(200, {"supabaseUrl": directory.url,
+                                 "supabaseAnonKey": directory.key})
             return
         if path not in ("/api/public/rooms","/api/state","/api/sync",
                         "/api/cursors","/api/cursors/stream"):
@@ -323,91 +340,132 @@ class PublicRooms:
         self.url = None
         self.room_id = None
         self.room_secret = None
+        self.rtc_public_key = None
         self.host_name = "Anfitrión"
         self.last_error = None
         self.finished = threading.Event()
 
     def status(self):
-        running = bool(self.url and self.process and self.process.poll() is None)
-        return {"active": running, "url": self.url if running else None,
-                "listed": running and self.directory.enabled and not self.last_error,
+        tunnel = bool(self.url and self.process and self.process.poll() is None)
+        rtc = bool(self.room_id and self.rtc_public_key and self.room_info().get("roomOpen"))
+        return {"active": bool(tunnel or rtc), "url": self.url if tunnel else None,
+                "roomId": self.room_id, "rtcReady": rtc, "cloudflareReady": tunnel,
+                "listed": bool(self.room_id and self.directory.enabled and
+                               not self.last_error and (tunnel or rtc)),
                 "configured": self.directory.enabled, "error": self.last_error}
 
     def _room_payload(self):
         info = self.room_info()
         return {"id": self.room_id, "token": self.room_secret, "city": info.get("roomName") or "Ciudad Viva",
                 "host_name": self.host_name, "players": info.get("players", 1),
-                "url": self.url}
+                "url": self.url or "", "rtc_public_key": self.rtc_public_key}
+
+    def activate_rtc(self, public_key):
+        """Sólo el anfitrión local puede registrar su clave pública ECDSA."""
+        with self.lock:
+            if not self.room_id or not self.room_info().get("roomOpen"):
+                raise RuntimeError("Primero creá una sala pública en este equipo.")
+            if not isinstance(public_key, str) or not 130 <= len(public_key) <= 600:
+                raise RuntimeError("Clave pública WebRTC inválida.")
+            try:
+                data = json.loads(public_key)
+            except ValueError as error:
+                raise RuntimeError("Clave pública WebRTC inválida.") from error
+            if (not isinstance(data, dict) or data.get("kty") != "EC" or
+                    data.get("crv") != "P-256" or
+                    not all(isinstance(data.get(k), str) and
+                            re.fullmatch(r"[-_a-zA-Z0-9]{43}", data[k]) for k in ("x", "y"))):
+                raise RuntimeError("Clave pública WebRTC inválida.")
+            self.rtc_public_key = public_key
+            self.directory.publish(self._room_payload())
+            self.last_error = None
+            return self.status()
 
     def start(self, host_name="Anfitrión"):
         with self.lock:
-            if self.url and self.process and self.process.poll() is None:
+            if self.room_id and self.room_info().get("roomOpen"):
                 return self.status()
             if not self.room_info().get("roomOpen"):
                 raise RuntimeError("Primero creá una sala en esta computadora.")
-            resource = (self.root / "runtime" / "cloudflared.exe")
+            resource = self.root / "runtime" / "cloudflared.exe"
             bundled = self.root / "cloudflared.exe"
             binary = resource if resource.is_file() else bundled if bundled.is_file() else shutil.which("cloudflared")
-            if not binary:
-                raise RuntimeError("Este ejecutable no incluye el conector a Internet. Descargá la nueva versión del .exe.")
             self.finished.clear()
             self.sessions.clear()
             self.room_id = str(uuid.uuid4())
             self.room_secret = secrets.token_hex(32)
+            self.rtc_public_key = None
             self.host_name = " ".join(str(host_name or "Anfitrión").split())[:32]
             self.last_error = None
-            handler = type("CiudadVivaPublicProxy", (PublicProxy,), {"controller": self})
-            self.proxy = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-            self.proxy.daemon_threads = True
-            threading.Thread(target=self.proxy.serve_forever, daemon=True, name="CiudadVivaPublicProxy").start()
-            address = "http://127.0.0.1:" + str(self.proxy.server_port)
-            flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            try:
-                self.process = subprocess.Popen(
-                    [str(binary), "tunnel", "--no-autoupdate", "--url", address],
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                    text=True, encoding="utf-8", errors="replace", creationflags=flags)
-                incoming = queue.Queue()
-                def scan():
-                    for line in self.process.stdout:
-                        match = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", line, flags=re.I)
-                        if match:
-                            incoming.put(match.group(0))
-                threading.Thread(target=scan, daemon=True, name="CiudadVivaTunnelLog").start()
-                deadline = time.monotonic() + 22
-                while time.monotonic() < deadline:
-                    try:
-                        self.url = incoming.get(timeout=0.5)
-                        break
-                    except queue.Empty:
-                        if self.process.poll() is not None:
-                            break
-                if not self.url:
-                    raise RuntimeError("El túnel de prueba no pudo obtener una dirección pública. Revisá la conexión a Internet.")
-            except Exception:
-                self.stop()
-                raise
-            if self.directory.ensure_config():
+            self.url = None
+            # El túnel es opcional: una falla de Cloudflare NO impide WebRTC.
+            if binary:
+                handler = type("CiudadVivaPublicProxy", (PublicProxy,), {"controller": self})
+                self.proxy = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+                self.proxy.daemon_threads = True
+                threading.Thread(target=self.proxy.serve_forever, daemon=True, name="CiudadVivaPublicProxy").start()
+                address = "http://127.0.0.1:" + str(self.proxy.server_port)
+                flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 try:
-                    self.directory.publish(self._room_payload())
-                except RuntimeError as error:
-                    self.last_error = str(error)
+                    process = subprocess.Popen(
+                        [str(binary), "tunnel", "--no-autoupdate", "--url", address],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        text=True, encoding="utf-8", errors="replace", creationflags=flags)
+                    self.process = process
+                    incoming = queue.Queue()
+                    def scan():
+                        for line in process.stdout:
+                            match = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com", line, flags=re.I)
+                            if match: incoming.put(match.group(0))
+                    threading.Thread(target=scan, daemon=True, name="CiudadVivaTunnelLog").start()
+                    deadline = time.monotonic() + 14
+                    while time.monotonic() < deadline:
+                        try:
+                            self.url = incoming.get(timeout=0.5)
+                            break
+                        except queue.Empty:
+                            if process.poll() is not None: break
+                except (OSError, RuntimeError) as error:
+                    self.last_error = "Cloudflare no está disponible; intentando WebRTC."
+                    self.process = None
             else:
-                self.last_error = "El enlace funciona, pero falta configurar Supabase para aparecer en la lista."
-            threading.Thread(target=self._heartbeat, daemon=True, name="CiudadVivaPublicDirectory").start()
-            return self.status()
-
-    def _heartbeat(self):
-        while not self.finished.wait(300):
-            if not self.process or self.process.poll() is not None or not self.room_info().get("roomOpen"):
-                self.stop()
-                break
-            if self.directory.ensure_config():
+                self.last_error = "Este ejecutable no trae Cloudflare; se intentará conectar por WebRTC."
+            if not self.url:
+                if self.process:
+                    try:
+                        self.process.terminate()
+                        self.process.wait(timeout=2)
+                    except (OSError, subprocess.TimeoutExpired):
+                        try: self.process.kill()
+                        except OSError: pass
+                    self.process = None
+                self.last_error = "No se pudo abrir Cloudflare; el anfitrión probará WebRTC."
+            if self.url and self.directory.ensure_config():
                 try:
                     self.directory.publish(self._room_payload())
                     self.last_error = None
                 except RuntimeError as error:
                     self.last_error = str(error)
+            threading.Thread(target=self._heartbeat, daemon=True, name="CiudadVivaPublicDirectory").start()
+            return self.status()
+
+    def _heartbeat(self):
+        while not self.finished.wait(300):
+            if not self.room_info().get("roomOpen"):
+                self.stop()
+                break
+            with self.lock:
+                if self.process and self.process.poll() is not None:
+                    self.process = None
+                    self.url = None
+                if not self.room_id or not (self.url or self.rtc_public_key):
+                    continue
+                if self.directory.ensure_config():
+                    try:
+                        self.directory.publish(self._room_payload())
+                        self.last_error = None
+                    except RuntimeError as error:
+                        self.last_error = str(error)
 
     def stop(self):
         with self.lock:
@@ -431,4 +489,5 @@ class PublicRooms:
             self.url = None
             self.room_id = None
             self.room_secret = None
+            self.rtc_public_key = None
             self.sessions.clear()

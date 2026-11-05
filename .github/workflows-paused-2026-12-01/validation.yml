@@ -55,6 +55,7 @@ jobs:
           node --check city_immersive_state.js
           node --check city_immersive_3d.js
           node --check online_engine.mjs
+          node --check public_rtc.js
           python -m py_compile shared_engine.py
           node --check cityGuide.js
           node --check reference-ui.js
@@ -78,7 +79,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.283
+          name: ciudad-viva-alfa-0.284
           path: |
             .
             !.git/**
@@ -106,6 +107,8 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: WebRTC P2P, configuración bajo subruta y limpieza de invitados
+        run: node tests/test_public_webrtc_ui.mjs
       - name: "Tutorial narrado: móvil y escritorio"
         run: node tests/test_beginner_tutorial_ui.mjs
       - name: "Asesor, misiones, previsiones y barrios: móvil y escritorio"
@@ -156,7 +159,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.283-responsive
+          name: ciudad-viva-alfa-0.284-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

@@ -87,6 +87,21 @@ class LANMultiplayerTests(unittest.TestCase):
                 return json.loads(raw)
             return raw
 
+    def test_public_webrtc_disconnect_removes_guest_membership_and_cursor(self):
+        self.request("/api/room/create", "host", {})
+        guest = "public-" + "a" * 24
+        self.request("/api/room/join", guest, {"name": "Invitado P2P"})
+        server.state.setdefault("municipalResponsibilities", {})["roads"] = guest
+        server.PLAYER_CURSORS[guest] = {"x": 4, "y": 7, "view": "Mapa", "at": time.time()}
+
+        result = self.request("/api/public/rtc/leave", "host", {"playerId": guest})
+
+        self.assertEqual(result, {"ok": True, "removed": True})
+        self.assertNotIn(guest, server.state["players"])
+        self.assertNotIn(guest, server.state["playerNames"])
+        self.assertNotIn(guest, server.state["municipalResponsibilities"].values())
+        self.assertNotIn(guest, server.PLAYER_CURSORS)
+
     def test_four_players_receive_concurrent_actions_and_static_assets_load(self):
         created = self.request("/api/room/create", "host", {})
         self.assertEqual(created["roomCode"], "TEST42")

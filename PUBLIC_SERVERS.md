@@ -1,53 +1,45 @@
-# Ciudad Viva · Directorio online autoalojado (Alfa 0.283)
 
-## Estado real
+# Ciudad Viva · Conectividad híbrida WebRTC + Cloudflare (Alfa 0.284)
 
-**Proyecto Supabase conectado:** CiudadViva. El directorio de metadatos está alojado en `https://tcglqhxoymnmbxxaaweq.supabase.co`, pero **ninguna partida ni motor de simulación reside allí**. La base de datos solamente registra nombre de ciudad, anfitrión, enlace HTTPS, ocupación y última actividad.
+La app Windows permite **WebRTC directo primero** y, si falla la conexión P2P, **Cloudflare Quick Tunnel como respaldo automático**. No se abren puertos, no hace falta instalar utilidades ni pagar un servidor central.
 
-**Los jugadores no necesitan instalar Supabase, Cloudflare ni Node.** El `CiudadViva.exe` ya empaqueta el juego, el motor Node y el conector `cloudflared.exe`. Al elegir **Crear servidor público**, el servidor arranca en su PC y la app crea un túnel HTTPS saliente sin abrir puertos. Al elegir **Servidores públicos**, el ejecutable y GitHub Pages leen el mismo listado global.
+## Qué hace realmente cada componente
 
-La **clave publicable** en `public_directory.json` es segura para distribuir. La **service role key** sólo existe como variable privada gestionada por el runtime de Supabase Edge Functions, **nunca** en GitHub, en el ejecutable ni en un navegador.
+1. El anfitrión crea una sala pública desde `CiudadViva.exe`. La app intenta arrancar el túnel Cloudflare y registra la sala en Supabase. **Si Cloudflare falla**, el anfitrión intenta WebRTC igualmente.
+2. La ventana del anfitrión inicia un canal público de **señalización** en Supabase Realtime, genera una clave ECDSA P-256 y registra sólo su clave pública en la ficha de la sala. No manda estados de juego a Supabase.
+3. Cada invitado —desde el **.exe Windows o GitHub Pages**— elige una sala e intenta WebRTC: intercambio de SDP a través de Supabase; tráfico de juego por `RTCDataChannel` cifrado por DTLS. El invitado verifica la firma del anfitrión contra la clave registrada en Supabase, para impedir suplantaciones durante la negociación.
+4. Si el enlace WebRTC no abre, se utiliza automáticamente el enlace Cloudflare del mismo anuncio, siempre que el anfitrión lo haya conseguido. Si la sesión WebRTC establecida se corta, la app también intenta pasarse al túnel.
+5. Si Cloudflare no está disponible, la sala se anuncia como **sólo WebRTC**. Los clientes que no pueden abrir un canal P2P reciben un error comprensible en lugar de perder su partida local.
+6. La simulación permanece en el motor Node de la PC anfitriona. El navegador de ésta retransmite únicamente las peticiones permitidas al servidor local, asignando **identidades de jugador exclusivas**, limitando el tráfico y rechazando funciones administrativas por WebRTC.
+7. GitHub Pages y la app Windows intentan WebRTC directamente. Si falla y existe un enlace Cloudflare, el navegador lo abre como respaldo. La configuración pública se resuelve respecto de la ruta del sitio, incluso cuando GitHub Pages publica el juego bajo `/ciudad-viva/`.
 
-## Seguridad de publicación y descubrimiento
+## Capacidad, directorio y costos
 
-- La tabla `public.public_rooms` tiene RLS habilitada y sólo concede `SELECT` sobre columnas públicas, para filas activas de los últimos 12 minutos. Nadie puede leer `owner_secret_hash` ni escribir directamente desde una clave pública.
-- La función `public-rooms` permite `publish` y `unpublish` desde el backend local. El anfitrión genera un identificador UUIDv4 y un secreto aleatorio de 256 bits por sesión; Supabase almacena únicamente el hash SHA-256. Las actualizaciones y bajas requieren conocer el secreto original. Es un protocolo por sala, sin registro de usuario ni autenticación de Supabase en cada PC.
-- El anuncio se renueva cada 5 minutos, mientras que los invitados consultan las salas sólo al abrir el listado o al pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Un anuncio deja de mostrarse tras 12 minutos sin actividad; esto evita que una desconexión abrupta quede publicada para siempre.
-- La función valida el hostname `*.trycloudflare.com`, el límite de 13 jugadores por sala y los nombres y restringe la creación de varias salas desde una conexión.
-- El proxy local, accesible desde el túnel, sólo entrega archivos públicos y rutas de jugador permitidas. Impide consultar guardados, crear otra sala o ejecutar funciones administrativas. Cada invitado obtiene su propio ID de jugador y una cookie `HttpOnly` y `Secure`.
-- LAN, Radmin VPN y Hamachi siguen funcionando como antes. Los cursores públicos utilizan HTTP polling, debido a la restricción de SSE en Cloudflare Quick Tunnels.
+- **Hasta 13 jugadores por sala**, incluido anfitrión, aplicados por el servidor.
+- **Sin cupo global de servidores públicos** artificial.
+- **Recarga manual cada 30 segundos**; las fichas de sala se actualizan por el anfitrión cada cinco minutos y expiran a los 12 minutos sin actividad.
+- Supabase guarda **solamente metadatos, clave pública del anfitrión y mensajes efímeros de señalización**; no partidas, acciones ni guardados.
+- El proyecto Free de Supabase tiene límites reales de conexiones Realtime y mensajes. Cada anfitrión mantiene sólo una conexión de señalización mientras tiene una sala pública abierta. Los invitados cierran su conexión de señalización cuando termina la negociación.
+- La conexión WebRTC directa **no está garantizada** con NAT simétrico o firewalls restrictivos: sin TURN puede fallar. Por eso se conserva Cloudflare como alternativa. Cloudflare Quick Tunnels sigue siendo **experimental**, sin garantía de disponibilidad para producción pública; tampoco tiene ancho de banda ilimitado garantizado.
+- La compatibilidad entre **dos redes domésticas reales** sigue requiriendo una prueba de campo. La prueba local ejecuta dos navegadores Chromium, señalización real en Supabase, un RTCDataChannel con un mensaje grande fragmentado, autorización por jugador y denegación de APIs de administrador. Las pruebas automáticas de GitHub Actions están pausadas hasta el 1 de diciembre de 2026 por el límite mensual de minutos.
 
-## Arquitectura
+## Seguridad
 
-```text
-Ciudad Viva.exe (PC del anfitrión)
-  ├── Motor autoritativo offline.js / Node.js
-  ├── Guardados locales
-  ├── Servidor HTTP LAN
-  └── Proxy de invitados → túnel HTTPS de Cloudflare
-                                  ↑
-                          Invitados remotos
+- El anuncio público sólo permite actualizar la sala usando el secreto aleatorio de 256 bits del anfitrión. La clave de servicio de Supabase nunca va al ejecutable.
+- La ficha de sala contiene `rtc_enabled` y `rtc_public_key`, una clave ECDSA pública, que es segura para compartir.
+- Las ofertas y respuestas SDP viajan por un canal público de señalización y pueden revelar información de conectividad ICE a los participantes del canal. No se deben almacenar como metadatos permanentes.
+- El anfitrión firma la respuesta SDP y el invitado valida la firma; la señalización pública no puede reemplazar unilateralmente al anfitrión.
+- Las acciones se reciben por un canal SCTP confiable con DTLS. Se imponen tamaño de mensajes, fragmentación de respuestas grandes, control de congestión y lista blanca de APIs. No se exponen guardados ni reinicios de ciudad.
+- Esta es una **alfa**, no una infraestructura lista para uso masivo: faltan moderación, antitrampas, mediciones de latencia bajo carga, TURN seguro y garantía de disponibilidad.
 
-Supabase CiudadViva
-  ├── Tabla public_rooms: sólo anuncios efímeros
-  └── Edge Function public-rooms: verificar token y publicar / retirar
+## Archivos
 
-GitHub Pages y CiudadViva.exe → leen el directorio público
-```
-
-## Archivos y mantenimiento
-
-- `public_directory.json`: URL y clave **publicable** del proyecto central, descargadas automáticamente por ejecutables que no tengan configuración embebida.
-- `public_servers.py`: gestión del túnel, proxy de visitantes, sesiones individuales y conexión con Supabase.
-- `supabase/functions/public-rooms/index.ts`: código de la función Edge; su `verify_jwt` es false **porque implementa autorización propia por secreto de sala de 256 bits**.
-- `supabase/public_rooms_schema.sql`: estructura de tabla y permisos de sólo lectura para clientes.
-- `scripts/smoke_public_directory.py`: comprobación de publicación, acceso anónimo de sólo lectura, rechazo de un secreto incorrecto y retirada segura.
-- `tests/test_public_servers.py`: comprobaciones offline de autorización y resistencia del proxy.
-
-## Límites y seguridad operativa
-
-**Cloudflare Quick Tunnels es un mecanismo experimental destinado a pruebas/desarrollo, no a producción.** Su disponibilidad, latencia y enlace temporal no están garantizados. El directorio está funcional, pero una oferta pública estable para una comunidad grande necesita un servicio de túneles gestionados/retransmisión compatible con sus condiciones de uso. Los jugadores nunca deberían conectar una ciudad importante con desconocidos sin una copia local.
-
-El prototipo todavía no incluye bloqueo/baneo, moderación de chat, sistema antitrampas, reconexión persistente entre reinicios ni defensas completas contra abuso masivo. Quien entra en una partida pública participa en las decisiones, como en LAN.
-
-No hay límite global artificial de servidores públicos. Sí se limita la creación de varias salas por una misma conexión para reducir el abuso. La base Supabase del plan Free tiene cuotas y límites; si el número de salas y consultas crece, habrá que supervisar su consumo. La simulación nunca deberá trasladarse a esa base.
+- `public_rtc.js`: canal WebRTC, protocolo Supabase Realtime, firma y verificación ECDSA, intercambio de acciones y fallback.
+- `public_servers.py`: intenta el túnel, anuncia ambas rutas, soporta RTC sin Cloudflare.
+- `server.py`: activación WebRTC sólo desde la PC anfitriona y acceso público local a la configuración publicable.
+- `supabase/functions/public-rooms/index.ts`: anuncia salas con uno o ambos transportes, validando la clave ECDSA.
+- `supabase/migrations/20261105_webrtc_hybrid_rooms.sql`: esquema y política de la ficha híbrida.
+- `tests/test_public_webrtc_ui.mjs`: dos navegadores reales contra Supabase Realtime y la API local simulada.
+- `scripts/build_windows_host.ps1`: vuelve a generar `dist/CiudadViva.exe` en Windows sin GitHub Actions.
+- `scripts/smoke_public_directory.py`: publicación, edición, retiro, modo sólo RTC y rechazo de registros sin transporte.
+- `tests/test_public_servers.py`: pruebas del servidor y del modo sin Cloudflare.

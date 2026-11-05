@@ -1,4 +1,4 @@
-# Auditoría integral de las fases 1–15 · Alfa 0.283
+# Auditoría integral de las fases 1–15 · Alfa 0.284
 
 La revisión contrasta sistemas observables, casos de prueba y pendientes del roadmap maestro. Los porcentajes son orientativos y solo cambian cuando hay una mecánica o evidencia nueva; no se convierten en un promedio global.
 
@@ -15,18 +15,20 @@ La revisión contrasta sistemas observables, casos de prueba y pendientes del ro
 | 9 | 80% | Salud, policía, bomberos, residuos, educación, protección social y respuesta física con personal, rutas y presupuesto. | Formación técnica/docente y saturación simultánea de múltiples servicios. |
 | 10 | 80% | Indicadores ambientales por barrio y remediaciones contratadas con fuente, alcance local, duración, costo e historial. | Atender más fuentes y medios, y calibrar efectos acumulados a largo plazo. |
 | 11 | 75% | Apoyo, elecciones, acuerdos y consultas distritales por grupo de edad con resultado estimado e historial. | La participación todavía se estima desde perfiles residentes; faltan respuestas individuales y trazabilidad histórica completa de promesas. |
-| 12 | 90% | Presencia, chat, cursores, responsabilidades, votación mayoritaria de gastos y controles, y delegación de anfitrión. | Validación sostenida en redes LAN reales, cortes y reconexiones durante votaciones. |
+| 12 | 90% | Presencia, chat, cursores, responsabilidades, votación mayoritaria y delegación de anfitrión; se agrega transporte WebRTC firmado desde navegador y respaldo Cloudflare. | Validación sostenida entre redes reales, NAT restrictivo, pérdida y reconexión durante partidas. |
 | 13 | 70% | Centro con 17 categorías de alerta, severidad, evidencia, respuesta recomendada e ingreso a sistemas existentes. | Cada familia todavía necesita su ciclo causal completo de prevención, decisión, recuperación y cierre. |
 | 14 | 70% | Ocho metas de ciudad, seis especializaciones y seguimiento histórico; estrés contable en cinco perfiles y 360 cierres. | Mejorar trayectorias y sostenibilidad en ciudades de escalas distintas; los perfiles de estrés no simulan cada jornada diaria. |
 | 15 | 90% | Paneles nuevos y 25 escenarios comprobados en Chromium a 390×844 y 1440×900. | Accesibilidad evaluada con usuarios y rendimiento en ciudades extensas y sesiones multijugador prolongadas. |
 
-La meta de 95% para cada fase no se declara alcanzada: las fases 2–6 y 9–15 conservan pendientes funcionales o de validación. El total no se promedia porque las 34 fases no tienen pesos comparables. El push activa la batería de CI; esta verificación local no sustituye una sesión LAN física ni el humo del directorio global.
+La meta de 95% para cada fase no se declara alcanzada: las fases 2–6 y 9–15 conservan pendientes funcionales o de validación. El total no se promedia porque las 34 fases no tienen pesos comparables. La batería reproducible está en `scripts/validate_local.sh`; GitHub Actions queda pausado hasta el 1 de diciembre de 2026. La verificación local no sustituye una sesión entre redes reales ni el smoke temporal del directorio global.
 
-## Revisión de alcance · Alfa 0.283
+## Revisión de alcance · Alfa 0.284
 
-La remediación añade obras ambientales contratadas con efectos territoriales temporales y operación presupuestada. Las consultas guardan muestras estimadas por edad y dejan claro que no son votos individuales. El cooperativo somete pausa y velocidad a mayoría y permite delegar la alcaldía. El centro de respuesta agrupa 17 categorías causales con evidencia y acceso al sistema vigente. También se corrigió y probó la pausa Offline con valores explícitos, y se cambió la prueba de concurrencia LAN para usar cuatro acciones fiscales independientes, dado que los controles de velocidad requieren votación.
+WebRTC añade un transporte directo desde la web y la app Windows, con señalización efímera, respuesta firmada, identidad creada por el anfitrión, límites de rutas y respaldo Cloudflare. La caída de un invitado libera su presencia en la sala. Se conserva la fase 12 en 90% porque la conectividad entre redes y bajo NAT restrictivo aún no tiene prueba de campo; no se contabiliza la implementación como conectividad universal.
 
-Evidencia local: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. La sintaxis y la integridad del diff pasaron. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
+La base Alfa 0.283 agregó remediación ambiental contratada, consultas estimadas y coordinación cooperativa. Sus verificaciones locales anteriores quedan registradas aquí; las acciones automáticas actuales están pausadas por cuota.
+
+Evidencia registrada de Alfa 0.283: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. Para 0.284, la validación del protocolo WebRTC se ejecuta con el script local; queda pendiente la prueba entre redes. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
 
 ---
 

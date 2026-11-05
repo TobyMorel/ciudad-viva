@@ -1,18 +1,19 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.283';
-import {setupCityCompanion} from './city-companion.js?v=0.283';
-import {setupCinematicCamera} from './city_cinema.js?v=0.283';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.283';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.283';
-import {createWorld} from './world3d.js?v=0.283';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.283';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.283';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.283';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.284';
+import {setupCityCompanion} from './city-companion.js?v=0.284';
+import {setupCinematicCamera} from './city_cinema.js?v=0.284';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.284';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.284';
+import {createWorld} from './world3d.js?v=0.284';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.284';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.284';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.284';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.284';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.283';
+import {growthDemand} from './growth_demand.js?v=0.284';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.283';
-import {ROAD_TYPES} from './road_network.js?v=0.283';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.284';
+import {ROAD_TYPES} from './road_network.js?v=0.284';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -38,6 +39,22 @@ document.addEventListener('pointerdown',event=>{if(event.target.closest('.metric
 document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;for(const card of detailCards){card.querySelector('.treasury-popover').hidden=true;card.querySelector('[data-metric-details]').setAttribute('aria-expanded','false')}});
 function renderMetricDetails(){if(!S)return;const homes=(S.buildings||[]).filter(b=>b.kind==='home'),population=Math.max(0,Number(S.population)||0),waiting=Math.max(0,Number(S.housingDemand?.unmet)||0),vacancies=homes.reduce((n,b)=>n+Math.max(0,(b.capacity||0)-(b.occupants||0)),0),staffed=Math.max(0,Number(S.traffic?.staffedJobs)||0),workingAge=Math.max(0,Number(S.laborMarket?.workingAge)||Math.round(population*.42)),coverage=(key)=>{const buildings=(S.buildings||[]).filter(b=>['home','shop','factory','office'].includes(b.kind));return buildings.length?Math.round(buildings.reduce((n,b)=>n+Math.max(0,Math.min(100,Number(b.utilityAccess?.[key])||0)),0)/buildings.length):0},rows=(title,items,note)=>`<header><strong>${title}</strong></header><ul>${items.map(([label,value])=>`<li><span>${label}</span><b>${value}</b></li>`).join('')}</ul><p class="metric-detail-note">${note}</p>`;detailCards[0].querySelector('.treasury-popover').innerHTML=rows('Población',[['Habitantes',nfmt(population)],['Viviendas terminadas',nfmt(homes.length)],['Plazas libres',nfmt(vacancies)],['Personas esperando vivienda',nfmt(waiting)]],'La demanda pendiente todavía no forma parte de la población residente.');detailCards[1].querySelector('.treasury-popover').innerHTML=rows('Empleo efectivo',[['Puestos cubiertos',nfmt(staffed)],['Puestos disponibles',nfmt(S.jobs||0)],['Población activa estimada',nfmt(workingAge)],['Indicador mostrado',`${Math.min(100,Math.max(0,Number(S.traffic?.effectiveEmployment??S.employment)||0))}%`]],'El indicador se limita a 100 %. Los puestos incluyen trabajo público y privado.');detailCards[2].querySelector('.treasury-popover').innerHTML=rows('Servicios',[['Cobertura general',`${nfmt(S.services||0)}%`],['Electricidad en edificios',`${coverage('powerServedPct')}%`],['Agua en edificios',`${coverage('waterServedPct')}%`],['Saneamiento en edificios',`${coverage('wastewaterTreatedPct')}%`]],'Las coberturas por red son promedios de viviendas, comercios y fábricas terminados.')}
 let pid=sessionStorage.getItem('cv-player')||('gob-'+Math.random().toString(36).slice(2,9));sessionStorage.setItem('cv-player',pid);
+let rtcSession=null,rtcHost=null,rtcFallbackRoom=null;
+const unmodifiedFetch=window.fetch.bind(window);
+window.fetch=(resource,options)=>{
+ if(rtcSession&&typeof resource==='string'&&/^\/api\//.test(resource))return rtcSession.fetch(resource,options);
+ return unmodifiedFetch(resource,options);
+};
+function rtcFallback(room){
+ rtcSession=null;
+ if(room?.url&&/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(room.url)){
+  const name=document.getElementById('playerName')?.value?.trim()||localStorage.getItem('ciudad-viva-player-name')||'Jugador';
+  const target=new URL(room.url);target.pathname='/';target.searchParams.set('join','1');target.searchParams.set('player',name);location.assign(target.href);
+ }else{
+  document.getElementById('modeBackdrop').classList.remove('hidden');
+  document.getElementById('modeError').textContent='Se perdió WebRTC y el anfitrión no tiene un túnel Cloudflare disponible. Podés reintentar desde Servidores públicos.';
+ }
+}
 let placementQueue=Promise.resolve();
 let S=null,gameMode=null,offlineAdapter=null,modeGeneration=0,disconnectToast=false,selectedActor=null,tool='inspect',toolVariant=null,toolIndustry=null,toolRoadType='local',toolDensity='low',zoneMode='paint',zoneSuitabilityVisible=false,hoverServiceTile=null,selected=null,zoom=window.innerWidth<650?1.08:2.05,panX=0,panY=0,rotation=0,drag=null,toastTimer,orderProjectId=null;
 const beginnerTutorial=setupBeginnerTutorial({getState:()=>S});
@@ -124,7 +141,7 @@ function stopCursorStream(){
 }
 function startCursorStream(){
  stopCursorStream();
- if(gameMode!=='online'||typeof EventSource==='undefined'||location.hostname.toLowerCase().endsWith('.trycloudflare.com'))return; // Quick Tunnels no admiten SSE
+ if(gameMode!=='online'||rtcSession?.active||typeof EventSource==='undefined'||location.hostname.toLowerCase().endsWith('.trycloudflare.com'))return; // RTCDataChannel y Quick Tunnels usan polling
  const stream=new EventSource('/api/cursors/stream?player='+encodeURIComponent(pid));
  cursorStream=stream;
  stream.onmessage=event=>{
@@ -442,7 +459,7 @@ function renderUI(){if(!S)return;beginnerTutorial.refresh();companion?.refresh()
   climatePill.textContent=names[atmosphere.season]+' · '+(atmosphere.rainMm>=12?'Tormenta '+Math.round(atmosphere.rainMm)+' mm':atmosphere.rainMm>0?'Lluvia '+Math.round(atmosphere.rainMm)+' mm':'Tiempo seco');
   climatePill.dataset.weather=atmosphere.rainMm>0?'rain':'dry';
  }
-renderOnlineHud();if(['derrotado','destituido'].includes(S.governmentReport?.status)&&window.cvLastGovernmentStatus!==S.governmentReport.status){showToast(S.governmentReport.status==='destituido'?'Destitución extraordinaria: la ciudad queda en observación.':'Derrota compartida: tu equipo perdió el gobierno. La ciudad queda en observación.');window.cvLastGovernmentStatus=S.governmentReport.status}if(!['derrotado','destituido'].includes(S.governmentReport?.status))window.cvLastGovernmentStatus=S.governmentReport?.status;const storage=storageStats();const publicReserved=(S.projects||[]).filter(p=>!p.privatePaid).reduce((n,p)=>n+Math.max(0,(p.cost||0)-(p.paid||0)),0),spendableCash=Math.max(0,(S.money||0)-publicReserved);ui.cityName.textContent=S.name;ui.mapCityName.textContent=S.name;ui.dateLabel.textContent=dateText(S.day);ui.mapDate.textContent=' · '+dateText(S.day);const minutes=Number(S.timeOfDayMinutes??360);ui.mapTime.textContent=`${isNight(minutes)?'☾':'☀'} ${formatGameTime(minutes)}`;ui.mapTime.title=`${trafficWindowLabel(trafficWindowAt(minutes))} · ${formatGameTime(minutes)}`;ui.mapTime.dataset.night=String(isNight(minutes));ui.money.textContent='$ '+nfmt(S.money);ui.budgetFlow.textContent=`${(S.grossMonthlyIncome??S.monthlyIncome)-(S.effectiveMonthlyExpenses??S.monthlyExpenses)>=0?'▲ +':'▼ -'} $${nfmt(Math.abs((S.grossMonthlyIncome??S.monthlyIncome)-(S.effectiveMonthlyExpenses??S.monthlyExpenses)))}/mes`;ui.treasuryPopover.innerHTML=treasuryDetailsMarkup(publicReserved,spendableCash);ui.population.textContent=nfmt(S.population);ui.jobs.textContent=`Puestos cubiertos ${nfmt(S.traffic?.staffedJobs||0)} / ${nfmt(S.jobs)}`;ui.employment.textContent=`${Math.min(100,Math.max(0,Number(S.traffic?.effectiveEmployment??S.employment)||0))}%`;ui.employmentNote.textContent=`${nfmt(S.traffic?.effectiveWorkers||0)} trabajadores efectivos · nómina pública $${nfmt(S.publicPayroll||0)}`;ui.services.textContent=`${S.services}%`;ui.serviceNote.textContent=`Cobertura básica · ${S.services<60?'hay zonas vulnerables':'capacidad disponible'}`;ui.approval.textContent=`${S.approval}%`;ui.approvalCause.textContent=S.approval>=55?'Servicios y empleo sostienen la confianza':'La presión fiscal reduce la confianza';renderGrowthDemand();ui.netLabel.textContent=gameMode==='offline'?'Partida offline · navegador':S.isHost?'Anfitrión · sala compartida':`Invitado · sala LAN · ${S.online} conectados`;ui.playersLabel.textContent=gameMode==='offline'?'PARTIDA OFFLINE · GUARDADO LOCAL':`GOBIERNO COMPARTIDO · ${S.online} CONECTADO${S.online===1?'':'S'}`;ui.speedLabel.textContent=S.paused?'PAUSADO':'EN MARCHA';ui.pauseBtn.innerHTML=S.paused?'<span class="dock-play-glyph" aria-hidden="true">&#9654;</span>':'<img src="assets/dock-icons/11_pausa.png" alt="" aria-hidden="true">';ui.pauseBtn.title=S.paused?'Reanudar':'Pausar';ui.pauseBtn.setAttribute('aria-label',ui.pauseBtn.title);ui.pauseBtn.dataset.paused=String(S.paused);ui.pauseBtn.disabled=false;document.querySelectorAll('.speed').forEach(b=>{b.classList.toggle('selected',+b.dataset.speed===S.speed);b.disabled=false});['saveBtn','loadBtn','newBtn'].forEach(id=>document.getElementById(id).disabled=false);
+renderOnlineHud();if(['derrotado','destituido'].includes(S.governmentReport?.status)&&window.cvLastGovernmentStatus!==S.governmentReport.status){showToast(S.governmentReport.status==='destituido'?'Destitución extraordinaria: la ciudad queda en observación.':'Derrota compartida: tu equipo perdió el gobierno. La ciudad queda en observación.');window.cvLastGovernmentStatus=S.governmentReport.status}if(!['derrotado','destituido'].includes(S.governmentReport?.status))window.cvLastGovernmentStatus=S.governmentReport?.status;const storage=storageStats();const publicReserved=(S.projects||[]).filter(p=>!p.privatePaid).reduce((n,p)=>n+Math.max(0,(p.cost||0)-(p.paid||0)),0),spendableCash=Math.max(0,(S.money||0)-publicReserved);ui.cityName.textContent=S.name;ui.mapCityName.textContent=S.name;ui.dateLabel.textContent=dateText(S.day);ui.mapDate.textContent=' · '+dateText(S.day);const minutes=Number(S.timeOfDayMinutes??360);ui.mapTime.textContent=`${isNight(minutes)?'☾':'☀'} ${formatGameTime(minutes)}`;ui.mapTime.title=`${trafficWindowLabel(trafficWindowAt(minutes))} · ${formatGameTime(minutes)}`;ui.mapTime.dataset.night=String(isNight(minutes));ui.money.textContent='$ '+nfmt(S.money);ui.budgetFlow.textContent=`${(S.grossMonthlyIncome??S.monthlyIncome)-(S.effectiveMonthlyExpenses??S.monthlyExpenses)>=0?'▲ +':'▼ -'} $${nfmt(Math.abs((S.grossMonthlyIncome??S.monthlyIncome)-(S.effectiveMonthlyExpenses??S.monthlyExpenses)))}/mes`;ui.treasuryPopover.innerHTML=treasuryDetailsMarkup(publicReserved,spendableCash);ui.population.textContent=nfmt(S.population);ui.jobs.textContent=`Puestos cubiertos ${nfmt(S.traffic?.staffedJobs||0)} / ${nfmt(S.jobs)}`;ui.employment.textContent=`${Math.min(100,Math.max(0,Number(S.traffic?.effectiveEmployment??S.employment)||0))}%`;ui.employmentNote.textContent=`${nfmt(S.traffic?.effectiveWorkers||0)} trabajadores efectivos · nómina pública $${nfmt(S.publicPayroll||0)}`;ui.services.textContent=`${S.services}%`;ui.serviceNote.textContent=`Cobertura básica · ${S.services<60?'hay zonas vulnerables':'capacidad disponible'}`;ui.approval.textContent=`${S.approval}%`;ui.approvalCause.textContent=S.approval>=55?'Servicios y empleo sostienen la confianza':'La presión fiscal reduce la confianza';renderGrowthDemand();ui.netLabel.textContent=gameMode==='offline'?'Partida offline · navegador':S.isHost?(rtcHost?'Anfitrión · WebRTC y Cloudflare':'Anfitrión · sala compartida'):(rtcSession?.active?`WebRTC directo · ${S.online} conectados`:`Invitado · sala LAN/Internet · ${S.online} conectados`);ui.playersLabel.textContent=gameMode==='offline'?'PARTIDA OFFLINE · GUARDADO LOCAL':`GOBIERNO COMPARTIDO · ${S.online} CONECTADO${S.online===1?'':'S'}`;ui.speedLabel.textContent=S.paused?'PAUSADO':'EN MARCHA';ui.pauseBtn.innerHTML=S.paused?'<span class="dock-play-glyph" aria-hidden="true">&#9654;</span>':'<img src="assets/dock-icons/11_pausa.png" alt="" aria-hidden="true">';ui.pauseBtn.title=S.paused?'Reanudar':'Pausar';ui.pauseBtn.setAttribute('aria-label',ui.pauseBtn.title);ui.pauseBtn.dataset.paused=String(S.paused);ui.pauseBtn.disabled=false;document.querySelectorAll('.speed').forEach(b=>{b.classList.toggle('selected',+b.dataset.speed===S.speed);b.disabled=false});['saveBtn','loadBtn','newBtn'].forEach(id=>document.getElementById(id).disabled=false);
  const queue=(S.supply.orders||[]).filter(o=>['en tránsito','esperando equipo','descargando'].includes(o.status)).sort((a,b)=>(b.urgencyScore||0)-(a.urgencyScore||0));const localQuarries=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='quarry'),localPlants=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='concrete'),localSawmills=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='sawmill'),quarryReserve=localQuarries.reduce((n,b)=>n+Math.max(0,b.business.quarryReserve||0),0),quarryStock=S.supply.suppliers?.['Cantera local']?.aggregate||0,quarryOutput=localQuarries.reduce((n,b)=>n+Math.max(0,b.business.lastProduction||0),0),concreteStock=S.supply.suppliers?.['Hormigonera local']?.concrete||0,concreteOutput=localPlants.reduce((n,b)=>n+Math.max(0,b.business.lastProduction||0),0),timberStock=S.supply.suppliers?.['Aserradero local']?.timber||0,timberOutput=localSawmills.reduce((n,b)=>n+Math.max(0,b.business.lastProduction||0),0),quarryCard=`<div class="supply-line depot-line"><span>🪨 Áridos locales</span><b>${quarryStock}/360 disponibles · ${quarryReserve} de reserva</b><small>Extracción del último ciclo: ${quarryOutput}/48 · ${localQuarries.length?localQuarries.length+' cantera(s) activa(s)':'sin cantera; falta inversión industrial'} · Personal, servicios y geología limitan la extracción.</small></div><div class="supply-line depot-line"><span>🏗️ Hormigón local</span><b>${concreteStock}/240 unidades · producción ${concreteOutput}/36</b><small>${localPlants.length?localPlants.length+' hormigonera(s) · consume 2 áridos por unidad y compra en cantera mediante ruta vial.':'Aún no hay hormigonera: se habilita después de la primera cantera local.'} ${localPlants.map(b=>`${b.name}: ${b.business.rawMaterialInventory||0} áridos en planta · ${b.business.lastMaterialCause||'operativa'}`).join(' · ')}</small></div>`,sawmillCard=`<div class="supply-line depot-line"><span>🪵 Madera local</span><b>${timberStock}/240 disponibles · bosque ${nfmt(S.localIndustry?.timberReserve??1800)} troncos</b><small>Producción del último ciclo: ${timberOutput}/30 tablas · ${localSawmills.length?localSawmills.map(b=>`${b.name}: ${b.business.lastMaterialCause||'operativo'}`).join(' · '):'sin aserradero; la ciudad usa proveedores externos'} · cada tabla consume dos troncos; el bosque regenera 18 al mes.</small></div>`,metalworks=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.industryType==='metalworks'),metalStock=S.supply.suppliers?.['Metalúrgica local']?.components||0,metalOutput=metalworks.reduce((n,b)=>n+Math.max(0,b.business.lastProduction||0),0),metalCard=`<div class="supply-line depot-line"><span>⚙️ Componentes metalúrgicos</span><b>${metalStock}/180 disponibles · producción ${metalOutput}/24</b><small>${metalworks.length?metalworks.map(b=>`${b.name}: ${b.business.rawSteelInventory||0} acero en planta · ${b.business.lastMaterialCause||'operativa'}`).join(' · '):'Sin metalúrgica local; los componentes se importan del proveedor elegido'} · consume acero regional por carretera; 1 acero produce 1 componente para las obras.</small></div>`;
  const industrialRecovery=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.industrialRecovery?.status==='en obra'),closedIndustrial=(S.buildings||[]).filter(b=>b.kind==='factory'&&b.business?.status==='cerrado'),recoveryCard=`<div class="supply-line depot-line"><span>Recuperación industrial privada</span><b>${industrialRecovery.length} rehabilitación(es) en marcha · ${closedIndustrial.length} planta(s) cerrada(s)</b><small>${industrialRecovery.length?industrialRecovery.map(b=>`${escHtml(b.name)}: obra de ${escHtml(b.industrialRecovery.contractor)} · lista desde día ${b.industrialRecovery.readyDay} · ${escHtml(b.industrialRecovery.statusCause||'en obra')}`).join(' · '):'Las plantas quebradas requieren 90 días de espera, demanda real, suelo industrial, servicios, acceso vial, capital y cinco trabajadores de constructora.'}</small></div>`;
  const vendorCatalog={quarry:['Cantera local','aggregate','aggregateStock',38],concrete:['Hormigonera local','concrete','concreteStock',62],sawmill:['Aserradero local','timber','timberStock',75],metalworks:['Metalúrgica local','components','componentStock',240]};
@@ -839,7 +856,7 @@ async function poll(generation=modeGeneration){
     }
    }
   }
-  if(gameMode==='online')ui.netLabel.textContent=S.isHost?'Anfitrión · sala compartida':`Invitado · sala LAN · ${S.online} conectados`;
+  if(gameMode==='online')ui.netLabel.textContent=S.isHost?(rtcHost?'Anfitrión · WebRTC y Cloudflare':'Anfitrión · sala compartida'):(rtcSession?.active?`WebRTC directo · ${S.online} conectados`:`Invitado · sala LAN/Internet · ${S.online} conectados`);
  }catch(e){
   if(generation!==modeGeneration)return;
   retryDelay=1000;ui.netLabel.textContent='Sala desconectada';
@@ -893,13 +910,16 @@ let publicHostingRequested=false;
 function showPublicInvite(data){
  const box=document.getElementById('publicSessionStatus'),label=document.getElementById('publicSessionLabel');
  if(!box||!label)return;
- box.hidden=!data?.url;
- if(data?.url)label.textContent=data.url+(data.listed?' · Visible en servidores públicos':' · Enlace directo; directorio aún no configurado');
+ box.hidden=!(data?.url||data?.rtcReady);
+ if(box.hidden)return;
+ label.textContent=(data.rtcReady?'WebRTC directo disponible':'WebRTC preparando conexión')
+  +(data.url?' · Cloudflare de respaldo: '+data.url:' · Sin túnel Cloudflare')
+  +(data.listed?' · Sala visible en servidores públicos':'');
  window.cvPublicInvite=data?.url?data.url.replace(/\/$/,'')+'/?join=1':null;
 }
 async function enterRoom(create=false,code='',slotSelection={}){
  const name=document.getElementById('playerName').value.trim();const error=document.getElementById('modeError');
- if(name.length<2){error.textContent='Elegí un nombre de al menos dos letras para jugar online.';document.getElementById('playerName').focus();return}
+ if(name.length<2){error.textContent='Elegí un nombre de al menos dos letras para jugar online.';document.getElementById('playerName').focus();return false}
  localStorage.setItem('ciudad-viva-player-name',name);
  stopCursorStream();const generation=++modeGeneration;gameMode=null;offlineAdapter=null;error.textContent=create?'Abriendo sala LAN…':'Conectando con la sala…';
  try{
@@ -911,12 +931,45 @@ async function enterRoom(create=false,code='',slotSelection={}){
      const publication=await published.json();
      if(!published.ok)throw Error(publication.error||'No se pudo abrir la conexión pública.');
      showPublicInvite(publication);window.cvInfo=await api('/api/info');
-     showToast(publication.listed?'Sala pública visible en el directorio.':'Sala pública por enlace directo. La lista requiere Supabase.');
+     if(publication.roomId){
+      try{
+       rtcHost?.close?.();
+       rtcHost=await startRtcHost({
+        roomId:publication.roomId,
+        activate:async publicKey=>{
+         const response=await unmodifiedFetch('/api/public/rtc/activate',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify({publicKey})});
+         const status=await response.json();if(!response.ok)throw Error(status.error||'No se pudo anunciar WebRTC.');showPublicInvite(status);
+        },
+        onPeerLeave:playerId=>unmodifiedFetch('/api/public/rtc/leave',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':pid},body:JSON.stringify({playerId})}),
+        onStatus:message=>{if(message&&gameMode==='online')showToast(message)}
+       });
+       showToast('WebRTC directo listo'+(publication.url?' · Cloudflare queda como respaldo.':'.'));
+      }catch(error){showToast('WebRTC no disponible: '+error.message+(publication.url?' · Cloudflare sigue disponible.':''))}
+     }else showToast('Sala LAN creada; no se activó el anuncio híbrido.');
     }catch(error){showToast('La sala LAN funciona, pero no se pudo publicar: '+error.message)}
    }else showToast(`Sala LAN creada · código ${reply.roomCode}`);
   }
-  poll(generation)
- }catch(e){if(generation===modeGeneration)error.textContent=e.message}
+  poll(generation);return true
+ }catch(e){if(generation===modeGeneration)error.textContent=e.message;return false}
+}
+
+async function connectPublicRoom(room){
+ const error=document.getElementById('modeError'),name=document.getElementById('playerName').value.trim();
+ if(name.length<2){error.textContent='Ingresá tu nombre para unirte.';return}
+ localStorage.setItem('ciudad-viva-player-name',name);
+ if(room.rtcEnabled&&room.rtcPublicKey&&typeof RTCPeerConnection!=='undefined'){
+  error.textContent='Probando conexión WebRTC directa…';
+  try{
+   const transport=await connectRtcRoom(room,{timeoutMs:16000,onDisconnected:()=>{
+    setTimeout(()=>{if(rtcSession&&!rtcSession.active)rtcFallback(rtcFallbackRoom)},3500);
+   }});
+   rtcSession?.close?.();rtcSession=transport;rtcFallbackRoom=room;
+   if(await enterRoom(false))return;
+   rtcSession=null;rtcFallbackRoom=null;transport.close();
+  }catch(error){rtcSession=null;rtcFallbackRoom=null;error.textContent='WebRTC directo no disponible: '+error.message}
+ }
+ if(room.url){error.textContent='Usando Cloudflare como respaldo…';location.assign(roomUrl(room.url));return}
+ error.textContent='El anfitrión no tiene WebRTC accesible ni un túnel Cloudflare activo. Probá nuevamente más tarde.';
 }
 
 function showLanChoices(){document.getElementById('modeOptions').classList.add('hidden');document.getElementById('lanChoices').classList.remove('hidden');document.getElementById('modeTitle').textContent='Jugar online · LAN o Internet';document.getElementById('modeIntro').textContent='Tu PC puede alojar una partida LAN o compartirla por Internet. Ninguna ciudad se ejecuta en un servidor central.';document.getElementById('modeError').textContent='Los servidores públicos experimentales requieren la app Windows actualizada y una conexión a Internet.';playSound('open')}
@@ -947,7 +1000,7 @@ async function fetchPublicDirectory(){
   return {rooms:[],configured:false,message:'El directorio global todavía no fue activado.'};
  const cutoff=new Date(Date.now()-12*60*1000).toISOString();
  const params=new URLSearchParams({
-  select:'id,city,host_name,join_url,players,max_players,last_seen',
+  select:'id,city,host_name,join_url,players,max_players,last_seen,rtc_enabled,rtc_public_key',
   last_seen:'gte.'+cutoff,order:'last_seen.desc',limit:'60'
  });
  const headers={apikey:key};
@@ -955,9 +1008,12 @@ async function fetchPublicDirectory(){
  const response=await fetch(base.replace(/\/$/,'')+'/rest/v1/public_rooms?'+params.toString(),{headers,cache:'no-store'});
  if(!response.ok)throw Error('No se pudo consultar Supabase (HTTP '+response.status+').');
  const rows=await response.json();
- return {configured:true,rooms:(Array.isArray(rows)?rows:[]).filter(row=>/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(row.join_url||'')).map(row=>({
+ return {configured:true,rooms:(Array.isArray(rows)?rows:[]).filter(row=>
+  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(row.join_url||'')||!!(row.rtc_enabled&&row.rtc_public_key)
+ ).map(row=>({
   id:row.id,name:row.city||'Ciudad Viva',host:row.host_name||'Anfitrión',
-  url:row.join_url,players:row.players||1,capacity:row.max_players||13
+  url:row.join_url||'',players:row.players||1,capacity:row.max_players||13,
+  rtcEnabled:!!(row.rtc_enabled&&row.rtc_public_key),rtcPublicKey:row.rtc_public_key||null
  }))};
 }
 // La lista SOLO se consulta al abrirla o pulsar Recargar, nunca por polling.
@@ -984,13 +1040,10 @@ function paintPublicRooms(directory){
   const button=document.createElement('button');
   button.type='button';button.className='room-result';
   const isFull=Number(room.players)>=Number(room.capacity);
-  button.textContent='🌍 '+room.name+' · '+room.host+' · '+room.players+'/'+room.capacity+' jugadores'+(isFull?' · Sala llena':'');
+  button.textContent='🌍 '+room.name+' · '+room.host+' · '+room.players+'/'+room.capacity+' jugadores · '+
+   (room.rtcEnabled?(room.url?'WebRTC + Cloudflare':'WebRTC'):'Cloudflare')+(isFull?' · Sala llena':'');
   button.disabled=isFull;
-  if(!isFull)button.addEventListener('click',()=>{
-   document.getElementById('lanAddress').value=room.url;
-   document.getElementById('lanCode').value='';
-   connectRoom();
-  });
+  if(!isFull)button.addEventListener('click',()=>connectPublicRoom(room));
   publicRoomResults.append(button);
  }
  if(!publicRoomResults.children.length){
@@ -1035,7 +1088,7 @@ document.getElementById('joinRoom').addEventListener('click',()=>{document.getEl
 document.getElementById('lanConnect').addEventListener('click',connectRoom);
 document.getElementById('browseRoom').addEventListener('click',async()=>{const list=document.getElementById('roomList'),firstOpen=list.classList.contains('hidden');list.dataset.browseMode='lan';list.classList.remove('hidden');document.getElementById('lanJoinForm').classList.add('hidden');if(firstOpen)list.textContent='Buscando salas en esta red…';try{const response=await fetch('/api/rooms',{cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();list.replaceChildren();for(const room of data.rooms||[]){const b=document.createElement('button');b.className='room-result';b.textContent=`🏙 ${room.name} · ${room.address} · código ${room.code}`;b.addEventListener('click',()=>{document.getElementById('lanAddress').value=room.address;document.getElementById('lanCode').value=room.code;connectRoom()});list.append(b)}if(!list.children.length)list.innerHTML='<b>Salas disponibles</b><p>Todavía no hay salas anunciadas. En Radmin VPN, el anfitrión debe abrir la app y cargar su partida.</p><button type="button" class="room-result" data-open-join>Unirse con dirección</button>';list.querySelector('[data-open-join]')?.addEventListener('click',()=>document.getElementById('lanJoinForm').classList.remove('hidden'))}catch{list.innerHTML='<b>Salas disponibles</b><p>No se detectaron salas abiertas desde este navegador. Para descubrir salas por Radmin VPN abrí la app Ciudad Viva en este equipo. Desde GitHub Pages, ingresá la dirección 26.x del anfitrión.</p><button type="button" class="room-result" data-open-join>Unirse con dirección</button>';list.querySelector('[data-open-join]').onclick=()=>{document.getElementById('lanJoinForm').classList.remove('hidden')};}});
 document.getElementById('publicCopyLink').addEventListener('click',async()=>{
- if(!window.cvPublicInvite)return;
+ if(!window.cvPublicInvite){showToast('Compartí el nombre de la sala desde «Servidores públicos».');return}
  try{await navigator.clipboard.writeText(window.cvPublicInvite);showToast('Invitación pública copiada.')}catch{showToast(window.cvPublicInvite)}
 });
 document.getElementById('onlineHudToggle').addEventListener('click',()=>{const hud=document.getElementById('onlineHud');hud.classList.toggle('collapsed');document.getElementById('onlineHudToggle').textContent=hud.classList.contains('collapsed')?'+':'−'});

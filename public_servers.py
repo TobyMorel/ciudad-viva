@@ -192,7 +192,17 @@ class PublicProxy(BaseHTTPRequestHandler):
                          ".ogg",".wav",".json",".bin",".glb",".gltf",".wasm",".webmanifest"}
         if path == "/api/info":
             self._json(200, {"roomOpen": self.controller.room_info().get("roomOpen", False),
-                             "publicUrl": self.controller.url, "ips": []})
+                             "publicUrl": self.controller.url, "ips": [],
+                             "rtcRoomId": self.controller.room_id})
+            return
+        if path == "/api/public/config":
+            directory = self.controller.directory
+            if not directory.ensure_config():
+                self._json(503, {"error": "No se pudo leer la configuración pública de Supabase."})
+            else:
+                # Sólo clave publicable, nunca token de sala ni credencial de servicio.
+                self._json(200, {"supabaseUrl": directory.url,
+                                 "supabaseAnonKey": directory.key})
             return
         if path not in ("/api/public/rooms","/api/state","/api/sync",
                         "/api/cursors","/api/cursors/stream"):

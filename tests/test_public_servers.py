@@ -70,11 +70,46 @@ class PublicHostingSecurity(unittest.TestCase):
             directory.enabled = True
             safe = {"id": "a", "city": "Puerto",
                     "host_name": "Pepe", "join_url": "https://good.trycloudflare.com",
-                    "players": 1, "max_players": 12}
+                    "players": 1, "max_players": 13}
             evil = {**safe, "id": "b", "join_url": "https://phishing.example"}
             with patch.object(directory, "_request", return_value=[safe, evil]):
                 rooms = directory.browse()["rooms"]
             self.assertEqual([x["id"] for x in rooms], ["a"])
+
+    def test_player_limit_is_thirteen(self):
+        class Controller:
+            game_port = 1
+            url = "https://example.trycloudflare.com"
+            session_lock = threading.RLock()
+            sessions = {}
+
+            @staticmethod
+            def room_info():
+                return {"roomOpen": True, "players": 13}
+
+        handler = type("FullRoomPublicProxy", (PublicProxy,), {"controller": Controller()})
+        server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        server.daemon_threads = True
+        worker = threading.Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=3)
+            conn.request("POST", "/api/room/join", body='{"name":"Visitante"}')
+            response = conn.getresponse()
+            self.assertEqual(response.status, 429)
+            self.assertIn("13 jugadores", json.loads(response.read())["error"])
+            conn.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            worker.join(timeout=3)
+
+    def test_sparse_directory_heartbeat_interval(self):
+        # La aplicación anuncia cada 5 min; consultar las salas es a demanda.
+        from inspect import getsource
+        from public_servers import PublicRooms
+        self.assertIn("self.finished.wait(300)", getsource(PublicRooms._heartbeat))
+
 
     def test_public_proxy_rejects_admin_and_unauthenticated_calls(self):
         class Controller:

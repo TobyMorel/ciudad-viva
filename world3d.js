@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
-import {daylightIntensity} from './simulation_time.js?v=0.280';
+import {daylightIntensity} from './simulation_time.js?v=0.281';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.280';
-import {createLivingCity3D} from './living_city_3d.js?v=0.280';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.280';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.281';
+import {createLivingCity3D} from './living_city_3d.js?v=0.281';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.281';
 
 // La cuadrícula lógica conserva sus celdas; en escena, cada celda mide 3
 // unidades y los modelos crecen un 35%, dejando más espacio entre ellos.

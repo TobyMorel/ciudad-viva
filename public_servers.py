@@ -62,7 +62,7 @@ class PublicDirectory:
                 return False
             self._checked_remote = now
             try:
-                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.280"})
+                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.281"})
                 with urlopen(req, timeout=4) as response:
                     config = json.loads(response.read(8192))
             except (OSError, TimeoutError, ValueError, TypeError):
@@ -105,7 +105,7 @@ class PublicDirectory:
         response = self._request("/functions/v1/public-rooms", "POST", {
             "action": "publish", "id": room["id"], "token": room["token"],
             "city": str(room["city"])[:64], "host_name": str(room["host_name"])[:32],
-            "join_url": room["url"], "players": max(1, min(12, room["players"])),
+            "join_url": room["url"], "players": max(1, min(13, room["players"])),
         })
         if not isinstance(response, dict) or not response.get("ok"):
             raise RuntimeError("Supabase no confirmó la publicación de esta sala.")
@@ -121,7 +121,7 @@ class PublicDirectory:
         if not self.ensure_config():
             return {"configured": False, "rooms": [],
                     "message": "Falta configurar Supabase para mostrar las salas de todos los jugadores."}
-        cutoff = quote((datetime.now(timezone.utc) - timedelta(seconds=90)).isoformat(timespec="seconds"), safe="")
+        cutoff = quote((datetime.now(timezone.utc) - timedelta(minutes=12)).isoformat(timespec="seconds"), safe="")
         rows = self._request("/rest/v1/public_rooms?select=id,city,host_name,join_url,players,max_players,last_seen"
                              "&last_seen=gte." + cutoff + "&order=last_seen.desc&limit=60") or []
         rooms = []
@@ -133,7 +133,7 @@ class PublicDirectory:
             rooms.append({
                 "id": row.get("id"), "name": str(row.get("city") or "Ciudad Viva")[:64],
                 "host": str(row.get("host_name") or "Anfitrión")[:32],
-                "players": row.get("players", 1), "capacity": row.get("max_players", 12),
+                "players": row.get("players", 1), "capacity": row.get("max_players", 13),
                 "url": address,
             })
         return {"configured": True, "rooms": rooms}
@@ -228,8 +228,8 @@ class PublicProxy(BaseHTTPRequestHandler):
             return
         identity = self._identity()
         if path == "/api/room/join":
-            if self.controller.room_info().get("players", 0) >= 12:
-                self._json(429, {"error": "La sala pública alcanzó los 12 jugadores."})
+            if self.controller.room_info().get("players", 0) >= 13:
+                self._json(429, {"error": "La sala pública alcanzó los 13 jugadores."})
                 return
             # El jugador no puede elegir una identidad existente ni hacerse pasar por el anfitrión.
             identity = "public-" + secrets.token_hex(12)
@@ -398,7 +398,7 @@ class PublicRooms:
             return self.status()
 
     def _heartbeat(self):
-        while not self.finished.wait(24):
+        while not self.finished.wait(300):
             if not self.process or self.process.poll() is not None or not self.room_info().get("roomOpen"):
                 self.stop()
                 break
@@ -416,7 +416,7 @@ class PublicRooms:
                 try:
                     self.directory.unpublish(self.room_id, self.room_secret)
                 except RuntimeError:
-                    pass  # La caducidad de 90 segundos limpia anuncios huérfanos.
+                    pass  # La caducidad de 12 minutos oculta anuncios huérfanos.
             if self.process:
                 try:
                     self.process.terminate()

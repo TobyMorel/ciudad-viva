@@ -7147,6 +7147,10 @@ class Handler(BaseHTTPRequestHandler):
                 if not ROOM_OPEN:self._send(409,{"error":"El anfitrión todavía no creó la sala."});return
                 if data.get("code") and str(data["code"]).upper()!=ROOM_CODE:
                     self._send(403,{"error":"Código de sala incorrecto."});return
+                # Aplicar la capacidad también para LAN y de forma atómica.
+                # Los clientes previamente admitidos pueden reconectarse.
+                if pid not in state["players"] and len(player_list()) >= 13:
+                    self._send(429, {"error": "La sala alcanzó los 13 jugadores."});return
                 chosen_name=clean_player_name(data.get("name"))
                 if data.get("name") and any(other!=pid and last>time.time()-25 and state.get("playerNames",{}).get(other)==chosen_name for other,last in state["players"].items()):
                     self._send(409,{"error":"Ese nombre ya está en uso en la sala. Elegí otro."});return

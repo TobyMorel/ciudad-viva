@@ -1,18 +1,18 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.280';
-import {setupCityCompanion} from './city-companion.js?v=0.280';
-import {setupCinematicCamera} from './city_cinema.js?v=0.280';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.280';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.280';
-import {createWorld} from './world3d.js?v=0.280';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.280';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.280';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.280';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.281';
+import {setupCityCompanion} from './city-companion.js?v=0.281';
+import {setupCinematicCamera} from './city_cinema.js?v=0.281';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.281';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.281';
+import {createWorld} from './world3d.js?v=0.281';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.281';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.281';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.281';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.280';
+import {growthDemand} from './growth_demand.js?v=0.281';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.280';
-import {ROAD_TYPES} from './road_network.js?v=0.280';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.281';
+import {ROAD_TYPES} from './road_network.js?v=0.281';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -933,7 +933,7 @@ async function fetchPublicDirectory(){
  const base=String(config?.supabaseUrl||''),key=String(config?.supabaseAnonKey||'');
  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(base)||!key)
   return {rooms:[],configured:false,message:'El directorio global todavía no fue activado.'};
- const cutoff=new Date(Date.now()-90000).toISOString();
+ const cutoff=new Date(Date.now()-12*60*1000).toISOString();
  const params=new URLSearchParams({
   select:'id,city,host_name,join_url,players,max_players,last_seen',
   last_seen:'gte.'+cutoff,order:'last_seen.desc',limit:'60'
@@ -945,25 +945,78 @@ async function fetchPublicDirectory(){
  const rows=await response.json();
  return {configured:true,rooms:(Array.isArray(rows)?rows:[]).filter(row=>/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(row.join_url||'')).map(row=>({
   id:row.id,name:row.city||'Ciudad Viva',host:row.host_name||'Anfitrión',
-  url:row.join_url,players:row.players||1,capacity:row.max_players||12
+  url:row.join_url,players:row.players||1,capacity:row.max_players||13
  }))};
 }
-document.getElementById('browsePublicRoom').addEventListener('click',async()=>{
- const list=document.getElementById('roomList');
- list.classList.remove('hidden');document.getElementById('lanJoinForm').classList.add('hidden');
- list.textContent='Buscando servidores públicos…';
+// La lista SOLO se consulta al abrirla o pulsar Recargar, nunca por polling.
+// El tiempo de espera se aplica también si se vuelve a abrir el menú.
+const PUBLIC_ROOM_REFRESH_INTERVAL=30000;
+let lastPublicRoomFetch=0;
+let publicRoomListCache=null;
+let publicRoomLoading=false;
+const publicRoomsContainer=document.getElementById('roomList');
+const publicRoomRefresh=document.createElement('button');
+publicRoomRefresh.type='button';
+publicRoomRefresh.className='room-result';
+publicRoomRefresh.style.marginBottom='8px';
+const publicRoomResults=document.createElement('div');
+function updatePublicRoomRefresh(){
+ const remaining=Math.max(0,Math.ceil((PUBLIC_ROOM_REFRESH_INTERVAL-(Date.now()-lastPublicRoomFetch))/1000));
+ publicRoomRefresh.disabled=publicRoomLoading||remaining>0;
+ publicRoomRefresh.textContent=publicRoomLoading?'Buscando servidores…':remaining>0?'Recargar servidores ('+remaining+' s)':'Recargar servidores';
+}
+function paintPublicRooms(directory){
+ publicRoomResults.replaceChildren();
+ for(const room of directory.rooms||[]){
+  const button=document.createElement('button');
+  button.type='button';button.className='room-result';
+  const isFull=Number(room.players)>=Number(room.capacity);
+  button.textContent='🌍 '+room.name+' · '+room.host+' · '+room.players+'/'+room.capacity+' jugadores'+(isFull?' · Sala llena':'');
+  button.disabled=isFull;
+  if(!isFull)button.addEventListener('click',()=>{
+   document.getElementById('lanAddress').value=room.url;
+   document.getElementById('lanCode').value='';
+   connectRoom();
+  });
+  publicRoomResults.append(button);
+ }
+ if(!publicRoomResults.children.length){
+  const msg=document.createElement('p');
+  msg.textContent=directory.message||'No hay servidores públicos activos en este momento.';
+  publicRoomResults.append(msg);
+ }
+}
+async function loadPublicRooms(){
+ if(publicRoomLoading||Date.now()-lastPublicRoomFetch<PUBLIC_ROOM_REFRESH_INTERVAL)return;
+ lastPublicRoomFetch=Date.now();
+ publicRoomLoading=true;
+ publicRoomResults.textContent='Buscando servidores públicos…';
+ updatePublicRoomRefresh();
  try{
-  const directory=await fetchPublicDirectory();
-  list.replaceChildren();
-  for(const room of directory.rooms||[]){
-   const button=document.createElement('button');button.type='button';button.className='room-result';
-   button.textContent=`🌍 ${room.name} · ${room.host} · ${room.players}/${room.capacity} jugadores`;
-   button.addEventListener('click',()=>{document.getElementById('lanAddress').value=room.url;document.getElementById('lanCode').value='';connectRoom()});
-   list.append(button);
-  }
-  if(!list.children.length){const message=document.createElement('p');message.textContent=directory.message||'No hay servidores públicos activos en este momento.';list.append(message)}
- }catch(error){list.textContent=error.message}
+  publicRoomListCache=await fetchPublicDirectory();
+  paintPublicRooms(publicRoomListCache);
+ }catch(error){
+  const msg=document.createElement('p');msg.textContent=error.message;
+  publicRoomResults.replaceChildren(msg);
+ }finally{
+  publicRoomLoading=false;
+  updatePublicRoomRefresh();
+ }
+}
+publicRoomRefresh.addEventListener('click',loadPublicRooms);
+document.getElementById('browsePublicRoom').addEventListener('click',()=>{
+ publicRoomsContainer.classList.remove('hidden');
+ document.getElementById('lanJoinForm').classList.add('hidden');
+ publicRoomsContainer.replaceChildren(publicRoomRefresh,publicRoomResults);
+ if(publicRoomListCache)paintPublicRooms(publicRoomListCache);
+ else if(Date.now()-lastPublicRoomFetch<PUBLIC_ROOM_REFRESH_INTERVAL){
+  publicRoomResults.textContent='Podés volver a buscar al finalizar la espera.';
+ }
+ updatePublicRoomRefresh();
+ loadPublicRooms();
 });
+// Este temporizador SOLO actualiza el texto del botón, no realiza consultas.
+setInterval(()=>{if(!publicRoomsContainer.classList.contains('hidden'))updatePublicRoomRefresh()},1000);
 document.getElementById('joinRoom').addEventListener('click',()=>{document.getElementById('lanJoinForm').classList.remove('hidden');document.getElementById('roomList').classList.add('hidden')});
 document.getElementById('lanConnect').addEventListener('click',connectRoom);
 document.getElementById('browseRoom').addEventListener('click',async()=>{const list=document.getElementById('roomList'),firstOpen=list.classList.contains('hidden');list.classList.remove('hidden');document.getElementById('lanJoinForm').classList.add('hidden');if(firstOpen)list.textContent='Buscando salas en esta red…';try{const response=await fetch('/api/rooms',{cache:'no-store'});if(!response.ok)throw Error();const data=await response.json();list.replaceChildren();for(const room of data.rooms||[]){const b=document.createElement('button');b.className='room-result';b.textContent=`🏙 ${room.name} · ${room.address} · código ${room.code}`;b.addEventListener('click',()=>{document.getElementById('lanAddress').value=room.address;document.getElementById('lanCode').value=room.code;connectRoom()});list.append(b)}if(!list.children.length)list.innerHTML='<b>Salas disponibles</b><p>Todavía no hay salas anunciadas. En Radmin VPN, el anfitrión debe abrir la app y cargar su partida.</p><button type="button" class="room-result" data-open-join>Unirse con dirección</button>';list.querySelector('[data-open-join]')?.addEventListener('click',()=>document.getElementById('lanJoinForm').classList.remove('hidden'))}catch{list.innerHTML='<b>Salas disponibles</b><p>No se detectaron salas abiertas desde este navegador. Para descubrir salas por Radmin VPN abrí la app Ciudad Viva en este equipo. Desde GitHub Pages, ingresá la dirección 26.x del anfitrión.</p><button type="button" class="room-result" data-open-join>Unirse con dirección</button>';list.querySelector('[data-open-join]').onclick=()=>{document.getElementById('lanJoinForm').classList.remove('hidden')};}});

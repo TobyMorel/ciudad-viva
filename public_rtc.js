@@ -201,9 +201,17 @@ export async function startRtcHost({roomId,activate,onStatus}){
   const peer=newPeer(),pid="public-"+id().slice(0,24);
   let joined=false;
   peers.set(m.client,peer);
-  peer.onconnectionstatechange=()=>{
-   if(["closed","failed","disconnected"].includes(peer.connectionState)){
+  // Un atacante no puede ocupar indefinidamente los 12 espacios enviando
+  // ofertas que nunca se conectan: cerrar los peers incompletos tras 25 s.
+  const pendingTimer=setTimeout(()=>{
+   if(peer.connectionState!=="connected"){
     peers.delete(m.client);try{peer.close()}catch{}
+   }
+  },25000);
+  peer.onconnectionstatechange=()=>{
+   if(peer.connectionState==="connected")clearTimeout(pendingTimer);
+   if(["closed","failed","disconnected"].includes(peer.connectionState)){
+    clearTimeout(pendingTimer);peers.delete(m.client);try{peer.close()}catch{}
    }
   };
   peer.ondatachannel=event=>{

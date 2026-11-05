@@ -1,3 +1,9 @@
+## Alfa 0.286 · Desarrollo transversal de las fases 1–15
+
+La cobertura funcional de las primeras quince fases llega al 95% o más en Alfa 0.286. Se agregan ventas privadas de inmuebles con historial de titularidad, ingreso salarial familiar sin duplicación, formación técnica y docente asociada a habilidades de empleo, y votos online de jugadores en consultas vecinales, separados de la muestra simulada de residentes. La batería local recorre contratos, equipos, migración, servicios, economía, movilidad, gobierno y presentación responsive. El residuo de cada fase se reserva para validación entre redes/dispositivos reales, accesibilidad y partidas prolongadas. El estrés económico de 30 años termina con caja $0 en cuatro perfiles heredados de baja financiación; queda calibrar esa sostenibilidad.
+
+GitHub Actions permanece pausado hasta el 1 de diciembre de 2026. La validación local se ejecuta con `scripts/validate_local.sh`, y las sesiones de campo de cuatro equipos siguen como comprobación final del online.
+
 ## Alfa 0.254 · Economía de una ciudad vacía
 
 Una nueva ciudad no muestra ingresos ni gastos sin actividad propia. El acceso regional queda fuera de mantenimiento vial y de redes municipales. Se quita el aporte regional de arranque y se eliminan los ingresos automáticos por población y empleo privado; los hogares y comercios aportan mediante impuestos efectivamente cobrados.

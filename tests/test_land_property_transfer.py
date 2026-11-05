@@ -29,8 +29,8 @@ class LandPropertyTransfer(unittest.TestCase):
 
     def tearDown(self):server.state,server.ROOM_OPEN=self.previous_state,self.previous_room
 
-    def action(self):
-        request=urllib.request.Request(f"http://127.0.0.1:{self.http.server_port}/api/action",data=json.dumps({"action":"acquirePrivateProperty","x":6,"y":10}).encode(),headers={"Content-Type":"application/json"},method="POST")
+    def action(self,action="acquirePrivateProperty",**fields):
+        request=urllib.request.Request(f"http://127.0.0.1:{self.http.server_port}/api/action",data=json.dumps({"action":action,"x":6,"y":10,**fields}).encode(),headers={"Content-Type":"application/json"},method="POST")
         try:
             with urllib.request.urlopen(request,timeout=5) as response:return response.status,json.load(response)
         except urllib.error.HTTPError as error:return error.code,json.load(error)
@@ -50,6 +50,28 @@ class LandPropertyTransfer(unittest.TestCase):
         status,body=self.action();self.assertEqual(status,409);self.assertIn("Quedan $ 3.000",body["error"]);self.assertEqual(server.state["money"],10000)
         server.state["projects"]=[];self.assertEqual(self.action()[0],200)
         status,body=self.action();self.assertEqual(status,409);self.assertIn("titularidad privada",body["error"])
+
+    def test_private_owner_can_list_and_market_transfers_title_at_month_close(self):
+        server.state["privateCapital"]=9000
+        server.state["buildings"][0]["occupants"]=2
+        status,body=self.action("listPrivateProperty");self.assertEqual(status,200,body)
+        deed=server.state["landClaims"]["parcelDeeds"]["6,10"]
+        self.assertEqual(deed["saleListing"],{"status":"en venta","askingPrice":4200,"listedDay":1,"seller":"Casa del Parque"})
+        server.state["day"]=30
+        server.settle_private_property_market()
+        self.assertEqual(deed["ownerType"],"private")
+        self.assertEqual(deed["ownerName"],"Hábitat del Sur")
+        self.assertEqual(server.state["privateCapital"],4800)
+        self.assertEqual(server.state["privatePropertyMarket"]["saleProceedsByOwner"]["home-6-10"],4200)
+        self.assertEqual(deed["transferHistory"][-1]["type"],"transferencia privada")
+        self.assertEqual(deed["saleListing"]["status"],"vendida")
+
+    def test_private_listing_can_be_withdrawn_and_rejects_unrealistic_price(self):
+        self.assertEqual(self.action("listPrivateProperty",askingPrice=9000)[0],409)
+        self.assertEqual(self.action("listPrivateProperty")[0],200)
+        self.assertEqual(self.action("cancelPrivatePropertyListing")[0],200)
+        deed=server.state["landClaims"]["parcelDeeds"]["6,10"]
+        self.assertEqual(deed["saleListing"]["status"],"retirada")
 
 
 if __name__=="__main__":unittest.main()

@@ -59,6 +59,29 @@ test('Offline: la consulta distrital conserva muestra por edad y bloquea una seg
  });
 });
 
+test('LAN: los jugadores conectados votan una sola vez y el recuento se guarda separado del sondeo vecinal',async()=>{
+ const city=seed();city.paused=false;city.speed=1;city.day=1;city.money=10000;city.projects=[];city.buildings=[
+  {kind:'home',name:'Hogares del Oeste',x:8,y:9,status:'operativo',capacity:2,occupants:2,quality:80,residents:[
+   {id:'resident-a',age:34,workerEligible:true,status:'empleado',monthlyWage:120},
+   {id:'resident-b',age:42,workerEligible:true,status:'buscando',monthlyWage:80}
+  ]}
+ ];city.population=2;
+ await scenario(city,async({view,action,tick})=>{
+  let opened=await action({action:'startCitizenConsultation',districtId:'oeste',topic:'employment',_serverPlayerId:'player-a',_onlinePlayers:[{id:'player-a',name:'Abril'},{id:'player-b',name:'Matías'}]});
+  const pollId=opened.governmentReport.consultations.at(-1).id;
+  opened=await action({action:'voteCitizenConsultation',pollId,vote:'yes',_serverPlayerId:'player-a'});
+  assert.equal(opened.governmentReport.consultations.at(-1).playerVotes['player-a'].playerName,'Abril');
+  await assert.rejects(action({action:'voteCitizenConsultation',pollId,vote:'no',_serverPlayerId:'player-a'}),/ya fue registrado/);
+  await assert.rejects(action({action:'voteCitizenConsultation',pollId,vote:'yes',_serverPlayerId:'outsider'}),/no estabas conectado/i);
+  await action({action:'voteCitizenConsultation',pollId,vote:'no',_serverPlayerId:'player-b'});
+  for(let i=0;i<7;i++)await tick();
+  const closed=(await view()).governmentReport.consultations.at(-1),result=closed.result;
+  assert.equal(closed.status,'cerrada');assert.equal(result.yes+result.no,result.respondents);
+  assert.deepEqual(result.playerParticipation,{eligible:2,voted:2,yes:1,no:1,supportPct:50,voters:[{name:'Abril',vote:'yes'},{name:'Matías',vote:'no'}]});
+  assert.ok(result.respondents>0);assert.equal(result.supportPct,Math.round(100*result.yes/result.respondents));
+ });
+});
+
 test('Offline: el centro de respuesta enlaza crisis de bomberos, calles, residuos, presupuesto y contratos',async()=>{
  const city=seed();city.paused=true;city.day=40;city.population=200;city.roads=[[4,10],[5,10],[6,10]];city.buildings=[{kind:'home',name:'Barrio en emergencia',x:7,y:10,status:'operativo',capacity:20,occupants:20,quality:80,residents:[]}];
  city.fireService={incidents:[{id:'fire-test',x:7,y:10,name:'Barrio en emergencia',status:'ardiendo',startDay:39,burningDays:1}],dispatches:0,resolved:0,unanswered:0};

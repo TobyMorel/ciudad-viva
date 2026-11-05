@@ -739,3 +739,8 @@ Las partidas locales sobreviven a cambios de versión; una colección de estado 
 `landClaims.chunkTitles` guarda un titulo municipal por sector habilitado (folio, titular, derecho, alta, costo y origen). `landClaims.parcelDeeds` es un indice disperso: solo agrega inmuebles de desarrollo privado; calles, edificios publicos y suelo municipal no requieren un registro repetido por cada celda. El titular municipal de una parcela se resuelve desde el titulo de su sector. Un permiso de zonificacion describe el uso urbanistico, no la propiedad.
 
 Al cargar partidas antiguas, una migracion de una sola vez crea los titulos faltantes y registra inmuebles privados ya construidos y obras con pago privado. Si el guardado viejo no conserva la fecha o el costo original de una compra, el registro marca esos campos como desconocidos en vez de inventarlos. En actualizaciones normales solo se examinan los ultimos cuatro sectores y ocho edificios/obras para detectar altas recientes; la compra inserta su titulo con el precio y dia exactos. Online y Offline conservan la misma estructura.
+
+
+## Alfa 0.286 · economía familiar, mercado privado y consultas online
+
+Las billeteras familiares reciben cada salario una sola vez y conservan fondos para pagar alquiler; la venta privada registra el ingreso del titular y cambia el folio catastral sin mover caja municipal. Los cursos técnicos y docentes modifican las habilidades requeridas por los puestos. Las consultas distinguen respuestas simuladas de residentes de los votos emitidos por jugadores conectados al abrirse la consulta. Los votos de equipo no alteran el sondeo vecinal ni el escrutinio electoral.

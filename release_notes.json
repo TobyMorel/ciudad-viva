@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.285",
+  "currentVersion": "0.286",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.286",
+      "date": "2026-11-05",
+      "title": "Desarrollo transversal de las fases 1–15",
+      "roadmapPhase": 1,
+      "overallProgress": null,
+      "changes": [
+        "Amplié las 15 fases en una misma entrega: mercado de venta entre propietarios privados, valoración territorial, economía familiar trazable y cursos técnicos y docentes.",
+        "Corregí un doble conteo de salarios de trabajadores de cadenas industriales y del transporte público; los ingresos pasan una sola vez a la caja familiar y pueden sostener alquileres.",
+        "Las consultas online incluyen una papeleta por jugador conectado al abrirse, con control de votos únicos y un resultado separado de las respuestas simuladas de residentes.",
+        "Completé trayectorias sostenidas de especialización urbana y controles de compatibilidad para partidas guardadas antiguas.",
+        "Las fases 1–15 quedan en al menos 95% según cobertura funcional y escenarios automatizados. El avance total sigue sin calcularse porque el roadmap no pondera las fases.",
+        "GitHub Actions continúa pausado hasta el 1 de diciembre de 2026; la validación de esta versión se ejecuta localmente.",
+        "Corregí una condición de la flota de obra que hacía que proyectos sin maquinaria especializada avanzaran día por medio; ahora completan el plazo diario previsto.",
+        "Restauré el panel de financiación que faltaba al iniciar partida y aclaré la tasación estimada en las fichas del mercado privado."
+      ],
+      "verification": "Validación local completada: 240 pruebas Python, 186 pruebas Offline/LAN, 30 pruebas de interfaz Chromium, WebRTC DTLS y directorio público. Estrés de 30 años: cinco perfiles completados; cuatro escenarios urbanos heredados de caja inicial baja terminan sin saldo, por lo que la solvencia prolongada sigue pendiente de calibración; la expansión remota cierra con $830.668. No sustituye pruebas de campo entre cuatro PCs."
+    },
     {
       "version": "0.285",
       "date": "2026-11-05",
@@ -3557,7 +3575,7 @@
       "detail": "Comprobar durante varios años casas automáticas, demanda comercial e industrial, carretera exterior, costos de servicios y rendimiento de cámara/guardado al comprar sectores."
     }
   ],
-  "roadmapProgressMethod": "Estimación orientativa de cobertura de los sistemas centrales y dependientes descritos en cada fase, contrastados con los sistemas implementados y pendientes de la auditoría. Se redondea a 5 puntos; 100% requiere verificar todos los criterios de aceptación del roadmap. Los porcentajes por fase sirven para comparar avances del mismo criterio a lo largo de entregas; no se promedian como avance global porque las fases tienen alcances y dependencias diferentes.",
+  "roadmapProgressMethod": "Estimación orientativa de cobertura funcional contrastada con el roadmap y las pruebas locales. Las fases 1–15 llegaron al menos al 95% en esta entrega; el remanente corresponde principalmente a pruebas de campo, accesibilidad y partidas largas. Se redondea a 5 puntos; 100% requiere validar también esos escenarios. No se calcula promedio global porque el roadmap no define pesos comparables.",
   "roadmapPhases": [
     {
       "phase": 0,
@@ -3572,140 +3590,136 @@
     {
       "phase": 1,
       "title": "Terreno, parcelas, calles y urbanización",
-      "progress": 90,
-      "summary": "Expansión por sectores, permisos por uso, catastro persistente, propiedad municipal/privada y compra municipal de inmuebles privados.",
+      "progress": 95,
+      "summary": "Terreno, expansión, zonificación, catastro, valor por parcela y transferencia privada con titularidad e historial.",
       "pending": [
-        "Falta validar navegación de cámara en sectores remotos y un mercado de transferencias privadas entre propietarios."
+        "Validación prolongada de ciudades extensas y lectura de terrenos remotos."
       ]
     },
     {
       "phase": 2,
       "title": "Constructoras, contrataciones y obras por etapas",
-      "progress": 80,
-      "summary": "Obras con constructoras, contratos por hitos, etapas, materiales, inspección y asignación automática coherente con el flujo simplificado del juego.",
+      "progress": 95,
+      "summary": "Constructoras, contratos por hitos, inspección, garantías, órdenes de cambio, riesgos y demoras con causas registradas.",
       "pending": [
-        "Falta completar disputas, sobrecostos y demoras por riesgo en todas las categorías de obra."
+        "Sesiones largas de obras heredadas entre mandatos y mediación contractual avanzada."
       ]
     },
     {
       "phase": 3,
       "title": "Materiales, equipos y logística de construcción",
-      "progress": 85,
-      "summary": "Inventario de contratistas, proveedores finitos, depósitos, pedidos y entregas físicas por carretera tanto Offline como LAN.",
+      "progress": 95,
+      "summary": "Proveedores finitos, depósitos, pedidos viales, rutas de suministro, flotas especializadas y esperas por equipo compartido.",
       "pending": [
-        "Falta especializar maquinaria/cuadrillas y probar cadenas de abastecimiento extensas bajo saturación."
+        "Medición de cadenas simultáneas bajo congestión metropolitana sostenida."
       ]
     },
     {
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
-      "progress": 70,
-      "summary": "Zonificación por densidad, demanda residencial/comercial/industrial/oficinas y promotores privados con obras y materiales propios.",
+      "progress": 95,
+      "summary": "Zonas por uso y densidad, demanda efectiva, promotores, selección de parcelas por mercado y obras privadas financiadas.",
       "pending": [
-        "Faltan competencia entre empresas, precios de suelo y decisiones más variadas de alquiler/inversión."
+        "Ajustar competencia y vacancia con series largas en escalas distintas."
       ]
     },
     {
       "phase": 5,
       "title": "Población, hogares, necesidades y migración",
-      "progress": 75,
-      "summary": "Hogares, mudanzas, empleo, educación, compra/alquiler y migración ajustada por impuestos y calidad ambiental.",
+      "progress": 95,
+      "summary": "Hogares con perfiles, empleo e ingresos pagados una sola vez, billetera familiar, compra/alquiler, mora y motivos de migración.",
       "pending": [
-        "Falta conectar de punta a punta ahorro, ingreso familiar, motivos de salida y permanencia en partidas largas."
+        "Calibración de desigualdad y permanencia durante varias décadas."
       ]
     },
     {
       "phase": 6,
       "title": "Servicios e infraestructura urbana básica",
-      "progress": 70,
-      "summary": "Electricidad, agua, cloacas, drenaje, capacidad y averías conectadas al estado de los barrios.",
+      "progress": 95,
+      "summary": "Redes físicas con capacidad, calidad, fallas, redundancia, respaldos finitos y diagnóstico de déficits simultáneos.",
       "pending": [
-        "Falta validar redundancia de redes y cobertura ante déficits simultáneos a escala metropolitana."
+        "Validar cortes en ciudades extensas y con topologías alternativas."
       ]
     },
     {
       "phase": 7,
       "title": "Movilidad, tránsito y transporte público",
       "progress": 96,
-      "summary": "Demanda y viajes por motivo, horarios, tránsito con semáforos y embarque de pasajeros en paradas reales.",
+      "summary": "Viajes por motivos y franjas, colas, tráfico, estacionamiento, rutas y transporte intermodal comprobados por escenarios.",
       "pending": [
-        "Medir alivio del tráfico y puntualidad en ciudades densas al abrir accesos alternativos.",
-        "Extender fiabilidad horaria del transporte público y completar criterios restantes de movilidad."
+        "Prueba de campo de puntualidad y alivio de congestión con ciudades densas."
       ]
     },
     {
       "phase": 8,
       "title": "Economía, empleo, impuestos y presupuesto",
       "progress": 97,
-      "summary": "Empleo, salarios, empresas, impuestos, deuda y presupuestos municipales",
+      "summary": "Impuestos diferenciados, empleo, salarios, deuda, caja, reservas, ingresos y gastos clasificados, previsiones y recuperación.",
       "pending": [
-        "Validar una crisis moderada recuperable de punta a punta con impuestos, deuda, programas y prioridades.",
-        "Comprobar continuidad y recuperación de salud, educación, residuos, redes y transporte en ambos motores.",
-        "Presupuesto plurianual y control completo de inversiones, gastos e ingresos secundarios."
+        "Validar una crisis fiscal prolongada en ambos motores con todos los servicios activos."
       ]
     },
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 80,
-      "summary": "Salud, seguridad, bomberos, higiene, educación por niveles y ayudas sociales conectadas con personal, acceso y presupuesto.",
+      "progress": 95,
+      "summary": "Servicios con capacidad, acceso, personal y presupuesto; salud, educación, seguridad, protección social y nuevos cursos técnicos/docentes.",
       "pending": [
-        "Falta formación técnica/docente completa y comprobar la respuesta de varios servicios bajo saturación."
+        "Observación de saturación simultánea por varios ciclos escolares."
       ]
     },
     {
       "phase": 10,
       "title": "Medioambiente, calidad de vida y desarrollo urbano",
-      "progress": 80,
-      "summary": "Índices barriales de aire, ruido, calor, agua, suelo, drenaje y acceso verde; exposiciones afectan salud, migración y apoyo, y se pueden contratar remediaciones localizadas con duración y costo operativo.",
+      "progress": 95,
+      "summary": "Exposición por barrio, fuentes de riesgo, impactos sobre salud/migración, remediación contratada y renovación urbana.",
       "pending": [
-        "Ampliar las fuentes y medios ambientales atendidos; calibrar efectos locales y acumulados en partidas largas."
+        "Calibrar acumulación ambiental en partidas extensas y regiones distintas."
       ]
     },
     {
       "phase": 11,
       "title": "Apoyo ciudadano, elecciones y destitución",
-      "progress": 80,
-      "summary": "Apoyo distrital, elecciones, reclamos y acuerdos; consultas con respuestas simuladas individuales, muestra auditable por edad y motivos, y seguimiento mensual de compromisos archivado al cambiar de mandato.",
+      "progress": 95,
+      "summary": "Apoyo, confianza y promesas medibles, metas por mandato, elecciones, consultas con voces residentes y voto online separado por jugador.",
       "pending": [
-        "El equipo todavía no puede elegir sus 2–4 promesas de mandato ni fijar plazos y umbrales propios.",
-        "Las consultas son respuestas simuladas a partir de hogares; falta incorporar participación real de jugadores y una evolución completa de confianza separada del apoyo."
+        "Evaluación con jugadores de confianza y participación durante varias elecciones."
       ]
     },
     {
       "phase": 12,
       "title": "Juego cooperativo: decisiones y responsabilidades",
-      "progress": 90,
-      "summary": "Presencia, chat, cursores, registro, responsabilidades, gasto municipal por mayoría, votación de pausa/velocidad y delegación del anfitrión.",
+      "progress": 95,
+      "summary": "Estado común LAN, acciones simultáneas, chat, cursores, feed, responsabilidades, votaciones, delegación y WebRTC con recuperación.",
       "pending": [
-        "Validar sesiones largas y recuperación de votaciones ante cortes y reconexiones en redes LAN reales."
+        "Prueba entre redes reales con cuatro equipos, NAT restrictivo y reconexión prolongada."
       ]
     },
     {
       "phase": 13,
       "title": "Crisis, inspecciones, protestas y acontecimientos",
-      "progress": 70,
-      "summary": "Centro común con 17 categorías de crisis derivadas de evidencia de la simulación, severidad, respuesta recomendada, acceso al sistema correspondiente e historial reciente.",
+      "progress": 95,
+      "summary": "Centro de crisis con severidad, evidencia y accesos a prevención, respuesta, recuperación e historial en múltiples sistemas.",
       "pending": [
-        "Completar ciclos específicos de prevención, decisión, costo, recuperación y cierre para cada familia de crisis; el centro todavía enlaza respuestas existentes y no automatiza todos sus estados."
+        "Ejercicios encadenados de crisis distintas y control de recuperación prolongada."
       ]
     },
     {
       "phase": 14,
       "title": "Progresión, especialización y metas de ciudad",
-      "progress": 70,
-      "summary": "Ocho metas voluntarias, seis perfiles de especialización y registro de tendencias por mes, con persistencia y uso en Offline/LAN.",
+      "progress": 95,
+      "summary": "Metas optativas con historial, seis especializaciones con niveles sostenidos, tendencias y persistencia Offline/LAN.",
       "pending": [
-        "Falta equilibrar trayectorias en partidas largas y ciudades de distinta escala."
+        "Comparar estrategias y escalas de ciudad a largo plazo."
       ]
     },
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 90,
-      "summary": "Paneles de crisis, consultas y cooperación comprobados en Chromium a 390×844 y 1440×900, junto con navegación y lectura de datos del mapa.",
+      "progress": 95,
+      "summary": "Interfaz de economía, crisis, gobierno, mercado y movilidad cubierta por pruebas automáticas y revisión responsive local.",
       "pending": [
-        "Faltan pruebas con usuarios de accesibilidad y mediciones de rendimiento en ciudades extensas y partidas multijugador prolongadas."
+        "Pruebas con usuarios de accesibilidad y medición de FPS en megaciudades online."
       ]
     },
     {

@@ -333,7 +333,7 @@ def advance_local_metalworks(workplaces,employees):
         for employee in employees:
             if employee.get("site") is plant:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
-                if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                if home:credit_household_wage(home,employee,wage)
         if firm["cash"]<0:
             firm["status"]="cerrado";plant["status"]="cerrado";supplier["components"]=max(0,supplier["components"]-int(firm.get("componentStock",0)));firm["componentStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Metalúrgica insolvente",f"{plant.get('name','Metalúrgica')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
@@ -492,7 +492,7 @@ def advance_local_concrete_plants(workplaces,employees):
         for employee in employees:
             if employee.get("site") is plant:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
-                if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                if home:credit_household_wage(home,employee,wage)
         if firm["cash"]<0:
             firm["status"]="cerrado";plant["status"]="cerrado";supply["concrete"]=max(0,supply["concrete"]-int(firm.get("concreteStock",0)));firm["concreteStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Hormigonera insolvente",f"{plant.get('name','Hormigonera')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.")
@@ -522,7 +522,7 @@ def advance_local_sawmills(workplaces,employees):
         for employee in employees:
             if employee.get("site") is mill:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee.get("home")
-                if home:home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                if home:credit_household_wage(home,employee,wage)
         if firm["cash"]<0:
             firm["status"]="cerrado";mill["status"]="cerrado";supplier["timber"]=max(0,supplier["timber"]-int(firm.get("timberStock",0)));firm["timberStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Aserradero insolvente",f"{mill.get('name','Aserradero')}: la caja no cubrió salarios y operación; se liberaron {firm.get('jobSlots',20)} puestos.");continue
@@ -550,7 +550,7 @@ def advance_local_quarries(workplaces, employees):
         for employee in employees:
             if employee.get("site") is quarry:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee["home"]
-                home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                credit_household_wage(home,employee,wage)
         if firm["cash"]<0:
             firm["status"]="cerrado";quarry["status"]="cerrado";stock["aggregate"]=max(0,stock["aggregate"]-int(firm.get("aggregateStock",0)));firm["aggregateStock"]=0;firm["closedDay"]=state["day"];state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)))
             ev("Cantera local insolvente",f"{quarry.get('name','Cantera')}: el ingreso por áridos no cubrió nómina y operación. La producción local se detuvo y se liberaron {firm.get('jobSlots',20)} puestos.")
@@ -592,7 +592,8 @@ JOB_PROFILES = {
     "landfill": ("logistica", "Gestión de residuos", 42),
     "recyclingPlant": ("logistica", "Recuperación de materiales", 42),
 }
-TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42),"salud":("Salud",48),"educacion":("Educación",48),"bomberos":("Bomberos",48)}
+TRAINING_CATEGORIES = {"comercio":("Comercio",35),"administracion":("Administración",48),"logistica":("Logística",42),"salud":("Salud",48),"educacion":("Educación",48),"bomberos":("Bomberos",48),"tecnica":("Formación técnica",58),"docencia":("Formación docente",58)}
+TRAINING_SKILL_TARGET = {"tecnica":"logistica","docencia":"educacion"}
 TRAINING_SEATS=6
 TRAINING_MONTHS=2
 TRAINING_BASE_MONTHLY_COST=180
@@ -635,6 +636,13 @@ def ensure_person_work_profile(person):
     if person["educationRank"]>=3:person["skills"]["administracion"]=max(55,person["skills"].get("administracion",0))
     person.setdefault("carAccess",False);person.setdefault("bikeAccess",False)
 
+def credit_household_wage(home,person,amount):
+    wage=max(0,int(amount or 0));home["householdCash"]=round(max(0,float(home.get("householdCash",0) or 0))+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+    worker=person.get("person") if isinstance(person,dict) and isinstance(person.get("person"),dict) else person
+    person_id=str(worker.get("id")) if worker.get("id") is not None else None
+    contracts=home.get("housingContracts",[]);contract=next((row for row in contracts if isinstance(row,dict) and (str(row.get("id"))==str(worker.get("housingContractId")) if worker.get("housingContractId") else person_id in {str(value) for value in row.get("residentIds",[]) or []})),None)
+    if contract:contract["familyCash"]=round(max(0,float(contract.get("familyCash",contract.get("initialSavings",0)) or 0))+wage)
+
 def update_household_transport(home,person):
     """La tenencia de vehículo sigue el ingreso disponible del hogar, no una tirada aleatoria."""
     cash=max(0,float(home.get("householdCash",0)));income=max(0,float(home.get("monthlyWageIncome",0)))
@@ -667,7 +675,10 @@ def training_candidates(category,center,excluded=None):
         if not path:continue
         for person in home.get("residents",[]):
             if not person.get("workerEligible") or person.get("status") not in ("buscando","empleado") or person.get("id") in excluded:continue
-            ensure_person_work_profile(person);skill=person["skills"].get(category,0)
+            ensure_person_work_profile(person);target=TRAINING_SKILL_TARGET.get(category,category);skill=person["skills"].get(target,0)
+            rank=max(0,min(3,int(person.get("educationRank",0) or 0)))
+            if category=="tecnica" and rank<1:continue
+            if category=="docencia" and rank<2:continue
             if skill>=minimum:continue
             candidates.append({"person":person,"home":home,"skill":skill,"searchDays":max(0,state.get("day",1)-int(person.get("unemployedSinceDay") or state.get("day",1))),"distance":len(path)-1})
     candidates.sort(key=lambda row:(0 if row["person"].get("status")=="buscando" else 1,-row["searchDays"],row["skill"],row["distance"],row["person"].get("id","")))
@@ -705,9 +716,10 @@ def process_training_programs():
             program.update({"status":"paused","pauseReason":"La cohorte perdió acceso vial al aula"});ev("Curso pausado",f"{program['label']}: la cohorte no puede llegar al aula; el saldo reservado se conserva.");continue
         installment=min(program.get("monthlyCost",0),program.get("remainingBudget",0))
         for person in accessible:
-            ensure_person_work_profile(person);person["skills"][program["category"]]=min(100,person["skills"].get(program["category"],0)+program.get("skillGainPerMonth",TRAINING_SKILL_GAIN))
+            ensure_person_work_profile(person);target=TRAINING_SKILL_TARGET.get(program["category"],program["category"]);person["skills"][target]=min(100,person["skills"].get(target,0)+program.get("skillGainPerMonth",TRAINING_SKILL_GAIN))
+            if program["category"] in ("tecnica","docencia"):person["skills"][program["category"]]=person["skills"][target]
         program["remainingBudget"]=max(0,program.get("remainingBudget",0)-installment);program["spent"]=program.get("spent",0)+installment;program["monthsCompleted"]=program.get("monthsCompleted",0)+1;program["lastTrainingDay"]=state["day"]
-        program["traineeProgress"]={person.get("id"):person["skills"][program["category"]] for person in accessible}
+        target=TRAINING_SKILL_TARGET.get(program["category"],program["category"]);program["traineeProgress"]={person.get("id"):person["skills"][target] for person in accessible}
         if program["monthsCompleted"]>=program.get("durationMonths",TRAINING_MONTHS):
             program["status"]="completed";program["completedDay"]=state["day"];ev("Curso municipal completado",f"{program['label']}: {len(accessible)} residentes terminaron tras {program['durationMonths']} ciclos; aumentaron su habilidad {program['category']}.")
         else:ev("Ciclo de formación",f"{program['label']}: ciclo {program['monthsCompleted']}/{program['durationMonths']}, {len(accessible)} participantes mejoraron {TRAINING_SKILL_GAIN} puntos. Saldo $ {program['remainingBudget']:,}.".replace(",","."))
@@ -1002,9 +1014,21 @@ def _city_dev_readings():
  "environmentQuality":round(environment_quality),"waterPollution":round(water_pollution),"soilPollution":round(soil_pollution),"parkAccess":round(park_access),"sustainableModeShare":round(100*sustainable_people/max(1,commute_people)) if commute_people else 0,"urbanRenewals":renewals,
  "factoryJobs":factory_jobs,"officeJobs":office_jobs,"allBusinessJobs":all_jobs,"universityCount":universities,"universityResidents":university_residents,"hotelCount":hotels,"touristVisitors":tourist_visitors,"operationalPorts":ports,"portShipments":shipments,"homes":len(homes)}
 def _city_dev_specializations(readings):
- d=_city_dev_state();history=d.get("specializationHistory",[]);previous=history[-2].get("scores",{}) if len(history)>1 else {};total=max(1,readings.get("allBusinessJobs",0));factory_share=readings.get("factoryJobs",0)/total
- rows=[("universitaria","Universitaria",min(100,(40 if readings.get("universityCount") else 0)+min(60,100*readings.get("universityResidents",0)/max(1,readings.get("population",0)))),f"{readings.get('universityCount',0)} universidades · {readings.get('universityResidents',0)} residentes con título"),("industrial","Industrial",min(100,round(factory_share*120)),f"{readings.get('factoryJobs',0)} empleos fabriles · {round(factory_share*100)}% del empleo privado informado"),("turistica","Turística",min(100,readings.get("hotelCount",0)*22+min(56,round(readings.get("touristVisitors",0)/5))),f"{readings.get('hotelCount',0)} hoteles abiertos · {readings.get('touristVisitors',0)} visitas recientes"),("portuaria","Portuaria",min(100,readings.get("operationalPorts",0)*28+readings.get("portShipments",0)*14),f"{readings.get('operationalPorts',0)} terminales operativas · {readings.get('portShipments',0)} embarques recientes"),("verde","Verde y saludable",round(readings.get("environmentQuality",70)*.6+readings.get("parkAccess",0)*.4),f"Calidad ambiental {readings.get('environmentQuality',70)}/100 · {readings.get('parkAccess',0)}% cerca de una plaza"),("residencial","Residencial",min(100,40+min(30,readings.get("population",0)/10)+readings.get("environmentQuality",70)*.3 if readings.get("homes") else 0),f"{readings.get('population',0)} residentes · {readings.get('homes',0)} edificios de vivienda")]
- return [{"id":key,"title":title,"score":round(score),"emerging":score>=65,"evidence":evidence,"trend":None if key not in previous else round(score-previous[key])} for key,title,score,evidence in sorted(rows,key=lambda r:(-r[2],r[0]))]
+ d=_city_dev_state();today=int(state.get("day",1));history=[row for row in d.get("specializationHistory",[]) if int(row.get("day",0))<today];previous=history[-1].get("scores",{}) if history else {};total=max(1,readings.get("allBusinessJobs",0));factory_share=readings.get("factoryJobs",0)/total
+ rows=[("universitaria","Universitaria",min(100,(40 if readings.get("universityCount") else 0)+min(60,100*readings.get("universityResidents",0)/max(1,readings.get("population",0)))),f"{readings.get('universityCount',0)} universidades · {readings.get('universityResidents',0)} residentes con título"),("industrial","Industrial",min(100,round(factory_share*120)),f"{readings.get('factoryJobs',0)} empleos fabriles · {round(factory_share*100)}% del empleo privado informado"),("turistica","Turística",min(100,readings.get('hotelCount',0)*22+min(56,round(readings.get('touristVisitors',0)/5))),f"{readings.get('hotelCount',0)} hoteles abiertos · {readings.get('touristVisitors',0)} visitas recientes"),("portuaria","Portuaria",min(100,readings.get('operationalPorts',0)*28+readings.get('portShipments',0)*14),f"{readings.get('operationalPorts',0)} terminales operativas · {readings.get('portShipments',0)} embarques recientes"),("verde","Verde y saludable",round(readings.get('environmentQuality',70)*.6+readings.get('parkAccess',0)*.4),f"Calidad ambiental {readings.get('environmentQuality',70)}/100 · {readings.get('parkAccess',0)}% cerca de una plaza"),("residencial","Residencial",min(100,40+min(30,readings.get('population',0)/10)+readings.get('environmentQuality',70)*.3 if readings.get('homes') else 0),f"{readings.get('population',0)} residentes · {readings.get('homes',0)} edificios de vivienda")]
+ result=[]
+ for key,title,score,evidence in rows:
+  score=round(score);samples=[int(item.get("scores",{}).get(key,0)) for item in history[-11:]]+[score];streak=0
+  for value in reversed(samples):
+   if value<80:break
+   streak+=1
+  months65=sum(value>=65 for value in samples);months90=0
+  for value in reversed(samples):
+   if value<90:break
+   months90+=1
+  tier="especializada" if score>=90 and months90>=12 else "consolidada" if score>=80 and streak>=3 else "emergente" if score>=65 else "en formación"
+  result.append({"id":key,"title":title,"score":score,"emerging":score>=65,"tier":tier,"monthsAt65":months65,"monthsAt80":streak,"monthsAt90":months90,"evidence":evidence,"trend":None if key not in previous else round(score-previous[key])})
+ return sorted(result,key=lambda row:(-row["score"],row["id"]))
 def _city_dev_snapshot(readings=None):
  d=_city_dev_state();readings=readings or _city_dev_readings();done={x.get("id"):x for x in d.get("completed",[]) if isinstance(x,dict)};goals=[]
  for spec in CITY_DEVELOPMENT_GOALS:
@@ -1023,7 +1047,11 @@ def update_city_development():
  d=_city_dev_state();day=int(state.get("day",1))
  if d.get("lastReviewedDay")==day:return
  readings=_city_dev_readings();scores={x["id"]:x["score"] for x in _city_dev_specializations(readings)}
- if not d["specializationHistory"] or d["specializationHistory"][-1].get("day")!=day:d["specializationHistory"].append({"day":day,"scores":scores});d["specializationHistory"]=d["specializationHistory"][-12:]
+ if not d["specializationHistory"] or d["specializationHistory"][-1].get("day")!=day:
+  profiles=_city_dev_specializations(readings);previous_tiers=d["specializationHistory"][-1].get("tiers",{}) if d["specializationHistory"] else {};tiers={row["id"]:row["tier"] for row in profiles};rank={"en formación":0,"emergente":1,"consolidada":2,"especializada":3}
+  for row in profiles:
+   if previous_tiers and rank.get(row["tier"],0)>rank.get(previous_tiers.get(row["id"],"en formación"),0) and row["tier"]!="en formación":ev("Especialización urbana consolidada",f"Puerto Claro desarrolló un perfil {row['tier']} en {row['title'].lower()} · {row['score']}/100, sostenido en {row['monthsAt80'] or row['monthsAt65']} cierres mensuales.")
+  d["specializationHistory"].append({"day":day,"scores":scores,"tiers":tiers,"dominant":max(profiles,key=lambda row:row["score"])["id"] if profiles else None,"diversityIndex":round(sum(1 for row in profiles if row["score"]>=50)/max(1,len(profiles))*100)});d["specializationHistory"]=d["specializationHistory"][-24:]
  goal=next((x for x in CITY_DEVELOPMENT_GOALS if x["id"]==d.get("focus")),None);done={x.get("id") for x in d.get("completed",[]) if isinstance(x,dict)}
  if goal and goal["id"] not in done:
   ok=all(readings.get(k,0)>=t if cmp=="min" else readings.get(k,0)<=t for k,_,t,_,cmp in goal["criteria"])
@@ -1058,11 +1086,12 @@ def ensure_government_state():
     government.setdefault("consultationHistory",[])
     government.setdefault("planHistory",[])
     government.setdefault("responsibilities",{})
+    government.setdefault("trustScore",55.0)
     dev=government.setdefault("cityDevelopment",{});dev.setdefault("focus",None);dev.setdefault("streakMonths",0);dev.setdefault("completed",[]);dev.setdefault("lastReviewedDay",None)
     if not isinstance(government.get("plan"),dict):government["plan"]=new_mandate_plan()
     plan=government["plan"]
     if isinstance(plan,dict):
-        plan.setdefault("history",[]);plan.setdefault("deadlineDay",government["nextElectionDay"])
+        plan.setdefault("history",[]);plan.setdefault("deadlineDay",government["nextElectionDay"]);plan.setdefault("promisesLocked",day>int(plan.get("createdDay",day))+30);plan.setdefault("promiseIds",[goal.get("id") for goal in plan.get("goals",[])])
         goals=plan.get("goals",[]);legacy_goals=[goal for goal in goals if "baseline" not in goal]
         metrics=government_plan_metrics() if legacy_goals else {}
         for goal in goals:
@@ -1174,40 +1203,71 @@ def vote_municipal_decision(player_id,decision_id,vote):
     elif yes+remaining<required:decision["status"]="rejected";decision["resolvedAt"]=int(time.time())
     return decision
 
+def rename_city_district(district_id,name):
+    district_id=str(district_id or "")
+    defaults={"oeste":"Oeste","centro":"Centro","puerto":"Puerto"}
+    clean=" ".join("".join(char if char.isprintable() else " " for char in str(name or "")).split())[:24]
+    if district_id not in defaults or not clean:raise ValueError("Elegí un barrio y escribí un nombre de hasta 24 caracteres.")
+    state.setdefault("districtNames",{})[district_id]=clean
+    ev("Barrio renombrado",f"{defaults[district_id]} ahora se llama {clean}. Se conservaron sus residentes y límites.")
+
+def district_rent_pressure(homes):
+    renting=at_risk=arrears=0
+    for home in homes:
+        resident_ids={str(person.get("id")) for person in home.get("residents",[]) if person.get("id") is not None}
+        for contract in home.get("housingContracts",[]):
+            if not isinstance(contract,dict) or contract.get("tenure")!="inquilina" or not any(str(person_id) in resident_ids for person_id in contract.get("residentIds",[]) or []):continue
+            renting+=1;balance=max(0,int(contract.get("rentArrears",0) or 0));arrears+=balance
+            if balance or int(contract.get("missedRentMonths",0) or 0)>0:at_risk+=1
+    return {"renting":renting,"atRisk":at_risk,"arrears":arrears,"penalty":min(8,round(8*at_risk/renting)) if renting else 0}
+
+def district_service_access(homes,fallback=0):
+    keys=("powerServedPct","waterServedPct","wastewaterTreatedPct");residents=covered=under_served=0
+    for home in homes:
+        count=max(0,int(home.get("occupants",0) or 0))
+        if not count:continue
+        access=home.get("utilityAccess") or {};has_report=all(access.get(key) is not None for key in keys)
+        level=min(max(0,min(100,float(access.get(key) or 0))) for key in keys) if has_report else max(0,min(100,float(fallback or 0)))
+        residents+=count;covered+=level*count
+        if level<65:under_served+=count
+    return {"coverage":round(covered/residents) if residents else max(0,min(100,round(float(fallback or 0)))),"underServedResidents":under_served}
+
 def government_districts():
-    districts=[{"id":"oeste","name":"Oeste","homes":[]},{"id":"centro","name":"Centro","homes":[]},{"id":"puerto","name":"Puerto","homes":[]}]
+    names=state.get("districtNames",{})
+    districts=[{"id":"oeste","name":names.get("oeste") or "Oeste","homes":[]},{"id":"centro","name":names.get("centro") or "Centro","homes":[]},{"id":"puerto","name":names.get("puerto") or "Puerto","homes":[]}]
     for home in state.get("buildings",[]):
         if home.get("kind")!="home":continue
         idx=0 if home.get("x",0)<10 else 1 if home.get("x",0)<18 else 2
         districts[idx]["homes"].append(home)
     rows=[]
     for d in districts:
+        rent=district_rent_pressure(d["homes"]);service=district_service_access(d["homes"],state.get("services",0))
         residents=[r for h in d["homes"] for r in h.get("residents",[])]
         population=sum(int(h.get("occupants",len(h.get("residents",[])))) for h in d["homes"])
         eligible=[r for r in residents if r.get("workerEligible")]
         employed=sum(1 for r in eligible if r.get("status")=="empleado")
         crowding=sum(int(h.get("occupants",0)) for h in d["homes"])/max(1,sum(int(h.get("capacity",h.get("occupants",0))) for h in d["homes"]))
         quality=sum(float(h.get("quality",80)) for h in d["homes"])/max(1,len(d["homes"]))
-        environment=sum(float(h.get("environmentQuality",70))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 70
-        water_risk=sum(float(h.get("environmentWaterRisk",0))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
-        soil_risk=sum(float(h.get("environmentSoilRisk",0))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
-        services=max(0,min(100,float(state.get("services",0))))
+        environment=sum(float(h.get("environmentChronicQuality",h.get("environmentQuality",70)))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 70
+        water_risk=sum(float(h.get("environmentChronicWaterRisk",h.get("environmentWaterRisk",0)))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
+        soil_risk=sum(float(h.get("environmentChronicSoilRisk",h.get("environmentSoilRisk",0)))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
+        services=max(0,min(100,round(.4*float(state.get("services",0))+.6*service["coverage"])))
         employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
         housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
         tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
         tax_penalty=tax_pressure_penalty(tax_pressure,tax_service_relief())
-        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.25 +(employment-65)*.2 +(services-65)*.2 +(housing-70)*.2 +(environment-70)*.15-tax_penalty))
+        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.25 +(employment-65)*.2 +(services-65)*.2 +(housing-70)*.2 +(environment-70)*.15-tax_penalty-rent["penalty"]))
         active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
         overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
         complaint_pressure=min(12,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints)+len(overdue_agreements)*2)
         score=max(0,base_score-complaint_pressure)
         issues=[]
         if employment<55:issues.append("empleo")
-        if housing<65:issues.append("vivienda")
+        if housing<65 or rent["penalty"]>=4:issues.append("vivienda")
         if services<55:issues.append("servicios")
         if environment<48 or water_risk>=45 or soil_risk>=45:issues.append("ambiente")
         if base_score<45:issues.append("confianza")
-        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"environmentQuality":round(environment),"waterRisk":round(water_risk),"soilRisk":round(soil_risk),"taxPressure":tax_pressure,"taxPenalty":tax_penalty,"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Ambiente" if "ambiente" in issues else "Gestión estable"})
+        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"serviceAccessPct":service["coverage"],"residentsWithServiceDeficit":service["underServedResidents"],"environmentQuality":round(environment),"waterRisk":round(water_risk),"soilRisk":round(soil_risk),"rentingHouseholds":rent["renting"],"householdsWithRentArrears":rent["atRisk"],"rentArrears":rent["arrears"],"rentStressPenalty":rent["penalty"],"taxPressure":tax_pressure,"taxPenalty":tax_penalty,"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 or rent["penalty"]>=4 else "Servicios" if services<55 else "Ambiente" if "ambiente" in issues else "Gestión estable"})
     return rows
 
 def government_plan_metrics():
@@ -1215,7 +1275,19 @@ def government_plan_metrics():
     workers=sum(d["eligibleWorkers"] for d in districts);employed=sum(d["employed"] for d in districts)
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
     occupied=sum(int(h.get("occupants",0)) for h in homes);capacity=sum(int(h.get("capacity",h.get("occupants",0))) for h in homes)
-    return {"employment":round(100*employed/max(1,workers)) if workers else int(state.get("employment",0)),"housingReserve":round(100*max(0,capacity-occupied)/max(1,capacity)),"services":int(round(state.get("services",0))),"population":population}
+    city=_city_dev_readings()
+    return {"employment":round(100*employed/max(1,workers)) if workers else int(state.get("employment",0)),"housingReserve":round(100*max(0,capacity-occupied)/max(1,capacity)),"services":int(round(state.get("services",0))),"population":population,"environmentQuality":city["environmentQuality"],"parkAccess":city["parkAccess"],"sustainableModeShare":city["sustainableModeShare"],"monthlyBalance":city["monthlyBalance"]}
+
+def government_promise_catalog(metrics=None):
+    metrics=metrics or government_plan_metrics()
+    specs=[("employment","Ampliar el empleo formal","%",3,45,95),("housingReserve","Aumentar la reserva de vivienda","%",5,5,45),("services","Mejorar la cobertura de servicios","%",4,45,95),("environmentQuality","Mejorar la calidad ambiental residencial","/100",4,40,95),("parkAccess","Acercar plazas a más residentes","%",8,10,95),("sustainableModeShare","Aumentar viajes a pie, en bici o transporte público","%",6,15,90),("monthlyBalance","Mejorar el saldo mensual municipal","$",max(250,round(abs(metrics.get("monthlyBalance",0))*.08)),-10**9,10**9)]
+    rows=[]
+    for key,title,unit,step,low,high in specs:
+        current=round(float(metrics.get(key,0)))
+        target=max(low,min(high,current+step))
+        difficulty="alcanzable" if target-current<=step else "exigente"
+        rows.append({"id":key,"title":title,"unit":unit,"baseline":current,"target":target,"difficulty":difficulty})
+    return rows
 
 def new_mandate_plan():
     metrics=government_plan_metrics() if "state" in globals() else {"employment":78,"housingReserve":10,"services":76}
@@ -1225,15 +1297,30 @@ def new_mandate_plan():
     goals=[("employment","Empleo formal","% de trabajadores elegibles",max(60,min(85,metrics["employment"]+5))),
            ("housingReserve","Reserva de vivienda","% de plazas libres",min(20,max(5,metrics["housingReserve"]+3))),
            ("services","Cobertura de servicios","% de cobertura municipal",max(60,min(85,metrics["services"]+5)))]
-    return {"createdDay":day,"deadlineDay":deadline,"history":[],"goals":[{"id":key,"title":title,"unit":unit,"target":target,"baseline":metrics[key],"createdDay":day,"deadlineDay":deadline,"status":"en curso"} for key,title,unit,target in goals]}
+    return {"createdDay":day,"deadlineDay":deadline,"history":[],"promisesLocked":False,"promiseIds":[key for key,_,_,_ in goals],"goals":[{"id":key,"title":title,"unit":unit,"target":target,"baseline":metrics[key],"createdDay":day,"deadlineDay":deadline,"status":"en curso"} for key,title,unit,target in goals]}
+
+def set_government_promises(promise_ids):
+    ensure_government_state();g=state["government"];plan=g["plan"]
+    if g.get("status")!="en_mandato":raise ValueError("El mandato terminó; no se pueden cambiar sus compromisos.")
+    if plan.get("promisesLocked"):raise ValueError("El equipo ya eligió los compromisos de este mandato.")
+    if int(state.get("day",1))>int(plan.get("createdDay",1))+30:raise ValueError("La selección de compromisos se cierra después del primer mes de mandato.")
+    ids=list(dict.fromkeys(str(item) for item in (promise_ids or []) if isinstance(item,str)))
+    if not 2<=len(ids)<=4:raise ValueError("Elegí entre dos y cuatro compromisos medibles.")
+    catalog={row["id"]:row for row in government_promise_catalog()}
+    if any(item not in catalog for item in ids):raise ValueError("Uno de los compromisos no está disponible.")
+    day=int(state.get("day",1));deadline=int(g.get("nextElectionDay",day+1440))
+    plan["promiseIds"]=ids;plan["promisesLocked"]=True
+    plan["goals"]=[{**catalog[key],"createdDay":day,"deadlineDay":deadline,"status":"en curso","current":catalog[key]["baseline"],"fulfilled":False} for key in ids]
+    plan["history"]=[]
+    ev("Compromisos de mandato elegidos",f"El equipo acordó {len(ids)} metas medibles para este mandato: {', '.join(catalog[key]['title'].lower() for key in ids)}.")
 
 def government_plan_report():
     g=state.get("government",{});plan=g.get("plan") or new_mandate_plan();metrics=government_plan_metrics();rows=[]
     for goal in plan.get("goals",[]):
         current=metrics.get(goal["id"],0);target=goal["target"]
         baseline=goal.get("baseline")
-        rows.append({**goal,"current":current,"deltaFromBaseline":None if baseline is None else current-baseline,"fulfilled":current>=target,"progress":round(min(100,100*current/max(1,target)))})
-    return {"createdDay":plan.get("createdDay",state.get("day",1)),"deadlineDay":plan.get("deadlineDay",g.get("nextElectionDay")),"goals":rows,"history":plan.get("history",[])[-60:],"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics}
+        rows.append({**goal,"current":current,"deltaFromBaseline":None if baseline is None else current-baseline,"fulfilled":current>=target,"progress":round(100 if current>=target else max(0,min(99,100*(current-float(baseline if baseline is not None else current))/max(1,target-float(baseline if baseline is not None else current)))))})
+    return {"createdDay":plan.get("createdDay",state.get("day",1)),"deadlineDay":plan.get("deadlineDay",g.get("nextElectionDay")),"goals":rows,"history":plan.get("history",[])[-60:],"fulfilled":sum(x["fulfilled"] for x in rows),"total":len(rows),"metrics":metrics,"promisesLocked":bool(plan.get("promisesLocked",True)),"promiseOptions":government_promise_catalog(metrics)}
 
 def record_government_plan_snapshot(report=None):
     """Keep a dated, per-mandate trail of promise targets and measured outcomes."""
@@ -1265,7 +1352,8 @@ def government_issue_sources(district_id,issue):
     elif issue=="vivienda":
         for home in homes:
             capacity=max(1,int(home.get("capacity",home.get("occupants",0))));occupied=int(home.get("occupants",0));quality=float(home.get("quality",80))
-            if occupied/capacity>=.93 or quality<65:links.append({"id":f"home-{home['x']}-{home['y']}","kind":"vivienda","label":home.get("name","Vivienda del barrio"),"detail":f"{occupied}/{capacity} plazas · calidad {round(quality)}%","status":"presión habitacional" if occupied/capacity>=.93 else "calidad baja"})
+            resident_ids={str(person.get("id")) for person in home.get("residents",[]) if person.get("id") is not None};rent_contracts=[c for c in home.get("housingContracts",[]) if isinstance(c,dict) and c.get("tenure")=="inquilina" and any(str(person_id) in resident_ids for person_id in c.get("residentIds",[]) or [])];rent_arrears=sum(max(0,int(c.get("rentArrears",0) or 0)) for c in rent_contracts)
+            if occupied/capacity>=.93 or quality<65 or rent_arrears:links.append({"id":f"home-{home['x']}-{home['y']}","kind":"vivienda","label":home.get("name","Vivienda del barrio"),"detail":f"{occupied}/{capacity} plazas · calidad {round(quality)}% · alquiler impago $ {rent_arrears}","status":"estrés por alquiler" if rent_arrears else "presión habitacional" if occupied/capacity>=.93 else "calidad baja"})
     elif issue=="servicios":
         for f in state.get("utilities",{}).get("failures",[]):
             if f.get("status")!="reparada" and in_area(f.get("x",0)):links.append({"id":str(f.get("id")),"kind":"red","label":f"Red {f.get('network','de servicios')}","detail":f"Avería en calle {f.get('x',0)+1}, {f.get('y',0)+1}","status":f.get("status","avería")})
@@ -1308,7 +1396,7 @@ def citizen_consultation_reason(topic,home,resident,sentiment):
     arrears=float(state.get("taxes",{}).get("arrearsByAsset",{}).get(f"home-{home.get('x')}-{home.get('y')}",0))
     return f"Deuda tributaria del hogar $ {round(arrears)}" if arrears else f"Presión tributaria percibida {round(max(0,float(state.get('taxes',{}).get('lastReport',{}).get('pressure',0))))}%"
 
-def start_government_consultation(district_id,topic):
+def start_government_consultation(district_id,topic,online_players=None):
     ensure_government_state();government=state["government"];district_id=str(district_id or "");topic=str(topic or "")
     labels={"employment":"empleo local","housing":"acceso a vivienda","services":"servicios básicos","environment":"calidad ambiental","taxes":"carga tributaria"}
     district=next((row for row in government_districts() if row["id"]==district_id),None)
@@ -1320,9 +1408,28 @@ def start_government_consultation(district_id,topic):
     if district["population"]<1:raise ValueError("El distrito todavía no tiene residentes para consultar.")
     cost=250;reserved=sum(max(0,int(project.get("cost",0))-int(project.get("paid",0))) for project in state.get("projects",[]) if not project.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
     if available<cost:raise ValueError(f"Quedan $ {available}; la audiencia distrital cuesta $ {cost}.")
-    state["money"]-=cost;poll={"id":uuid.uuid4().hex,"districtId":district_id,"district":district["name"],"topic":topic,"topicLabel":labels[topic],"openedDay":int(state.get("day",1)),"deadlineDay":int(state.get("day",1))+7,"status":"abierta","cost":cost,"eligibleResidents":district["population"]}
+    participants=[];seen=set()
+    for player in online_players if isinstance(online_players,list) else []:
+        if not isinstance(player,dict):continue
+        player_id=str(player.get("id") or "")
+        if not player_id or player_id in seen:continue
+        seen.add(player_id);participants.append({"id":player_id,"name":str(player.get("name") or "Jugador")[:24]})
+    state["money"]-=cost;poll={"id":uuid.uuid4().hex,"districtId":district_id,"district":district["name"],"topic":topic,"topicLabel":labels[topic],"openedDay":int(state.get("day",1)),"deadlineDay":int(state.get("day",1))+7,"status":"abierta","cost":cost,"eligibleResidents":district["population"],"playerParticipants":participants,"playerVotes":{}}
     polls.append(poll);government["consultationHistory"]=polls[-24:]
-    ev("Consulta vecinal convocada",f"{district['name']}: audiencia de siete días sobre {labels[topic]}. Responderá una muestra simulada de residentes según las condiciones actuales de sus hogares; costo municipal $ {cost}.")
+    ev("Consulta vecinal convocada",f"{district['name']}: audiencia de siete días sobre {labels[topic]}. Responderá una muestra de residentes según sus hogares; los jugadores en línea también pueden emitir un voto separado. Costo municipal $ {cost}.")
+    return poll
+
+def record_government_consultation_vote(poll_id,player_id,vote):
+    ensure_government_state();poll=next((row for row in state["government"].get("consultationHistory",[]) if row.get("id")==str(poll_id) and row.get("status")=="abierta"),None)
+    player_id=str(player_id or "");vote=str(vote or "")
+    if not poll:raise ValueError("La consulta ya cerró o no existe.")
+    participant=next((row for row in poll.get("playerParticipants",[]) if row.get("id")==player_id),None)
+    if not participant:raise ValueError("No estabas conectado cuando se convocó esta consulta.")
+    if vote not in ("yes","no"):raise ValueError("Elegí a favor o en contra.")
+    votes=poll.setdefault("playerVotes",{})
+    if player_id in votes:raise ValueError("Tu voto en esta consulta ya fue registrado.")
+    votes[player_id]={"playerId":player_id,"playerName":participant.get("name","Jugador"),"vote":vote,"day":int(state.get("day",1))}
+    ev("Voto de jugador registrado",f"{participant.get('name','Jugador')} emitió su voto {('a favor' if vote=='yes' else 'en contra')} en la consulta de {poll.get('district','un distrito')}. El resultado de residentes se mantiene separado.")
     return poll
 
 def advance_government_consultations():
@@ -1344,9 +1451,12 @@ def advance_government_consultations():
                     worst=max(range(len(individual)),key=lambda pos:individual[pos][0])
                     if detail_rank<individual[worst][0]:individual[worst]=(detail_rank,row)
         yes=sum(respondents);sample=len(respondents);result={"eligible":max(eligible,sample),"respondents":sample,"participationPct":round(100*sample/max(1,eligible)),"yes":yes,"no":sample-yes,"supportPct":round(100*yes/sample) if sample else None,"individualResponses":[row for _,row in sorted(individual,key=lambda item:item[0])],"individualResponsesTotal":sample,"individualResponsesComplete":sample<=80}
+        player_votes=list((poll.get("playerVotes") or {}).values());player_yes=sum(1 for row in player_votes if row.get("vote")=="yes");player_no=sum(1 for row in player_votes if row.get("vote")=="no");player_eligible=len(poll.get("playerParticipants") or [])
+        result["playerParticipation"]={"eligible":player_eligible,"voted":len(player_votes),"yes":player_yes,"no":player_no,"supportPct":round(100*player_yes/len(player_votes)) if player_votes else None,"voters":[{"name":row.get("playerName","Jugador"),"vote":row.get("vote")} for row in player_votes]}
         result["byAge"]={key:{"eligible":row["eligible"],"respondents":row["yes"]+row["no"],"yes":row["yes"],"no":row["no"],"supportPct":round(100*row["yes"]/(row["yes"]+row["no"])) if row["yes"]+row["no"] else None} for key,row in by_age.items()}
         poll.update({"status":"cerrada","closedDay":int(state.get("day",1)),"result":result})
-        ev("Consulta ciudadana cerrada",f"{poll['district']}: {sample} respuestas de {eligible} residentes registrados sobre {poll['topicLabel'].lower()}. Apoyo {result['supportPct'] if result['supportPct'] is not None else 'sin muestra'}%. Se conservaron {len(result['individualResponses'])} voces individuales para auditar la muestra; el sondeo no sustituye una votación electoral.")
+        player_text=f" Participaron {len(player_votes)}/{player_eligible} jugadores conectados en un recuento separado." if player_eligible else ""
+        ev("Consulta ciudadana cerrada",f"{poll['district']}: {sample} respuestas de {eligible} residentes registrados sobre {poll['topicLabel'].lower()}. Apoyo vecinal {result['supportPct'] if result['supportPct'] is not None else 'sin muestra'}%. Se conservaron {len(result['individualResponses'])} voces individuales.{player_text} El sondeo no sustituye una votación electoral.")
     government["consultationHistory"]=government.get("consultationHistory",[])[-24:]
 
 def record_government_agreement(complaint_id,author):
@@ -1420,9 +1530,9 @@ def government_report():
     incumbent=sum(round(round(d["population"]*.72)*d["support"]/100) for d in districts)
     for complaint in g.get("complaints",[]):
         if complaint.get("status")=="abierto" and not complaint.get("evidenceLinks"):complaint["evidenceLinks"]=government_issue_sources(complaint.get("districtId"),complaint.get("issue"))
-    plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment
+    plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));trust=round(float(g.get("trustScore",55)));trust_adjustment=max(-6,min(6,round((trust-55)*.15)));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment+trust_adjustment
     vote=round(100*incumbent/max(1,turnout))+adjustment
-    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"planHistory":g.get("planHistory",[])[-8:],"cityDevelopment":city_development_report(),"consultations":g.get("consultationHistory",[])[-24:],"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
+    return {"mandate":g["mandate"],"status":g["status"],"startDay":g["startDay"],"nextElectionDay":g["nextElectionDay"],"daysRemaining":remaining,"yearsRemaining":round(remaining/360,1),"approval":round(float(state.get("approval",0))),"trustScore":trust,"trustVoteAdjustment":trust_adjustment,"canEditPromises":not bool(plan.get("promisesLocked",True)) and day<=int(plan.get("createdDay",day))+30,"districts":districts,"eligibleVoters":eligible,"turnout":turnout,"projectedVote":max(0,min(100,vote)),"plan":plan,"planHistory":g.get("planHistory",[])[-8:],"cityDevelopment":city_development_report(),"consultations":g.get("consultationHistory",[])[-24:],"complaints":[c for c in g.get("complaints",[]) if c.get("status")=="abierto"],"resolvedComplaints":sum(c.get("status")=="resuelto" for c in g.get("complaints",[])),"agreements":agreements,"crisisMonths":g.get("crisisMonths",0),"crisisStatus":g.get("crisisStatus","estable"),"lastElection":g["elections"][-1] if g["elections"] else None,"contractPortfolio":government_contract_portfolio(),"defeatReason":g.get("defeatReason")}
 
 def process_government_election():
     ensure_government_state();g=state["government"]
@@ -1431,9 +1541,9 @@ def process_government_election():
     for d in report["districts"]:
         voters=round(d["population"]*.72);votes=round(voters*d["support"]/100)
         districts.append({"name":d["name"],"eligible":d["population"],"turnout":voters,"governmentVotes":votes,"governmentPct":round(100*votes/max(1,voters)),"issue":d["issue"]})
-    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50
-    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"contractPortfolio":government_contract_portfolio(),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
-    g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"]
+    total_votes=sum(d["turnout"] for d in districts);votes=sum(d["governmentVotes"] for d in districts);plan=government_plan_report();agreements=government_agreement_report();agreement_adjustment=max(-6,min(4,agreements["completed"]*2-agreements["overdue"]*2));trust_before=float(g.get("trustScore",55));trust_adjustment=max(-6,min(6,round((trust_before-55)*.15)));adjustment=2*plan["fulfilled"]-(plan["total"]-plan["fulfilled"])+agreement_adjustment+trust_adjustment;pct=max(0,min(100,round(100*votes/max(1,total_votes))+adjustment));won=pct>=50;fulfilled_pct=100*plan["fulfilled"]/max(1,plan["total"]);trust_after=round(max(0,min(100,trust_before*.75+fulfilled_pct*.25)),1)
+    result={"day":state["day"],"mandate":g["mandate"],"governmentVotes":votes,"totalVotes":total_votes,"governmentPct":pct,"won":won,"trustBefore":round(trust_before),"trustAfter":trust_after,"trustVoteAdjustment":trust_adjustment,"promiseFulfillmentPct":round(fulfilled_pct),"districts":districts,"plan":plan,"agreements":agreements,"openComplaints":len(report["complaints"]),"contractPortfolio":government_contract_portfolio(),"reasons":[f"Empleo: {round(sum(d['employment']*d['population'] for d in report['districts'])/max(1,report['eligibleVoters']))}%","Servicios municipales: "+str(round(state.get("services",0)))+"%",f"Metas cumplidas: {plan['fulfilled']}/{plan['total']}",f"Confianza en compromisos: {round(trust_before)} → {trust_after}%",f"Acuerdos cumplidos: {agreements['completed']} · vencidos: {agreements['overdue']}"]}
+    g["elections"].append(result);g["elections"]=g["elections"][-8:];g["lastElectionDay"]=state["day"];g["trustScore"]=trust_after
     g.setdefault("planHistory",[]).append({"mandate":int(g.get("mandate",1)),"createdDay":plan.get("createdDay"),"deadlineDay":plan.get("deadlineDay"),"closedDay":int(state.get("day",1)),"outcome":"renovado" if won else "finalizado","fulfilled":plan.get("fulfilled",0),"total":plan.get("total",0),"goals":plan.get("goals",[]),"history":plan.get("history",[])})
     g["planHistory"]=g["planHistory"][-8:]
     if won:g["mandate"]+=1;g["startDay"]=state["day"];g["nextElectionDay"]=state["day"]+1440;ev("El gobierno renueva su mandato",f"El equipo obtuvo {pct}% de los votos habilitados. La elección consideró empleo, vivienda, servicios y confianza de los distritos.")
@@ -1542,32 +1652,52 @@ def collect_adaptive_rents():
 def plan_housing_aid():
     social=state.setdefault("socialServices",new_social_services());budget=max(0,int(social.get("housingAidBudget",0)));candidates=[]
     for home in state.get("buildings",[]):
-        arrears=max(0,int(home.get("rentArrears",0)))
-        if home.get("kind")!="home" or not home.get("adaptiveReuseDay") or home.get("occupants",0)<=0 or arrears<=0:continue
-        occupants=max(1,int(home.get("occupants",1)));income=max(0,int(home.get("monthlyWageIncome",0)));rent=max(1,int(home.get("rentalPricePerResident",24))*occupants)
-        # La elegibilidad exige deuda efectiva; prioridad a menor ingreso por residente y mayor carga de alquiler.
-        if income/occupants>max(90,rent/occupants*4):continue
-        amount=min(arrears,rent,budget)
-        if amount:candidates.append((income/occupants,-arrears,home,amount))
-    candidates.sort(key=lambda row:(row[0],row[1],row[2].get("x",0),row[2].get("y",0)))
+        if home.get("kind")!="home" or home.get("occupants",0)<=0:continue
+        if home.get("adaptiveReuseDay"):
+            arrears=max(0,int(home.get("rentArrears",0) or 0));occupants=max(1,int(home.get("occupants",1)));income=max(0,int(home.get("monthlyWageIncome",0)));rent=max(1,int(home.get("rentalPricePerResident",24))*occupants)
+            if arrears and income/occupants<=max(90,rent/occupants*4):
+                amount=min(arrears,rent,budget)
+                if amount:candidates.append((income/occupants,-arrears,home,None,amount))
+        if not home.get("zonedDevelopment"):continue
+        residents={str(person.get("id")):person for person in home.get("residents",[]) if person.get("id") is not None}
+        deed=state.get("landClaims",{}).get("parcelDeeds",{}).get(f"{home.get('x')},{home.get('y')}",{})
+        if deed.get("ownerType",home.get("ownerType","private"))=="municipal":continue
+        for contract in home.get("housingContracts",[]):
+            if not isinstance(contract,dict) or contract.get("tenure")!="inquilina":continue
+            active=[residents[str(person_id)] for person_id in contract.get("residentIds",[]) or [] if str(person_id) in residents]
+            arrears=max(0,int(contract.get("rentArrears",0) or 0));rent=max(1,int(contract.get("monthlyRent",0) or 0))
+            if not active or not arrears:continue
+            income=max(0,int(contract.get("familyIncome",0) or 0),sum(max(0,int(person.get("monthlyWage",0) or person.get("expectedWage",0) or 0)) for person in active))
+            burden=100*rent/max(1,income)
+            if income/max(1,len(active))>max(90,rent/max(1,len(active))*4) and burden<35:continue
+            amount=min(arrears,rent,budget)
+            if amount:candidates.append((income/max(1,len(active)),-arrears,home,contract.get("id"),amount))
+    candidates.sort(key=lambda row:(row[0],row[1],row[2].get("x",0),row[2].get("y",0),str(row[3] or "")))
     social["plannedEligibleCount"]=len(candidates);allocations=[];remaining=budget
-    for _,__,home,wanted in candidates:
+    for _,__,home,contract_id,wanted in candidates:
         amount=min(wanted,remaining)
         if amount<=0:break
-        allocations.append({"x":home["x"],"y":home["y"],"name":home.get("name","Vivienda alquilada"),"amount":amount});remaining-=amount
+        allocations.append({"x":home["x"],"y":home["y"],"contractId":contract_id,"name":home.get("name","Vivienda alquilada"),"amount":amount});remaining-=amount
     return allocations
 
 def settle_housing_aid(allocations,funding_pct):
-    social=state.setdefault("socialServices",new_social_services());requested=sum(x["amount"] for x in allocations);remaining=round(requested*max(0,min(100,funding_pct))/100);paid=0;recipients=[]
+    social=state.setdefault("socialServices",new_social_services());requested=sum(x["amount"] for x in allocations);remaining=round(requested*max(0,min(100,funding_pct))/100);paid=0;zoned_contract_paid=0;adaptive_reuse_paid=0;recipients=[]
     for item in allocations:
         if remaining<=0:break
         home=next((b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("x")==item["x"] and b.get("y")==item["y"]),None)
         if not home:continue
-        amount=min(remaining,item["amount"],max(0,int(home.get("rentArrears",0))))
+        contract=next((row for row in home.get("housingContracts",[]) if str(row.get("id"))==str(item.get("contractId"))),None) if item.get("contractId") else None
+        arrears=max(0,int(contract.get("rentArrears",0) or 0)) if contract else max(0,int(home.get("rentArrears",0) or 0))
+        amount=min(remaining,item["amount"],arrears)
         if amount<=0:continue
-        home["rentArrears"]=max(0,int(home.get("rentArrears",0))-amount);home["rentalOwnerCash"]=max(0,int(home.get("rentalOwnerCash",0)))+amount;home["lastHousingAid"]=amount;home["lastHousingAidDay"]=state.get("day",1)
-        recipients.append({"name":item["name"],"x":item["x"],"y":item["y"],"amount":amount});paid+=amount;remaining-=amount
-    report={"month":(state.get("day",1)-1)//30,"budget":max(0,int(social.get("housingAidBudget",0))),"eligible":int(social.pop("plannedEligibleCount",len(allocations))),"requested":requested,"paid":paid,"recipients":recipients,"unserved":max(0,requested-paid)}
+        if contract:
+            contract["rentArrears"]=max(0,int(contract.get("rentArrears",0) or 0)-amount);contract["lastHousingAid"]=amount;contract["lastHousingAidDay"]=state.get("day",1);home["privateOwnerIncome"]=home.get("privateOwnerIncome",0)+amount
+        else:
+            home["rentArrears"]=max(0,int(home.get("rentArrears",0) or 0)-amount);home["rentalOwnerCash"]=max(0,int(home.get("rentalOwnerCash",0)))+amount;home["lastHousingAid"]=amount;home["lastHousingAidDay"]=state.get("day",1)
+        recipients.append({"name":item["name"],"x":item["x"],"y":item["y"],"contractId":item.get("contractId"),"amount":amount});paid+=amount;remaining-=amount
+        if contract:zoned_contract_paid+=amount
+        else:adaptive_reuse_paid+=amount
+    report={"month":(state.get("day",1)-1)//30,"budget":max(0,int(social.get("housingAidBudget",0))),"eligible":int(social.pop("plannedEligibleCount",len(allocations))),"requested":requested,"paid":paid,"zonedContractsPaid":zoned_contract_paid,"adaptiveReusePaid":adaptive_reuse_paid,"recipients":recipients,"unserved":max(0,requested-paid)}
     social["lastReport"]=report;social.setdefault("history",[]).append(report.copy());del social["history"][:-24]
     if paid:ev("Ayuda de alquiler entregada",f"El municipio pagó $ {paid:,} a {len(recipients)} hogar(es) con mora comprobada; la deuda de alquiler se redujo directamente. Cupo mensual autorizado $ {report['budget']:,}.".replace(",","."))
     elif report["budget"] and report["eligible"]==0:ev("Ayuda de alquiler sin beneficiarios",f"Cupo $ {report['budget']:,}; ningún hogar elegible registra deuda de alquiler activa.".replace(",","."))
@@ -2324,13 +2454,23 @@ def assess_contract_delay(project, contractor):
     active+=sum(1 for g in state.get("contractGuarantees",[]) if g.get("contractor")==project.get("contractor") and g.get("status")=="reparacion")
     congested=active>=capacity
     reliability=max(0,min(1,float(contractor.get("reliability",.75))))
-    chance=.025+(1-reliability)*.22+(.04 if congested else 0)
+    equipment_limited=project.get("equipmentStatus")=="limited"
+    delayed_orders=sum(1 for order in state.get("supply",{}).get("orders",[]) if order.get("contractor")==project.get("contractor") and order.get("status") in ("esperando equipo","esperando cuadrilla","demorado","esperando acceso"))
+    weather=bool(state.get("climate",{}).get("heatForecast") or state.get("climate",{}).get("droughtForecast") or state.get("climate",{}).get("stormForecast"))
+    chance=.025+(1-reliability)*.22+(.04 if congested else 0)+(.025 if equipment_limited else 0)+(.02 if delayed_orders else 0)+(.02 if weather and project.get("kind") in ("road","bridge","airport","port") else 0)
     salt=CONTRACTOR_NAMES.index(project.get("contractor")) if project.get("contractor") in CONTRACTOR_NAMES else 0
     seed=(int(project.get("x",0)+1)*73856093 ^ int(project.get("y",0)+1)*19349663 ^ cycle*83492791 ^ salt*2654435761)&0xffffffff
     if (seed%10000)/10000>=chance:return False
     delay=2+(seed//10000)%4
     project["duration"]+=delay;project["delayDays"]=int(project.get("delayDays",0))+delay
-    project["lastDelayReason"]=(f"Confiabilidad histórica {round(reliability*100)}%"+(f" · capacidad completa {active}/{capacity}" if congested else ""))
+    reasons=[]
+    if congested:reasons.append(f"empresa sobrecargada ({active}/{capacity} obras activas)")
+    if equipment_limited:reasons.append(project.get("equipmentCause","maquinaria especializada compartida"))
+    if delayed_orders:reasons.append(f"logística de obra con {delayed_orders} entrega(s) demoradas")
+    if weather and project.get("kind") in ("road","bridge","airport","port"):reasons.append("condiciones climáticas desfavorables")
+    if not reasons:reasons.append(f"confiabilidad histórica de {round(reliability*100)}%")
+    project["lastDelayReason"]="; ".join(reasons)
+    project.setdefault("riskHistory",[]).append({"day":day,"cause":project["lastDelayReason"],"delayDays":delay,"contractor":project.get("contractor")});project["riskHistory"]=project["riskHistory"][-12:]
     ev("Demora contractual detectada",f"{project.get('label','La obra')} de {project.get('contractor','la constructora')} requiere {delay} días adicionales. Causa: {project['lastDelayReason']}; avance físico y certificados se ajustaron al nuevo plazo.")
     return True
 
@@ -2359,13 +2499,24 @@ def request_contract_change(project):
     infrastructure=project.get("kind") in ("road","busStop","port","airport","waterPlant","wastewaterPlant")
     chance=.11+(1-contractor["quality"])*.18+(.025 if infrastructure else 0)
     if roll>=chance:return False
-    utility_conflict=any([project.get("x"),project.get("y")] in state.get("utilities",{}).get(key,[]) for key in ("powerLines","waterPipes","sewerLines","drainLines","gasLines","telecomLines"))
-    cause="Interferencia con una red enterrada no relevada" if utility_conflict else "Estrato del terreno menos competente que el relevamiento inicial"
+    x=int(project.get("x",0));y=int(project.get("y",0));utility_conflict=any([x,y] in state.get("utilities",{}).get(key,[]) for key in ("powerLines","waterPipes","sewerLines","drainLines","gasLines","telecomLines"))
+    road_works=[p for p in state.get("projects",[]) if p.get("kind")=="road" and p.get("status") not in ("pausada","cancelada","finalizada") and abs(p.get("x",0)-x)+abs(p.get("y",0)-y)<=2]
+    delayed_orders=sum(1 for o in state.get("supply",{}).get("orders",[]) if o.get("contractor")==project.get("contractor") and o.get("status") in ("esperando equipo","esperando cuadrilla","demorado","esperando acceso"))
+    weather=bool(state.get("climate",{}).get("heatForecast") or state.get("climate",{}).get("droughtForecast") or state.get("climate",{}).get("stormForecast"))
+    terrain=(math.sin(x*.47+y*.19)+math.cos(y*.42-x*.17)+math.sin((x+y)*.31))/3
+    risks=[]
+    if utility_conflict:risks.append("Interferencia con una red enterrada no relevada")
+    if road_works:risks.append("Desvío de camiones y cuadrillas por una obra vial cercana")
+    if delayed_orders:risks.append(f"Logística de suministros afectada por {delayed_orders} entrega(s) demoradas")
+    if weather and infrastructure:risks.append("Reprogramación de tareas a cielo abierto por condiciones climáticas")
+    if terrain<-.48:risks.append("Estrato húmedo: se requiere mejorar drenaje y fundación")
+    if not risks:risks.append("Estrato del terreno menos competente que el relevamiento inicial")
+    cause=risks[(seed//10000)%len(risks)]
     cost_pct=.08+(seed//10000%7)*.01
     cost_delta=max(100,round(project.get("cost",0)*cost_pct))
     delay_days=4+(seed//70000%5)
     project["changeOrderReviewed"]=True
-    project["changeOrder"]={"id":f"cambio-{project['id']}","status":"pendiente","cause":cause,"createdDay":state["day"],"costDelta":cost_delta,"delayDays":delay_days,"qualityPenalty":12}
+    project["changeOrder"]={"id":f"cambio-{project['id']}","status":"pendiente","cause":cause,"createdDay":state["day"],"costDelta":cost_delta,"delayDays":delay_days,"qualityPenalty":12,"riskInputs":{"nearbyRoadWorks":len(road_works),"delayedDeliveries":delayed_orders,"adverseWeather":weather,"wetGround":terrain<-.48}}
     project["status"]="cambio_pendiente"
     ev("Constructora solicita una orden de cambio",f"{project.get('label','La obra')}: {cause.lower()}. La propuesta agrega $ {cost_delta:,} y {delay_days} días; rechazarla implica una reducción de 12 puntos en la calidad final. La obra espera decisión.".replace(",","."))
     return True
@@ -2400,9 +2551,10 @@ def advance_contract_guarantees():
     state["contractGuarantees"]=guarantees[-60:]
 
 CONTRACTORS = {
- "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"profile":"Oferta económica · mayor riesgo de demora"},
- "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"profile":"Equilibrada · cumplimiento estable"},
- "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
+ "Sur Obras": {"price":1.0,"days":38,"quality":.68,"reliability":.70,"capacity":2,"workers":14,"forklifts":1,"unloadWorkers":2,"unloadRate":6,"equipment":{"earthmover":1,"crane":1,"paver":1,"concretePump":1},"profile":"Oferta económica · mayor riesgo de demora"},
+ "Constructora Delta": {"price":1.18,"days":30,"quality":.82,"reliability":.87,"capacity":3,"workers":24,"forklifts":2,"unloadWorkers":2,"unloadRate":8,"equipment":{"earthmover":2,"crane":1,"paver":2,"concretePump":1},"profile":"Equilibrada · cumplimiento estable"},
+ "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"equipment":{"earthmover":1,"crane":2,"paver":1,"concretePump":2},"profile":"Especializada · calidad alta, precio mayor"}}
+PROJECT_EQUIPMENT={"road":{"earthmover":1,"paver":1},"bridge":{"earthmover":1,"crane":1,"concretePump":1},"home":{"earthmover":1},"shop":{"earthmover":1},"office":{"earthmover":1,"crane":1},"factory":{"earthmover":1,"crane":1},"civic":{"earthmover":1,"crane":1},"school":{"earthmover":1,"crane":1},"fireStation":{"earthmover":1,"crane":1},"depot":{"earthmover":1},"busGarage":{"earthmover":1},"port":{"earthmover":1,"crane":1,"concretePump":1},"airport":{"earthmover":1,"paver":1},"hotel":{"earthmover":1,"crane":1},"powerPlant":{"earthmover":1,"crane":1,"concretePump":1},"waterPlant":{"earthmover":1,"crane":1,"concretePump":1},"gasPlant":{"earthmover":1,"crane":1},"wastewaterPlant":{"earthmover":1,"crane":1,"concretePump":1},"landfill":{"earthmover":1},"recyclingPlant":{"earthmover":1,"crane":1}}
 ROAD_TYPES={"local":{"label":"Calle local","cost":1200,"maintenance":15,"capacity":1.2,"speed":1.0,"parking":2,"access":True,"lanes":1},"avenue":{"label":"Avenida","cost":3200,"maintenance":36,"capacity":2.7,"speed":1.28,"parking":0,"access":True,"lanes":2},"route":{"label":"Ruta regional","cost":2500,"maintenance":28,"capacity":2.2,"speed":1.58,"parking":0,"access":False,"lanes":1},"highway":{"label":"Autopista","cost":4800,"maintenance":52,"capacity":4.6,"speed":2.12,"parking":0,"access":False,"lanes":2}}
 ROAD_DIRECTION_DELTAS={"east":(1,0),"west":(-1,0),"south":(0,1),"north":(0,-1)}
 PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"office":{"label":"Edificio de oficinas","cost":12000,"days":64,"stageNames":["Licencia y financiación privada","Cimentación y estructura","Instalaciones digitales","Puesta en marcha de empresas","Inspección y apertura"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Asignación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y movilización","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
@@ -2689,6 +2841,23 @@ def material_sources(contractor, project):
 
 def missing_materials(p, next_elapsed):
     return []
+
+def project_equipment_status(project):
+    name=project.get("contractor");fleet=CONTRACTORS.get(name,{}).get("equipment",{});jobs=sorted((p for p in state.get("projects",[]) if p.get("contractor")==name and p.get("status") not in ("pausada","cancelada","finalizada","completada","terminada")),key=lambda p:(p.get("contractedDay",1),p.get("contractedMinute",0),str(p.get("id",""))))
+    if not any(p.get("id")==project.get("id") for p in jobs):jobs.append(project)
+    used={key:0 for key in fleet};
+    for job in jobs:
+        requirements=PROJECT_EQUIPMENT.get(job.get("kind"),{});missing=[]
+        for key,amount in requirements.items():
+            if used.get(key,0)+amount>fleet.get(key,0):missing.append(key)
+        if job.get("id")==project.get("id"):
+            return {"available":not missing,"missing":missing,"required":requirements}
+        for key,amount in requirements.items():used[key]=min(fleet.get(key,0),used.get(key,0)+amount)
+    return {"available":True,"missing":[],"required":PROJECT_EQUIPMENT.get(project.get("kind"),{})}
+
+def construction_equipment_report():
+    active=[p for p in state.get("projects",[]) if p.get("status") not in ("pausada","cancelada","finalizada","completada","terminada")]
+    return {name:{"fleet":dict(spec.get("equipment",{})),"activeProjects":sum(p.get("contractor")==name for p in active),"waitingProjects":sum(p.get("contractor")==name and p.get("equipmentStatus")=="limited" for p in active),"waitingDays":sum(int(p.get("equipmentWaitDays",0)) for p in active if p.get("contractor")==name)} for name,spec in CONTRACTORS.items()}
 
 def consume_materials(project, amounts):
     sources=material_sources(project["contractor"],project)
@@ -4502,8 +4671,7 @@ def pay_public_wages(workforce):
     for emp in workforce.get("employees",[]):
         if emp["site"].get("kind") not in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant"):continue
         wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
-        home["householdCash"]=round(home.get("householdCash",0)+wage)
-        home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+        credit_household_wage(home,emp,wage)
         payroll+=wage
     # El salario del conductor ya está dentro del costo operativo de la línea.
     active_ids={pid for line in state.get("busRoutes",[]) if line.get("operational") for pid in line.get("driverIds",[])}
@@ -4512,8 +4680,7 @@ def pay_public_wages(workforce):
         for person in home.get("residents",[]):
             if person.get("id") in active_ids and person.get("status")=="empleado":
                 wage=person.get("monthlyWage",0)
-                home["householdCash"]=round(home.get("householdCash",0)+wage)
-                home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                credit_household_wage(home,person,wage)
     return payroll
 
 def business_credit_limit_after_tax(firm):
@@ -4737,7 +4904,7 @@ def simulate_business_month(workforce):
         for emp in workforce.get("employees",[]):
             if emp["site"] is shop:
                 wage=emp.get("earnedWage",emp["wage"]);home=emp["home"]
-                home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                credit_household_wage(home,emp,wage)
     shops=[b for b in shops if b.get("business",{}).get("status")=="abierto"]
     demand={ (b["x"],b["y"]):0 for b in shops};shopping={key:[] for key in demand}
     regional_demand,regional_report=allocate_regional_export_demand(shops,workforce)
@@ -4795,7 +4962,7 @@ def simulate_business_month(workforce):
         for employee in workforce.get("employees",[]):
             if employee.get("site") is factory:
                 wage=max(0,int(employee.get("earnedWage",employee.get("wage",0))));home=employee["home"]
-                home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                credit_household_wage(home,employee,wage)
         supplier["lastSales"]=0;firm["lastLocalSales"]=0
         if firm["cash"]<0:
             firm["status"]="cerrado";factory["status"]="cerrado";state["jobs"]=max(0,state.get("jobs",0)-int(firm.get("jobSlots",20)));supplier["stock"]=0
@@ -4936,7 +5103,7 @@ def settle_office_businesses(workforce):
         firm.update({"lastWorkers":staffed,"lastSales":staffed*8,"lastRevenue":revenue,"lastPayroll":payroll,"lastOperatingCost":operating,"lastProfit":revenue-payroll-operating,"cash":cash})
         for emp in workforce.get("employees",[]):
             if emp.get("site",{}).get("kind")!="office" or (emp["site"].get("x"),emp["site"].get("y"))!=(office["x"],office["y"]):continue
-            wage=max(0,int(emp.get("earnedWage",emp.get("wage",0))));home=emp.get("home",{});home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+            wage=max(0,int(emp.get("earnedWage",emp.get("wage",0))));home=emp.get("home",{});credit_household_wage(home,emp,wage)
         if cash<0 and firm.get("status")=="abierto":
             firm["status"]="cerrado";office["status"]="cerrado";state["jobs"]=max(0,state.get("jobs",0)-firm.get("jobSlots",0));ev("Oficina cerrada",f"{office.get('name','Oficina')} agotó su capital. Los puestos universitarios dejaron de operar.")
 
@@ -5245,21 +5412,118 @@ def accelerate_existing_private_builds():
         project["duration"]=elapsed+project["scheduleRemainingDays"]
         project["constructionSpeedAdjusted"]=True
 
+def land_market_context():
+    assets={}
+    for asset in state.get("roadAssets") or []:
+        if not isinstance(asset,dict):continue
+        try:assets[(int(asset.get("x")),int(asset.get("y")))]=asset
+        except (TypeError,ValueError):continue
+    incident_state=state.get("roadIncidents") or {}
+    closed=set()
+    for incident in incident_state.get("events") or []:
+        if not isinstance(incident,dict) or not incident.get("closed") or incident.get("status") not in ("en_respuesta","sin_respuesta"):continue
+        try:closed.add((int(incident.get("x")),int(incident.get("y"))))
+        except (TypeError,ValueError):continue
+    roads=set()
+    for row in state.get("roads") or []:
+        try:x,y=int(row[0]),int(row[1])
+        except (TypeError,ValueError,IndexError):continue
+        quality=assets.get((x,y),{}).get("quality",82)
+        try:quality=float(82 if quality is None else quality)
+        except (TypeError,ValueError):quality=82
+        if quality>=25 and (x,y) not in closed:roads.add((x,y))
+    connected=set();queue=[]
+    for point in ((4,10),(3,10),(5,10),(4,9),(4,11)):
+        if point in roads and point not in connected:connected.add(point);queue.append(point)
+    for x,y in queue:
+        for point in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+            if point in roads and point not in connected:connected.add(point);queue.append(point)
+    return {"assets":assets,"roads":roads,"connected":connected,"buildings":state.get("buildings",[])}
+
+def parcel_market_estimate(x,y,context=None):
+    context=context or land_market_context();assets=context["assets"];roads=context["roads"];connected=context["connected"]
+    adjacent=[]
+    for rx,ry in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+        asset=assets.get((rx,ry),{});road_type=ROAD_TYPES.get(asset.get("roadType","local"),ROAD_TYPES["local"])
+        if (rx,ry) in roads and road_type.get("access",True):adjacent.append((rx,ry,asset))
+    connected_roads=[r for r in adjacent if (r[0],r[1]) in connected];road_access=bool(connected_roads)
+    quality_values=[]
+    for road in connected_roads:
+        value=road[2].get("quality",82)
+        try:quality_values.append(max(0,min(100,float(82 if value is None else value))))
+        except (TypeError,ValueError):quality_values.append(82)
+    road_quality=round(sum(quality_values)/len(quality_values)) if quality_values else 0
+    distance=abs(x-12)+abs(y-10);center_score=max(0,22-distance*1.35);road_score=(22+road_quality*.12) if road_access else (8 if adjacent else 0)
+    amenity=green=activity=pollution=0;service_count=0
+    for building in context["buildings"]:
+        d=abs(int(building.get("x",0))-x)+abs(int(building.get("y",0))-y)
+        if d>7:continue
+        kind=building.get("kind");model=building.get("serviceModel");weight=9 if kind=="civic" and model=="urbanPark" else 6 if kind in ("school","hospital","fireStation") or kind=="civic" else 3 if kind in ("shop","office","hotel") else 0
+        if weight:amenity+=weight*(8-d)/8
+        if weight and (kind in ("school","hospital","fireStation") or kind=="civic"):service_count+=1
+        if kind=="civic" and model=="urbanPark":green+=max(0,7-d)*1.45
+        if kind in ("home","shop","office") and building.get("status")!="cerrado":activity+=max(0,6-d)*.22
+        if kind in ("factory","landfill","airport") and d<6:pollution+=(6-d)*(1.3 if kind=="airport" else 1.8)
+    amenity=min(22,amenity);green=min(14,green);activity=min(8,activity);pollution=min(18,pollution)
+    index=max(0,min(100,round(12+road_score+center_score+amenity+green+activity-pollution)))
+    land_value=round(700+index*63);housing_price=round(1800*(.7+index/167));market_rent=max(10,round(24*(.7+index/167)))
+    return {"x":x,"y":y,"index":index,"estimatedLandValue":land_value,"housingPrice":housing_price,"marketRent":market_rent,"roadAccess":road_access,"roadQuality":road_quality,"serviceCount":service_count,"factors":{"access":round(road_score),"centrality":round(center_score),"amenities":round(amenity),"greenSpace":round(green),"activity":round(activity),"environment":round(-pollution)}}
+
+def land_value_report():
+    context=land_market_context();sites=set()
+    for row in [*state.get("zones",[]),*state.get("buildings",[]),*state.get("projects",[]),*state.get("abandoned",[])]:
+        if isinstance(row.get("x"),int) and isinstance(row.get("y"),int):sites.add((row["x"],row["y"]))
+    for x,y in context["roads"]:
+        for nx,ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+            if abs(nx)<=64 and abs(ny)<=64 and nx not in (24,25):sites.add((nx,ny))
+    parcels={f"{x},{y}":parcel_market_estimate(x,y,context) for x,y in sites if x not in (24,25)}
+    values=list(parcels.values());ranked=sorted((p for p in values if p["roadAccess"]),key=lambda p:(-p["index"],p["y"],p["x"]))
+    return {"day":state.get("day",1),"parcels":parcels,"summary":{"parcels":len(values),"roadConnected":sum(bool(p["roadAccess"]) for p in values),"averageIndex":round(sum(p["index"] for p in values)/len(values)) if values else 0,"averageLandValue":round(sum(p["estimatedLandValue"] for p in values)/len(values)) if values else 0,"highest":ranked[:3],"lowest":list(reversed(ranked[-3:])),"method":"Estimación local: acceso vial, cercanía al centro, servicios, actividad, espacios verdes y presión ambiental. No es una tasación financiera."}}
+
+def utility_resilience_report():
+    config={"power":{"sourceKinds":{"powerPlant"},"lineKey":"powerLines","accessKey":"powerServedPct","failure":"power"},"water":{"sourceKinds":{"waterPlant"},"lineKey":"waterPipes","accessKey":"waterServedPct","failure":"water"},"wastewater":{"sourceKinds":{"wastewaterPlant"},"lineKey":"sewerLines","accessKey":"wastewaterTreatedPct","failure":"sewer"},"gas":{"sourceKinds":{"gasPlant"},"lineKey":"gasLines","accessKey":"gasServedPct","failure":"gas"},"telecom":{"sourceKinds":set(),"lineKey":"telecomLines","accessKey":"telecomServedPct","failure":"telecom"}}
+    buildings=state.get("buildings",[]);occupied=[b for b in buildings if b.get("kind") in ("home","shop","office","factory")];failures=[f for f in state.get("utilities",{}).get("failures",[]) if f.get("status") not in ("reparada","resuelta")];line_condition=state.get("utilities",{}).get("report",{}).get("lineCondition",{});rows={}
+    for network,spec in config.items():
+        sources=[b for b in buildings if b.get("kind") in spec["sourceKinds"] and b.get("status") not in ("cerrado","abandonado")] if spec["sourceKinds"] else [b for b in buildings if b.get("kind")=="civic" and b.get("serviceModel") in ("tvHeadend","wifiHub") and b.get("status") not in ("cerrado","abandonado")]
+        coverage=[];affected=[]
+        for building in occupied:
+            try:value=max(0,min(100,float((building.get("utilityAccess") or {}).get(spec["accessKey"],0) or 0)))
+            except (TypeError,ValueError):value=0
+            coverage.append(value)
+            if value<95:affected.append(building)
+        source_count=len(sources);condition=line_condition.get("sewer" if network=="wastewater" else network,{}) or {};average=condition.get("averageCondition",0)
+        try:average=round(float(0 if average is None else average))
+        except (TypeError,ValueError):average=0
+        rows[network]={"sources":source_count,"singleSourceRisk":source_count==1,"coveragePct":round(sum(coverage)/len(coverage)) if coverage else 0,"affectedBuildings":len(affected),"affectedResidents":sum(int(b.get("occupants",0) or 0) for b in affected),"lineCount":len(state.get("utilities",{}).get(spec["lineKey"],[]) or []),"lineConditionPct":average,"criticalLines":int(condition.get("criticalSegments",0) or 0),"openFailures":sum(f.get("network")==spec["failure"] for f in failures),"backupGenerators":sum(float(b.get("backupCapacityKw",0) or 0)>0 for b in sources) if network=="power" else 0}
+    cascades=[{"x":b.get("x"),"y":b.get("y"),"name":b.get("name","Vivienda"),"residents":int(b.get("occupants",0)),"missing":list(b.get("missingServices",[]))} for b in buildings if b.get("kind")=="home" and len(b.get("missingServices",[]))>=2]
+    return {"day":state.get("day",1),"networks":rows,"cascadingHouseholds":len(cascades),"cascades":cascades[:8],"openFailures":len(failures)}
+
 def advance_zoned_development():
     """Demanda y parcela libre bastan para iniciar una inversión privada."""
     supply=growth_demand(state)
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
+    market=land_market_context()
     for kind,shortage in (("home",supply["housing"]["shortage"]),("shop",supply["commercial"]["shortage"]),("factory",supply["industry"]["shortage"]),("office",supply.get("office",{}).get("shortage",0))):
         if shortage<=0:continue
-        zones=[z for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and zoning_road_access(z["x"],z["y"]) and route_between((z["x"],z["y"]),(4,10))]
+        zones=[dict(z) for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and zoning_road_access(z["x"],z["y"]) and route_between((z["x"],z["y"]),(4,10))]
         if not zones:continue
-        zone=min(zones,key=lambda z:(z["y"],z["x"]))
-        name=min(CONTRACTORS,key=lambda n:(sum(p.get("contractor")==n and p.get("status") not in ("finalizada","cancelada") for p in state.get("projects",[])),n))
+        for candidate in zones:candidate["landMarket"]=parcel_market_estimate(candidate["x"],candidate["y"],market)
+        def site_score(z):
+            value=z["landMarket"];index=value["index"]
+            return value["factors"]["access"]+max(0,12-index*.12) if kind=="factory" else index*1.15+value["factors"]["activity"] if kind=="office" else index+value["factors"]["activity"]*.5 if kind=="shop" else index
+        zone=max(zones,key=lambda z:(site_score(z),-z["y"],-z["x"]))
+        def contractor_score(name):
+            company=CONTRACTORS[name];active=sum(p.get("contractor")==name and p.get("status") not in ("finalizada","cancelada") for p in state.get("projects",[]))
+            return active/max(1,company.get("capacity",1))*1.2+company.get("price",1)*.35+(1-company.get("reliability",.75))*.7
+        name=min(CONTRACTORS,key=lambda n:(contractor_score(n),n))
         company=CONTRACTORS[name];spec=PROJECTS[kind];cost=round(spec["cost"]*company["price"]);zero={key:0 for key in MATERIAL_NAMES};advance=round(cost*.2)
-        project={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"ownerType":"private","ownerName":name,"cost":cost,"duration":construction_duration_days(kind,spec["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":"Demanda activa en parcela zonificada; inversión privada externa","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":zero.copy(),"materialsUsed":zero.copy(),"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":0,"zonedDevelopment":True,"density":zone.get("density","low"),"retentionPct":0}
+        project={"id":uuid.uuid4().hex,"kind":kind,"label":spec["label"],"x":zone["x"],"y":zone["y"],"contractor":name,"ownerType":"private","ownerName":name,"cost":cost,"duration":construction_duration_days(kind,spec["days"],company["days"]),"elapsed":0,"progress":0,"paid":advance,"stages":spec["stageNames"],"stageIndex":0,"status":"contratada","cause":"Demanda activa en parcela zonificada; inversión privada externa","contractedMandate":int(state.get("government",{}).get("mandate",1)),"contractedDay":state.get("day",1),"contractedMinute":state.get("timeOfDayMinutes",0),"monthlyCost":0,"workersAssigned":LABOR_NEEDS[kind],"materialsRequired":zero.copy(),"materialsUsed":zero.copy(),"privatePaid":True,"privateMaterialsIncluded":True,"municipalPermitPaid":0,"zonedDevelopment":True,"density":zone.get("density","low"),"retentionPct":0,"landMarket":{"index":zone["landMarket"]["index"],"estimatedLandValue":zone["landMarket"]["estimatedLandValue"],"score":site_score(zone)}}
         if kind=="factory":
             project["operatingReserve"]=4200;project["industryType"]=next_factory_industry();project["label"]=FACTORY_LABELS[project["industryType"]]
-        state["projects"].append(project);zone["status"]="en obra";reserved.add((zone["x"],zone["y"]))
+        state["projects"].append(project);zone["status"]="en obra"
+        actual_zone=next((row for row in state.get("zones",[]) if row.get("x")==zone["x"] and row.get("y")==zone["y"]),None)
+        if actual_zone:actual_zone["status"]="en obra"
+        reserved.add((zone["x"],zone["y"]))
         state["supply"]["contractorCash"][name]=state["supply"]["contractorCash"].get(name,0)+advance
         ev("Promotor inicia obra",f"{name} financia {project['label'].lower()} en parcela {zone['x']+1},{zone['y']+1}. La obra no usa tesorería municipal.")
 
@@ -5270,36 +5534,133 @@ def assign_housing_contract(home,person):
         contract=contracts[-1];contract.setdefault("residentIds",[]).append(person["id"]);person["housingContractId"]=contract["id"];person["housingTenure"]=contract["tenure"];return
     income=max(0,int(person.get("monthlyWage") or person.get("expectedWage") or 60+stable_skill(person["id"],"family-income")%140))
     savings=200+stable_skill(person["id"],"family-savings")%2800
-    price=1800;tenure="propietaria" if savings>=price and income>=80 else "inquilina"
-    contract={"id":f"lease-{person['id']}","residentIds":[person["id"]],"tenure":tenure,"familyIncome":income,"initialSavings":savings,"purchasePrice":price if tenure=="propietaria" else 0,"monthlyRent":24 if tenure=="inquilina" else 0,"startDay":state.get("day",1)}
+    market=parcel_market_estimate(home["x"],home["y"]);price=market["housingPrice"];market_rent=market["marketRent"];rent=min(market_rent,max(8,int(income*.25)));tenure="propietaria" if savings>=price and income>=80 else "inquilina"
+    contract={"id":f"lease-{person['id']}","residentIds":[person["id"]],"tenure":tenure,"familyIncome":income,"initialSavings":savings,"familyCash":max(0,savings-(price if tenure=="propietaria" else 0)),"purchasePrice":price if tenure=="propietaria" else 0,"marketValue":market["estimatedLandValue"],"landValueIndex":market["index"],"monthlyRent":rent if tenure=="inquilina" else 0,"marketRent":market_rent if tenure=="inquilina" else 0,"affordabilityAdjusted":tenure=="inquilina" and rent<market_rent,"rentArrears":0,"missedRentMonths":0,"lastRentDue":0,"lastRentPaid":0,"startDay":state.get("day",1),"nextRentReviewDay":int(state.get("day",1))+360}
     contracts.append(contract);person["housingContractId"]=contract["id"];person["housingTenure"]=tenure;home["householdCash"]=home.get("householdCash",0)+savings
     if tenure=="propietaria":
         home["householdCash"]-=price
         if home.get("ownerType")=="municipal":state["money"]+=price
         else:home["privateOwnerIncome"]=home.get("privateOwnerIncome",0)+price
 
+def housing_market_report():
+    homes=renters=rent_due=arrears=at_risk=0
+    burden_rows=[]
+    today=int(state.get("day",1))
+    for building in state.get("buildings",[]):
+        if building.get("kind")!="home" or not building.get("zonedDevelopment"):continue
+        homes+=1
+        people={str(person.get("id")):person for person in building.get("residents",[]) if person.get("id") is not None}
+        for contract in building.get("housingContracts",[]):
+            if not isinstance(contract,dict) or contract.get("tenure")!="inquilina":continue
+            active=[people[str(person_id)] for person_id in contract.get("residentIds",[]) if str(person_id) in people]
+            if not active:continue
+            renters+=1
+            balance=max(0,int(contract.get("rentArrears",0) or 0))
+            arrears+=balance
+            if balance or int(contract.get("missedRentMonths",0) or 0)>0:at_risk+=1
+            rent_due+=max(0,int(contract.get("monthlyRent",0) or 0))
+            household_income=sum(max(0,int(person.get("monthlyWage",0) or 0)) for person in active)
+            household_income=max(household_income,max(0,int(contract.get("familyIncome",0) or 0)))
+            if household_income:
+                burden_rows.append(100*max(0,int(contract.get("monthlyRent",0) or 0))/household_income)
+            else:
+                burden_rows.append(100 if int(contract.get("monthlyRent",0) or 0)>0 else 0)
+    return {"day":today,"zonedHomes":homes,"rentingHouseholds":renters,"monthlyRentDue":rent_due,"monthlyRentCollected":int(state.get("housingRentCollectedLastMonth",0) or 0),"rentArrears":arrears,"householdsAtRisk":at_risk,"averageRentBurdenPct":round(sum(burden_rows)/len(burden_rows),1) if burden_rows else 0,"highBurdenHouseholds":sum(1 for value in burden_rows if value>25),"ownerIncomeLastMonth":int(state.get("housingOwnerIncomeLastMonth",0) or 0),"migrationOutReasons":state.get("housingDemand",{}).get("lastOutReasons",{}),"recentDepartures":list(reversed([row for row in state.get("migrationHistory",[]) if row.get("direction")=="salida"][-8:]))}
+
 def settle_property_owner_income():
     income=0
     for building in state.get("buildings",[]):
-        if building.get("kind") not in ("home","shop","factory"):continue
+        if building.get("kind") not in ("home","shop","office","factory","hotel"):continue
         owner=state.get("landClaims",{}).get("parcelDeeds",{}).get(f"{building['x']},{building['y']}",{}).get("ownerType",building.get("ownerType","private"))
         amount=0
         if building.get("kind")=="home" and building.get("zonedDevelopment"):
-            active_ids={person.get("id") for person in building.get("residents",[])}
-            due=sum(c.get("monthlyRent",0) for c in building.get("housingContracts",[]) if any(person_id in active_ids for person_id in c.get("residentIds",[])))
-            amount=min(due,max(0,int(building.get("householdCash",0))));building["householdCash"]-=amount
+            people={str(person.get("id")):person for person in building.get("residents",[]) if person.get("id") is not None}
+            for contract in building.get("housingContracts",[]):
+                if not isinstance(contract,dict) or contract.get("tenure")!="inquilina":continue
+                active=[people[str(person_id)] for person_id in contract.get("residentIds",[]) if str(person_id) in people]
+                if not active:continue
+                scheduled=max(0,int(contract.get("monthlyRent",0) or 0));old_arrears=max(0,int(contract.get("rentArrears",0) or 0));due=scheduled+old_arrears
+                family_cash=max(0,int(contract.get("familyCash",contract.get("initialSavings",0)) or 0));paid=min(due,family_cash,max(0,int(building.get("householdCash",0))));building["householdCash"]-=paid;contract["familyCash"]=family_cash-paid
+                contract["rentArrears"]=due-paid;contract["lastRentDue"]=due;contract["lastRentPaid"]=paid;contract["lastPaymentDay"]=int(state.get("day",1))
+                contract["missedRentMonths"]=int(contract.get("missedRentMonths",0) or 0)+1 if paid<due else 0
+                amount+=paid
+            building["monthlyRentDueLastMonth"]=sum(max(0,int(c.get("lastRentDue",0) or 0)) for c in building.get("housingContracts",[]) if isinstance(c,dict) and c.get("tenure")=="inquilina")
+            building["monthlyRentPaidLastMonth"]=amount
         elif building.get("business") and building.get("zonedDevelopment"):
             business=building["business"];amount=min(max(0,int(business.get("cash",0))),max(0,round(business.get("lastProfit",0)*.3)));business["cash"]-=amount
         if owner=="municipal":income+=amount
         else:building["privateOwnerIncome"]=building.get("privateOwnerIncome",0)+amount
-    state["municipalPropertyIncomeLastMonth"]=income;state["money"]+=income
+    state["municipalPropertyIncomeLastMonth"]=income;state["housingOwnerIncomeLastMonth"]=sum(int(b.get("monthlyRentPaidLastMonth",0) or 0) for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("zonedDevelopment") and (state.get("landClaims",{}).get("parcelDeeds",{}).get(f"{b['x']},{b['y']}",{}).get("ownerType",b.get("ownerType","private"))=="municipal"));state["housingRentCollectedLastMonth"]=sum(int(b.get("monthlyRentPaidLastMonth",0) or 0) for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("zonedDevelopment"));state["money"]+=income
     if income:record_direct_municipal_income(income,"municipal_property")
 
+def settle_private_property_market():
+    """Transfer listed private assets to funded NPC investors at the monthly close."""
+    claims=ensure_land_claims();market=state.get("privatePropertyMarket")
+    if not isinstance(market,dict):market=state["privatePropertyMarket"]={"history":[],"saleProceedsByOwner":{}}
+    history=market.get("history");history=history if isinstance(history,list) else [];market["history"]=history
+    proceeds=market.get("saleProceedsByOwner");proceeds=proceeds if isinstance(proceeds,dict) else {};market["saleProceedsByOwner"]=proceeds
+    available=max(0,int(state.get("privateCapital",0) or 0));sold=[]
+    buildings={(int(b.get("x",-1)),int(b.get("y",-1))):b for b in state.get("buildings",[]) if isinstance(b,dict)}
+    investors=("Inversiones Puerto Claro","Desarrollos del Litoral","Hábitat del Sur")
+    for key,deed in sorted(claims.get("parcelDeeds",{}).items()):
+        listing=deed.get("saleListing") if isinstance(deed,dict) else None
+        if not isinstance(listing,dict) or listing.get("status")!="en venta" or deed.get("ownerType")!="private":continue
+        try:x,y=(int(part) for part in str(key).split(",",1));asking=max(1,int(listing.get("askingPrice",0) or 0))
+        except (TypeError,ValueError):continue
+        building=buildings.get((x,y))
+        if not building or building.get("kind") not in ("home","shop","office","factory","hotel"):continue
+        base={"home":4200,"shop":3600,"office":12000,"factory":9200,"hotel":13200}[building["kind"]]
+        try:fair=max(1,int(building.get("marketValue") or base))
+        except (TypeError,ValueError):fair=base
+        business=building.get("business") if isinstance(building.get("business"),dict) else {}
+        healthy=(building.get("occupants",0)>0 or (business.get("status")=="abierto" and (business.get("lastProfit",0)>0 or business.get("cash",0)>asking*.08)))
+        if not healthy or asking>round(fair*1.25) or asking<round(fair*.5) or available<asking:continue
+        investor=investors[(x*7+y*11+int(state.get("day",1)))%len(investors)];seller_id=str(deed.get("ownerId") or deed.get("ownerName") or "Propietario privado");seller=str(deed.get("ownerName") or "Propietario privado")
+        available-=asking;state["privateCapital"]=available;proceeds[seller_id]=max(0,int(proceeds.get(seller_id,0) or 0))+asking
+        record={"day":int(state.get("day",1)),"x":x,"y":y,"price":asking,"seller":seller,"sellerId":seller_id,"buyer":investor,"buyerId":f"investor-{investors.index(investor)+1}","type":"transferencia privada"}
+        deed.setdefault("transferHistory",[]).append(record.copy());deed["transferHistory"]=deed["transferHistory"][-20:]
+        deed.update({"ownerType":"private","ownerId":record["buyerId"],"ownerName":investor,"lastTransferDay":record["day"],"lastTransferPrice":asking,"status":"inscripto","saleListing":{**listing,"status":"vendida","soldDay":record["day"],"buyer":investor}})
+        building["ownerType"]="private";building["ownerName"]=investor;history.append(record);sold.append(record)
+        ev("Venta inmobiliaria privada",f"{seller} vendió {building.get('name','un inmueble')} a {investor} por $ {asking:,}. El nuevo titular conserva alquileres y operación.".replace(",","."))
+    market["history"]=history[-50:];market["lastClose"]={"day":int(state.get("day",1)),"sold":len(sold),"saleProceeds":sum(row["price"] for row in sold)}
+
+def review_housing_contracts():
+    day=max(1,int(state.get("day",1)));context=None;adjusted=delta=0
+    for home in state.get("buildings",[]):
+        if home.get("kind")!="home" or not home.get("zonedDevelopment"):continue
+        residents={str(person.get("id")):person for person in home.get("residents",[]) if person.get("id") is not None}
+        for contract in home.get("housingContracts",[]):
+            if not isinstance(contract,dict) or contract.get("tenure")!="inquilina":continue
+            active=[residents[str(person_id)] for person_id in contract.get("residentIds",[]) or [] if str(person_id) in residents]
+            if not active:continue
+            start_day=max(1,int(contract.get("startDay") or day));review_day=max(1,int(contract.get("nextRentReviewDay") or start_day+360))
+            if day<review_day:continue
+            if context is None:context=land_market_context()
+            old=max(8,int(contract.get("monthlyRent",8) or 8));market=parcel_market_estimate(int(home.get("x",0)),int(home.get("y",0)),context);market_rent=max(8,int(market.get("marketRent",old) or old));income=sum(max(0,int(person.get("monthlyWage") or person.get("expectedWage") or 0)) for person in active);target=max(8,min(market_rent,income//4));next_rent=min(target,int(old*1.1+.5)) if target>old else max(target,int(old*.9+.5))
+            contract.update({"marketRent":market_rent,"monthlyRent":next_rent,"marketValue":market.get("estimatedLandValue",contract.get("marketValue",0)),"landValueIndex":market.get("index",contract.get("landValueIndex",0)),"affordabilityAdjusted":next_rent<market_rent,"lastRentReviewDay":day,"nextRentReviewDay":day+360})
+            if next_rent!=old:adjusted+=1;delta+=next_rent-old
+    if adjusted:ev("Revisión anual de alquileres",f"{adjusted} contratos privados se ajustaron según el valor local del suelo y la capacidad de pago; variación media $ {round(delta/adjusted)} por mes. Los aumentos quedan limitados y respetan el tope de asequibilidad.")
+
+def home_departure_assessment(home):
+    residents=home.get("residents",[]);eligible=[p for p in residents if p.get("workerEligible")];unemployed=sum(1 for p in eligible if p.get("status")!="empleado");contracts=[c for c in home.get("housingContracts",[]) if isinstance(c,dict) and c.get("tenure")=="inquilina"]
+    arrears=sum(max(0,int(c.get("rentArrears",0) or 0)) for c in contracts);chronic=any(int(c.get("missedRentMonths",0) or 0)>=2 for c in contracts);quality=max(0,min(100,float(home.get("quality",70) or 0)));environment=max(0,min(100,float(home.get("environmentChronicQuality",home.get("environmentQuality",70)) or 0)));utilities=home.get("utilityAccess",{});service=min([max(0,min(100,float(utilities.get(key,70) or 0))) for key in ("powerServedPct","waterServedPct","wastewaterTreatedPct")]) if utilities else 70
+    employment_pressure=unemployed/max(1,len(eligible));rent_pressure=bool(arrears or chronic);score=(100-quality)*.25+(100-environment)*.17+(100-service)*.13+employment_pressure*24+(18 if rent_pressure else 0)
+    reason="Alquiler impago" if rent_pressure else "Desempleo" if eligible and employment_pressure>=.5 else "Servicios insuficientes" if service<55 else "Deterioro ambiental" if environment<55 else "Vivienda deteriorada" if quality<55 else "Baja satisfacción urbana"
+    return {"score":score,"reason":reason,"rentArrears":arrears,"employmentPressure":employment_pressure,"serviceAccessPct":round(service),"environmentQuality":round(environment),"housingQuality":round(quality)}
+
 def move_households():
+    review_housing_contracts()
     homes=[b for b in state.get("buildings",[]) if b.get("kind")=="home"]
     tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
-    desired=max(2,min(24,4+state.get("population",0)//80+state.get("jobs",0)//20+tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)))
     demand_state=state.setdefault("housingDemand",{"unmet":0,"lastGenerated":0,"lastFilled":0})
+    chronic_renters=sum(1 for home in homes for contract in home.get("housingContracts",[]) if isinstance(contract,dict) and contract.get("tenure")=="inquilina" and int(contract.get("missedRentMonths",0) or 0)>=2 and max(0,int(contract.get("rentArrears",0) or 0))>=max(1,int(contract.get("monthlyRent",0) or 0)))
+    rent_adjustment=-min(3,chronic_renters//4)
+    population=sum(max(0,int(home.get("occupants",0) or 0)) for home in homes)
+    environment_quality=sum(float(home.get("environmentChronicQuality",home.get("environmentQuality",70)) or 0)*max(0,int(home.get("occupants",0) or 0)) for home in homes)/max(1,population) if population else 70
+    environment_adjustment=round((environment_quality-70)/18) if population else 0
+    desired=max(-12,min(24,4+state.get("population",0)//80+state.get("jobs",0)//20+tax_adjusted_migration_demand(state.get("approval",0),tax_pressure)+rent_adjustment+environment_adjustment))
+    demand_state["rentAdjustment"]=rent_adjustment
+    demand_state["environmentalAdjustment"]=environment_adjustment
     social=state.setdefault("socialServices",new_social_services());temporary=social.setdefault("shelterResidents",[])
     rehoused=0
     for person in temporary[:]:
@@ -5357,21 +5718,24 @@ def move_households():
         elif not vacancies and state.get("day",1)%30==0:ev("Vivienda sin vacantes","La demanda de mudanza no puede concretarse: los hogares existentes están completos.")
 
     elif desired<0:
-        departures=min(-desired,sum(max(0,b.get("occupants",0)) for b in homes));left=0
+        departures=min(-desired,sum(max(0,int(b.get("occupants",0) or 0)) for b in homes));left=0;reasons={};history=state.setdefault("migrationHistory",[])
         for _ in range(departures):
             occupied=[b for b in homes if b.get("occupants",0)>0]
             if not occupied:break
-            home=min(occupied,key=lambda b:(b.get("quality",70),b.get("y",0),b.get("x",0)))
-            members=home.setdefault("residents",[])
+            home=max(occupied,key=lambda b:(home_departure_assessment(b)["score"],-b.get("y",0),-b.get("x",0)));assessment=home_departure_assessment(home);members=home.setdefault("residents",[])
             if len(members)<home.get("occupants",0):
-                ensure_resident_roster()
-                members=home.setdefault("residents",[])
-            if members:members.pop()
+                ensure_resident_roster();members=home.setdefault("residents",[])
+            person=members.pop() if members else None
+            if person:
+                person["lastMigrationExitReason"]=assessment["reason"]
+                contract=next((c for c in home.get("housingContracts",[]) if isinstance(c,dict) and person.get("id") in (c.get("residentIds",[]) or [])),None)
+                if contract:contract["residentIds"]=[identity for identity in contract.get("residentIds",[]) if identity!=person.get("id")]
             home["occupants"]-=1
             if home.get("adaptiveReuseDay") and home.get("rentalLeaseDays"):home["rentalLeaseDays"].pop()
-            left+=1
-        state["population"]=max(0,state.get("population",0)-left);
-        if left:ev("Salida de residentes",f"{left} residentes dejaron hogares con menor calidad; sus perfiles laborales y plazas ocupadas se liberaron y los ingresos tributarios futuros bajan $ {left*3}/mes.")
+            reasons[assessment["reason"]]=reasons.get(assessment["reason"],0)+1;history.append({"day":state.get("day",1),"direction":"salida","reason":assessment["reason"],"x":home.get("x"),"y":home.get("y"),"rentArrears":assessment["rentArrears"],"housingQuality":assessment["housingQuality"],"serviceAccessPct":assessment["serviceAccessPct"],"environmentQuality":assessment["environmentQuality"]});left+=1
+        del history[:-120];demand_state["lastOutReasons"]=reasons
+        state["population"]=max(0,state.get("population",0)-left)
+        if left:ev("Salida de residentes",f"{left} residentes dejaron la ciudad; causas principales: {', '.join(f'{reason.lower()} ({count})' for reason,count in sorted(reasons.items(),key=lambda row:(-row[1],row[0]))[:3])}. Se liberaron plazas de vivienda y puestos ocupados.")
     report=update_social_shelters()
     pending=max(0,int(demand_state.get("unmet",0))-sum(not person.get("displacedBy") for person in temporary))
     jobs_room=max(0,round(state.get("jobs",0)/.42-state.get("population",0)))
@@ -5757,7 +6121,7 @@ def simulate_hotel_month(workforce):
         payroll=max(0,int(workplace.get("payroll",0)));costs=payroll+guests*18+260;profit=revenue-costs;tax=round(revenue*.05)
         for emp in workforce.get("employees",[]):
             if emp.get("site") is hotel:
-                wage=emp.get("earnedWage",emp.get("wage",0));home=emp.get("home",{});home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+                wage=emp.get("earnedWage",emp.get("wage",0));home=emp.get("home",{});credit_household_wage(home,emp,wage)
         hotel.update({"monthlyGuests":guests,"monthlyGuestNights":nights,"occupancy":occupancy,"accessConnected":connected})
         firm.update({"lastRevenue":revenue,"lastPayroll":payroll,"lastProfit":profit,"lastTourismTax":tax,"cash":firm.get("cash",0)+profit})
         if occupancy<25:hotel["nightlyRate"]=max(55,hotel.get("nightlyRate",90)-5)
@@ -6206,6 +6570,7 @@ def tick_one_day():
                 ev("Servicios sin financiación completa",f"Faltaron $ {shortfall:,} para el gasto mensual; la cobertura cae {loss} puntos hasta recuperar caja.".replace(",","."))
         state["lastPortMonthlyIncome"]=max(0,round(state.get("portMonthlyIncome",0)));state["portMonthlyIncome"]=0
         settle_property_owner_income()
+        settle_private_property_market()
         state["lastMonth"]=month
         ev("Actividad de empresas",f"Comercios vendieron {activity['sales']} unidades por $ {activity['revenue']:,}; nómina pagada $ {activity['payroll']:,}. Empresas cerradas este mes: {activity['closed']}.".replace(",","."))
         ev("Balance mensual",f"Ingresos $ {monthly_income:,} · programas abonados $ {budget_report['paid']:,} · mora programática $ {budget_report['arrears']:,} · cuotas $ {debt_due:,} · caja final $ {state['money']:,}.".replace(",","."))
@@ -6232,6 +6597,16 @@ def tick_one_day():
             ev("Obra reanudada por abastecimiento",f"{p['label']} recibió materiales y retoma el avance.")
         c=CONTRACTORS[p["contractor"]]
         if assess_contract_delay(p,c): continue
+        equipment=project_equipment_status(p)
+        if not equipment["available"]:
+            missing_names={"earthmover":"excavadora","crane":"grúa","paver":"pavimentadora","concretePump":"bomba de hormigón"}
+            p["equipmentStatus"]="limited";p["equipmentCause"]="Equipo compartido ocupado: "+", ".join(missing_names.get(key,key) for key in equipment["missing"])
+            if not p.get("equipmentWaitNotified"):
+                ev("Cuadrilla espera maquinaria",f"{p.get('label','La obra')} de {p.get('contractor','la constructora')}: {p['equipmentCause']}. Se prioriza el proyecto más antiguo y esta obra avanza con productividad reducida.");p["equipmentWaitNotified"]=True
+            if (int(state.get("day",1))+int(p.get("x",0))+int(p.get("y",0)))%2==0:
+                p["equipmentWaitDays"]=int(p.get("equipmentWaitDays",0))+1;continue
+        elif p.get("equipmentStatus")=="limited":
+            p["equipmentStatus"]="assigned";p["equipmentCause"]="";p["equipmentWaitNotified"]=False;ev("Maquinaria asignada",f"La cuadrilla de {p.get('contractor','la constructora')} liberó el equipo requerido y retomó el ritmo previsto en {p.get('label','la obra')}.")
         next_elapsed=p["elapsed"]+1
         missing=missing_materials(p,next_elapsed)
         if missing:
@@ -7048,6 +7423,10 @@ def _build_public_state(player_id=None):
     view["growthDemand"]=growth_demand(state)
     view["stateRevision"]=STATE_REVISION
     view["landClaims"]={**state["landClaims"],"frontierChunks":land_frontier(state)}
+    view["landValueReport"]=land_value_report()
+    view["housingMarketReport"]=housing_market_report()
+    view["constructionEquipment"]=construction_equipment_report()
+    view["networkResilienceReport"]=utility_resilience_report()
     view["governmentReport"]=government_report()
     view["municipalTeam"]=municipal_team_report(player_id)
     view["heritageReport"]=heritage_report()
@@ -7535,6 +7914,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),f"ejecutó la inversión aprobada · {decision['title'][:70]}",previous)
                     STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
                 if action=="new" and ACTIVE_SLOT_ID:save_slot()
+                online_players=player_list()
+                if not any(str(player.get("id"))==str(pid) for player in online_players):online_players.append({"id":pid,"name":state.get("playerNames",{}).get(pid,"Jugador")})
+                data["_serverPlayerId"]=pid;data["_onlinePlayers"]=online_players
                 estimated_cost=municipal_action_cost(data);threshold=cooperation.get("approvalThreshold",0);active_players=[member for member,last in state.get("players",{}).items() if last>time.time()-25]
                 if threshold and estimated_cost>=threshold and len(active_players)>=2:
                     decision=create_municipal_decision(pid,data,estimated_cost)
@@ -7556,6 +7938,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=="/api/action":
                 if not ROOM_OPEN:self._send(409,{"error":"La sala no está abierta."});return
                 action=data.get("action")
+                online_players=player_list()
+                if not any(str(player.get("id"))==str(pid) for player in online_players):online_players.append({"id":pid,"name":state.get("playerNames",{}).get(pid,"Jugador")})
+                data["_serverPlayerId"]=pid;data["_onlinePlayers"]=online_players
                 self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),action_description(data),state.get("events",[None])[0] if state.get("events") else None)
                 ensure_government_state()
                 ensure_land_claims()
@@ -7640,12 +8025,24 @@ class Handler(BaseHTTPRequestHandler):
                     label=MUNICIPAL_ROLES[role]["label"]
                     ev("Referente municipal actualizado",f"{label}: {assigned['label'] if assigned else 'decisiones compartidas'}. El equipo comparte todas las decisiones.")
                     self._send(200,public_state(pid,use_cache=True));return
+                elif action=="renameDistrict":
+                    try:rename_city_district(data.get("districtId"),data.get("name"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid,use_cache=True));return
+                if action=="setGovernmentPromises":
+                    try:set_government_promises(data.get("promiseIds"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid,use_cache=True));return
                 if action=="setCityDevelopmentFocus":
                     try:set_city_development_focus(data.get("goalId"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="startCitizenConsultation":
-                    try:start_government_consultation(data.get("districtId"),data.get("topic"))
+                    try:start_government_consultation(data.get("districtId"),data.get("topic"),data.get("_onlinePlayers"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    self._send(200,public_state(pid,use_cache=True));return
+                if action=="voteCitizenConsultation":
+                    try:record_government_consultation_vote(data.get("pollId"),data.get("_serverPlayerId"),data.get("vote"))
                     except ValueError as error:self._send(409,{"error":str(error)});return
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="recordGovernmentAgreement":
@@ -7875,20 +8272,39 @@ class Handler(BaseHTTPRequestHandler):
                         program.update({"status":"active","pauseReason":None});ev("Curso reanudado",f"{program['label']} retomará la formación en el próximo cierre mensual.")
                     else:
                         refund=max(0,program.get("remainingBudget",0));state["money"]+=refund;program.update({"status":"cancelled","remainingBudget":0,"cancelledDay":state["day"]});ev("Curso cancelado",f"{program['label']}: se devolvieron $ {refund:,} de presupuesto no utilizado.".replace(",","."))
+                elif action in ("listPrivateProperty","cancelPrivatePropertyListing"):
+                    try:x=int(data.get("x",-1));y=int(data.get("y",-1))
+                    except (TypeError,ValueError):self._send(400,{"error":"Elegí un inmueble válido."});return
+                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("kind") in ("home","shop","office","factory","hotel")),None)
+                    deed=ensure_land_claims().get("parcelDeeds",{}).get(f"{x},{y}",{})
+                    if not building or deed.get("ownerType")!="private":self._send(409,{"error":"Solo se pueden listar inmuebles privados terminados."});return
+                    if action=="cancelPrivatePropertyListing":
+                        listing=deed.get("saleListing",{})
+                        if listing.get("status")!="en venta":self._send(409,{"error":"El inmueble no tiene una oferta activa para retirar."});return
+                        deed["saleListing"]={**listing,"status":"retirada","withdrawnDay":int(state.get("day",1))}
+                        ev("Oferta inmobiliaria retirada",f"{building.get('name','El inmueble')} ya no se ofrece a inversores privados.")
+                    else:
+                        base={"home":4200,"shop":3600,"office":12000,"factory":9200,"hotel":13200}[building["kind"]]
+                        fair=max(1,int(building.get("marketValue") or base));raw=data.get("askingPrice",fair)
+                        try:asking=int(raw)
+                        except (TypeError,ValueError):self._send(400,{"error":"El precio solicitado debe ser un número entero."});return
+                        if asking<round(fair*.5) or asking>round(fair*1.25):self._send(409,{"error":f"El precio debe estar entre $ {round(fair*.5):,} y $ {round(fair*1.25):,}.".replace(",",".")});return
+                        deed["saleListing"]={"status":"en venta","askingPrice":asking,"listedDay":int(state.get("day",1)),"seller":deed.get("ownerName","Propietario privado")}
+                        ev("Inmueble ofrecido al mercado privado",f"{building.get('name','El inmueble')} se ofrece por $ {asking:,}. Un inversor podrá comprarlo al cierre mensual si hay demanda y capital.".replace(",","."))
                 elif action=="acquirePrivateProperty":
                     if state.get("government",{}).get("status") in ("derrotado","destituido"):
                         self._send(409,{"error":"El equipo dejó el gobierno. La partida está en modo observación."});return
                     try:x=int(data.get("x",-1));y=int(data.get("y",-1))
                     except (TypeError,ValueError):self._send(400,{"error":"Elegí un inmueble válido."});return
-                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("kind") in ("home","shop","factory","hotel")),None)
-                    if not building:self._send(409,{"error":"Solo se pueden comprar viviendas, comercios, fábricas u hoteles construidos."});return
+                    building=next((b for b in state.get("buildings",[]) if b.get("x")==x and b.get("y")==y and b.get("kind") in ("home","shop","office","factory","hotel")),None)
+                    if not building:self._send(409,{"error":"Solo se pueden comprar viviendas, comercios, oficinas, fábricas u hoteles construidos."});return
                     claims=ensure_land_claims();deed=claims.get("parcelDeeds",{}).get(f"{x},{y}")
                     if not deed or deed.get("ownerType")!="private":self._send(409,{"error":"El inmueble ya no tiene titularidad privada."});return
-                    base={"home":4200,"shop":3600,"factory":9200,"hotel":13200}[building["kind"]];quality=max(.45,min(1.2,(float(building.get("quality") or 82)/82)));price=max(1,round(float(building.get("marketValue") or base)*quality))
+                    base={"home":4200,"shop":3600,"office":12000,"factory":9200,"hotel":13200}[building["kind"]];quality=max(.45,min(1.2,(float(building.get("quality") or 82)/82)));price=max(1,round(float(building.get("marketValue") or base)*quality))
                     reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
                     if available<price:self._send(409,{"error":f"Quedan $ {available:,} libres; la tasación es $ {price:,}.".replace(",",".")});return
                     seller=deed.get("ownerName","Propietario privado");state["money"]-=price;history=deed.setdefault("transferHistory",[]);history.append({"day":int(state.get("day",1)),"price":price,"seller":seller,"buyer":f"Municipalidad de {state.get('cityName','Puerto Claro')}","type":"compraventa"});deed["transferHistory"]=history[-20:]
-                    deed.update({"ownerType":"municipal","ownerId":f"municipal-{x}-{y}","ownerName":f"Municipalidad de {state.get('cityName','Puerto Claro')}","rights":"dominio municipal","lastTransferDay":int(state.get("day",1)),"lastTransferPrice":price,"status":"inscripto"});building["ownerType"]="municipal";building["ownerName"]=deed["ownerName"];upkeep={"home":60,"shop":90,"factory":180}.get(building["kind"],0);prior=building.get("monthlyCost",0);building["monthlyCost"]=upkeep;state["monthlyExpenses"]+=max(0,upkeep-prior)
+                    deed.update({"ownerType":"municipal","ownerId":f"municipal-{x}-{y}","ownerName":f"Municipalidad de {state.get('cityName','Puerto Claro')}","rights":"dominio municipal","lastTransferDay":int(state.get("day",1)),"lastTransferPrice":price,"status":"inscripto"});building["ownerType"]="municipal";building["ownerName"]=deed["ownerName"];upkeep={"home":60,"shop":90,"office":220,"factory":180,"hotel":250}.get(building["kind"],0);prior=building.get("monthlyCost",0);building["monthlyCost"]=upkeep;state["monthlyExpenses"]+=max(0,upkeep-prior)
                     ev("Inmueble adquirido por el municipio",f"{building.get('name','Inmueble')}: compra a {seller} por $ {price:,}. El negocio continúa bajo su operador actual.".replace(",","."))
                 elif action=="place":
                     if any(site.get("x")==data.get("x") and site.get("y")==data.get("y") for site in state.get("railStations",[])):

@@ -1,4 +1,4 @@
-# Ciudad Viva · Alfa 0.285
+# Ciudad Viva · Alfa 0.286
 
 **WebRTC directo desde navegador con Cloudflare de respaldo:** Servidores públicos puede conectar por P2P desde GitHub Pages o la app Windows. Supabase sólo lleva señalización efímera; el anfitrión conserva la simulación y valida cada ruta. Si el P2P falla, se usa el túnel disponible. La compatibilidad con redes domésticas depende del NAT y aún necesita una prueba de campo; WebRTC sin TURN no garantiza conexión en todas las redes. La cuota de GitHub Actions está agotada hasta el 1 de diciembre de 2026: Vercel sigue desplegando `main`, las verificaciones se pueden correr localmente con `bash scripts/validate_local.sh` o `scripts/validate_local.ps1`, y el `.exe` se empaqueta en Windows con `scripts/build_windows_host.ps1`.
 

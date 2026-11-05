@@ -21,14 +21,24 @@ const fail=message=>{throw Error(message)};
 const id=()=>[...crypto.getRandomValues(new Uint8Array(16))].map(c=>c.toString(16).padStart(2,"0")).join("");
 const bytes=new TextEncoder();
 
+let rtcConfigCache=null;
 export async function loadRtcConfig(){
- const response=await fetch("/public_directory.json",{cache:"no-store"});
- if(!response.ok)fail("El ejecutable no incluye la configuración pública para WebRTC.");
+ if(rtcConfigCache)return rtcConfigCache;
+ // El .exe consulta el JSON público local. Un invitado que abrió el
+ // enlace Cloudflare obtiene sólo las mismas claves PUBLICABLES desde
+ // /api/public/config; se cachean para sobrevivir a una caída del túnel.
+ let response;
+ try{response=await fetch("/public_directory.json",{cache:"no-store"})}catch{}
+ if(!response?.ok){
+  response=await fetch("/api/public/config",{cache:"no-store"});
+ }
+ if(!response.ok)fail("No se pudo leer la configuración pública de señalización.");
  const data=await response.json();
  if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(data?.supabaseUrl||"")||
     !/^sb_publishable_[A-Za-z0-9_-]+$/.test(data?.supabaseAnonKey||""))
   fail("Configuración de señalización inválida.");
- return {base:data.supabaseUrl,key:data.supabaseAnonKey};
+ rtcConfigCache={base:data.supabaseUrl,key:data.supabaseAnonKey};
+ return rtcConfigCache;
 }
 function readyWithTimeout(promise,timeout,message){
  return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(Error(message)),timeout))]);

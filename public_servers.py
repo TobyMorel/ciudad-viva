@@ -29,7 +29,13 @@ def _utc():
 
 
 class PublicDirectory:
-    """Cliente REST con RLS y usuario anónimo; nunca usa una service_role key."""
+    """Directorio Supabase con configuración pública actualizable y RLS.
+
+    La URL y la publishable/anon key son deliberadamente públicas.
+    En un .exe congelado se consultan desde GitHub Pages cuando falta
+    la configuración embebida. No requiere actualizar el ejecutable.
+    """
+    CONFIG_URL = "https://tobymorel.github.io/ciudad-viva/public_directory.json"
     def __init__(self, root):
         config_file = Path(root) / "public_directory.json"
         try:
@@ -41,20 +47,46 @@ class PublicDirectory:
         parsed = urlsplit(self.url)
         self.enabled = bool(self.url and self.key and parsed.scheme == "https"
                             and (parsed.hostname or "").endswith(".supabase.co"))
-        self.access = None
-        self.refresh = None
-        self.owner = None
-        self.expires = 0
+        self._checked_remote = 0.0
+        self._config_lock = threading.Lock()
 
-    def _request(self, path, method="GET", payload=None, authenticated=False, prefer=None):
-        if not self.enabled:
+    def ensure_config(self):
+        """Descarga sólo una configuración pública HTTPS; nunca claves privadas."""
+        if self.enabled:
+            return True
+        with self._config_lock:
+            if self.enabled:
+                return True
+            now = time.monotonic()
+            if now - self._checked_remote < 90:
+                return False
+            self._checked_remote = now
+            try:
+                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.280"})
+                with urlopen(req, timeout=4) as response:
+                    config = json.loads(response.read(8192))
+            except (OSError, TimeoutError, ValueError, TypeError):
+                return False
+            if not isinstance(config, dict):
+                return False
+            remote_url = str(config.get("supabaseUrl") or "").strip().rstrip("/")
+            remote_key = str(config.get("supabaseAnonKey") or "").strip()
+            parsed = urlsplit(remote_url)
+            if not re.fullmatch(r"https://[a-z0-9-]+\.supabase\.co", remote_url, flags=re.I) or not remote_key:
+                return False
+            self.url = remote_url
+            self.key = remote_key
+            self.enabled = True
+        return True
+
+    def _request(self, path, method="GET", payload=None):
+        if not self.ensure_config():
             raise RuntimeError("El directorio público todavía no tiene un proyecto Supabase configurado.")
-        token = self.access if authenticated else self.key
-        headers = {"apikey": self.key, "Authorization": "Bearer " + token, "Accept": "application/json"}
+        headers = {"apikey": self.key, "Accept": "application/json"}
+        if not self.key.startswith("sb_publishable_"):
+            headers["Authorization"] = "Bearer " + self.key
         if payload is not None:
             headers["Content-Type"] = "application/json"
-        if prefer:
-            headers["Prefer"] = prefer
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         request = Request(self.url + path, data=data, headers=headers, method=method)
         try:
@@ -67,47 +99,26 @@ class PublicDirectory:
         except (URLError, TimeoutError) as error:
             raise RuntimeError("No se pudo acceder al directorio Supabase.") from error
 
-    def _login(self):
-        if self.access and self.expires > time.time() + 90:
-            return
-        if self.refresh:
-            try:
-                result = self._request("/auth/v1/token?grant_type=refresh_token", "POST",
-                                       {"refresh_token": self.refresh})
-            except RuntimeError:
-                self.refresh = None
-            else:
-                self._save_session(result)
-                return
-        result = self._request("/auth/v1/signup", "POST", {})
-        self._save_session(result)
-
-    def _save_session(self, result):
-        if not isinstance(result, dict) or not result.get("access_token") or not result.get("user", {}).get("id"):
-            raise RuntimeError("Supabase debe tener habilitado el acceso anónimo para anfitriones.")
-        self.access = result["access_token"]
-        self.refresh = result.get("refresh_token")
-        self.owner = result["user"]["id"]
-        self.expires = time.time() + int(result.get("expires_in", 3600))
-
     def publish(self, room):
-        self._login()
-        payload = {
-            "id": room["id"], "owner_id": self.owner,
-            "city": room["city"][:64], "host_name": room["host_name"][:32],
+        # La Edge Function verifica el token aleatorio de esta sala. Nunca
+        # guardamos credenciales privadas de Supabase en una PC anfitriona.
+        response = self._request("/functions/v1/public-rooms", "POST", {
+            "action": "publish", "id": room["id"], "token": room["token"],
+            "city": str(room["city"])[:64], "host_name": str(room["host_name"])[:32],
             "join_url": room["url"], "players": max(1, min(12, room["players"])),
-            "max_players": 12, "last_seen": _utc(),
-        }
-        return self._request("/rest/v1/public_rooms?on_conflict=id", "POST", payload,
-                             authenticated=True, prefer="resolution=merge-duplicates,return=minimal")
+        })
+        if not isinstance(response, dict) or not response.get("ok"):
+            raise RuntimeError("Supabase no confirmó la publicación de esta sala.")
+        return response
 
-    def unpublish(self, room_id):
-        if self.enabled and self.access:
-            self._request("/rest/v1/public_rooms?id=eq." + quote(room_id), "DELETE",
-                          authenticated=True, prefer="return=minimal")
+    def unpublish(self, room_id, token):
+        if self.enabled:
+            self._request("/functions/v1/public-rooms", "POST", {
+                "action": "unpublish", "id": room_id, "token": token,
+            })
 
     def browse(self):
-        if not self.enabled:
+        if not self.ensure_config():
             return {"configured": False, "rooms": [],
                     "message": "Falta configurar Supabase para mostrar las salas de todos los jugadores."}
         cutoff = quote((datetime.now(timezone.utc) - timedelta(seconds=90)).isoformat(timespec="seconds"), safe="")
@@ -117,7 +128,7 @@ class PublicDirectory:
         for row in rows:
             address = str(row.get("join_url") or "")
             parsed = urlsplit(address)
-            if parsed.scheme != "https" or not parsed.hostname:
+            if not re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com/?", address, flags=re.I):
                 continue
             rooms.append({
                 "id": row.get("id"), "name": str(row.get("city") or "Ciudad Viva")[:64],
@@ -157,22 +168,39 @@ class PublicProxy(BaseHTTPRequestHandler):
             entry = self.controller.sessions.get(morsel.value)
             if not entry or entry[1] < time.monotonic():
                 return None
-            self.controller.sessions[morsel.value] = (entry[0], time.monotonic() + 1800)
+            self.controller.sessions[morsel.value] = (entry[0], time.monotonic() + 86400)
             return entry[0]
 
     def do_GET(self):
-        path = unquote(urlsplit(self.path).path)
-        # El servidor original decodifica URL; autorizar sobre la MISMA ruta
-        # evita sortear /api/saves con /%61pi/saves y otros escapes.
+        raw_path = urlsplit(self.path).path
+        # No aceptar rutas codificadas: el upstream también decodifica las URLs.
+        # Sin esta restricción /%2561pi/saves saltaría el filtro del proxy.
+        if "%" in raw_path or "\\" in raw_path:
+            self._json(403, {"error": "Ruta pública inválida."})
+            return
+        path = raw_path
+        static_root = {"index.html", "offline_seed.json", "release_notes.json"}
+        static_ext = {".css", ".js", ".mjs", ".svg"}
+        static_assets = {".css",".js",".mjs",".svg",".png",".jpg",".jpeg",".webp",
+                         ".gif",".ico",".woff",".woff2",".ttf",".otf",".mp3",
+                         ".ogg",".wav",".json",".bin",".glb",".gltf",".wasm",".webmanifest"}
         if path == "/api/info":
             self._json(200, {"roomOpen": self.controller.room_info().get("roomOpen", False),
                              "publicUrl": self.controller.url, "ips": []})
             return
-        if path.startswith("/api/") and path not in (
-            "/api/public/rooms", "/api/state", "/api/sync",
-            "/api/cursors", "/api/cursors/stream"):
-            self._json(403, {"error": "Operación reservada al anfitrión."})
-            return
+        if path not in ("/api/public/rooms","/api/state","/api/sync",
+                        "/api/cursors","/api/cursors/stream"):
+            relative = path.lstrip("/")
+            pieces = relative.split("/")
+            safe = (not relative or relative in static_root or
+                    (len(pieces) == 1 and "." in relative and
+                     "." + relative.rsplit(".", 1)[-1].lower() in static_ext) or
+                    (len(pieces) > 1 and pieces[0] in ("assets","vendor") and
+                     pieces[-1].rpartition(".")[-1].lower() in {x.lstrip(".") for x in static_assets}))
+            safe = path == "/" or (safe and all(piece not in ("", ".", "..") for piece in pieces))
+            if not safe:
+                self._json(403, {"error": "Recurso reservado al anfitrión."})
+                return
         identity = self._identity()
         if path in ("/api/state", "/api/sync", "/api/cursors", "/api/cursors/stream") and not identity:
             self._json(401, {"error": "Primero tenés que entrar a la sala pública."})
@@ -183,7 +211,11 @@ class PublicProxy(BaseHTTPRequestHandler):
         self._forward("GET", identity=identity)
 
     def do_POST(self):
-        path = unquote(urlsplit(self.path).path)
+        raw_path = urlsplit(self.path).path
+        if "%" in raw_path or "\\" in raw_path:
+            self._json(403, {"error": "Ruta pública inválida."})
+            return
+        path = raw_path
         if path not in ("/api/room/join", "/api/action", "/api/chat", "/api/cursors"):
             self._json(403, {"error": "Operación reservada al anfitrión."})
             return
@@ -260,7 +292,10 @@ class PublicProxy(BaseHTTPRequestHandler):
             if new_session and response.status == 200:
                 token = secrets.token_urlsafe(32)
                 with self.controller.session_lock:
-                    self.controller.sessions[token] = (identity, time.monotonic() + 1800)
+                    now = time.monotonic()
+                    if len(self.controller.sessions) >= 256:
+                        self.controller.sessions = {k: v for k, v in self.controller.sessions.items() if v[1] > now}
+                    self.controller.sessions[token] = (identity, now + 86400)
                 self.send_header("Set-Cookie", "cv_public_session=" + token
                                  + "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax")
             self.end_headers()
@@ -287,6 +322,7 @@ class PublicRooms:
         self.process = None
         self.url = None
         self.room_id = None
+        self.room_secret = None
         self.host_name = "Anfitrión"
         self.last_error = None
         self.finished = threading.Event()
@@ -299,7 +335,7 @@ class PublicRooms:
 
     def _room_payload(self):
         info = self.room_info()
-        return {"id": self.room_id, "city": info.get("roomName") or "Ciudad Viva",
+        return {"id": self.room_id, "token": self.room_secret, "city": info.get("roomName") or "Ciudad Viva",
                 "host_name": self.host_name, "players": info.get("players", 1),
                 "url": self.url}
 
@@ -317,6 +353,7 @@ class PublicRooms:
             self.finished.clear()
             self.sessions.clear()
             self.room_id = str(uuid.uuid4())
+            self.room_secret = secrets.token_hex(32)
             self.host_name = " ".join(str(host_name or "Anfitrión").split())[:32]
             self.last_error = None
             handler = type("CiudadVivaPublicProxy", (PublicProxy,), {"controller": self})
@@ -350,7 +387,7 @@ class PublicRooms:
             except Exception:
                 self.stop()
                 raise
-            if self.directory.enabled:
+            if self.directory.ensure_config():
                 try:
                     self.directory.publish(self._room_payload())
                 except RuntimeError as error:
@@ -365,7 +402,7 @@ class PublicRooms:
             if not self.process or self.process.poll() is not None or not self.room_info().get("roomOpen"):
                 self.stop()
                 break
-            if self.directory.enabled:
+            if self.directory.ensure_config():
                 try:
                     self.directory.publish(self._room_payload())
                     self.last_error = None
@@ -375,9 +412,9 @@ class PublicRooms:
     def stop(self):
         with self.lock:
             self.finished.set()
-            if self.directory.enabled and self.room_id:
+            if self.directory.enabled and self.room_id and self.room_secret:
                 try:
-                    self.directory.unpublish(self.room_id)
+                    self.directory.unpublish(self.room_id, self.room_secret)
                 except RuntimeError:
                     pass  # La caducidad de 90 segundos limpia anuncios huérfanos.
             if self.process:
@@ -393,4 +430,5 @@ class PublicRooms:
                 self.proxy = None
             self.url = None
             self.room_id = None
+            self.room_secret = None
             self.sessions.clear()

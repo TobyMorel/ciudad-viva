@@ -1,77 +1,53 @@
-# Ciudad Viva — servidores públicos autoalojados (Alfa 0.279)
+# Ciudad Viva · Directorio online autoalojado (Alfa 0.280)
 
-## Cómo funciona
+## Estado real
 
-La persona que crea una partida usa **Crear servidor público** en el ejecutable Windows. La simulación y los guardados permanecen en su PC. El mismo `server.py` y el mismo motor `offline.js` atienden las conexiones LAN y las que lleguen desde Internet.
+**Proyecto Supabase conectado:** CiudadViva. El directorio de metadatos está alojado en `https://tcglqhxoymnmbxxaaweq.supabase.co`, pero **ninguna partida ni motor de simulación reside allí**. La base de datos solamente registra nombre de ciudad, anfitrión, enlace HTTPS, ocupación y última actividad.
 
-La versión Windows incluye el programa auxiliar `cloudflared.exe`. Al publicar, la app abre un túnel saliente hacia un proxy HTTP local que expone sólo los recursos y acciones que necesita un invitado. El anfitrión no tiene que abrir puertos del router ni instalar una VPN. Se genera un enlace HTTPS temporal para invitar a otras personas. Al cerrar el ejecutable se cierra el túnel.
+**Los jugadores no necesitan instalar Supabase, Cloudflare ni Node.** El `CiudadViva.exe` ya empaqueta el juego, el motor Node y el conector `cloudflared.exe`. Al elegir **Crear servidor público**, el servidor arranca en su PC y la app crea un túnel HTTPS saliente sin abrir puertos. Al elegir **Servidores públicos**, el ejecutable y GitHub Pages leen el mismo listado global.
 
-**Cursores por Internet:** los túneles rápidos no admiten SSE, por eso la versión pública usa el sondeo HTTP periódico del juego; las salas LAN conservan SSE para menor latencia.
+La **clave publicable** en `public_directory.json` es segura para distribuir. La **service role key** sólo existe como variable privada gestionada por el runtime de Supabase Edge Functions, **nunca** en GitHub, en el ejecutable ni en un navegador.
 
-**Advertencia:** este primer soporte usa Cloudflare Quick Tunnels. Cloudflare indica que son para desarrollo/pruebas, no para producción, y no ofrecen una URL estable ni garantías de continuidad. Para sostener un directorio público a gran escala debe adoptarse un servicio de túnel/retransmisión adecuado para producción. La simulación puede seguir alojada exclusivamente en la PC del anfitrión.
+## Seguridad de publicación y descubrimiento
 
-## Directorio global de salas (configuración única)
+- La tabla `public.public_rooms` tiene RLS habilitada y sólo concede `SELECT` sobre columnas públicas, para filas activas de los últimos 90 segundos. Nadie puede leer `owner_secret_hash` ni escribir directamente desde una clave pública.
+- La función `public-rooms` permite `publish` y `unpublish` desde el backend local. El anfitrión genera un identificador UUIDv4 y un secreto aleatorio de 256 bits por sesión; Supabase almacena únicamente el hash SHA-256. Las actualizaciones y bajas requieren conocer el secreto original. Es un protocolo por sala, sin registro de usuario ni autenticación de Supabase en cada PC.
+- El anuncio se renueva cada 24 segundos y deja de ser visible automáticamente tras 90 segundos sin actividad.
+- La función valida el hostname `*.trycloudflare.com`, los límites de jugadores y nombres y restringe la creación de varias salas desde una conexión.
+- El proxy local, accesible desde el túnel, sólo entrega archivos públicos y rutas de jugador permitidas. Impide consultar guardados, crear otra sala o ejecutar funciones administrativas. Cada invitado obtiene su propio ID de jugador y una cookie `HttpOnly` y `Secure`.
+- LAN, Radmin VPN y Hamachi siguen funcionando como antes. Los cursores públicos utilizan HTTP polling, debido a la restricción de SSE en Cloudflare Quick Tunnels.
 
-Supabase sólo almacenaría metadatos de presencia, jamás la ciudad: UUID de sala, nombre, anfitrión, URL temporal HTTPS, cantidad de participantes y última actualización. La app refresca el registro cada 24 segundos y el directorio deja de mostrar salas sin actualización durante 90 segundos.
+## Arquitectura
 
-Para activar el listado global, el operador de Ciudad Viva debe crear **un solo proyecto Supabase** y habilitar **Anonymous Sign-Ins**. No hace falta que cada jugador cree una cuenta ni configure una base de datos. En el editor SQL del proyecto:
+```text
+Ciudad Viva.exe (PC del anfitrión)
+  ├── Motor autoritativo offline.js / Node.js
+  ├── Guardados locales
+  ├── Servidor HTTP LAN
+  └── Proxy de invitados → túnel HTTPS de Cloudflare
+                                  ↑
+                          Invitados remotos
 
-```sql
-create table if not exists public.public_rooms (
-  id uuid primary key,
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  city text not null check (char_length(city) between 1 and 64),
-  host_name text not null check (char_length(host_name) between 1 and 32),
-  join_url text not null check (join_url ~ '^https://[a-z0-9-]+[.]trycloudflare[.]com/?$'),
-  players integer not null check (players between 1 and 12),
-  max_players integer not null default 12 check (max_players = 12),
-  last_seen timestamptz not null default now()
-);
-create index if not exists idx_public_rooms_last_seen on public.public_rooms(last_seen desc);
-alter table public.public_rooms enable row level security;
-revoke all on public.public_rooms from anon, authenticated;
-grant select on public.public_rooms to anon, authenticated;
-grant insert, update, delete on public.public_rooms to authenticated;
+Supabase CiudadViva
+  ├── Tabla public_rooms: sólo anuncios efímeros
+  └── Edge Function public-rooms: verificar token y publicar / retirar
 
-create policy "Leer salas recientes o propias" on public.public_rooms
-  for select to anon, authenticated
-  using (last_seen > now() - interval '90 seconds' or owner_id = (select auth.uid()));
-
-create policy "Crear sala propia" on public.public_rooms
-  for insert to authenticated
-  with check (owner_id = (select auth.uid()));
-
-create policy "Actualizar sala propia" on public.public_rooms
-  for update to authenticated
-  using (owner_id = (select auth.uid()))
-  with check (owner_id = (select auth.uid()));
-
-create policy "Eliminar sala propia" on public.public_rooms
-  for delete to authenticated
-  using (owner_id = (select auth.uid()));
+GitHub Pages y CiudadViva.exe → leen el directorio público
 ```
 
-Rellenar `public_directory.json` con `supabaseUrl` (debe ser `https://...supabase.co`) y `supabaseAnonKey` (clave pública/anon o publishable de Supabase), recompilar el .exe y publicar una nueva versión. Para el desarrollo en Python también se aceptan `CIUDAD_VIVA_SUPABASE_URL` y `CIUDAD_VIVA_SUPABASE_ANON_KEY`.
+## Archivos y mantenimiento
 
-**No incluir jamás una service_role key.** La publicación utiliza una sesión anónima de Supabase con JWT y políticas RLS que sólo permiten editar la sala propia. No envía snapshots, datos personales de ciudadanos, chat ni acciones de construcción a Supabase.
+- `public_directory.json`: URL y clave **publicable** del proyecto central, descargadas automáticamente por ejecutables que no tengan configuración embebida.
+- `public_servers.py`: gestión del túnel, proxy de visitantes, sesiones individuales y conexión con Supabase.
+- `supabase/functions/public-rooms/index.ts`: código de la función Edge; su `verify_jwt` es false **porque implementa autorización propia por secreto de sala de 256 bits**.
+- `supabase/public_rooms_schema.sql`: estructura de tabla y permisos de sólo lectura para clientes.
+- `scripts/smoke_public_directory.py`: comprobación de publicación, acceso anónimo de sólo lectura, rechazo de un secreto incorrecto y retirada segura.
+- `tests/test_public_servers.py`: comprobaciones offline de autorización y resistencia del proxy.
 
-**Situación actual:** el repositorio incluye `public_directory.json` vacío, porque todavía no se proporcionó un proyecto Supabase. El listado público permanecerá deshabilitado hasta su configuración. Los enlaces HTTPS temporales directos pueden crearse sin Supabase.
+## Límites y seguridad operativa
 
-## Seguridad
+**Cloudflare Quick Tunnels es un mecanismo experimental destinado a pruebas/desarrollo, no a producción.** Su disponibilidad, latencia y enlace temporal no están garantizados. El directorio está funcional, pero una oferta pública estable para una comunidad grande necesita un servicio de túneles gestionados/retransmisión compatible con sus condiciones de uso. Los jugadores nunca deberían conectar una ciudad importante con desconocidos sin una copia local.
 
-El túnel público llega a un proxy independiente, escuchando sólo en `127.0.0.1` en un puerto efímero. El proxy permite servir los archivos estáticos y las rutas de unión, estado, sincronización, cursores, chat y acciones de un jugador autenticado. Bloquea desde Internet las APIs de creación de sala, selección de guardados, guardado/carga y reinicio de partida. Los invitados obtienen un token de sesión aleatorio en una cookie `HttpOnly; Secure; SameSite=Lax`; el proxy asigna IDs nuevos para impedir que se hagan pasar por el anfitrión.
+El prototipo todavía no incluye bloqueo/baneo, moderación de chat, sistema antitrampas, reconexión persistente entre reinicios ni defensas completas contra abuso masivo. Quien entra en una partida pública participa en las decisiones, como en LAN.
 
-El servidor LAN original sigue disponible, conservando Radmin/Hamachi y las conexiones directas en red local. La publicación pública es explícita, no automática para todas las salas.
-
-**Pendiente antes de considerar esto un sistema público definitivo:** controles de expulsión/baneo, limitación de frecuencia por jugador, mitigación de abusos, reconexión fuerte, revisión de límites de recursos, autenticación persistente opcional y pruebas de penetración. Todos los participantes que ingresen pueden construir y tomar decisiones, igual que en LAN. Guardar copias de seguridad antes de abrir ciudades importantes a personas desconocidas.
-
-## Validaciones exigidas
-
-1. Verificar que el artefacto de GitHub Actions contiene Node.js y `cloudflared.exe` sin instalaciones adicionales.
-2. Crear una partida en un Windows anfitrión y obtener el enlace HTTPS sin abrir puertos.
-3. Unirse desde otra conexión a Internet sin Radmin ni Hamachi y probar acciones simultáneas, chat, cursores y persistencia local.
-4. Confirmar que los invitados no pueden consultar `/api/saves`, guardar/cargar ni crear una sala.
-5. Configurar Supabase, comprobar listados, ocupación, desconexión y caducidad.
-6. Probar suspensión/reanudación del PC, cortes de Internet, latencia y estabilidad durante varias horas.
-
-No se debe confundir el éxito de las pruebas unitarias o del empaquetado con la verificación real de conectividad entre distintas redes.
+La base Supabase del plan Free tiene cuotas y límites; si el número de salas y consultas crece, habrá que supervisar su consumo. La simulación nunca deberá trasladarse a esa base.

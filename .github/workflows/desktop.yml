@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'server.py'
+      - 'public_servers.py'
       - 'shared_engine.py'
       - 'online_engine.mjs'
       - 'desktop_app.py'

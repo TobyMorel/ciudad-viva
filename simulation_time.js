@@ -1,5 +1,7 @@
 export const MINUTES_PER_DAY=1440;
-export const REAL_SECONDS_PER_GAME_HOUR=4;
+// Un día de juego dura 4 minutos y 48 segundos a velocidad x1; los ciclos de
+// luz tienen tiempo para apreciarse y x2/x4 siguen acelerando la simulación.
+export const REAL_SECONDS_PER_GAME_HOUR=12;
 export function gameMinutesForElapsedSeconds(seconds,speed=1){return Math.max(0,Number(seconds)||0)*Math.max(1,Number(speed)||1)*60/REAL_SECONDS_PER_GAME_HOUR}
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const smoothstep=value=>{const t=clamp(value,0,1);return t*t*(3-2*t)};

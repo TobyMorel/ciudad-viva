@@ -408,3 +408,5 @@ button:focus-visible{outline:2px solid #b85681;outline-offset:2px}
 @media(max-width:650px){.online-hud{right:8px;bottom:77px;width:min(250px,calc(100vw - 95px));max-height:35dvh}.online-hud #onlineHudBody{max-height:calc(35dvh - 44px)}.online-feed,.online-chat{max-height:70px}.save-list{max-height:26dvh}}
 
 .road-controls .plot-actions:first-of-type{display:grid;grid-template-columns:repeat(5,minmax(30px,1fr));gap:5px}.road-controls .plot-actions:first-of-type button{min-width:0;padding:7px 3px;text-align:center;font-size:12px}.road-controls .plot-actions:last-of-type{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.road-controls .plot-actions:last-of-type button{min-width:0;padding:7px 6px;white-space:normal;line-height:1.25;overflow-wrap:anywhere}.road-controls [aria-pressed=true]{border-color:#1d8468;background:#dff5ea;color:#145842;box-shadow:inset 0 0 0 1px #1d846833}
+
+.training-education-levels span{overflow-wrap:anywhere}.training-education-note{display:block;color:#6d8175;font:9px/1.45 system-ui}.training-education-levels>div{min-width:0}

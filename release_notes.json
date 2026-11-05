@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.275",
+  "currentVersion": "0.276",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.276",
+      "date": "2026-11-05",
+      "title": "Estacionamiento, tránsito, formación y ciclos día-noche",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los autos particulares ahora recorren únicamente calles conectadas; llegan a una plaza reservada en la calle o garaje, estacionan y la persona camina desde el borde del edificio. No usan la parcela del destino como tramo de ruta.",
+        "Las plazas de calle solo se asignan en segmentos rectos señalizados. La P aparece únicamente en los vehículos a los que no se les pudo asignar un lugar, y las plazas cercanas se reservan sin duplicarlas.",
+        "La escena representa más viajes de la población con varios autos, bicicletas y peatones por grupo de viajes, usando límites de actores para conservar el rendimiento. Los peatones y ciclistas empiezan y terminan fuera de las huellas de los edificios.",
+        "Las marcas de estacionamiento ya no dibujan cuadrículas sobre curvas e intersecciones; cada tramo vial reconstruye su pavimento y sus bordes a partir de las conexiones actuales.",
+        "Los iconos de avisos vuelven a proyectarse mientras se mueve la cámara para mantenerlos anclados a sus edificios durante paneo y rotación.",
+        "Formación muestra cuántos residentes están sin estudios completos, tienen primario, secundario o universidad, e indica por qué la falta de puestos universitarios puede elevar la demanda de oficinas.",
+        "Los ciclos de luz duran más: un día de juego ocupa 4 minutos y 48 segundos a velocidad x1; x2 y x4 aceleran también el paso del tiempo."
+      ],
+      "verification": "Revisión estática y comprobación de sintaxis JavaScript. No se ejecutó la suite de pruebas."
+    },
     {
       "version": "0.275",
       "date": "2026-11-05",

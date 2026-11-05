@@ -9,18 +9,24 @@ export const roadAssetMap=assets=>new Map((assets||[]).map(asset=>[`${asset.x},$
 export const roadParkingSpaces=(asset,degree=2)=>roadTypeInfo(asset?.roadType).parking*(degree>=3?0:1);
 
 function pathToRoad(origin,slot,roads,roadSet){
-  const from=[Number(origin[0]),Number(origin[1])],target=slot.road,queue=[],previous=new Map(),goals=new Set([`${target[0]},${target[1]}`]);
-  for(const [x,y] of [[from[0]+1,from[1]],[from[0]-1,from[1]],[from[0],from[1]+1],[from[0],from[1]-1]]){const id=`${x},${y}`;if(roadSet.has(id)&&!previous.has(id)){previous.set(id,null);queue.push([x,y])}}
-  if(roadSet.has(`${from[0]},${from[1]}`)&&!previous.has(`${from[0]},${from[1]}`)){previous.set(`${from[0]},${from[1]}`,null);queue.push(from)}
-  if(!queue.length)return [from,[...target]];
+  const point=value=>Array.isArray(value)?value:value?.road;
+  const from=point(origin),to=point(slot);if(!Array.isArray(from)||!Array.isArray(to))return[];
+  const neighbors=([x,y])=>[[x,y],[x+1,y],[x-1,y],[x,y+1],[x,y-1]];
+  const starts=(origin?.road?[from]:neighbors(from)).filter(([x,y])=>roadSet.has(`${x},${y}`));
+  const goals=new Set((slot?.road?[to]:neighbors(to)).filter(([x,y])=>roadSet.has(`${x},${y}`)).map(([x,y])=>`${x},${y}`));
+  if(!starts.length||!goals.size)return[];
+  const queue=[],previous=new Map();for(const [x,y] of starts){const id=`${x},${y}`;if(previous.has(id))continue;previous.set(id,null);queue.push([x,y])}
   let end=null;
-  for(let i=0;i<queue.length;i++){const [x,y]=queue[i],id=`${x},${y}`;if(goals.has(id)){end=id;break}for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){const next=`${nx},${ny}`;if(!roadSet.has(next)||previous.has(next))continue;previous.set(next,id);queue.push([nx,ny])}}
-  if(!end)return [from,[...target]];const path=[];for(let at=end;at;at=previous.get(at)){const [x,y]=at.split(',').map(Number);path.push([x,y])}path.reverse();if(path[0][0]!==from[0]||path[0][1]!==from[1])path.unshift(from);return path;
+  for(let i=0;i<queue.length;i++){
+    const [x,y]=queue[i],id=`${x},${y}`;if(goals.has(id)){end=id;break}
+    for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){const next=`${nx},${ny}`;if(!roadSet.has(next)||previous.has(next))continue;previous.set(next,id);queue.push([nx,ny])}
+  }
+  if(!end)return[];const path=[];for(let at=end;at;at=previous.get(at)){const [x,y]=at.split(',').map(Number);path.push([x,y])}return path.reverse();
 }
 
 export function assignParking(state,trips){
   const assets=roadAssetMap(state.roadAssets),roads=state.roads||[],roadSet=new Set(roads.map(([x,y])=>`${x},${y}`)),roadSlots=[];
-  for(const [x,y] of roads){const degree=[[1,0],[-1,0],[0,1],[0,-1]].reduce((n,[dx,dy])=>n+Number(roadSet.has(`${x+dx},${y+dy}`)),0),count=roadParkingSpaces(assets.get(`${x},${y}`),degree);for(let index=0;index<count;index++)roadSlots.push({id:`street:${x},${y}:${index}`,kind:'street',road:[x,y],index,x,y})}
+  for(const [x,y] of roads){const n=roadSet.has(`${x},${y-1}`),s=roadSet.has(`${x},${y+1}`),e=roadSet.has(`${x+1},${y}`),w=roadSet.has(`${x-1},${y}`),degree=Number(n)+Number(s)+Number(e)+Number(w),straight=degree===2&&(n&&s||e&&w),count=straight?roadParkingSpaces(assets.get(`${x},${y}`),degree):0;for(let index=0;index<count;index++)roadSlots.push({id:`street:${x},${y}:${index}`,kind:'street',road:[x,y],index,x,y})}
   const garages=(state.buildings||[]).filter(b=>b.serviceModel==='parkingGarage'&&['habilitado','operativo'].includes(b.status)),garageSlots=[];
   for(const garage of garages){const adjacent=roads.filter(([x,y])=>Math.abs(x-garage.x)+Math.abs(y-garage.y)===1).sort((a,b)=>Math.abs(a[0]-garage.x)+Math.abs(a[1]-garage.y)-Math.abs(b[0]-garage.x)-Math.abs(b[1]-garage.y)||a[1]-b[1]||a[0]-b[0]),road=adjacent[0];if(!road)continue;for(let index=0;index<Math.max(0,Math.trunc(garage.parkingSpaces||24));index++)garageSlots.push({id:`garage:${garage.x},${garage.y}:${index}`,kind:'garage',road:[...road],index,x:garage.x,y:garage.y,garage})}
   const allSlots=[...roadSlots,...garageSlots],slotsByRoad=new Map(),occupancy=new Map(),garagePeaks=new Map(garages.map(g=>[g,0])),reservations=[];
@@ -50,9 +56,11 @@ export function assignParking(state,trips){
     const endWindow=trip.returnWindowKey||back?.departureWindowKey||'eveningPeak',destinationPeriod=isWork?'workday':`visit:${window}`,homePeriod=`home:${endWindow}`;
     const destinations=allocate(trip.to.map(Number),destinationPeriod,demand,trip),first=destinations[0]||null,origins=first?allocate(trip.from.map(Number),homePeriod,destinations.length,trip):[],origin=origins[0]||null;
     const allocated=destinations.length,shortfall=Math.max(0,demand-allocated),searchMinutes=shortfall?Math.min(30,5+Math.ceil(shortfall/Math.max(1,demand)*20)):first?Math.round(first.distance*.35):0,walk=first?.walkDistance||0,stay=isWork?600:Math.max(60,Number(trip.parkingStayMinutes)||150);
-    let driveRoute=[];if(first){driveRoute=pathToRoad(origin?.road||trip.from,first,roads,roadSet);if(back){const returnShortfall=Math.max(0,destinations.length-origins.length);usedReturns.add(back);back.parkingSlot=origin;back.parkingSlots=origins.slice(0,12);back.parkingOriginSlot=first;back.parkingWalkDistance=origin?.walkDistance||0;back.parkingRoute=[...driveRoute].reverse();back.parkingSearching=returnShortfall>0;back.parkingSearchMinutes=returnShortfall?Math.min(30,5+Math.ceil(returnShortfall/Math.max(1,destinations.length)*20)):0;back.parkingSpacesUsed=origins.length;back.parkingAssignedVehicles=origins.length;back.parkingShortfall=returnShortfall;back.parkingStayMinutes=stay;back.parkingCapacity=allSlots.length}}
-    else if(back){back.parkingSlot=null;back.parkingSlots=[];back.parkingOriginSlot=null;back.parkingRoute=[];back.parkingWalkDistance=0;back.parkingAssignedVehicles=0;back.parkingSearching=true;back.parkingSearchMinutes=searchMinutes;back.parkingSpacesUsed=0;back.parkingShortfall=demand;back.parkingStayMinutes=stay;back.parkingCapacity=allSlots.length}
-    Object.assign(trip,{parkingSlot:first,parkingSlots:destinations.slice(0,12),parkingOriginSlot:origin,parkingOriginSlots:origins.slice(0,12),parkingRoute:driveRoute,parkingWalkDistance:walk,parkingAssignedVehicles:allocated,parkingSearchMinutes:searchMinutes,parkingSearching:shortfall>0,parkingSpacesUsed:allocated,parkingShortfall:shortfall,parkingMinutes:2+searchMinutes,parkingStayMinutes:stay,parkingCapacity:allSlots.length});
+    const visibleDestinations=destinations.slice(0,12),visibleOrigins=origins.slice(0,12),parkingRoutes=visibleDestinations.map((slot,index)=>pathToRoad(visibleOrigins[index]||trip.from,slot,roads,roadSet)),parkingWalkRoutes=visibleDestinations.map(slot=>pathToRoad(trip.to,slot,roads,roadSet));
+    let searchRoute=pathToRoad(trip.from,trip.to,roads,roadSet);if(searchRoute.length===1){const [x,y]=searchRoute[0],neighbor=[[x+1,y],[x-1,y],[x,y+1],[x,y-1]].find(([nx,ny])=>roadSet.has(`${nx},${ny}`));if(neighbor)searchRoute=[searchRoute[0],neighbor,searchRoute[0]]}
+    const driveRoute=parkingRoutes[0]||searchRoute;
+    if(back){const returnShortfall=Math.max(0,destinations.length-origins.length),returnRoutes=visibleOrigins.map((slot,index)=>parkingRoutes[index]?.slice().reverse()||pathToRoad(trip.to,slot,roads,roadSet));usedReturns.add(back);Object.assign(back,{parkingSlot:origin,parkingSlots:visibleOrigins,parkingOriginSlot:first,parkingOriginSlots:visibleDestinations,parkingRoute:returnRoutes[0]||searchRoute.slice().reverse(),parkingRoutes:returnRoutes,parkingSearchRoute:searchRoute.slice().reverse(),parkingWalkRoutes:visibleOrigins.map(slot=>pathToRoad(back.to,slot,roads,roadSet)),parkingWalkDistance:origin?.walkDistance||0,parkingSearching:returnShortfall>0,parkingSearchMinutes:returnShortfall?Math.min(30,5+Math.ceil(returnShortfall/Math.max(1,destinations.length)*20)):0,parkingSpacesUsed:origins.length,parkingAssignedVehicles:origins.length,parkingShortfall:returnShortfall,parkingStayMinutes:stay,parkingCapacity:allSlots.length})}
+    Object.assign(trip,{parkingSlot:first,parkingSlots:visibleDestinations,parkingOriginSlot:origin,parkingOriginSlots:visibleOrigins,parkingRoute:driveRoute,parkingRoutes,parkingSearchRoute:searchRoute,parkingWalkRoutes,parkingWalkDistance:walk,parkingAssignedVehicles:allocated,parkingSearchMinutes:searchMinutes,parkingSearching:shortfall>0,parkingSpacesUsed:allocated,parkingShortfall:shortfall,parkingMinutes:2+searchMinutes,parkingStayMinutes:stay,parkingCapacity:allSlots.length});
     trip.estimatedMinutes=(Number(trip.estimatedMinutes)||0)+searchMinutes;trip.trafficFactor=(Number(trip.trafficFactor)||1)+searchMinutes/10;
     totalDemand+=demand;totalAllocated+=allocated;weightedSearch+=searchMinutes*demand;weightedWalk+=walk*demand;weightedStay+=stay*demand;weightedCars+=demand;
     if(back)usedReturns.add(back);

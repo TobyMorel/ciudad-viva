@@ -259,7 +259,7 @@ class PublicProxy(BaseHTTPRequestHandler):
                 with self.controller.session_lock:
                     self.controller.sessions[token] = (identity, time.monotonic() + 1800)
                 self.send_header("Set-Cookie", "cv_public_session=" + token
-                                 + "; Path=/; Max-Age=1800; HttpOnly; Secure; SameSite=Lax")
+                                 + "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax")
             self.end_headers()
             self.wfile.write(payload)
         except (OSError, TimeoutError, BrokenPipeError, ConnectionError) as error:

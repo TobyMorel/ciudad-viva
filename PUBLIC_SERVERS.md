@@ -2,9 +2,9 @@
 
 ## Cómo funciona
 
-La persona que crea una partida usa **Crear servidor público** en el ejecutable Windows. La simulación y los guardados permanecen en su PC. El mismo \`server.py\` y el mismo motor \`offline.js\` atienden las conexiones LAN y las que lleguen desde Internet.
+La persona que crea una partida usa **Crear servidor público** en el ejecutable Windows. La simulación y los guardados permanecen en su PC. El mismo `server.py` y el mismo motor `offline.js` atienden las conexiones LAN y las que lleguen desde Internet.
 
-La versión Windows incluye el programa auxiliar \`cloudflared.exe\`. Al publicar, la app abre un túnel saliente hacia un proxy HTTP local que expone sólo los recursos y acciones que necesita un invitado. El anfitrión no tiene que abrir puertos del router ni instalar una VPN. Se genera un enlace HTTPS temporal para invitar a otras personas. Al cerrar el ejecutable se cierra el túnel.
+La versión Windows incluye el programa auxiliar `cloudflared.exe`. Al publicar, la app abre un túnel saliente hacia un proxy HTTP local que expone sólo los recursos y acciones que necesita un invitado. El anfitrión no tiene que abrir puertos del router ni instalar una VPN. Se genera un enlace HTTPS temporal para invitar a otras personas. Al cerrar el ejecutable se cierra el túnel.
 
 **Advertencia:** este primer soporte usa Cloudflare Quick Tunnels. Cloudflare indica que son para desarrollo/pruebas, no para producción, y no ofrecen una URL estable ni garantías de continuidad. Para sostener un directorio público a gran escala debe adoptarse un servicio de túnel/retransmisión adecuado para producción. La simulación puede seguir alojada exclusivamente en la PC del anfitrión.
 
@@ -14,7 +14,7 @@ Supabase sólo almacenaría metadatos de presencia, jamás la ciudad: UUID de sa
 
 Para activar el listado global, el operador de Ciudad Viva debe crear **un solo proyecto Supabase** y habilitar **Anonymous Sign-Ins**. No hace falta que cada jugador cree una cuenta ni configure una base de datos. En el editor SQL del proyecto:
 
-\`\`\`sql
+```sql
 create table if not exists public.public_rooms (
   id uuid primary key,
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -47,17 +47,17 @@ create policy "Actualizar sala propia" on public.public_rooms
 create policy "Eliminar sala propia" on public.public_rooms
   for delete to authenticated
   using (owner_id = (select auth.uid()));
-\`\`\`
+```
 
-Rellenar \`public_directory.json\` con \`supabaseUrl\` (debe ser \`https://...supabase.co\`) y \`supabaseAnonKey\` (clave pública/anon o publishable de Supabase), recompilar el .exe y publicar una nueva versión. Para el desarrollo en Python también se aceptan \`CIUDAD_VIVA_SUPABASE_URL\` y \`CIUDAD_VIVA_SUPABASE_ANON_KEY\`.
+Rellenar `public_directory.json` con `supabaseUrl` (debe ser `https://...supabase.co`) y `supabaseAnonKey` (clave pública/anon o publishable de Supabase), recompilar el .exe y publicar una nueva versión. Para el desarrollo en Python también se aceptan `CIUDAD_VIVA_SUPABASE_URL` y `CIUDAD_VIVA_SUPABASE_ANON_KEY`.
 
 **No incluir jamás una service_role key.** La publicación utiliza una sesión anónima de Supabase con JWT y políticas RLS que sólo permiten editar la sala propia. No envía snapshots, datos personales de ciudadanos, chat ni acciones de construcción a Supabase.
 
-**Situación actual:** el repositorio incluye \`public_directory.json\` vacío, porque todavía no se proporcionó un proyecto Supabase. El listado público permanecerá deshabilitado hasta su configuración. Los enlaces HTTPS temporales directos pueden crearse sin Supabase.
+**Situación actual:** el repositorio incluye `public_directory.json` vacío, porque todavía no se proporcionó un proyecto Supabase. El listado público permanecerá deshabilitado hasta su configuración. Los enlaces HTTPS temporales directos pueden crearse sin Supabase.
 
 ## Seguridad
 
-El túnel público llega a un proxy independiente, escuchando sólo en \`127.0.0.1\` en un puerto efímero. El proxy permite servir los archivos estáticos y las rutas de unión, estado, sincronización, cursores, chat y acciones de un jugador autenticado. Bloquea desde Internet las APIs de creación de sala, selección de guardados, guardado/carga y reinicio de partida. Los invitados obtienen un token de sesión aleatorio en una cookie \`HttpOnly; Secure; SameSite=Lax\`; el proxy asigna IDs nuevos para impedir que se hagan pasar por el anfitrión.
+El túnel público llega a un proxy independiente, escuchando sólo en `127.0.0.1` en un puerto efímero. El proxy permite servir los archivos estáticos y las rutas de unión, estado, sincronización, cursores, chat y acciones de un jugador autenticado. Bloquea desde Internet las APIs de creación de sala, selección de guardados, guardado/carga y reinicio de partida. Los invitados obtienen un token de sesión aleatorio en una cookie `HttpOnly; Secure; SameSite=Lax`; el proxy asigna IDs nuevos para impedir que se hagan pasar por el anfitrión.
 
 El servidor LAN original sigue disponible, conservando Radmin/Hamachi y las conexiones directas en red local. La publicación pública es explícita, no automática para todas las salas.
 
@@ -65,10 +65,10 @@ El servidor LAN original sigue disponible, conservando Radmin/Hamachi y las cone
 
 ## Validaciones exigidas
 
-1. Verificar que el artefacto de GitHub Actions contiene Node.js y \`cloudflared.exe\` sin instalaciones adicionales.
+1. Verificar que el artefacto de GitHub Actions contiene Node.js y `cloudflared.exe` sin instalaciones adicionales.
 2. Crear una partida en un Windows anfitrión y obtener el enlace HTTPS sin abrir puertos.
 3. Unirse desde otra conexión a Internet sin Radmin ni Hamachi y probar acciones simultáneas, chat, cursores y persistencia local.
-4. Confirmar que los invitados no pueden consultar \`/api/saves\`, guardar/cargar ni crear una sala.
+4. Confirmar que los invitados no pueden consultar `/api/saves`, guardar/cargar ni crear una sala.
 5. Configurar Supabase, comprobar listados, ocupación, desconexión y caducidad.
 6. Probar suspensión/reanudación del PC, cortes de Internet, latencia y estabilidad durante varias horas.
 

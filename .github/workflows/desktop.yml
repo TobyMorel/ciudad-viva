@@ -17,6 +17,24 @@ on:
       - 'assets/**'
       - 'vendor/**'
       - '.github/workflows/desktop.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server.py'
+      - 'public_servers.py'
+      - 'shared_engine.py'
+      - 'online_engine.mjs'
+      - 'desktop_app.py'
+      - 'desktop_app.spec'
+      - 'requirements-desktop.txt'
+      - 'index.html'
+      - '*.css'
+      - '*.js'
+      - '*.mjs'
+      - '*.json'
+      - 'assets/**'
+      - 'vendor/**'
+      - '.github/workflows/desktop.yml'
   workflow_dispatch:
 permissions:
   contents: write
@@ -55,6 +73,7 @@ jobs:
           $version = python -c "import json; print(json.load(open('release_notes.json', encoding='utf-8'))['currentVersion'])"
           "version=$version" >> $env:GITHUB_OUTPUT
       - name: Adjuntar ejecutable al historial de versiones
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.release_version.outputs.version }}

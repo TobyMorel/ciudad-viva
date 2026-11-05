@@ -17,6 +17,8 @@ try{
     assert.equal(await button.isVisible(),true);
     await button.evaluate(el=>el.click());
     assert.equal(await button.getAttribute('aria-pressed'),'true');
+    await page.locator('[data-citizen-toggle]').evaluateAll(items=>items.forEach(toggle=>{if(toggle.textContent.trim()==='Ocultar')toggle.click()}));
+    await page.evaluate(()=>window.__ciudadVivaFocusTileForDiagnostics(11,4));
     const tile=await page.evaluate(()=>{const p=window.__ciudadVivaProjectTile(11,4,0),r=document.getElementById('city').getBoundingClientRect();return{x:p.x+r.left,y:p.y+r.top,visible:p.visible}});
     assert.equal(tile.visible,true,'el tramo debe estar a la vista');
     await page.mouse.move(tile.x,tile.y);

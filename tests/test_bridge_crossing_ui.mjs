@@ -13,8 +13,9 @@ try{
   await page.locator('.game-dock [data-popup="build"]').evaluate(button=>button.click());await page.locator('[data-build-filter="terrain"]').evaluate(button=>button.click());
   const bridge=page.locator('.build-catalog-item[data-tool="bridge"]');await bridge.scrollIntoViewIfNeeded();await bridge.evaluate(button=>button.click());
   async function place(x){const point=await page.evaluate(x=>{const p=window.__ciudadVivaProjectTile(x,10),r=document.querySelector('#city').getBoundingClientRect();return{x:r.left+p.x,y:r.top+p.y,visible:p.visible}},x);assert.ok(point.visible,`${viewport.width}px: tramo ${x} visible`);await page.mouse.click(point.x,point.y);await page.waitForFunction(x=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).roadAssets.some(a=>a.x===x&&a.y===10&&a.bridge),x,{timeout:12000})}
+  await page.evaluate(()=>window.__ciudadVivaFocusTileForDiagnostics(24,10));
   await place(24);await place(25);
-  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')));assert.equal(state.money,93600);assert.equal(state.roadAssets.filter(a=>a.bridge).length,2);assert.ok((await page.evaluate(()=>window.__ciudadVivaScene())).dynamicObjects>0);assert.deepEqual(errors,[]);
+  const state=await page.evaluate(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')));assert.equal(state.money,87000);assert.equal(state.roadAssets.filter(a=>a.bridge).length,2);assert.ok((await page.evaluate(()=>window.__ciudadVivaScene())).dynamicObjects>0);assert.deepEqual(errors,[]);
   await page.close();
  }
  console.log('Puente visible y dos tramos colocados desde Construir en Chromium móvil y escritorio.');

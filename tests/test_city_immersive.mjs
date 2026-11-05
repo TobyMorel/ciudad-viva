@@ -119,4 +119,5 @@ test('Los nueve elementos 3D están integrados en una escena procedimental y tie
  assert.match(world,/busStopKeys/);
  assert.match(world,/userData\.passengerDoor/);
  assert.match(world,/poweredStreetlights/); // Alimentación efectiva de farolas de la red
+ assert.match(world,/headlightLightPool/);
 });

@@ -1,0 +1,6 @@
+project_id = "tcglqhxoymnmbxxaaweq"
+
+[functions.public-rooms]
+# The directory uses its own per-room 256-bit secret for publish/unpublish.
+# Supabase's JWT gateway check rejects publishable API keys when enabled.
+verify_jwt = false

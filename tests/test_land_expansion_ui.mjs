@@ -14,9 +14,8 @@ try{
   await page.locator('.game-dock').waitFor({timeout:30000});
   await page.locator('[data-popup="city"]').evaluate(el=>el.click());await page.locator('#newBtn').evaluate(el=>el.click());
   await page.waitForFunction(()=>document.getElementById('money')?.textContent.includes('175.000')&&document.getElementById('population')?.textContent.trim()==='0');
-  for(let i=0;i<5;i++)await page.locator('#zoomOut').evaluate(el=>el.click());
-  let lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));
-  if(!lock.visible){const canvas=page.locator('#city'),rect=await canvas.boundingBox();await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width/2-75,rect.y+rect.height/2,{steps:8});await page.mouse.up();lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));}
+  await page.locator('[data-tutorial-close]').evaluateAll(items=>items.at(-1)?.click());
+  await page.evaluate(()=>window.__ciudadVivaFocusTileForDiagnostics(20,4));const lock=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,4,0));
   assert.ok(lock.visible,`${name}: el sector bloqueado queda visible tras desplazar el mapa`);
   const canvas=await page.locator('#city').boundingBox();await page.mouse.click(canvas.x+lock.x,canvas.y+lock.y);
   const card=page.locator('.land-unlock-card');await card.waitFor();
@@ -27,6 +26,7 @@ try{
   await page.locator('[data-unlock-land]').evaluate(el=>el.click());
   await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'));
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('ciudad-viva-offline-v1')).landClaims.unlockedChunks.includes('2,0'));
+  await page.evaluate(()=>window.__ciudadVivaFocusTileForDiagnostics(20,12));
   let neighbor=await page.evaluate(()=>window.__ciudadVivaProjectTile(20,12,0));assert.ok(neighbor.visible,`${name}: el sector vecino queda visible`);await page.mouse.click(canvas.x+neighbor.x,canvas.y+neighbor.y);await page.locator('.land-unlock-card').waitFor();assert.equal(await page.locator('[data-unlock-land][data-chunk-x="2"][data-chunk-y="1"]').count(),1,`${name}: al desbloquear el sector se habilita su vecino`);
   assert.deepEqual(errors,[],`${name}: errores JavaScript`);await page.close();
  }

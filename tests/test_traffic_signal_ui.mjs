@@ -16,7 +16,9 @@ try{
   const card=page.locator('[data-toggle-traffic-signal]').locator('..').locator('..');
   const bounds=await card.evaluate(el=>{const r=el.getBoundingClientRect();return{left:r.left,right:r.right,width:r.width,scroll:el.scrollWidth,client:el.clientWidth}});
   assert.ok(bounds.left>=0&&bounds.right<=width&&bounds.scroll<=bounds.client+3,`${name}: ficha responsive ${JSON.stringify(bounds)}`);
-  await page.locator('[data-toggle-traffic-signal]').click();await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'),null,{timeout:30000});
+  const signalButton=page.locator('[data-toggle-traffic-signal]');
+  await signalButton.waitFor({state:'visible'});await signalButton.scrollIntoViewIfNeeded();
+  await signalButton.click();await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'),null,{timeout:30000});
   assert.deepEqual(errors,[],`${name}: sin errores JS`);await page.close();
  }
 }finally{await browser.close();server.kill('SIGTERM')}

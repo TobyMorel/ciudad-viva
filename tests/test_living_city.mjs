@@ -95,7 +95,7 @@ test('Three.js muestra obras de casas, comercios y fábricas; nada se deforma ni
  const world=readFileSync(new URL('../world3d.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  for(const kind of ['home','shop','factory'])assert.match(source,new RegExp(kind));
- assert.match(source,/createProjectModel/);assert.match(source,/createParks/);assert.match(source,/createTraffic/);
+ assert.match(source,/createProjectModel/);assert.match(source,/createParks/);assert.match(world,/trafficRoot/); // El tránsito se representa en el mundo, no se duplica en el módulo de historias
  assert.match(source,/createMoments/);assert.match(source,/g\.scale\.setScalar/);
  assert.match(world,/living3d\.sceneSync/);assert.match(world,/living3d\.tick/);
  assert.match(world,/living3d\.residentHit/);

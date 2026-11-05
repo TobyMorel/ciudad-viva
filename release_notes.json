@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.278",
+  "currentVersion": "0.279",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.279",
+      "date": "2026-11-05",
+      "title": "Salas públicas autoalojadas: enlace Internet y directorio opcional",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El ejecutable Windows integra el conector Cloudflare y puede crear un enlace HTTPS temporal sin abrir puertos ni instalar una VPN.",
+        "LAN e Internet comparten el motor autoritativo local; simulación, ciudades y guardados permanecen en la PC anfitriona.",
+        "Un proxy de acceso público exige cookies individuales y bloquea creación de salas, carga, guardado y reinicio administrativo desde Internet.",
+        "El menú incorpora Crear servidor público y Servidores públicos, con nombres y ocupación. El directorio global requiere configurar un único proyecto Supabase con políticas RLS.",
+        "El directorio publica sólo metadatos de la partida activa, refresca cada 24 segundos y oculta anuncios con más de 90 segundos. Los cursores públicos usan el sondeo HTTP porque Cloudflare Quick Tunnels no admite SSE.",
+        "Se actualizan tres pruebas desfasadas. Cloudflare Quick Tunnel es experimental, no un servicio permanente."
+      ],
+      "verification": "Pendientes CI del nuevo .exe y prueba entre redes reales. Falta configurar Supabase para la lista pública global."
+    },
     {
       "version": "0.278",
       "date": "2026-11-05",

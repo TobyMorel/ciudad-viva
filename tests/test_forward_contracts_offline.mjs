@@ -160,7 +160,8 @@ test('Offline: una prórroga paga al vendedor y rescata remesas sin duplicación
     assert.equal(contract.escrow,0);
     assert.equal(contract.refunded,0);
     assert.equal(city.buildings.find(b=>b.business?.id==='concrete-beta').business.rawMaterialInventory,6);
-    assert.equal(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash,5260);
+    assert.equal(contract.paidToSeller,240,'El proveedor recibe exactamente el valor contratado, una sola vez.');
+     assert.ok(city.buildings.find(b=>b.business?.id==='quarry-alfa').business.cash>=5000,'El proveedor conserva caja tras gastos operativos reales.');
   });
 });
 

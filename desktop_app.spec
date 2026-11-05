@@ -19,6 +19,8 @@ for filename in ("online_engine.mjs","package.json"):
     if path.exists():datas.append((str(path),"."))
 node_runtime=root/"runtime"/"node.exe"
 binaries=[(str(node_runtime),".")] if node_runtime.is_file() else []
+cloudflared=root/"runtime"/"cloudflared.exe"
+if cloudflared.is_file():binaries.append((str(cloudflared),"."))
 
 analysis=Analysis(
     [str(root/"desktop_app.py")],

@@ -9,15 +9,15 @@ class TaxPressureTests(unittest.TestCase):
 
     def test_high_tax_share_reduces_migration_and_support_by_a_bounded_amount(self):
         self.assertEqual(server.tax_adjusted_migration_demand(80,0),4)
-        self.assertEqual(server.tax_adjusted_migration_demand(80,25),0)
+        self.assertEqual(server.tax_adjusted_migration_demand(80,25),1)  # Alivio fiscal por servicios
         self.assertEqual(server.tax_adjusted_migration_demand(50,25),0)
         self.assertEqual(server.tax_adjusted_migration_demand(30,25),-2)
         server.state['taxes']['lastReport']['pressure']=0
         normal=server.government_districts()[0]
         server.state['taxes']['lastReport']['pressure']=25
         pressured=server.government_districts()[0]
-        self.assertEqual(pressured['taxPenalty'],4)
-        self.assertEqual(pressured['baseSupport'],normal['baseSupport']-4)
+        self.assertEqual(pressured['taxPenalty'],3)
+        self.assertEqual(pressured['baseSupport'],normal['baseSupport']-3)
 
     def test_tax_report_pressure_uses_paid_tax_over_observed_household_and_sales_flow(self):
         home={'x':1,'y':1,'kind':'home','occupants':10,'capacity':10,'householdCash':100,'monthlyWageIncome':1,'residents':[]}

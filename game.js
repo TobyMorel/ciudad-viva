@@ -1,18 +1,18 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.276';
-import {setupCityCompanion} from './city-companion.js?v=0.276';
-import {setupCinematicCamera} from './city_cinema.js?v=0.276';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.276';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.276';
-import {createWorld} from './world3d.js?v=0.276';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.276';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.276';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.276';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.277';
+import {setupCityCompanion} from './city-companion.js?v=0.277';
+import {setupCinematicCamera} from './city_cinema.js?v=0.277';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.277';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.277';
+import {createWorld} from './world3d.js?v=0.277';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.277';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.277';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.277';
 import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.276';
+import {growthDemand} from './growth_demand.js?v=0.277';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.276';
-import {ROAD_TYPES} from './road_network.js?v=0.276';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.277';
+import {ROAD_TYPES} from './road_network.js?v=0.277';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.

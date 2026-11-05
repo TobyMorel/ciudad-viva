@@ -4108,9 +4108,14 @@ def traffic_factor(route, exclude_order=None):
     return sum(factors)/len(factors)
 
 def assign_parking_capacity(trips):
-    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])};roads=[tuple(r) for r in state.get("roads",[])];road_set=set(roads);slots=[]
+    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])}
+    closed_incidents={(i.get("x"),i.get("y")) for i in state.get("roadIncidents",{}).get("events",[]) if i.get("closed") and i.get("status") in ("en_respuesta","sin_respuesta")}
+    roads=[tuple(r) for r in state.get("roads",[]) if float(assets.get(tuple(r),{}).get("quality",82))>=25 and not assets.get(tuple(r),{}).get("accidentClosed") and tuple(r) not in closed_incidents]
+    road_set=set(roads);slots=[]
     for x,y in roads:
-        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)));count=ROAD_TYPES.get(assets.get((x,y),{}).get("roadType","local"),ROAD_TYPES["local"])["parking"]*(0 if degree>=3 else 1)
+        north=(x,y-1) in road_set;south=(x,y+1) in road_set;east=(x+1,y) in road_set;west=(x-1,y) in road_set
+        straight=sum((north,south,east,west))==2 and ((north and south) or (east and west))
+        count=ROAD_TYPES.get(assets.get((x,y),{}).get("roadType","local"),ROAD_TYPES["local"])["parking"] if straight else 0
         slots.extend({"id":f"street:{x},{y}:{i}","kind":"street","road":[x,y],"index":i,"x":x,"y":y} for i in range(count))
     garages=[b for b in state.get("buildings",[]) if b.get("serviceModel")=="parkingGarage" and b.get("status") in ("habilitado","operativo")];garage_slots=[]
     for garage in garages:
@@ -4119,12 +4124,19 @@ def assign_parking_capacity(trips):
         garage_slots.extend({"id":f"garage:{garage['x']},{garage['y']}:{i}","kind":"garage","road":list(access[0]),"index":i,"x":garage["x"],"y":garage["y"],"garage":garage} for i in range(max(0,int(garage.get("parkingSpaces",24)))))
     slots.extend(garage_slots);neighbors=((1,0),(-1,0),(0,1),(0,-1));slots_by_road={}
     for slot in slots:slots_by_road.setdefault(tuple(slot["road"]),[]).append(slot)
-    def nearest_available(building,used,count):
-        if count<=0 or len(used)>=len(slots):return []
+    def reachable_roads(building):
+        origin=tuple(map(int,building));frontier=[point for point in [origin,*((origin[0]+dx,origin[1]+dy) for dx,dy in neighbors)] if point in road_set]
+        visited=set(frontier)
+        for x,y in frontier:
+            for dx,dy in neighbors:
+                point=(x+dx,y+dy)
+                if point in road_set and point not in visited:visited.add(point);frontier.append(point)
+        return visited
+    def nearest_available(building,used,count,reachable):
+        if count<=0 or len(used)>=len(slots) or not reachable:return []
         origin=tuple(map(int,building));frontier=[];visited=set();found=[];distance=1
-        for dx,dy in neighbors:
-            point=(origin[0]+dx,origin[1]+dy)
-            if point in road_set and point not in visited:visited.add(point);frontier.append(point)
+        for point in [origin,*((origin[0]+dx,origin[1]+dy) for dx,dy in neighbors)]:
+            if point in reachable and point not in visited:visited.add(point);frontier.append(point)
         while frontier and len(found)<count:
             for point in frontier:
                 found.extend((distance,slot) for slot in slots_by_road.get(point,[]) if slot["id"] not in used)
@@ -4133,7 +4145,7 @@ def assign_parking_capacity(trips):
             for x,y in frontier:
                 for dx,dy in neighbors:
                     point=(x+dx,y+dy)
-                    if point in road_set and point not in visited:visited.add(point);next_frontier.append(point)
+                    if point in reachable and point not in visited:visited.add(point);next_frontier.append(point)
             frontier=next_frontier;distance+=1
         return sorted(found,key=lambda row:(row[0],row[1]["y"],row[1]["x"],row[1]["index"]))[:count]
     reserved_by_window={};stats_by_window={};garage_peaks={i:0 for i in range(len(garages))};reservations=[];total_demand=total_allocated=weighted_search=weighted_walk=weighted_stay=weighted_cars=0
@@ -4144,18 +4156,20 @@ def assign_parking_capacity(trips):
         window=trip.get("departureWindowKey","midday");destination=tuple(map(int,trip["to"]));demand=max(1,math.ceil(float(trip.get("vehicles",0) or 0)));is_work=trip.get("reason")=="trabajo"
         back=next((row for row in ordered if is_work and row.get("reason")=="regreso" and row.get("from")==trip.get("to") and row.get("to")==trip.get("from") and id(row) not in used_returns),None)
         used=reserved_by_window.setdefault("workday" if is_work else window,set())
-        assigned=nearest_available(destination,used,demand)
+        reachable=reachable_roads(trip["from"]);assigned=nearest_available(destination,used,demand,reachable)
         for _,slot in assigned:used.add(slot["id"])
         allocated=len(assigned);shortfall=max(0,demand-allocated);first=assigned[0] if assigned else None;search=min(30,3+math.ceil(shortfall/max(1,allocated+1))*2) if shortfall else max(0,round((first[0]-1)*.35)) if first else 8;walk=max(0,first[0]-1) if first else 0;stay=510 if trip.get("reason")=="trabajo" else 480 if trip.get("reason")=="regreso" else 150
         visual_slots=[{**slot,"walkDistance":max(0,distance-1)} for distance,slot in assigned[:12]]
         if first:
-            return_window=trip.get("returnWindowKey") or (back or {}).get("departureWindowKey","eveningPeak");origin_used=reserved_by_window.setdefault(f"home:{return_window}",set());origin_rows=nearest_available(trip["from"],origin_used,allocated);origin=origin_rows[0] if origin_rows else None
+            return_window=trip.get("returnWindowKey") or (back or {}).get("departureWindowKey","eveningPeak");origin_used=reserved_by_window.setdefault(f"home:{return_window}",set());origin_rows=nearest_available(trip["from"],origin_used,allocated,reachable);origin=origin_rows[0] if origin_rows else None
             for _,home_slot in origin_rows:
                 origin_used.add(home_slot["id"]);reservations.append({"slotId":home_slot["id"],"tripKey":f"{trip.get('reason')}:{trip['from'][0]},{trip['from'][1]}>{trip['to'][0]},{trip['to'][1]}:home","x":home_slot["x"],"y":home_slot["y"],"index":home_slot["index"],"kind":home_slot["kind"],"window":f"home:{return_window}","status":"reservada"})
-            drive_route=route_between(tuple(origin[1]["road"] if origin else trip["from"]),tuple(first[1]["road"])) or [list(origin[1]["road"] if origin else trip["from"]),first[1]["road"]]
+            departure_road=tuple(origin[1]["road"]) if origin else next((point for point in reachable if abs(point[0]-trip["from"][0])+abs(point[1]-trip["from"][1])<=1),None)
+            drive_route=route_between(departure_road,tuple(first[1]["road"])) if departure_road else None
+            drive_route=drive_route or []
             trip.update({"parkingSlot":visual_slots[0],"parkingSlots":visual_slots,"parkingOriginSlot":{**origin[1],"walkDistance":max(0,origin[0]-1)} if origin else None,"parkingRoute":drive_route,"parkingWalkDistance":walk,"parkingAssignedVehicles":allocated,"parkingSearchMinutes":search,"parkingSearching":shortfall>0,"parkingSpacesUsed":allocated,"parkingShortfall":shortfall,"parkingMinutes":2+search,"parkingStayMinutes":stay})
             if back:
-                return_shortfall=max(0,allocated-len(origin_rows));back_slots=[{**slot,"walkDistance":max(0,distance-1)} for distance,slot in origin_rows[:12]];used_returns.add(id(back));back.update({"parkingSlot":back_slots[0] if back_slots else None,"parkingSlots":back_slots,"parkingOriginSlot":visual_slots[0],"parkingRoute":list(reversed(drive_route)),"parkingWalkDistance":back_slots[0]["walkDistance"] if back_slots else 0,"parkingAssignedVehicles":len(origin_rows),"parkingSearchMinutes":min(30,3+math.ceil(return_shortfall/max(1,allocated)*2)) if return_shortfall else 0,"parkingSearching":return_shortfall>0,"parkingSpacesUsed":len(origin_rows),"parkingShortfall":return_shortfall,"parkingStayMinutes":stay,"parkingCapacity":len(slots)})
+                return_shortfall=max(0,demand-len(origin_rows));back_slots=[{**slot,"walkDistance":max(0,distance-1)} for distance,slot in origin_rows[:12]];used_returns.add(id(back));back.update({"parkingSlot":back_slots[0] if back_slots else None,"parkingSlots":back_slots,"parkingOriginSlot":visual_slots[0],"parkingRoute":list(reversed(drive_route)),"parkingWalkDistance":back_slots[0]["walkDistance"] if back_slots else 0,"parkingAssignedVehicles":len(origin_rows),"parkingSearchMinutes":min(30,3+math.ceil(return_shortfall/max(1,demand)*2)) if return_shortfall else 0,"parkingSearching":return_shortfall>0,"parkingSpacesUsed":len(origin_rows),"parkingShortfall":return_shortfall,"parkingStayMinutes":stay,"parkingCapacity":len(slots)})
         else:
             trip.update({"parkingSlot":None,"parkingSlots":[],"parkingRoute":[],"parkingWalkDistance":0,"parkingAssignedVehicles":0,"parkingSearchMinutes":search,"parkingSearching":True,"parkingSpacesUsed":0,"parkingShortfall":demand,"parkingMinutes":10,"parkingStayMinutes":stay})
             if back:
@@ -7852,7 +7866,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200,public_state(pid,use_cache=True));return
         self._send(404,{"error":"No encontrado"})
 
-REAL_SECONDS_PER_GAME_HOUR=4
+REAL_SECONDS_PER_GAME_HOUR=12
 
 def advance_simulation_clock(day_progress,elapsed,speed):
     """Avanza horas de juego y entrega un nuevo día al cruzar la medianoche."""

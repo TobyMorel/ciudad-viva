@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.276",
+  "currentVersion": "0.277",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.277",
+      "date": "2026-11-05",
+      "title": "Reloj LAN y estacionamiento conectado",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "El servidor LAN usa el mismo ritmo de día y noche que el motor offline: 4 minutos y 48 segundos por día a velocidad x1.",
+        "Las plazas de estacionamiento se asignan solamente cuando pertenecen a calles abiertas y conectadas con el origen del viaje. Los cortes viales y los tramos deteriorados impiden reservar lugares inaccesibles.",
+        "El regreso conserva los vehículos sin plaza; las medias de caminata y permanencia se calculan sobre los autos que sí estacionaron.",
+        "La simulación Python de compatibilidad también limita las plazas a tramos rectos y a calles conectadas."
+      ],
+      "verification": "Comprobados los recorridos y reservas con pruebas específicas, el reloj offline y LAN y el motor compartido."
+    },
     {
       "version": "0.276",
       "date": "2026-11-05",

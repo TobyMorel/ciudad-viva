@@ -42,6 +42,10 @@ class TrafficCapacityTests(unittest.TestCase):
         self.assertGreater(next_day["segments"]["0,0|1,0"]["windows"]["early"]["queueBefore"], 0)
 
     def test_online_commutes_publish_queue_report_and_return_delay(self):
+        for home in server.state["buildings"]:
+            if home.get("kind") == "home":
+                home["householdCash"] = 5000
+                home["monthlyWageIncome"] = 200
         model = server.commute_model()
         self.assertEqual(len(model["queueReport"]["windows"]), 9)
         returns = [trip for trip in model["routes"] if trip.get("reason") == "regreso" and trip.get("mode") != "walk"]
@@ -64,6 +68,26 @@ class TrafficCapacityTests(unittest.TestCase):
 
         server.state["traffic"]["queueState"]["queues"] = {}
         self.assertEqual(server.route_between((0, 0), (4, 0)), direct)
+
+    def test_parking_requires_a_connected_road(self):
+        server.state.update({"roads": [[1, 1], [2, 1], [3, 1], [10, 1], [11, 1], [12, 1]],
+                             "roadAssets": [], "buildings": [], "traffic": {}})
+        trip = {"from": [1, 0], "to": [11, 0], "mode": "auto", "reason": "compras",
+                "vehicles": 1, "estimatedMinutes": 8, "trafficFactor": 1}
+        report = server.assign_parking_capacity([trip])
+        self.assertIsNone(trip["parkingSlot"])
+        self.assertEqual(trip["parkingShortfall"], 1)
+        self.assertEqual(report["reservations"], [])
+
+    def test_closed_road_blocks_parking_access(self):
+        server.state.update({"roads": [[x, 1] for x in range(1, 13)],
+                             "roadAssets": [{"x": 6, "y": 1, "quality": 10}],
+                             "buildings": [], "traffic": {}})
+        trip = {"from": [1, 0], "to": [11, 0], "mode": "auto", "reason": "compras",
+                "vehicles": 1, "estimatedMinutes": 8, "trafficFactor": 1}
+        server.assign_parking_capacity([trip])
+        self.assertIsNone(trip["parkingSlot"])
+        self.assertEqual(trip["parkingShortfall"], 1)
 
 
 if __name__ == "__main__":

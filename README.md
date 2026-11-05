@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.277
+
+**Reloj y estacionamiento coherentes (0.277):** el servidor LAN y el modo offline usan el mismo ciclo de 4:48 minutos por día a x1. Los autos solo reservan plazas a las que pueden llegar por calles conectadas y abiertas; una plaza aislada o separada por un corte vial no aparenta estar disponible para ese viaje. El regreso conserva el faltante de estacionamiento, y las estadísticas de caminata y permanencia promedian únicamente los autos que realmente estacionaron.
+
 # Ciudad Viva · Alfa 0.276
 
 **Tránsito realista y ciclos más largos (0.276):** los autos circulan por rutas compuestas solo por calles, ocupan plazas señalizadas y dejan a las personas caminando hasta el destino. La P queda reservada para autos sin plaza asignada. Cruces y curvas ya no muestran marcas de estacionamiento; más viajes se representan con vehículos, bicicletas y peatones a escala controlada. Los avisos siguen a la cámara en cada movimiento. Formación muestra la población por nivel educativo y explica la demanda de oficinas. Un día dura 4:48 minutos a velocidad x1.

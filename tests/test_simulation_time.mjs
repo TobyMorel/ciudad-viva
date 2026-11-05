@@ -14,11 +14,11 @@ test('el amanecer, el día y la noche cambian iluminación y farolas',()=>{
 });
 
 test('las velocidades conservan días más largos y una relación x1/x2/x4',()=>{
- assert.equal(REAL_SECONDS_PER_GAME_HOUR,4);
- assert.equal(gameMinutesForElapsedSeconds(1,1),15);
- assert.equal(gameMinutesForElapsedSeconds(1,2),30);
- assert.equal(gameMinutesForElapsedSeconds(1,4),60);
- assert.equal(gameMinutesForElapsedSeconds(24,4),1440);
+ assert.equal(REAL_SECONDS_PER_GAME_HOUR,12);
+ assert.equal(gameMinutesForElapsedSeconds(1,1),5);
+ assert.equal(gameMinutesForElapsedSeconds(1,2),10);
+ assert.equal(gameMinutesForElapsedSeconds(1,4),20);
+ assert.equal(gameMinutesForElapsedSeconds(72,4),1440);
 });
 
 test('una obra activa avanza entre medianoches y se detiene al pausar el proyecto',()=>{

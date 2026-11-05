@@ -751,3 +751,8 @@ Las billeteras familiares reciben cada salario una sola vez y conservan fondos p
 Los perfiles de terreno son deterministas para conservar sincronía Offline/LAN. La inspección entrega primero una estimación acotada y, tras siete días de juego y un pago, habilita el perfil del sitio. Sus factores ajustan cimentación y escorrentía, sin simular todavía una cuenca completa.
 
 Los reclamos contractuales comparan únicamente datos observados de plazo, certificación, calidad e inspección. Las multas se limitan por contrato y se cobran de la caja/retenciones disponibles, con saldo pendiente si no alcanza. La operación aeroportuaria aplica la meteorología registrada y una estación de 90 días; no representa todavía rutas de carga ni aerolíneas competidoras.
+
+
+## Alfa 0.288 · límites y eliminación de copias recuperadas
+
+Los respaldos automáticos se limitan globalmente a los dos más recientes y se pueden eliminar desde el selector sin afectar el slot fuente. Cada respaldo se puede recuperar en un slot aparte, con un máximo de dos slots recuperados simultáneos; el límite se valida dentro de una transacción IndexedDB para que dos clics rápidos o pestañas distintas no excedan la capacidad.

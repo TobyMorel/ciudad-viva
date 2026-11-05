@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.287",
+  "currentVersion": "0.288",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.288",
+      "date": "2026-11-05",
+      "title": "Gestión de copias recuperadas y límite de slots",
+      "roadmapPhase": 15,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "Las copias de recuperación ahora tienen una acción visible para eliminarlas desde el selector Offline; borrar una copia no borra la partida original.",
+        "El navegador conserva como máximo las dos copias de seguridad más recientes y limpia los respaldos antiguos al abrir la lista o guardar una nueva copia.",
+        "Solo se pueden crear dos slots recuperados a la vez. Si ya están ocupados, el juego explica que hay que borrar uno antes de recuperar otra copia.",
+        "Las filas de copia y sus botones de borrado se acomodan en móvil y escritorio; el selector indica el límite de dos recuperaciones."
+      ],
+      "verification": "Validación local completa: 241 pruebas Python, 192 pruebas JavaScript/Offline, sintaxis, JSON, Chromium móvil y escritorio para el selector de recuperaciones, WebRTC DTLS real y directorio público responsive. No se ejecutó el estrés económico de 30 años ni una prueba LAN física entre varios equipos."
+    },
     {
       "version": "0.287",
       "date": "2026-11-05",

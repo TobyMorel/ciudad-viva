@@ -1,4 +1,10 @@
-## Alfa 0.287 · Desarrollo parcial de las fases 16–33
+## Alfa 0.288 · Gestión segura de partidas recuperadas
+
+El selector Offline permite eliminar cada copia de recuperación, conserva un máximo de dos respaldos recientes y limita a dos los slots creados desde copias. La acción de borrado protege la partida original; los slots recuperados se administran como cualquier otra partida guardada.
+
+Validación específica en Chromium móvil y escritorio, más la suite local completa.
+
+## Historial · Alfa 0.287 · Desarrollo parcial de las fases 16–33
 
 Esta entrega agrega estudios de suelo con incertidumbre, tiempo y costo; sus resultados afectan cimentación, plazo y escorrentía. También incorpora mediación contractual basada en registros para reclamos de demora, certificación y calidad. El aeropuerto responde a tormentas y estacionalidad, y sus movimientos contribuyen a los indicadores ambientales locales.
 

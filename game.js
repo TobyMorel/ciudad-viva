@@ -1,20 +1,20 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.287';
-import {setupCityCompanion} from './city-companion.js?v=0.287';
-import {setupCinematicCamera} from './city_cinema.js?v=0.287';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.287';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.287';
-import {createWorld} from './world3d.js?v=0.287';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.287';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.287';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.287';
-import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.287';
-import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,restoreOfflineBackup} from './offline_slots.js';
-import {growthDemand} from './growth_demand.js?v=0.287';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.288';
+import {setupCityCompanion} from './city-companion.js?v=0.288';
+import {setupCinematicCamera} from './city_cinema.js?v=0.288';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.288';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.288';
+import {createWorld} from './world3d.js?v=0.288';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.288';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.288';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.288';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.288';
+import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.288';
+import {growthDemand} from './growth_demand.js?v=0.288';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.287';
-import {ROAD_TYPES} from './road_network.js?v=0.287';
-import {geotechnicalEstimate} from './land_survey.js?v=0.287';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.288';
+import {ROAD_TYPES} from './road_network.js?v=0.288';
+import {geotechnicalEstimate} from './land_survey.js?v=0.288';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -904,7 +904,13 @@ async function showSaveChoices(mode){
   }
   if(mode==='offline'){
    const backups=await listOfflineBackups();
-   for(const backup of backups){const button=document.createElement('button');button.type='button';const title=document.createElement('b'),detail=document.createElement('small');title.textContent=`Recuperar copia de ${backup.name}`;detail.textContent=`${backup.city||'Puerto Claro'} · día ${backup.day||1} · ${new Date(backup.createdAt).toLocaleString('es-AR')}`;button.append(title,detail);button.onclick=async()=>{try{const recovered=await restoreOfflineBackup(backup.id);await startOffline(recovered)}catch(error){document.getElementById('modeError').textContent=error.message}};list.append(button)}
+   if(backups.length){const heading=document.createElement('div');heading.className='save-backup-heading';heading.textContent='Copias recuperables · máximo 2';list.append(heading)}
+   for(const backup of backups){
+    const row=document.createElement('div'),restore=document.createElement('button'),remove=document.createElement('button'),title=document.createElement('b'),detail=document.createElement('small');
+    row.className='save-backup-row';row.dataset.backupId=backup.id;restore.type='button';restore.className='save-backup-restore';restore.dataset.restoreBackup=backup.id;title.textContent=`Recuperar copia de ${backup.name}`;detail.textContent=`${backup.city||'Puerto Claro'} · día ${backup.day||1} · ${new Date(backup.createdAt).toLocaleString('es-AR')}`;restore.append(title,detail);restore.onclick=async()=>{try{const recovered=await restoreOfflineBackup(backup.id);await startOffline(recovered)}catch(error){document.getElementById('modeError').textContent=error.message}};
+    remove.type='button';remove.className='save-slot-delete save-backup-delete';remove.dataset.deleteBackup=backup.id;remove.textContent='Eliminar';remove.setAttribute('aria-label',`Eliminar copia recuperable de ${backup.name}`);remove.onclick=async()=>{if(!confirm(`¿Eliminar definitivamente la copia de recuperación de «${backup.name}»?`))return;try{await deleteOfflineBackup(backup.id);row.remove();if(!list.querySelector('.save-backup-row'))list.querySelector('.save-backup-heading')?.remove();if(!list.querySelector('.save-slot-row,.save-backup-row'))list.textContent='Todavía no hay partidas guardadas ni copias de seguridad.'}catch(error){document.getElementById('modeError').textContent=error.message}};
+    row.append(restore,remove);list.append(row)
+   }
   }
   if(!list.childElementCount)list.textContent='Todavía no hay partidas guardadas ni copias de seguridad.';
   newButton.disabled=false;

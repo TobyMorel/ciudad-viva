@@ -1,7 +1,10 @@
 const LEGACY_KEY='ciudad-viva-offline-v1';
 const MIGRATION_KEY='ciudad-viva-legacy-imported-v1';
 const DB_NAME='ciudad-viva-partidas';
+const MAX_BACKUPS=2;
+const MAX_RECOVERED_SLOTS=2;
 function markMigrated(){try{localStorage.setItem(MIGRATION_KEY,'1')}catch{}}
+function isRecoveredSlot(slot){return Boolean(slot?.recoveredFromBackup)||/\s·\srecuperada$/i.test(String(slot?.name||''))}
 
 function database(){
   return new Promise((resolve,reject)=>{
@@ -55,16 +58,31 @@ export async function deleteOfflineSlot(id){
 
 export async function listOfflineBackups(){
   const backups=await transaction('readonly',store=>store.getAll(),'backups');
-  return backups.sort((a,b)=>b.createdAt-a.createdAt).map(({snapshot,...info})=>info);
+  backups.sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0)||String(b.id).localeCompare(String(a.id)));
+  for(const backup of backups.slice(MAX_BACKUPS))await deleteOfflineBackup(backup.id);
+  return backups.slice(0,MAX_BACKUPS).map(({snapshot,...info})=>info);
 }
 
 export async function getOfflineBackup(id){return transaction('readonly',store=>store.get(id),'backups')}
 
+export async function deleteOfflineBackup(id){await transaction('readwrite',store=>store.delete(id),'backups')}
+
 export async function restoreOfflineBackup(id){
   const backup=await getOfflineBackup(id);
   if(!backup?.snapshot)throw Error('Esa copia de seguridad ya no está disponible.');
-  const slot={id:crypto.randomUUID(),name:`${backup.name} · recuperada`.slice(0,48),city:backup.city,day:backup.day,updatedAt:Date.now(),snapshot:backup.snapshot};
-  await transaction('readwrite',store=>store.put(slot));
+  const slot={id:crypto.randomUUID(),name:`${backup.name} · recuperada`.slice(0,48),city:backup.city,day:backup.day,updatedAt:Date.now(),recoveredFromBackup:true,recoveredBackupId:backup.id,snapshot:backup.snapshot};
+  const db=await database();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction('slots','readwrite'),store=tx.objectStore('slots'),request=store.getAll();let full=false;
+    request.onsuccess=()=>{
+      const recovered=request.result.filter(isRecoveredSlot);
+      if(recovered.length>=MAX_RECOVERED_SLOTS){full=true;tx.abort();return}
+      store.add(slot);
+    };
+    tx.oncomplete=()=>{db.close();resolve()};
+    tx.onabort=()=>{db.close();reject(full?Error('Ya hay dos partidas recuperadas. Eliminá una desde la lista antes de recuperar otra.'):tx.error||Error('No se pudo crear la partida recuperada.'))};
+    tx.onerror=()=>{db.close();reject(tx.error||Error('No se pudo crear la partida recuperada.'))};
+  });
   return slot;
 }
 
@@ -80,6 +98,7 @@ export async function updateOfflineSlot(id,snapshot){
   const now=Date.now(),needsBackup=old.snapshot&&old.snapshot!==snapshot&&(!old.lastBackupAt||now-old.lastBackupAt>=10*60*1000||Number(city.day||1)<Number(old.day||1));
   if(needsBackup){
     await transaction('readwrite',store=>store.put({id:crypto.randomUUID(),slotId:id,name:old.name,city:old.city,day:old.day,createdAt:now,snapshot:old.snapshot}),'backups');
+    await listOfflineBackups();
     old.lastBackupAt=now;
   }
   await transaction('readwrite',store=>store.put({...old,city:city.name||'Puerto Claro',day:city.day||1,updatedAt:now,snapshot}));

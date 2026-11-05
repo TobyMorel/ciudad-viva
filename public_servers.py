@@ -62,7 +62,7 @@ class PublicDirectory:
                 return False
             self._checked_remote = now
             try:
-                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.287"})
+                req = Request(self.CONFIG_URL, headers={"Accept": "application/json", "User-Agent": "CiudadViva/0.288"})
                 with urlopen(req, timeout=4) as response:
                     config = json.loads(response.read(8192))
             except (OSError, TimeoutError, ValueError, TypeError):

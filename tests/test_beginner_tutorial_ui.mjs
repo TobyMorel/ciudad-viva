@@ -21,7 +21,7 @@ try{
   await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('build-drawer-open'));
   await page.waitForFunction(()=>document.querySelector('#tutorialSpotlight')?.dataset.target==='roads');
   assert.equal(await page.locator('#tutorialSpotlight').getAttribute('data-target'),'roads');
-  await page.locator('.tool[data-tool="road"]').evaluate(b=>b.click());
+  await page.locator('.tool[data-tool="road"][data-road-type="local"]').evaluate(b=>b.click());
   await page.waitForFunction(()=>document.querySelector('#tutorialSpotlight')?.dataset.target==='map');
   assert.match(await page.locator('#tutorialAction').innerText(),/mapa/);
   await page.locator('[data-tutorial-voice]').evaluate(b=>b.click());

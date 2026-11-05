@@ -9,7 +9,7 @@ class TaxPressureTests(unittest.TestCase):
 
     def test_high_tax_share_reduces_migration_and_support_by_a_bounded_amount(self):
         self.assertEqual(server.tax_adjusted_migration_demand(80,0),4)
-        self.assertEqual(server.tax_adjusted_migration_demand(80,25),0)
+        self.assertEqual(server.tax_adjusted_migration_demand(80,25),1)  # Alivio fiscal por servicios
         self.assertEqual(server.tax_adjusted_migration_demand(50,25),0)
         self.assertEqual(server.tax_adjusted_migration_demand(30,25),-2)
         server.state['taxes']['lastReport']['pressure']=0

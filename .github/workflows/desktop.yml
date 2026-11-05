@@ -37,6 +37,13 @@ jobs:
           New-Item -ItemType Directory -Force runtime | Out-Null
           Copy-Item -Path (Get-Command node.exe).Source -Destination runtime/node.exe
           & runtime/node.exe --version
+      - name: Incluir el conector público dentro del ejecutable Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = 'https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe'
+          Invoke-WebRequest -Uri $url -OutFile runtime/cloudflared.exe
+          & runtime/cloudflared.exe --version
       - name: Instalar empaquetador y ventana integrada
         run: pip install -r requirements-desktop.txt
       - name: Empaquetar Ciudad Viva
@@ -51,10 +58,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.release_version.outputs.version }}
-          name: Ciudad Viva Alfa ${{ steps.release_version.outputs.version }} · anfitrión LAN
+          name: Ciudad Viva Alfa ${{ steps.release_version.outputs.version }} · LAN e Internet
           body: |
-            Aplicación Windows con el servidor LAN integrado.
-            Abrila para iniciar la ciudad y crear una sala; el juego se cierra junto con el servidor al cerrar la ventana.
+            Aplicación Windows con motor de ciudad, servidor LAN y conexión pública experimental integrada.
+            El anfitrión aloja y guarda la partida en su propia PC. Internet usa un túnel Cloudflare temporal.
+            El directorio global requiere configurar el proyecto Supabase; ver PUBLIC_SERVERS.md.
           files: dist/CiudadViva.exe
           prerelease: true
           fail_on_unmatched_files: true

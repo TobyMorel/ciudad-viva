@@ -11,6 +11,7 @@ from metro import metro_station_catalog,metro_refresh,metro_action,advance_metro
 from rail_freight import freight_route_for_factory_port,freight_routes_for_factory_port,freight_routes_from_station_to_port,freight_leg_route,serialize_freight_legs,reserve_freight_route,next_freight_departure_day,rail_freight_report
 from essential_services import evaluate_essential_services,advance_essential_service_day
 from shared_engine import SharedOfflineEngine,SharedEngineError
+from public_servers import PublicRooms
 
 ROOT = Path(getattr(sys,"_MEIPASS",Path(__file__).resolve().parent)).resolve()
 if getattr(sys,"frozen",False):
@@ -2057,6 +2058,12 @@ def player_list():
     now=time.time();names=state.get("playerNames",{})
     return [{"id":pid,"name":names.get(pid) or ("Anfitrión" if pid==state.get("host") else "Jugador"),"isHost":pid==state.get("host")}
             for pid,last in state.get("players",{}).items() if last>now-25]
+
+PUBLIC_BRIDGE = PublicRooms(ROOT, PORT, lambda: {
+    "roomOpen": ROOM_OPEN,
+    "roomName": state.get("roomName", state.get("name", "Ciudad Viva")),
+    "players": len(player_list()),
+})
 
 def clean_player_name(value):
     name=" ".join(str(value or "").strip().split())[:24]
@@ -7065,7 +7072,15 @@ class Handler(BaseHTTPRequestHandler):
                     if last<time.time()-25: del state["players"][key]
                 self._send(200,public_state(pid,use_cache=True))
             return
-        if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None}); return
+        if path=="/api/public/rooms":
+            try:self._send(200,PUBLIC_BRIDGE.directory.browse())
+            except RuntimeError as error:self._send(503,{"error":str(error),"rooms":[]})
+            return
+        if path=="/api/public/status":
+            if self.client_address[0] not in ("127.0.0.1","::1"):
+                self._send(403,{"error":"Sólo disponible desde la PC anfitriona."});return
+            self._send(200,PUBLIC_BRIDGE.status());return
+        if path=="/api/info": self._send(200,{"ips":local_ips(),"port":PORT,"roomOpen":ROOM_OPEN,"roomCode":ROOM_CODE if ROOM_OPEN else None,"publicUrl":PUBLIC_BRIDGE.status()["url"]}); return
         if path=="/api/saves":
             if self.client_address[0] not in ("127.0.0.1","::1"):self._send(403,{"error":"Las partidas guardadas solo se eligen desde el equipo anfitrión."});return
             with LOCK:self._send(200,{"slots":sorted(slot_catalog(),key=lambda item:item.get("updatedAt",0),reverse=True)})
@@ -7107,6 +7122,16 @@ class Handler(BaseHTTPRequestHandler):
                 CURSOR_REVISION+=1
                 CURSOR_CONDITION.notify_all()
             self._send(200,{"ok":True});return
+        if path=="/api/public/publish":
+            if self.client_address[0] not in ("127.0.0.1","::1"):
+                self._send(403,{"error":"La conexión pública sólo puede abrirse desde la PC anfitriona."});return
+            with LOCK:
+                if not ROOM_OPEN or pid!=state.get("host"):
+                    self._send(403,{"error":"Primero tenés que ser anfitrión de una sala abierta."});return
+                host_name=state.get("playerNames",{}).get(pid,"Anfitrión")
+            try:self._send(200,PUBLIC_BRIDGE.start(host_name))
+            except (RuntimeError,OSError) as error:self._send(503,{"error":str(error)})
+            return
         with LOCK:
             if path in ("/api/action","/api/load") and SHARED_ENGINE is None:
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
@@ -7927,6 +7952,7 @@ def stop_shared_engine():
         SHARED_GAME_VIEW=None
         ROOM_OPEN=False
     if worker is not None:worker.close()
+    PUBLIC_BRIDGE.stop()
 
 
 def start_server(open_browser=False,background=False):

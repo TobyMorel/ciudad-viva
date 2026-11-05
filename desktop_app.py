@@ -1,4 +1,4 @@
-"""Aplicación de escritorio del anfitrión: servidor LAN y juego en una ventana."""
+"""Aplicación Windows: simulación local, LAN y conexiones públicas opcionales."""
 import threading
 
 import webview

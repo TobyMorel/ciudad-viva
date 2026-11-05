@@ -1,4 +1,8 @@
-# Ciudad Viva · Alfa 0.278
+# Ciudad Viva · Alfa 0.279
+
+**Servidores públicos alojados por jugadores (0.279, experimental):** el .exe de Windows permite abrir una sala LAN o compartirla por un enlace HTTPS público temporal sin VPN ni abrir puertos. La partida, simulación y guardados siguen en el equipo anfitrión. El .exe incorpora cloudflared y un proxy que bloquea las operaciones administrativas a visitantes de Internet. La pantalla Servidores públicos consulta Supabase cuando esté configurado el directorio común; sin esa configuración, la sala se comparte por enlace directo y no aparece en el listado. Los Quick Tunnels no están destinados a producción. Ver `PUBLIC_SERVERS.md`.
+
+**Pruebas de regresión:** expectativas alineadas con 21 modelos de servicios, alivio fiscal para migraciones y el selector del tutorial que distingue las cuatro categorías de carretera.
 
 **Revisión integral en curso (0.278):** se corrigieron errores de carga del mundo 3D, la ubicación de avisos y las capas de ventanas y editor de rutas. La revisión de sistemas y pruebas continúa en esta versión.
 

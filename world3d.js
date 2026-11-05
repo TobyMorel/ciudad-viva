@@ -48,7 +48,7 @@ export function createWorld(canvas){
   const gl=renderer.getContext(),rendererInfo=gl.getExtension('WEBGL_debug_renderer_info');
   const softwareRenderer=Boolean(rendererInfo&&/swiftshader|llvmpipe|software/i.test(String(gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL))));
   const smallScreen=window.innerWidth<650;
-  const minPixelRatio=softwareRenderer?.28:smallScreen?.78:.8,maxPixelRatio=softwareRenderer?.4:smallScreen?1.25:1.5;
+  const minPixelRatio=softwareRenderer?0.28:smallScreen?0.78:0.8,maxPixelRatio=softwareRenderer?0.4:smallScreen?1.25:1.5;
   let renderPixelRatio=clamp(window.devicePixelRatio||1,minPixelRatio,maxPixelRatio);
   let lastSoftwareRender=0;
   renderer.setPixelRatio(renderPixelRatio);
@@ -1896,7 +1896,7 @@ export function createWorld(canvas){
     for(const actor of routeActors){const old=previousActors.get(actorIdentity(actor));if(!old)continue;if(actor.parkingStay){actor.parkingPhase=old.parkingPhase||actor.parkingPhase;actor.parkingElapsed=old.parkingElapsed||0;actor.parkingDeparturePending=old.parkingDeparturePending||false;actor.parkingSteer=old.parkingSteer||0;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation;continue}if((actor.selection?.type==='Vehículo entrante'||actor.actorKey?.startsWith('shopping-')||actor.parkingDriving)&&!sameRoute(actor.route,old.route)){const oldTotal=Math.max(TILE,(old.route.length-1)*TILE),oldPhase=((simulationClock*(old.speed||actor.speed||1)+(old.offset||0))%(2*oldTotal)+2*oldTotal)%(2*oldTotal),mapped=projectRoutePhase(actor.route,old.position,oldPhase>oldTotal?-1:1);const loop=mapped.total*2;actor.offset=((mapped.phase-simulationClock*actor.speed)%loop+loop)%loop;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation;continue}if(actor.actorKey?.startsWith('shipment:'))continue;actor.route=old.route;actor.offset=old.offset;actor.busWaitUntil=old.busWaitUntil;actor.lastBusStopKey=old.lastBusStopKey;actor.busStopVisitCount=old.busStopVisitCount;actor.busStopVisitKey=old.busStopVisitKey;actor.railWaitUntil=old.railWaitUntil;actor.lastRailStopKey=old.lastRailStopKey;actor.railStopVisitCount=old.railStopVisitCount;actor.railStopVisitKey=old.railStopVisitKey;actor.mesh.position.copy(old.position);actor.mesh.rotation.y=old.rotation}
     for(const pool of [...walkerModelPool.values(),...bicycleModelPool.values(),...vehicleModelPool.values()])for(const model of pool)clear(model);walkerModelPool.clear();bicycleModelPool.clear();vehicleModelPool.clear();
     refreshServiceCoverage(state,chosen,view,openRoads);
-    renderer.render(scene,camera);visualSignature=signature;sceneSyncRebuilds++;lastSceneSyncMs=performance.now()-syncStarted;
+    positionDeliveryActors();renderer.render(scene,camera);visualSignature=signature;sceneSyncRebuilds++;lastSceneSyncMs=performance.now()-syncStarted;
   }
   function setParkingIndicators(actor,active,now){
     const blink=active&&Math.floor(now/260)%2===0;
@@ -1958,11 +1958,19 @@ export function createWorld(canvas){
     }
     mesh.visible=false;setParkingIndicators(actor,false,now);
   }
+  function positionDeliveryActors(){
+    for(const a of routeActors){
+      if(a.deliveryProgress===undefined)continue;
+      const count=a.route.length-1;if(count<1)continue;const deliveryProgress=a.deliveryStartDay!==undefined?clamp((visualGameDay-a.deliveryStartDay)/Math.max(1,a.deliveryEndDay-a.deliveryStartDay),0,.999):a.deliveryProgress,distance=clamp(count*TILE*deliveryProgress,0,count*TILE-.01),index=Math.min(count-1,Math.floor(distance/TILE)),f=(distance-index*TILE)/TILE,p=a.route[index],q=a.route[index+1],dx=q[0]-p[0],dz=q[1]-p[1],side=a.side||0;
+      if(a.cargoEmptyAt!==null&&a.mesh.userData.cargoMeshes?.length)for(const cargo of a.mesh.userData.cargoMeshes)cargo.visible=deliveryProgress<a.cargoEmptyAt;
+      a.mesh.position.set(p[0]+dx*f+dz/TILE*side,a.height||0,p[1]+dz*f-dx/TILE*side);a.mesh.rotation.y=Math.atan2(dx,dz);
+    }
+  }
   function animate(now){
     requestAnimationFrame(animate);
     if(softwareRenderer&&now-lastSoftwareRender<400)return;
     if(softwareRenderer)lastSoftwareRender=now;
-    const wallDelta=Math.min(softwareRenderer?.25:.1,Math.max(0,(now-lastFrame)/1000));
+    const wallDelta=Math.min(softwareRenderer?0.25:0.1,Math.max(0,(now-lastFrame)/1000));
     lastFrame=now;adaptRenderResolution(now);updateWind(wallDelta);
     if(simulationPaused){resize();updateVegetation();spectacle.tick(0,visualTimeOfDayMinutes,true);living3d.tick(0,visualTimeOfDayMinutes,true);immersive3d.tick(0,visualTimeOfDayMinutes,true,routeActors);const pausedHeadlights=visualTimeOfDayMinutes>=1110||visualTimeOfDayMinutes<350||Number(lastSceneState?.utilities?.report?.drainage?.rainfallMm||0)>0;updateTrafficHeadlights(routeActors,pausedHeadlights,now);updateTireSprays(now);renderer.render(scene,camera);return}
     simulationClock+=wallDelta*simulationSpeed;visualTimeOfDayMinutes=(visualTimeOfDayMinutes+wallDelta*simulationSpeed*15)%1440;visualGameDay+=wallDelta*simulationSpeed/96;updateLighting(visualTimeOfDayMinutes);resize();updateVegetation();spectacle.tick(wallDelta,visualTimeOfDayMinutes);living3d.tick(wallDelta,visualTimeOfDayMinutes);
@@ -2067,12 +2075,7 @@ export function createWorld(canvas){
        if(isWalker&&routine){const t=routine.progress,first=a.route[routine.reverse?count:0],last=a.route[routine.reverse?0:count],band=.055,smooth=v=>v*v*(3-2*v);if(t<band){const blend=smooth(t/band);targetX=first[0]*(1-blend)+targetX*blend;targetZ=first[1]*(1-blend)+targetZ*blend}else if(t>1-band){const blend=smooth((t-(1-band))/band);targetX=targetX*(1-blend)+last[0]*blend;targetZ=targetZ*(1-blend)+last[1]*blend}}
        a.mesh.position.set(targetX,a.height||0,targetZ);const angle=Math.atan2(dx*direction+ndx/TILE*bend,dz*direction+ndz/TILE*bend),delta=Math.atan2(Math.sin(angle-a.mesh.rotation.y),Math.cos(angle-a.mesh.rotation.y));a.mesh.rotation.y+=delta*.22;const collectionRig=a.mesh.userData.collectionRig;if(collectionRig){const collecting=Boolean(a.serviceAtStop&&a.serviceStopKind==='container'),serviceBin=collecting?wasteContainerModels.get(a.serviceStopKey):null;collectionRig.collection.visible=collecting;collectionRig.lift.rotation.x+=(collecting?-1.48-collectionRig.lift.rotation.x:-collectionRig.lift.rotation.x)*.14;if(collectionRig.arm)collectionRig.arm.rotation.x+=(collecting?-.92-collectionRig.arm.rotation.x:-collectionRig.arm.rotation.x)*.18;if(a.serviceBin&&a.serviceBin!==serviceBin){a.serviceBin.position.copy(a.serviceBin.userData.serviceBasePosition);a.serviceBin.rotation.copy(a.serviceBin.userData.serviceBaseRotation);a.serviceBin=null}if(serviceBin){const base=serviceBin.userData.serviceBasePosition,cycle=Math.abs(Math.sin(simulationClock*2.4+(a.offset||0)));serviceBin.position.y=base.y+.48*cycle;serviceBin.rotation.z=serviceBin.userData.serviceBaseRotation.z-.58*cycle;a.serviceBin=serviceBin}else if(a.serviceBin){a.serviceBin.position.copy(a.serviceBin.userData.serviceBasePosition);a.serviceBin.rotation.copy(a.serviceBin.userData.serviceBaseRotation);a.serviceBin=null}}if(isWalker&&a.mesh.userData.walkCycle){const cycle=a.mesh.userData.walkCycle,gait=simulationClock*(5.2+Math.min(2,a.speed||0)*1.5)+(a.offset||0)+cycle.phase;cycle.legs[0].rotation.x=Math.sin(gait)*.48;cycle.legs[1].rotation.x=Math.sin(gait+Math.PI)*.48;cycle.arms[0].rotation.x=Math.sin(gait+Math.PI)*.38;cycle.arms[1].rotation.x=Math.sin(gait)*.38;if(cycle.torso)cycle.torso.position.y=.75+Math.abs(Math.sin(gait*2))*.018}const bike=a.mesh.userData.bikeCycle;if(bike){const cadence=simulationClock*7.5+bike.phase;bike.crank.rotation.x=cadence;for(const wheel of bike.wheels)wheel.rotation.x=cadence*.55}
     }
-    for(const a of routeActors){
-      if(a.deliveryProgress===undefined)continue;
-      const count=a.route.length-1;if(count<1)continue;const deliveryProgress=a.deliveryStartDay!==undefined?clamp((visualGameDay-a.deliveryStartDay)/Math.max(1,a.deliveryEndDay-a.deliveryStartDay),0,.999):a.deliveryProgress,distance=clamp(count*TILE*deliveryProgress,0,count*TILE-.01),index=Math.min(count-1,Math.floor(distance/TILE)),f=(distance-index*TILE)/TILE,p=a.route[index],q=a.route[index+1],dx=q[0]-p[0],dz=q[1]-p[1],side=a.side||0;
-      if(a.cargoEmptyAt!==null&&a.mesh.userData.cargoMeshes?.length)for(const cargo of a.mesh.userData.cargoMeshes)cargo.visible=deliveryProgress<a.cargoEmptyAt;
-      a.mesh.position.set(p[0]+dx*f+dz/TILE*side,a.height||0,p[1]+dz*f-dx/TILE*side);a.mesh.rotation.y=Math.atan2(dx,dz);
-    }
+    positionDeliveryActors();
     const ambientTime=now*.004;
     for(const f of fireVisuals){const t=simulationClock*.8+f.seed;for(const p of f.flames){const q=(t+p.phase)%1.15;p.mesh.position.set(f.fx+Math.sin(t*4+p.phase*9)*.13,.48+q*1.85,f.fz+Math.cos(t*3+p.phase*8)*.11);p.mesh.scale.set(.82+Math.sin(t*8+p.phase*12)*.2,Math.max(.05,Math.sin(q*Math.PI)),.82+Math.sin(t*8+p.phase*12)*.2);p.mesh.material.opacity=.92*(1-q*.42);p.mesh.rotation.z=Math.sin(t*5+p.phase*7)*.18}for(const p of f.smoke){const q=(t*.34+p.phase)%1;p.mesh.position.set(f.fx+Math.sin(t*1.4+p.phase*8)*(.18+q*.4),1.42+q*3.15,f.fz+Math.cos(t*1.2+p.phase*9)*(.18+q*.4));p.mesh.scale.setScalar(.62+q*1.45);p.mesh.material.opacity=.42*(1-q)}}
     immersive3d.tick(wallDelta,visualTimeOfDayMinutes,false,routeActors);

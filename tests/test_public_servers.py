@@ -9,7 +9,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from urllib.error import URLError
 
-from public_servers import PublicDirectory, PublicProxy
+from public_servers import PublicDirectory, PublicProxy, PublicRooms
 
 
 class PublicHostingSecurity(unittest.TestCase):
@@ -110,6 +110,41 @@ class PublicHostingSecurity(unittest.TestCase):
         from public_servers import PublicRooms
         self.assertIn("self.finished.wait(300)", getsource(PublicRooms._heartbeat))
 
+
+    def test_webrtc_host_can_start_when_cloudflare_is_unavailable(self):
+        with TemporaryDirectory() as folder:
+            with patch("public_servers.shutil.which", return_value=None):
+                bridge = PublicRooms(folder, 1, lambda: {
+                    "roomOpen": True, "roomName": "Prueba WebRTC", "players": 1})
+                status = bridge.start("Anfitrión")
+                try:
+                    self.assertTrue(status["roomId"])
+                    self.assertIsNone(status["url"])
+                    self.assertFalse(status["cloudflareReady"])
+                    key = json.dumps({"kty": "EC", "crv": "P-256",
+                                      "x": "A" * 43, "y": "B" * 43})
+                    with patch.object(bridge.directory, "publish", return_value={"ok": True}) as publish:
+                        enabled = bridge.activate_rtc(key)
+                        self.assertTrue(enabled["rtcReady"])
+                        self.assertTrue(enabled["active"])
+                        self.assertEqual(publish.call_args.args[0]["rtc_public_key"], key)
+                finally:
+                    bridge.stop()
+
+    def test_public_browse_includes_webrtc_only_rooms(self):
+        with TemporaryDirectory() as folder:
+            directory = PublicDirectory(folder)
+            directory.enabled = True
+            row = {"id": "rtc", "city": "Puerto",
+                   "host_name": "Anfitrión", "join_url": "", "players": 1,
+                   "max_players": 13, "rtc_enabled": True,
+                   "rtc_public_key": json.dumps({"kty":"EC","crv":"P-256",
+                                                    "x":"A"*43,"y":"B"*43})}
+            with patch.object(directory, "_request", return_value=[row]):
+                result = directory.browse()
+            self.assertEqual(len(result["rooms"]), 1)
+            self.assertTrue(result["rooms"][0]["rtcEnabled"])
+            self.assertFalse(result["rooms"][0]["url"])
 
     def test_public_proxy_rejects_admin_and_unauthenticated_calls(self):
         class Controller:

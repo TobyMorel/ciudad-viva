@@ -6974,7 +6974,7 @@ def discovery_loop():
             with LOCK:DISCOVERED_ROOMS[(address[0],room.get("port"))]={"name":str(room.get("name","Ciudad Viva"))[:40],"code":str(room.get("code",""))[:8],"address":f"http://{address[0]}:{room.get('port')}/","seen":now}
     finally:sock.close()
 
-STATIC_ROOT_FILES={"index.html","offline_seed.json","release_notes.json"}
+STATIC_ROOT_FILES={"index.html","offline_seed.json","release_notes.json","public_directory.json"}
 STATIC_ROOT_EXTENSIONS={".css",".js",".mjs",".svg"}
 STATIC_ASSET_DIRECTORIES={"assets","vendor"}
 STATIC_ASSET_EXTENSIONS={".css",".js",".mjs",".svg",".png",".jpg",".jpeg",".webp",".gif",".ico",".woff",".woff2",".ttf",".otf",".mp3",".ogg",".wav",".json",".bin",".glb",".gltf",".wasm",".webmanifest"}
@@ -7122,6 +7122,17 @@ class Handler(BaseHTTPRequestHandler):
                 CURSOR_REVISION+=1
                 CURSOR_CONDITION.notify_all()
             self._send(200,{"ok":True});return
+        if path=="/api/public/rtc/activate":
+            if self.client_address[0] not in ("127.0.0.1","::1"):
+                self._send(403,{"error":"Sólo el anfitrión puede activar WebRTC."});return
+            with LOCK:
+                if not ROOM_OPEN or pid!=state.get("host"):
+                    self._send(403,{"error":"Primero tenés que crear una sala como anfitrión."});return
+            try:
+                self._send(200,PUBLIC_BRIDGE.activate_rtc(data.get("publicKey")))
+            except (RuntimeError,OSError) as error:
+                self._send(503,{"error":str(error)})
+            return
         if path=="/api/public/publish":
             if self.client_address[0] not in ("127.0.0.1","::1"):
                 self._send(403,{"error":"La conexión pública sólo puede abrirse desde la PC anfitriona."});return

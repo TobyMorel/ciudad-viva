@@ -1,3 +1,7 @@
+# Ciudad Viva · Alfa 0.282
+
+**Online híbrido WebRTC + Cloudflare (0.282):** desde el ejecutable Windows, cada invitado prueba primero la conexión WebRTC directa (acciones y estado por canal DTLS); si la red la bloquea, utiliza automáticamente Cloudflare como respaldo. Si el anfitrión no logra abrir Cloudflare, aún puede anunciar y alojar una sala WebRTC. La señalización usa Supabase Realtime, con respuestas firmadas por el anfitrión. Se conservan LAN y Radmin VPN, hasta 13 jugadores por sala y recarga de servidores bajo demanda. Los Quick Tunnels son experimentales; WebRTC sin TURN no funciona en todas las redes. Ver `PUBLIC_SERVERS.md`.
+
 # Ciudad Viva · Alfa 0.281
 
 **13 jugadores y directorio público bajo demanda:** las salas LAN e Internet admiten hasta 13 jugadores incluido el anfitrión. Las búsquedas públicas sólo consultan Supabase al abrir «Servidores públicos» o pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Los anfitriones mantienen sus anuncios activos con una señal cada 5 minutos; desaparecen a los 12 minutos si la conexión cae. No hay un máximo global artificial de servidores. La conexión WebRTC P2P sigue siendo una alternativa futura que requiere pruebas de NAT y TURN. Ver `PUBLIC_SERVERS.md`.

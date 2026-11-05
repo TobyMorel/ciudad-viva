@@ -40,6 +40,7 @@ jobs:
           node --check traffic.js
           node --check simulation_time.js
           node --check game.js
+          node --check public_rtc.js
           node --check beginnerTutorial.js
           node --check cityInsights.js
           node --check city-companion.js
@@ -78,7 +79,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.281
+          name: ciudad-viva-alfa-0.282
           path: |
             .
             !.git/**
@@ -106,6 +107,8 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
+      - name: "WebRTC directo en dos navegadores y Supabase Realtime"
+        run: node tests/test_public_webrtc_ui.mjs
       - name: "Tutorial narrado: móvil y escritorio"
         run: node tests/test_beginner_tutorial_ui.mjs
       - name: "Asesor, misiones, previsiones y barrios: móvil y escritorio"
@@ -155,7 +158,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.281-responsive
+          name: ciudad-viva-alfa-0.282-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

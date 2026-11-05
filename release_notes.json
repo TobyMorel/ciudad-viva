@@ -1,7 +1,25 @@
 {
-  "currentVersion": "0.281",
+  "currentVersion": "0.282",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.282",
+      "date": "2026-11-05",
+      "title": "Online híbrido: WebRTC P2P con Cloudflare como respaldo",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "Los jugadores con el .exe intentan WebRTC directo y si falla la negociación ICE se conectan por Cloudflare, manteniendo también LAN.",
+        "El anfitrión puede anunciar WebRTC aunque Cloudflare no consiga abrir un túnel; la lista pública distingue servidores con una y dos rutas disponibles.",
+        "Supabase Realtime transporta sólo la señalización WebRTC; las acciones y estados viajan cifrados entre jugadores mediante RTCDataChannel y el motor autoritativo queda en la PC anfitriona.",
+        "Un par de claves ECDSA por sala permite verificar que la respuesta WebRTC procede del auténtico anfitrión registrado en Supabase.",
+        "Las peticiones P2P usan identidad exclusiva por canal, permisos de jugador y fragmentación y control de congestión para estados grandes.",
+        "El límite de 13 jugadores, la recarga de servidores cada 30 segundos y los anuncios cada cinco minutos permanecen; no hay cupo global de salas.",
+        "Supabase y la función Edge aceptan anuncios sólo RTC, sólo Cloudflare o híbridos. El transporte directo se prueba entre dos navegadores reales en CI.",
+        "Quedan pendientes las pruebas entre redes domésticas distintas y mejoras de NAT/TURN; Cloudflare Quick Tunnels sigue siendo experimental."
+      ],
+      "verification": "CI validará WebRTC real entre Chromium, Supabase, seguridad, lógica y compilación Windows. Prueba entre dos redes reales aún pendiente."
+    },
     {
       "version": "0.281",
       "date": "2026-11-05",

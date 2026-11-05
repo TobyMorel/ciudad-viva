@@ -1,7 +1,24 @@
 {
-  "currentVersion": "0.281",
+  "currentVersion": "0.282",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.282",
+      "date": "2026-11-05",
+      "title": "Ambiente por barrios, metas de ciudad y cooperación municipal",
+      "roadmapPhase": 12,
+      "overallProgress": null,
+      "changes": [
+        "El mapa ambiental distingue riesgos locales de agua y suelo además de aire, ruido, calor, inundación y acceso a parques; la calidad residencial se refleja en demanda sanitaria, migración y apoyo por distrito.",
+        "El panel ambiental agrega capas para agua, suelo y calidad de vida. Las capas representan índices comparativos de simulación, no mediciones científicas.",
+        "Las metas opcionales incluyen salud ambiental, movilidad sostenible y renovación urbana; el informe muestra seis especializaciones emergentes y conserva su evolución reciente en las partidas.",
+        "En Online, el anfitrión puede activar votación mayoritaria por umbral para inversiones municipales grandes. Las inversiones privadas quedan fuera de la votación; propuestas y votos quedan registrados.",
+        "Al cargar una partida Online se restauran responsabilidades y ajustes cooperativos; votos pendientes de una sala anterior se cancelan con explicación, las aprobaciones terminadas se conservan y los jugadores desconectados no pueden votar.",
+        "La auditoría actualiza el tablero de fases 1–15 según sistemas presentes y verificaciones; las fases con criterios funcionales pendientes permanecen por debajo de 95%.",
+        "La búsqueda automática de salas LAN ya no reemplaza la lista de servidores públicos abierta por el jugador."
+      ],
+      "verification": "224 pruebas Python, 179 pruebas Offline/JavaScript, estrés de 30 años en cinco perfiles y smoke del directorio público pasaron. Batería responsive en Chromium: 25 escenarios entre 390×844 y 1440×900; los dos escenarios corregidos se revalidaron individualmente. Sintaxis Python/JavaScript y diff limpios."
+    },
     {
       "version": "0.281",
       "date": "2026-11-05",
@@ -3509,61 +3526,55 @@
     {
       "phase": 1,
       "title": "Terreno, parcelas, calles y urbanización",
-      "progress": 85,
-      "summary": "Expansion pagada por sectores, permisos de uso y catastro persistente con titularidad municipal y privada.",
+      "progress": 90,
+      "summary": "Expansión por sectores, permisos por uso, catastro persistente, propiedad municipal/privada y compra municipal de inmuebles privados.",
       "pending": [
-        "Validar navegacion y construccion en sectores alejados con la interfaz de mapa.",
-        "Compraventa y transferencia de inmuebles privados."
+        "Falta validar navegación de cámara en sectores remotos y un mercado de transferencias privadas entre propietarios."
       ]
     },
     {
       "phase": 2,
       "title": "Constructoras, contrataciones y obras por etapas",
-      "progress": 75,
-      "summary": "Obras por etapas, cuadrillas y contratos con asignación automática; colocación directa sin confirmar cada proyecto, con costo y plazo consultables en el catálogo.",
+      "progress": 80,
+      "summary": "Obras con constructoras, contratos por hitos, etapas, materiales, inspección y asignación automática coherente con el flujo simplificado del juego.",
       "pending": [
-        "Permisos y planificación completos para todos los usos",
-        "riesgos y retrasos integrales",
-        "contratos y disputas especializadas siguen existiendo internamente aunque la asignación inicial sea automática."
+        "Falta completar disputas, sobrecostos y demoras por riesgo en todas las categorías de obra."
       ]
     },
     {
       "phase": 3,
       "title": "Materiales, equipos y logística de construcción",
-      "progress": 60,
-      "summary": "Stock de materiales, proveedores, pedidos, transporte y entregas para obras Online",
+      "progress": 85,
+      "summary": "Inventario de contratistas, proveedores finitos, depósitos, pedidos y entregas físicas por carretera tanto Offline como LAN.",
       "pending": [
-        "Logística equivalente en Offline",
-        "maquinaria especializada y cadena completa de suministro."
+        "Falta especializar maquinaria/cuadrillas y probar cadenas de abastecimiento extensas bajo saturación."
       ]
     },
     {
       "phase": 4,
       "title": "Zonificación, mercado inmobiliario y crecimiento privado",
-      "progress": 65,
-      "summary": "Promotores residenciales, comerciales e industriales inician obras según demanda, población, ventas, parcela permitida y conexión vial; las zonas permiten elegir baja o alta densidad.",
+      "progress": 70,
+      "summary": "Zonificación por densidad, demanda residencial/comercial/industrial/oficinas y promotores privados con obras y materiales propios.",
       "pending": [
-        "Competencia inmobiliaria, precios de suelo, alquileres y decisiones de inversión variadas.",
-        "Demanda/viabilidad residencial y comercial más amplia, incluyendo empleos y servicios sin bloquear la demanda inicial."
+        "Faltan competencia entre empresas, precios de suelo y decisiones más variadas de alquiler/inversión."
       ]
     },
     {
       "phase": 5,
       "title": "Población, hogares, necesidades y migración",
-      "progress": 70,
-      "summary": "Demanda migratoria persistente; nueva ciudad vacía y conectada a ruta regional; residentes entran solo a hogares terminados.",
+      "progress": 75,
+      "summary": "Hogares, mudanzas, empleo, educación, compra/alquiler y migración ajustada por impuestos y calidad ambiental.",
       "pending": [
-        "Necesidades individuales completas, migración multidimensional y desigualdad.",
-        "Comprobar permanencia y crecimiento en una ciudad nueva conectando empleo, accesibilidad y servicios."
+        "Falta conectar de punta a punta ahorro, ingreso familiar, motivos de salida y permanencia en partidas largas."
       ]
     },
     {
       "phase": 6,
       "title": "Servicios e infraestructura urbana básica",
       "progress": 70,
-      "summary": "Electricidad, agua, cloacas, drenaje y balances físicos",
+      "summary": "Electricidad, agua, cloacas, drenaje, capacidad y averías conectadas al estado de los barrios.",
       "pending": [
-        "Cobertura integral de redes, redundancia y respuesta completa a déficits."
+        "Falta validar redundancia de redes y cobertura ante déficits simultáneos a escala metropolitana."
       ]
     },
     {
@@ -3590,40 +3601,37 @@
     {
       "phase": 9,
       "title": "Servicios públicos, salud, educación y seguridad",
-      "progress": 75,
-      "summary": "Centros de salud, policía, bomberos, higiene urbana, educación por niveles, protección social, mortalidad natural y despachos físicos con capacidad, rutas y cobertura explicada.",
+      "progress": 80,
+      "summary": "Salud, seguridad, bomberos, higiene, educación por niveles y ayudas sociales conectadas con personal, acceso y presupuesto.",
       "pending": [
-        "Verificar plazas, contratación docente y cobertura por distrito en una partida poblada tras ampliar una escuela.",
-        "Educación técnica, formación docente y protección social con efectos presupuestarios completos en hogares.",
-        "Validar respuesta policial bajo carga, con móviles ocupados, rutas de regreso y cobertura de sectores remotos.",
-        "Ampliar especialización y cobertura del personal; completar despacho interactivo de incidentes."
+        "Falta formación técnica/docente completa y comprobar la respuesta de varios servicios bajo saturación."
       ]
     },
     {
       "phase": 10,
       "title": "Medioambiente, calidad de vida y desarrollo urbano",
-      "progress": 40,
-      "summary": "Índices ambientales comparativos por barrio, fuentes viales e industriales, amortiguación verde y presión sanitaria localizada.",
+      "progress": 70,
+      "summary": "Índices barriales de aire, ruido, calor, agua, suelo, drenaje y acceso verde; exposición influye en salud, migración y apoyo local.",
       "pending": [
-        "Faltan contaminación de agua y suelo, ruido con efectos de bienestar, políticas de mitigación y calidad de vida integrada."
+        "Faltan políticas de mitigación/remediación directa y calibración ambiental a largo plazo."
       ]
     },
     {
       "phase": 11,
       "title": "Apoyo ciudadano, elecciones y destitución",
-      "progress": 60,
-      "summary": "Aprobación, elecciones por distrito, metas, reclamos, crisis y destitución",
+      "progress": 70,
+      "summary": "Apoyo distrital y elecciones conectados con empleo, vivienda, servicios, ambiente, impuestos, reclamos y acuerdos.",
       "pending": [
-        "Participación demográfica, consultas, transparencia y evaluación electoral completa."
+        "Faltan consultas demográficas y transparencia histórica completa de promesas y participación."
       ]
     },
     {
       "phase": 12,
       "title": "Juego cooperativo: decisiones y responsabilidades",
-      "progress": 20,
-      "summary": "Estado común de sala LAN y acciones compartidas",
+      "progress": 75,
+      "summary": "Jugadores comparten ciudad, chat, cursores, registro, responsabilidades opcionales y votación mayoritaria de gastos municipales.",
       "pending": [
-        "Roles municipales, permisos/responsabilidades y reconexión robusta en red real."
+        "Faltan votaciones de pausa/velocidad, delegación de anfitrión y validación sostenida en redes reales."
       ]
     },
     {
@@ -3639,22 +3647,19 @@
     {
       "phase": 14,
       "title": "Progresión, especialización y metas de ciudad",
-      "progress": 30,
-      "summary": "Cinco metas voluntarias de ciudad con indicadores explicados, continuidad de seis cierres mensuales y seguimiento compartido Online/Offline.",
+      "progress": 70,
+      "summary": "Ocho metas voluntarias, seis perfiles de especialización y registro de tendencias por mes, con persistencia y uso en Offline/LAN.",
       "pending": [
-        "Especializaciones urbanas emergentes y trayectorias de desarrollo a largo plazo.",
-        "Ampliar objetivos ambientales, de transporte y revitalización con efectos integrados.",
-        "Validar el equilibrio de metas durante partidas largas y distintas escalas de ciudad."
+        "Falta equilibrar trayectorias en partidas largas y ciudades de distinta escala."
       ]
     },
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 80,
-      "summary": "Interfaz según 13 referencias y nuevo pase de arte 3D según siete referencias: edificios, calles, vegetación, costa y obras",
+      "progress": 85,
+      "summary": "Capas ambientales, paneles explicativos, información de acuerdos y ajustes responsive para el nuevo panel cooperativo.",
       "pending": [
-        "Validación de usabilidad, contraste y accesibilidad con personas y tecnologías de asistencia.",
-        "LOD por distancia, rendimiento en ciudades grandes y un segundo pase de detalle arquitectónico y entorno."
+        "Falta validación de accesibilidad con usuarios y medición de rendimiento en ciudades extensas."
       ]
     },
     {

@@ -78,7 +78,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.281
+          name: ciudad-viva-alfa-0.282
           path: |
             .
             !.git/**
@@ -139,6 +139,7 @@ jobs:
             tests/test_port_import_ui.mjs
             tests/test_funeral_ui.mjs
             tests/test_land_expansion_ui.mjs
+            tests/test_municipal_approvals_ui.mjs
             tests/test_new_settlement_traffic_ui.mjs
             tests/test_traffic_signal_ui.mjs
             tests/test_citizen_inbox_ui.mjs
@@ -155,7 +156,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.281-responsive
+          name: ciudad-viva-alfa-0.282-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

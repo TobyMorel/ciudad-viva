@@ -31,5 +31,11 @@ test('Offline avanza hora continua, cruza medianoche ordenadamente y se congela 
   now+=1_500;state=await adapter.request('/api/state');
   assert.equal(state.day,day,'un retraso largo no omite jornadas antes de acumular 24 horas simuladas');
   assert.equal(state.timeOfDayMinutes,35,'el reloj continuo conserva los 30 minutos simulados del retraso');
+  await adapter.request('/api/action',{action:'pause',value:true});
+  assert.equal((await adapter.request('/api/state')).paused,true,'la pausa explícita detiene el juego');
+  await adapter.request('/api/action',{action:'pause',value:true});
+  assert.equal((await adapter.request('/api/state')).paused,true,'repetir el mismo estado no reanuda el juego');
+  await adapter.request('/api/action',{action:'pause',value:false});
+  assert.equal((await adapter.request('/api/state')).paused,false,'la reanudación explícita vuelve a iniciar el reloj');
  }finally{Date.now=previousNow;globalThis.fetch=previousFetch;if(previousStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=previousStorage}
 });

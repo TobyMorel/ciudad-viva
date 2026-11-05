@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.282
+# Ciudad Viva · Alfa 0.283
+
+**Remediación ambiental, consultas por distrito y coordinación cooperativa:** las obras de remediación reducen riesgos locales con plazo, contratista y costo mensual; las consultas muestran una muestra estimada por edad y quedan registradas; en Online, pausa y velocidad se aprueban por mayoría y el anfitrión puede delegar. El centro de respuesta reúne 17 clases de alertas con evidencia y acceso a los sistemas correspondientes. La auditoría del roadmap conserva pendientes reales; las fases todavía incompletas no se marcan como 95%.
 
 **13 jugadores y directorio público bajo demanda:** las salas LAN e Internet admiten hasta 13 jugadores incluido el anfitrión. Las búsquedas públicas sólo consultan Supabase al abrir «Servidores públicos» o pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Los anfitriones mantienen sus anuncios activos con una señal cada 5 minutos; desaparecen a los 12 minutos si la conexión cae. No hay un máximo global artificial de servidores. La conexión WebRTC P2P sigue siendo una alternativa futura que requiere pruebas de NAT y TURN. Ver `PUBLIC_SERVERS.md`.
 
@@ -206,7 +208,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.242](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.242/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.283](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.283/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

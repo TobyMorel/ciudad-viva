@@ -1,4 +1,4 @@
-# Ciudad Viva · Directorio online autoalojado (Alfa 0.282)
+# Ciudad Viva · Directorio online autoalojado (Alfa 0.283)
 
 ## Estado real
 

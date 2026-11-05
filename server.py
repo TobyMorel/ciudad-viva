@@ -1073,7 +1073,12 @@ def municipal_team_report(player_id=None):
     for decision in cooperation["decisions"][-8:]:
         votes=decision.get("votes",{});labels_for_votes={member:labels.get(member,state.get("playerNames",{}).get(member,"Jugador desconectado")) for member in decision.get("eligibleVoters",[])}
         decision_rows.append({"id":decision["id"],"title":decision["title"],"cost":decision["cost"],"status":decision["status"],"proposerName":decision.get("proposerName","Jugador"),"requiredVotes":decision.get("requiredVotes",1),"yesVotes":sum(v=="yes" for v in votes.values()),"noVotes":sum(v=="no" for v in votes.values()),"myVote":votes.get(player_id),"votes":[{"name":labels_for_votes.get(member,"Jugador"),"vote":vote} for member,vote in votes.items()]})
-    cooperation_view={"approvalThreshold":cooperation["approvalThreshold"],"thresholds":list(MUNICIPAL_APPROVAL_THRESHOLDS),"decisions":decision_rows}
+    control_vote=cooperation.get("controlVote")
+    control_vote_view=None
+    if isinstance(control_vote,dict):
+        control_votes=control_vote.get("votes",{})
+        control_vote_view={"id":control_vote.get("id"),"control":control_vote.get("control"),"value":control_vote.get("value"),"status":control_vote.get("status"),"proposerName":control_vote.get("proposerName","Jugador"),"requiredVotes":control_vote.get("requiredVotes",1),"yesVotes":sum(v=="yes" for v in control_votes.values()),"noVotes":sum(v=="no" for v in control_votes.values()),"myVote":control_votes.get(player_id),"votes":[{"name":state.get("playerNames",{}).get(member,"Jugador"),"vote":vote} for member,vote in control_votes.items()],"cancellationReason":control_vote.get("cancellationReason")}
+    cooperation_view={"approvalThreshold":cooperation["approvalThreshold"],"thresholds":list(MUNICIPAL_APPROVAL_THRESHOLDS),"decisions":decision_rows,"controlVote":control_vote_view,"controlHistory":cooperation.get("controlHistory",[])[-6:]}
     return {"isHost":player_id is not None and player_id==state.get("host"),"myRole":next((role for role,owner in responsibilities.items() if owner==player_id),"compartido"),"members":members,"roles":roles,"online":len(active),"cooperation":cooperation_view}
 
 def municipal_cooperation_state():
@@ -1081,6 +1086,9 @@ def municipal_cooperation_state():
     if value.get("approvalThreshold") not in MUNICIPAL_APPROVAL_THRESHOLDS:value["approvalThreshold"]=0
     value.setdefault("decisions",[])
     value["decisions"]=[d for d in value["decisions"] if isinstance(d,dict)][-40:]
+    value.setdefault("controlVote",None)
+    value.setdefault("controlHistory",[])
+    value["controlHistory"]=[row for row in value["controlHistory"] if isinstance(row,dict)][-12:]
     return value
 
 def restore_municipal_network_data(snapshot):
@@ -1098,6 +1106,13 @@ def restore_municipal_network_data(snapshot):
             decision["cancellationReason"]="La sala cambió al cargar la partida."
         decisions.append(decision)
     cooperation["decisions"]=decisions[-40:]
+    control_vote=cooperation.get("controlVote")
+    if isinstance(control_vote,dict) and control_vote.get("status")=="pending":
+        control_vote["status"]="cancelled"
+        control_vote["cancellationReason"]="La sala cambió al cargar la partida."
+        cooperation.setdefault("controlHistory",[]).append(control_vote)
+        cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+        cooperation["controlVote"]=None
     active=set(state.get("players",{}))
     responsibilities=snapshot.get("municipalResponsibilities",{}) if isinstance(snapshot,dict) else {}
     if not isinstance(responsibilities,dict):responsibilities={}
@@ -7295,6 +7310,68 @@ class Handler(BaseHTTPRequestHandler):
                     state["players"][pid]=time.time();state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":f"actualizó la responsabilidad de {MUNICIPAL_ROLES[role]['label']}","day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
                     STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
                 cooperation=municipal_cooperation_state()
+                if action=="transferMunicipalHost":
+                    if pid!=state.get("host"):
+                        self._send(403,{"error":"Solo el anfitrión actual puede delegar la alcaldía."});return
+                    target=str(data.get("playerId") or "")
+                    if target==pid or target not in state.get("players",{}) or state["players"].get(target,0)<=time.time()-25:
+                        self._send(409,{"error":"Elegí otro jugador que siga conectado a la sala."});return
+                    previous_name=state.get("playerNames",{}).get(pid,"Anfitrión");next_name=state.get("playerNames",{}).get(target,"Jugador")
+                    state["host"]=target
+                    state["players"][pid]=time.time()
+                    state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":previous_name,"detail":f"delegó la alcaldía a {next_name}","day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action in ("proposeSimulationControl","voteSimulationControl"):
+                    now=time.time();current=cooperation.get("controlVote")
+                    if action=="proposeSimulationControl":
+                        control=str(data.get("control") or "")
+                        if control not in ("pause","speed"):
+                            self._send(409,{"error":"El control cooperativo debe ser pausa o velocidad."});return
+                        value=data.get("value")
+                        if control=="pause":
+                            if not isinstance(value,bool):self._send(409,{"error":"La pausa necesita un valor verdadero o falso."});return
+                        else:
+                            try:value=int(value)
+                            except (TypeError,ValueError):value=0
+                            if value not in (1,2,4):self._send(409,{"error":"Elegí velocidad x1, x2 o x4."});return
+                        if isinstance(current,dict) and current.get("status")=="pending" and now-int(current.get("createdAt",0))<=60:
+                            self._send(409,{"error":"Ya hay una votación de pausa o velocidad en curso."});return
+                        if isinstance(current,dict) and current.get("status")=="pending":
+                            current["status"]="expired";cooperation.setdefault("controlHistory",[]).append(current);cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+                        active_ids=sorted(member for member,last in state.get("players",{}).items() if last>now-25)
+                        vote={"id":uuid.uuid4().hex,"control":control,"value":value,"status":"pending","proposer":pid,"proposerName":state.get("playerNames",{}).get(pid,"Jugador"),"createdAt":int(now),"eligibleVoters":active_ids,"requiredVotes":len(active_ids)//2+1,"votes":{pid:"yes"}}
+                        cooperation["controlVote"]=vote
+                    else:
+                        if not isinstance(current,dict) or current.get("status")!="pending" or now-int(current.get("createdAt",0))>60 or str(data.get("voteId") or "")!=str(current.get("id") or ""):
+                            self._send(409,{"error":"No hay una votación de control vigente; actualizá el panel y volvé a votar."});return
+                        choice=str(data.get("vote") or "")
+                        if choice not in ("yes","no"):
+                            self._send(409,{"error":"El voto debe ser a favor o en contra."});return
+                        if pid not in current.get("eligibleVoters",[]) or state.get("players",{}).get(pid,0)<=now-25:
+                            self._send(403,{"error":"Solo pueden votar los jugadores presentes al iniciar la propuesta."});return
+                        current.setdefault("votes",{})[pid]=choice;vote=current
+                    vote=cooperation.get("controlVote") or vote
+                    active_ids={member for member,last in state.get("players",{}).items() if last>now-25}
+                    electorate=[member for member in vote.get("eligibleVoters",[]) if member in active_ids]
+                    required=max(1,len(electorate)//2+1);votes=vote.get("votes",{});yes=sum(votes.get(member)=="yes" for member in electorate);no=sum(votes.get(member)=="no" for member in electorate);remaining=max(0,len(electorate)-yes-no);vote["requiredVotes"]=required
+                    if yes>=required:
+                        engine_action={"action":vote["control"],"value":vote["value"]}
+                        try:view=SHARED_ENGINE.action(engine_action)
+                        except SharedEngineError as error:
+                            vote["status"]="rejected";vote["cancellationReason"]=str(error)
+                            self._send(409,{"error":str(error)});return
+                        publish_shared_view(view);vote["status"]="applied";vote["resolvedAt"]=int(now)
+                    elif yes+remaining<required:
+                        vote["status"]="rejected";vote["resolvedAt"]=int(now)
+                    state["players"][pid]=now
+                    label=("pausa" if vote["control"]=="pause" else f"velocidad x{vote['value']}")
+                    detail=(f"aprobó el cambio de {label}" if vote["status"]=="applied" else f"votó {'a favor' if votes.get(pid)=='yes' else 'en contra'} del cambio de {label}")
+                    state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":detail,"day":state.get("day",1),"time":int(now)});del state["actionFeed"][:-40]
+                    if vote["status"] in ("applied","rejected"):
+                        cooperation.setdefault("controlHistory",[]).append(vote);cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action in ("pause","speed"):
+                    self._send(409,{"error":"En una sala Online, pausa y velocidad se proponen desde los controles cooperativos."});return
                 if action=="setMunicipalApprovalThreshold":
                     if pid!=state.get("host"):
                         self._send(403,{"error":"Solo el anfitrión puede configurar el umbral de aprobación."});return

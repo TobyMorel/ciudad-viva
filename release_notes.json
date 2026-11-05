@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.282",
+  "currentVersion": "0.283",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.283",
+      "date": "2026-11-05",
+      "title": "Remediación ambiental, consultas y coordinación cooperativa",
+      "roadmapPhase": 13,
+      "overallProgress": null,
+      "changes": [
+        "Se pueden contratar obras de remediación ambiental con cuadrilla y plazo: reducen la exposición local según el medio atendido, tienen costo inicial y operación mensual, guardan historial y vencen al año de juego.",
+        "Las consultas distritales registran respuestas estimadas a partir de perfiles residentes y grupos de edad. La interfaz aclara que son estimaciones y no una votación electoral; el resultado queda en el historial del mandato.",
+        "En Online, pausa y velocidad se someten a mayoría de quienes siguen conectados. El anfitrión puede delegar la alcaldía a otro participante conectado; se rechazan votos vencidos o de personas fuera del padrón de la propuesta.",
+        "El panel de recuperación incorpora un centro de respuesta con 17 categorías causales, severidad, evidencia, historial y accesos directos a los sistemas que atienden cada alerta.",
+        "Se corrigió la alternancia de pausa Offline que podía ignorar la pausa solicitada al enviar un valor explícito; el test cubre pausa y reanudación explícitas y tradicionales.",
+        "La auditoría de fases actualiza con evidencia las fases 10, 11, 12, 13 y 15. Las fases 1–15 aún no alcanzan todas el 95%; el porcentaje global sigue sin estimarse porque el roadmap no define pesos comparables."
+      ],
+      "verification": "227 pruebas Python y 183 pruebas Node/Offline pasaron; 25 escenarios responsive de Chromium pasaron en móvil y escritorio. El estrés contable comprobó cinco perfiles durante 360 cierres mensuales. Sintaxis JavaScript/Python, validación JSON y git diff --check pasaron."
+    },
     {
       "version": "0.282",
       "date": "2026-11-05",
@@ -3610,38 +3626,37 @@
     {
       "phase": 10,
       "title": "Medioambiente, calidad de vida y desarrollo urbano",
-      "progress": 70,
-      "summary": "Índices barriales de aire, ruido, calor, agua, suelo, drenaje y acceso verde; exposición influye en salud, migración y apoyo local.",
+      "progress": 80,
+      "summary": "Índices barriales de aire, ruido, calor, agua, suelo, drenaje y acceso verde; exposiciones afectan salud, migración y apoyo, y se pueden contratar remediaciones localizadas con duración y costo operativo.",
       "pending": [
-        "Faltan políticas de mitigación/remediación directa y calibración ambiental a largo plazo."
+        "Ampliar las fuentes y medios ambientales atendidos; calibrar efectos locales y acumulados en partidas largas."
       ]
     },
     {
       "phase": 11,
       "title": "Apoyo ciudadano, elecciones y destitución",
-      "progress": 70,
-      "summary": "Apoyo distrital y elecciones conectados con empleo, vivienda, servicios, ambiente, impuestos, reclamos y acuerdos.",
+      "progress": 75,
+      "summary": "Apoyo distrital, elecciones, reclamos, acuerdos y consultas con muestras estimadas por edad; los resultados y la participación quedan registrados.",
       "pending": [
-        "Faltan consultas demográficas y transparencia histórica completa de promesas y participación."
+        "Las respuestas son estimaciones de perfiles residentes, no votos individuales; falta participación real y seguimiento histórico completo de promesas y consultas."
       ]
     },
     {
       "phase": 12,
       "title": "Juego cooperativo: decisiones y responsabilidades",
-      "progress": 75,
-      "summary": "Jugadores comparten ciudad, chat, cursores, registro, responsabilidades opcionales y votación mayoritaria de gastos municipales.",
+      "progress": 90,
+      "summary": "Presencia, chat, cursores, registro, responsabilidades, gasto municipal por mayoría, votación de pausa/velocidad y delegación del anfitrión.",
       "pending": [
-        "Faltan votaciones de pausa/velocidad, delegación de anfitrión y validación sostenida en redes reales."
+        "Validar sesiones largas y recuperación de votaciones ante cortes y reconexiones en redes LAN reales."
       ]
     },
     {
       "phase": 13,
       "title": "Crisis, inspecciones, protestas y acontecimientos",
-      "progress": 40,
-      "summary": "Clima, contratos, incidentes y respuesta municipal a cortes de redes con costo, ruta, plazo y cuadrilla visible",
+      "progress": 70,
+      "summary": "Centro común con 17 categorías de crisis derivadas de evidencia de la simulación, severidad, respuesta recomendada, acceso al sistema correspondiente e historial reciente.",
       "pending": [
-        "Biblioteca completa de doce crisis causales y recuperación persistente para cada tipo.",
-        "Ampliar decisiones para enfermedad, accidentes y otras interrupciones de servicio."
+        "Completar ciclos específicos de prevención, decisión, costo, recuperación y cierre para cada familia de crisis; el centro todavía enlaza respuestas existentes y no automatiza todos sus estados."
       ]
     },
     {
@@ -3656,10 +3671,10 @@
     {
       "phase": 15,
       "title": "Experiencia de juego, información y equilibrio",
-      "progress": 85,
-      "summary": "Capas ambientales, paneles explicativos, información de acuerdos y ajustes responsive para el nuevo panel cooperativo.",
+      "progress": 90,
+      "summary": "Paneles de crisis, consultas y cooperación comprobados en Chromium a 390×844 y 1440×900, junto con navegación y lectura de datos del mapa.",
       "pending": [
-        "Falta validación de accesibilidad con usuarios y medición de rendimiento en ciudades extensas."
+        "Faltan pruebas con usuarios de accesibilidad y mediciones de rendimiento en ciudades extensas y partidas multijugador prolongadas."
       ]
     },
     {

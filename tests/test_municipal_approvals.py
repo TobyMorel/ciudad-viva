@@ -68,6 +68,35 @@ class MunicipalApprovalTests(unittest.TestCase):
         self.assertEqual(server.municipal_action_cost({"action":"placeRoad","x":5,"y":10,"roadType":"avenue"}),3200)
         status,body=self.request("guest",{"action":"setMunicipalApprovalThreshold","threshold":10000})
         self.assertEqual(status,403);self.assertIn("anfitrión",body["error"])
+    def test_pause_and_speed_votes_apply_only_after_current_connected_majority(self):
+        status,view=self.request("host",{"action":"proposeSimulationControl","control":"pause","value":True})
+        self.assertEqual(status,200)
+        vote=view["municipalTeam"]["cooperation"]["controlVote"]
+        self.assertEqual(vote["status"],"pending");self.assertEqual(vote["yesVotes"],1);self.assertEqual(vote["requiredVotes"],2)
+        self.assertEqual(server.SHARED_ENGINE.actions,[])
+        status,view=self.request("guest",{"action":"voteSimulationControl","voteId":vote["id"],"vote":"yes"})
+        self.assertEqual(status,200);self.assertEqual(view["municipalTeam"]["cooperation"]["controlVote"]["status"],"applied")
+        self.assertEqual(server.SHARED_ENGINE.actions[-1],{"action":"pause","value":True})
+        status,view=self.request("guest",{"action":"proposeSimulationControl","control":"speed","value":4})
+        speed_vote=view["municipalTeam"]["cooperation"]["controlVote"]
+        self.assertEqual(speed_vote["status"],"pending")
+        status,view=self.request("host",{"action":"voteSimulationControl","voteId":speed_vote["id"],"vote":"yes"})
+        self.assertEqual(status,200);self.assertEqual(view["municipalTeam"]["cooperation"]["controlVote"]["status"],"applied")
+        self.assertEqual(server.SHARED_ENGINE.actions[-1],{"action":"speed","value":4})
+        status,_=self.request("third",{"action":"voteSimulationControl","voteId":speed_vote["id"],"vote":"yes"})
+        self.assertEqual(status,409)
+
+    def test_only_connected_host_can_delegate_alcaldia(self):
+        status,body=self.request("guest",{"action":"transferMunicipalHost","playerId":"third"})
+        self.assertEqual(status,403);self.assertEqual(server.state["host"],"host")
+        status,body=self.request("host",{"action":"transferMunicipalHost","playerId":"guest"})
+        self.assertEqual(status,200);self.assertEqual(server.state["host"],"guest")
+        self.assertFalse(body["municipalTeam"]["isHost"])
+        self.assertTrue(server.public_state("guest")["municipalTeam"]["isHost"])
+        server.state["players"]["third"]=time.time()-60
+        status,_=self.request("guest",{"action":"transferMunicipalHost","playerId":"third"})
+        self.assertEqual(status,409);self.assertEqual(server.state["host"],"guest")
+
     def test_quorum_rejects_when_remaining_players_cannot_reach_majority(self):
         decision=server.create_municipal_decision("host",{"action":"place","kind":"civic","x":4,"y":9},8000)
         self.assertIsNotNone(decision)

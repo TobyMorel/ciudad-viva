@@ -1,26 +1,32 @@
-# Auditoría integral de las fases 1–15 · Alfa 0.282
+# Auditoría integral de las fases 1–15 · Alfa 0.283
 
-Se contrastaron los sistemas del repositorio y sus pruebas con el roadmap. Las cifras son orientativas y el juego exige completar los criterios antes de marcar una fase al 100%; no se promedian como avance global.
+La revisión contrasta sistemas observables, casos de prueba y pendientes del roadmap maestro. Los porcentajes son orientativos y solo cambian cuando hay una mecánica o evidencia nueva; no se convierten en un promedio global.
 
 | Fase | Avance | Evidencia principal | Pendiente que impide llegar a 95% |
 |---:|---:|---|---|
-| 1 | 90% | Expansión por sectores, calles y zonas conectadas, catastro y compra municipal de inmuebles privados; pruebas de adquisición y mapa. | Validar navegación por cámara en sectores remotos y cubrir más operaciones de titularidad. |
-| 2 | 80% | Contratos, constructoras, avances por etapas, cuadrillas, inspecciones, pagos y riesgos básicos. | Riesgos, demoras y disputas aún no cubren todos los tipos de obra; la selección de ofertas manual se mantiene fuera del flujo simplificado acordado. |
-| 3 | 85% | Inventario y proveedores finitos, depósitos, pedidos y camiones; regresiones Online/Offline para pedidos, desvíos y materiales insuficientes. | Maquinaria especializada y cadenas extensas bajo congestión todavía requieren pruebas. |
-| 4 | 70% | Zonificación por densidad y promotores privados activados por demanda y acceso vial. | Competencia entre promotores y precios/alquileres de suelo más variados. |
-| 5 | 75% | Hogares, mudanzas, formación, empleo, compra/alquiler y migración; el ambiente puede reducir la llegada o impulsar salidas. | Motivos de salida y decisión económica de cada familia no están equilibrados en partidas largas. |
-| 6 | 70% | Redes de agua, energía, saneamiento y drenaje con capacidad, consumo y cortes. | Redundancia y respuesta conjunta a déficits extensos. |
+| 1 | 90% | Expansión por sectores, calles y zonas conectadas, catastro y compra municipal de inmuebles privados; pruebas de adquisición y expansión. | Mercado de transferencias entre privados, valor del suelo por zona y planificación vial completa. |
+| 2 | 80% | Contratos, constructoras, avances por etapas, cuadrillas, inspecciones, pagos, garantías y órdenes de cambio. | Disputas, riesgos y demoras todavía no cubren todas las categorías de obra. |
+| 3 | 85% | Inventario y proveedores finitos, depósitos, pedidos y camiones; regresiones Online/Offline para pedidos, desvíos y faltantes. | Maquinaria especializada y cadenas extensas bajo congestión todavía requieren pruebas. |
+| 4 | 70% | Zonificación por densidad y promotores privados activados por demanda y acceso vial. | Competencia entre promotores y precios de suelo, alquiler e inversión más variados. |
+| 5 | 75% | Hogares, mudanzas, formación, empleo, compra/alquiler y migración; el ambiente puede reducir la llegada o impulsar salidas. | Ahorro e ingresos de cada familia, motivos de salida y permanencia aún requieren balance longitudinal. |
+| 6 | 70% | Redes de agua, energía, saneamiento y drenaje con capacidad, consumo, cortes, respaldos y reparaciones. | Redundancia distribuida y respuesta conjunta a déficits extensos todavía no están validadas. |
 | 7 | 96% | Viajes, rutas, transporte público, estacionamiento, capacidad y operación diaria cubiertos por pruebas extensas. | Validar alivio de congestión y puntualidad en ciudades densas. |
-| 8 | 97% | Impuestos por sector, empleo, cuentas municipales, deuda y previsiones con conciliación de caja. | Validar recuperación de crisis fiscal completa y gastos secundarios a largo plazo. |
+| 8 | 97% | Impuestos por sector, empleo, cuentas municipales, deuda y previsiones con conciliación de caja. | Validar recuperación fiscal completa y continuidad de servicios en una crisis prolongada. |
 | 9 | 80% | Salud, policía, bomberos, residuos, educación, protección social y respuesta física con personal, rutas y presupuesto. | Formación técnica/docente y saturación simultánea de múltiples servicios. |
-| 10 | 70% | Aire, ruido, calor, agua, suelo, inundación y parques medidos por barrio; salud, migración y apoyo responden a exposición. | Mitigación/remediación directa y calibración de sus efectos a largo plazo. |
-| 11 | 70% | Apoyo y reclamos distritales, elecciones, acuerdos y alertas institucionales; el ambiente se incorpora a la evaluación local. | Consultas demográficas y transparencia histórica completa de participación y promesas. |
-| 12 | 75% | Presencia, chat, cursores, registro, responsabilidades y votación opcional de gastos; se cubren desconexión y carga de partidas. | Votación de pausa/velocidad, delegación del anfitrión y pruebas sostenidas en redes reales. |
-| 13 | 40% | Incidentes de obras, redes, movilidad, incendios y clima con respuestas y costos en sistemas distintos. | Biblioteca causal integrada de doce crisis, prevención y recuperación persistente. |
-| 14 | 70% | Ocho metas de ciudad, seis especializaciones derivadas de actividad real y tendencia mensual persistida. | Balance de trayectorias durante décadas y con tamaños de ciudad distintos. |
-| 15 | 85% | Capas ambientales y panel cooperativo responsive; interfaz comprobada en Chromium a 390×844 y 1440×900, incluido el flujo de votación. | Pruebas de accesibilidad con usuarios y medición de rendimiento en ciudades extensas. |
+| 10 | 80% | Indicadores ambientales por barrio y remediaciones contratadas con fuente, alcance local, duración, costo e historial. | Atender más fuentes y medios, y calibrar efectos acumulados a largo plazo. |
+| 11 | 75% | Apoyo, elecciones, acuerdos y consultas distritales por grupo de edad con resultado estimado e historial. | La participación todavía se estima desde perfiles residentes; faltan respuestas individuales y trazabilidad histórica completa de promesas. |
+| 12 | 90% | Presencia, chat, cursores, responsabilidades, votación mayoritaria de gastos y controles, y delegación de anfitrión. | Validación sostenida en redes LAN reales, cortes y reconexiones durante votaciones. |
+| 13 | 70% | Centro con 17 categorías de alerta, severidad, evidencia, respuesta recomendada e ingreso a sistemas existentes. | Cada familia todavía necesita su ciclo causal completo de prevención, decisión, recuperación y cierre. |
+| 14 | 70% | Ocho metas de ciudad, seis especializaciones y seguimiento histórico; estrés contable en cinco perfiles y 360 cierres. | Mejorar trayectorias y sostenibilidad en ciudades de escalas distintas; los perfiles de estrés no simulan cada jornada diaria. |
+| 15 | 90% | Paneles nuevos y 25 escenarios comprobados en Chromium a 390×844 y 1440×900. | Accesibilidad evaluada con usuarios y rendimiento en ciudades extensas y sesiones multijugador prolongadas. |
 
-La meta solicitada de 95% para cada fase no se declara alcanzada en esta entrega: varias todavía tienen sistemas centrales completos por construir o validar. Las fases 1–15 quedan registradas en `release_notes.json`; el porcentaje global no se calcula porque las fases no tienen pesos comparables.
+La meta de 95% para cada fase no se declara alcanzada: las fases 2–6 y 9–15 conservan pendientes funcionales o de validación. El total no se promedia porque las 34 fases no tienen pesos comparables. El push activa la batería de CI; esta verificación local no sustituye una sesión LAN física ni el humo del directorio global.
+
+## Revisión de alcance · Alfa 0.283
+
+La remediación añade obras ambientales contratadas con efectos territoriales temporales y operación presupuestada. Las consultas guardan muestras estimadas por edad y dejan claro que no son votos individuales. El cooperativo somete pausa y velocidad a mayoría y permite delegar la alcaldía. El centro de respuesta agrupa 17 categorías causales con evidencia y acceso al sistema vigente. También se corrigió y probó la pausa Offline con valores explícitos, y se cambió la prueba de concurrencia LAN para usar cuatro acciones fiscales independientes, dado que los controles de velocidad requieren votación.
+
+Evidencia local: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. La sintaxis y la integridad del diff pasaron. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
 
 ---
 

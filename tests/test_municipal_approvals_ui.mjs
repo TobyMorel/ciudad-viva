@@ -27,6 +27,10 @@ try{
  assert.ok(host,'El anfitrión debe tener una identidad online');
  const joined=await page.evaluate(async()=>{const response=await fetch('/api/room/join',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':'ui-guest'},body:JSON.stringify({name:'Beto'})});return response.ok});
  assert.equal(joined,true,'El segundo miembro debe entrar en la misma sala');
+ await page.locator('#cityReportRail [data-city-report="recovery"]').click();await page.locator('.crisis-desk').waitFor();
+ assert.match(await page.locator('.crisis-desk').innerText(),/CENTRO DE RESPUESTA/);
+ for(const viewport of [{width:390,height:844},{width:1440,height:900}]){await page.setViewportSize(viewport);await page.waitForTimeout(100);const layout=await page.locator('.crisis-desk').evaluate(el=>({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right,scroll:el.scrollWidth,client:el.clientWidth,page:document.documentElement.scrollWidth-window.innerWidth}));assert.ok(layout.left>=-1&&layout.right<=viewport.width+1&&layout.scroll<=layout.client+2&&layout.page<=1,`El tablero de crisis se desborda a ${viewport.width}px: ${JSON.stringify(layout)}`)}
+ await page.locator('#popupClose').click();
  await page.locator('#cityReportRail [data-city-report="government"]').click();
  await page.locator('.municipal-team').waitFor();
  await page.locator('.municipal-team > summary').click();
@@ -48,8 +52,20 @@ try{
  const vote=await page.evaluate(async()=>{const visible=element=>element.getClientRects().length>0,card=[...document.querySelectorAll('.municipal-decision')].find(visible),response=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':'ui-guest'},body:JSON.stringify({action:'voteMunicipalDecision',decisionId:card?.querySelector('[data-decision-vote]')?.dataset.decisionVote,vote:'yes'})});return response.ok});
  assert.equal(vote,true,'El segundo integrante debe poder completar la mayoría');
  await page.waitForFunction(()=>[...document.querySelectorAll('.municipal-decision')].some(card=>card.getClientRects().length>0&&card.innerText.includes('Aprobada')),null,{timeout:15000});
+ await page.evaluate(async()=>fetch('/api/state',{headers:{'X-Player-Id':'ui-guest'}}));
+ await page.locator('[data-speed="4"]').evaluate(button=>button.click());
+ await page.waitForFunction(()=>document.querySelector('.simulation-control-vote')?.innerText.includes('Votación abierta'),null,{timeout:15000});
+ const controlVote=await page.evaluate(async()=>{const response=await fetch('/api/state',{headers:{'X-Player-Id':'ui-guest'}});const state=await response.json();return state.municipalTeam?.cooperation?.controlVote});
+ assert.ok(controlVote?.id,'La propuesta de velocidad debe quedar visible al equipo');
+ const speedVote=await page.evaluate(async id=>{const response=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json','X-Player-Id':'ui-guest'},body:JSON.stringify({action:'voteSimulationControl',voteId:id,vote:'yes'})});return response.ok?response.json():{error:await response.text()}},controlVote.id);
+ assert.equal(speedVote.municipalTeam.cooperation.controlVote.status,'applied');
+ await page.waitForFunction(()=>document.querySelector('.simulation-control-vote')?.innerText.includes('Aprobada y aplicada'),null,{timeout:15000});
+ const delegated=await page.locator('[data-transfer-host="ui-guest"]').count();assert.equal(delegated,1,'La alcaldía debe poder delegarse desde la lista de jugadores');
+ await page.locator('[data-transfer-host="ui-guest"]').evaluate(button=>button.click());
+ const newHost=await page.evaluate(async()=>{const response=await fetch('/api/state',{headers:{'X-Player-Id':'ui-guest'}});return (await response.json()).municipalTeam?.isHost});
+ assert.equal(newHost,true,'La delegación debe transferir el rol de anfitrión');
  assert.deepEqual(errors,[],errors.join('; '));
- console.log('Votación municipal Online y panel sin desbordes en móvil/escritorio verificados en Chromium.');
+ console.log('Votación de gastos y de velocidad, delegación del anfitrión y paneles mobile/escritorio verificados en Chromium.');
 }finally{
  await browser?.close();
  if(server.exitCode===null)await new Promise(resolve=>{server.once('exit',resolve);server.kill('SIGTERM')});

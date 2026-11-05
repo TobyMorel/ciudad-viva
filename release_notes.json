@@ -14,11 +14,12 @@
         "Las consultas online incluyen una papeleta por jugador conectado al abrirse, con control de votos únicos y un resultado separado de las respuestas simuladas de residentes.",
         "Completé trayectorias sostenidas de especialización urbana y controles de compatibilidad para partidas guardadas antiguas.",
         "Las fases 1–15 quedan en al menos 95% según cobertura funcional y escenarios automatizados. El avance total sigue sin calcularse porque el roadmap no pondera las fases.",
-        "GitHub Actions continúa pausado hasta el 1 de diciembre de 2026; la validación de esta versión se ejecuta localmente.",
+        "Los workflows propios están archivados y la validación se ejecuta localmente. GitHub conserva activos dos workflows dinámicos; desactivar Actions por completo requiere permisos de administración del repositorio.",
         "Corregí una condición de la flota de obra que hacía que proyectos sin maquinaria especializada avanzaran día por medio; ahora completan el plazo diario previsto.",
+        "Los workflows propios están archivados y la validación se ejecuta localmente. GitHub conserva activos dos workflows dinámicos; desactivar Actions por completo requiere permisos de administración del repositorio.",
         "Restauré el panel de financiación que faltaba al iniciar partida y aclaré la tasación estimada en las fichas del mercado privado."
       ],
-      "verification": "Validación local completada: 240 pruebas Python, 186 pruebas Offline/LAN, 30 pruebas de interfaz Chromium, WebRTC DTLS y directorio público. Estrés de 30 años: cinco perfiles completados; cuatro escenarios urbanos heredados de caja inicial baja terminan sin saldo, por lo que la solvencia prolongada sigue pendiente de calibración; la expansión remota cierra con $830.668. No sustituye pruebas de campo entre cuatro PCs."
+      "verification": "Validación local completada: 240 pruebas Python, 186 pruebas Offline/LAN, 30 pruebas de interfaz Chromium, WebRTC DTLS y directorio público. Estrés de 30 años: cinco perfiles completados; cuatro escenarios urbanos heredados de caja inicial baja terminan sin saldo, por lo que la solvencia prolongada sigue pendiente de calibración; la expansión remota cierra con $830.668. No sustituye pruebas de campo entre cuatro PCs. El deployment de Vercel correspondiente al commit queda BLOCKED por la protección SSO del proyecto; no se retiró esa protección y el contenido no pudo verificarse automáticamente."
     },
     {
       "version": "0.285",

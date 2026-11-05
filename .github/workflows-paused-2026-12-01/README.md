@@ -2,7 +2,7 @@
 
 Los workflows se movieron fuera de `.github/workflows/` el 5 de noviembre de 2026 porque la cuenta agotó los 2.000 minutos incluidos. GitHub Actions no iniciará validaciones, paquetes Windows ni limpieza programada desde este repositorio mientras permanezcan en esta carpeta.
 
-Revisar la cuota el **1 de diciembre de 2026**. Para reactivar las automatizaciones, mover `*.yml` de esta carpeta a `.github/workflows/` y hacer un commit. La publicación web sigue dependiendo de la integración Git de Vercel, no de estos workflows.
+Revisar la cuota el **1 de diciembre de 2026**. Para reactivar las automatizaciones, mover `*.yml` de esta carpeta a `.github/workflows/` y hacer un commit. La publicación web sigue dependiendo de la integración Git de Vercel, no de estos workflows. GitHub aún muestra los workflows dinámicos `pages-build-deployment` y `Dependency Graph`; la API conectada responde sin permiso para desactivarlos o cambiar la configuración global. Si hay que detenerlos, una persona administradora puede usar Settings → Actions → General → Disable Actions. El último deployment de Vercel (Alfa 0.286) quedó bloqueado por la protección SSO; no se quitó la protección.
 
 Durante la pausa, ejecutar `bash scripts/validate_local.sh` o `powershell -ExecutionPolicy Bypass -File scripts/validate_local.ps1` en una máquina con Python, Node.js, Playwright y Chromium. La prueba de WebRTC usa Supabase Realtime para señalización, sin escribir registros en la base. `RUN_RESPONSIVE=1` corre también los escenarios UI; `RUN_STRESS=1` activa los perfiles económicos; `RUN_SUPABASE_DIRECTORY_SMOKE=1` crea y elimina un anuncio temporal.
 

@@ -2,7 +2,7 @@
 
 La cobertura funcional de las primeras quince fases llega al 95% o más en Alfa 0.286. Se agregan ventas privadas de inmuebles con historial de titularidad, ingreso salarial familiar sin duplicación, formación técnica y docente asociada a habilidades de empleo, y votos online de jugadores en consultas vecinales, separados de la muestra simulada de residentes. La batería local recorre contratos, equipos, migración, servicios, economía, movilidad, gobierno y presentación responsive. El residuo de cada fase se reserva para validación entre redes/dispositivos reales, accesibilidad y partidas prolongadas. El estrés económico de 30 años termina con caja $0 en cuatro perfiles heredados de baja financiación; queda calibrar esa sostenibilidad.
 
-GitHub Actions permanece pausado hasta el 1 de diciembre de 2026. La validación local se ejecuta con `scripts/validate_local.sh`, y las sesiones de campo de cuatro equipos siguen como comprobación final del online.
+Los workflows propios de GitHub están archivados hasta el 1 de diciembre. Los flujos dinámicos de Pages y Dependency Graph siguen activos porque el token no permite deshabilitar Actions a nivel de repositorio. El deployment de Vercel para 0.286 está bloqueado por la protección SSO. La validación local se ejecuta con `scripts/validate_local.sh`; las sesiones de campo de cuatro equipos siguen pendientes.
 
 ## Alfa 0.254 · Economía de una ciudad vacía
 

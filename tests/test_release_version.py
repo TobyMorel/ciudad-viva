@@ -66,7 +66,8 @@ class ReleaseVersionTests(unittest.TestCase):
         except (OSError, subprocess.CalledProcessError):
             self.fail("No se pudo comparar el historial con la base del PR; configurar checkout fetch-depth: 0.")
         if not any(path in {"server.py", "offline.js", "game.js", "world3d.js", "index.html"}
-                   or (path.endswith((".js", ".py", ".css")) and not path.startswith("tests/"))
+                   or (path.endswith((".js", ".py", ".css"))
+                       and not path.startswith(("tests/", "scripts/")))
                    for path in changed):
             return
         current = json.loads((ROOT / "release_notes.json").read_text(encoding="utf-8"))

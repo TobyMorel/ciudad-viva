@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 echo "== Python syntax =="
-python -m py_compile server.py public_servers.py shared_engine.py desktop_app.py scripts/smoke_public_directory.py
+python -m py_compile server.py public_servers.py shared_engine.py desktop_app.py scripts/smoke_public_directory.py scripts/build_wasm_route.py
 
 echo "== JavaScript syntax =="
 find . -maxdepth 1 -type f \( -name '*.js' -o -name '*.mjs' \) -print0 | xargs -0 -r -n1 node --check
@@ -23,6 +23,12 @@ node --test tests/*_offline.mjs tests/test_city_guide.mjs tests/test_beginner_tu
 
 echo "== Offline recovered save slots and browser delete controls =="
 node tests/test_offline_slot_management.mjs
+
+echo "== Rust/WebAssembly road routing =="
+node tests/test_wasm_route.mjs
+
+echo "== WebGPU renderer and automatic WebGL 2 fallback =="
+node tests/test_render_backend.mjs
 
 echo "== Public WebRTC browser integration (uses Supabase Realtime, no database writes) =="
 node tests/test_public_webrtc_ui.mjs

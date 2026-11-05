@@ -1,7 +1,22 @@
 {
-  "currentVersion": "0.288",
+  "currentVersion": "0.289",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.289",
+      "date": "2026-11-05",
+      "title": "WebGPU y caminos Rust/WASM",
+      "roadmapPhase": 15,
+      "phaseProgress": 95,
+      "overallProgress": null,
+      "changes": [
+        "El mapa 3D y las vistas 3D del catálogo ahora prefieren WebGPU y usan WebGL 2 automáticamente cuando el navegador no tiene WebGPU.",
+        "El buscador ponderado de rutas de la simulación Offline se compiló desde Rust a WebAssembly; si falta el binario o el mapa supera 16.384 nodos, el juego conserva el buscador JavaScript.",
+        "Se mantuvo Three.js para renderizar la escena procedural existente: cambiar a Babylon.js o PlayCanvas requeriría reconstruir los modelos y sistemas acoplados al grafo actual.",
+        "El anfitrión Online y el resto de la simulación conservan sus runtimes actuales; esta entrega migra el backend de dibujo y el cálculo de rutas Offline, no todo el código del juego."
+      ],
+      "verification": "Validación local completa: suite Python, 192 pruebas Offline/LAN, 3 pruebas Rust/WASM, Chromium confirmó WebGPU y fallback WebGL 2, y pasaron las comprobaciones de sala WebRTC y directorio público. Chromium usó SwiftShader; falta contrastar en GPU física."
+    },
     {
       "version": "0.288",
       "date": "2026-11-05",

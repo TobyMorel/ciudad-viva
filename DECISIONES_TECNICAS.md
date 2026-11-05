@@ -756,3 +756,10 @@ Los reclamos contractuales comparan únicamente datos observados de plazo, certi
 ## Alfa 0.288 · límites y eliminación de copias recuperadas
 
 Los respaldos automáticos se limitan globalmente a los dos más recientes y se pueden eliminar desde el selector sin afectar el slot fuente. Cada respaldo se puede recuperar en un slot aparte, con un máximo de dos slots recuperados simultáneos; el límite se valida dentro de una transacción IndexedDB para que dos clics rápidos o pestañas distintas no excedan la capacidad.
+
+
+## Alfa 0.289 · WebGPU y pathfinding Rust/WASM
+
+El mapa existente usa la API de Three.js en cientos de constructores y efectos. Se cambia el renderer por `WebGPURenderer`, cuyo backend intenta WebGPU y selecciona WebGL 2 si el navegador no expone WebGPU; el mismo renderer alimenta las vistas del catálogo. Se conserva la escena procedural para no duplicar modelos y reglas mientras se cambia el backend.
+
+El Dijkstra ponderado que utiliza la simulación offline se compila como Rust `no_std` a `wasm32-unknown-unknown`. El ABI recibe aristas y costos compactos; el límite de 16.384 nodos acota memoria y una ciudad mayor usa el buscador JavaScript. El server de sala mantiene su implementación autoritativa existente; todavía no se migraron todos los subsistemas de simulación a WASM.

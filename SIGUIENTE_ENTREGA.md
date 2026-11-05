@@ -1,3 +1,9 @@
+## Alfa 0.289 · WebGPU y rutas Rust/WASM
+
+El mapa 3D y sus previews prefieren WebGPU y caen a WebGL 2 cuando hace falta. El buscador ponderado de caminos de la simulación offline corre en Rust/WASM, con respaldo JS para compatibilidad y mapas que superen 16.384 nodos. Se mantuvieron los modelos y sistemas actuales de Three.js. La autoridad de rutas Online y el resto de la lógica siguen en sus runtimes existentes: esta versión cambia el backend de dibujo y migra un cálculo intensivo, no todo el juego.
+
+Próximo trabajo de rendimiento: medir el mismo mapa grande en PC y A54 con diagnóstico de backend activo, localizar los costos restantes de simulación/escena y migrar otros cálculos sólo cuando el perfil lo justifique. Un traslado completo a PlayCanvas/Babylon o de toda la simulación requeriría reconstruir sistemas y datos además del renderer.
+
 ## Alfa 0.288 · Gestión segura de partidas recuperadas
 
 El selector Offline permite eliminar cada copia de recuperación, conserva un máximo de dos respaldos recientes y limita a dos los slots creados desde copias. La acción de borrado protege la partida original; los slots recuperados se administran como cualquier otra partida guardada.

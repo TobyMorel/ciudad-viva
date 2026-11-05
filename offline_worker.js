@@ -1,4 +1,4 @@
-import {createOfflineAdapter} from './offline.js?v=0.288';
+import {createOfflineAdapter} from './offline.js?v=0.289';
 
 const SAVE_KEY='ciudad-viva-offline-v1';
 const memory=new Map();
@@ -12,7 +12,7 @@ self.addEventListener('message',async event=>{
   const message=event.data||{};
   if(message.type==='init'){
     if(message.snapshot)memory.set(SAVE_KEY,message.snapshot);
-    try{adapter=await createOfflineAdapter();adapter.setRealtimeClock(true);lastRevision=-1;lastSnapshotAt=Date.now();self.postMessage({type:'ready',snapshot:memory.get(SAVE_KEY)||null})}
+    try{adapter=await createOfflineAdapter();adapter.setRealtimeClock(true);lastRevision=-1;lastSnapshotAt=Date.now();self.postMessage({type:'ready',snapshot:memory.get(SAVE_KEY)||null,diagnostics:adapter.getRuntimeDiagnostics?.()||null})}
     catch(error){self.postMessage({type:'initError',error:error?.message||'No se pudo iniciar la ciudad offline.'})}
     return;
   }

@@ -1,16 +1,17 @@
 import {evaluateEssentialServices,advanceEssentialServiceDay} from './essential_services.js?v=0.245';
-import {gameMinutesForElapsedSeconds} from './simulation_time.js?v=0.288';
+import {gameMinutesForElapsedSeconds} from './simulation_time.js?v=0.289';
 import {assignTaxiPassengers} from './taxi_passengers.js?v=0.245';
 import {assignBusNonworkPassengers,collectBusNonworkFares} from './bus_nonwork.js?v=0.245';
-import {growthDemand} from './growth_demand.js?v=0.288';
-import {recordCityProgress} from './cityInsights.js?v=0.288';
+import {growthDemand} from './growth_demand.js?v=0.289';
+import {recordCityProgress} from './cityInsights.js?v=0.289';
 import {metroStationCatalog,metroRefresh,metroAction,advanceMetroDay,metroAssignPassengers,settleMetroMonth} from './metro.js?v=0.245';
 import {freightRouteForFactoryPort,freightRoutesForFactoryPort,freightRoutesFromStationToPort,freightLegRoute,serializeFreightLegs,reserveFreightRoute,nextFreightDepartureDay,railFreightReport} from './rail_freight.js?v=0.245';
 import {trafficFactorForRoute,TRAFFIC_TIME_WINDOWS,trafficEdgeKey,trafficQueueStep,trafficQueueDelay,roadCapacity} from './traffic.js';
-import {ROAD_TYPES,assignParking} from './road_network.js?v=0.288';
-import {geotechnicalEstimate,geotechnicalSurvey,applyFoundationAdjustment,applySurveyHydrology} from './land_survey.js?v=0.288';
-import {evaluateContractClaim} from './contract_arbitration.js?v=0.288';
-import {airportWeatherAdjustment,tourismSeason,airportNoiseSource} from './airport_operations.js?v=0.288';
+import {ROAD_TYPES,assignParking} from './road_network.js?v=0.289';
+import {geotechnicalEstimate,geotechnicalSurvey,applyFoundationAdjustment,applySurveyHydrology} from './land_survey.js?v=0.289';
+import {evaluateContractClaim} from './contract_arbitration.js?v=0.289';
+import {airportWeatherAdjustment,tourismSeason,airportNoiseSource} from './airport_operations.js?v=0.289';
+import {loadWasmRoadRouter} from './wasm_route.js?v=0.289';
 export function taxAdjustedBusinessCreditLimit(baseLimit,taxArrears=0,consecutiveMissedTaxMonths=0){const base=Math.max(0,Math.trunc(baseLimit||0));if((consecutiveMissedTaxMonths||0)>=3)return 0;return Math.max(0,base-Math.max(0,Math.trunc(taxArrears||0)))}
 export function taxPressurePenalty(pressure){return Math.min(5,Math.max(0,Math.floor((Math.max(0,Math.trunc(pressure||0))-5)/5)))}
 export function taxAdjustedMigrationDemand(approval,pressure,relief=0){const base=Math.round(((approval||0)-45)/8);if(base<=0)return Math.max(-5,base);return Math.max(0,Math.min(12,base-Math.max(0,taxPressurePenalty(pressure)-Math.max(0,Math.trunc(relief)))))}
@@ -55,9 +56,9 @@ const REGIONAL_MARKETS=[{id:'valle',name:'Villa del Valle',monthlyUnits:105,mont
 const TRAINING={comercio:{label:'Comercio',minimum:35},administracion:{label:'Administración',minimum:48},logistica:{label:'Logística',minimum:42},salud:{label:'Salud',minimum:48},educacion:{label:'Educación',minimum:48},bomberos:{label:'Bomberos',minimum:48},tecnica:{label:'Formación técnica',minimum:58},docencia:{label:'Formación docente',minimum:58}},TRAINING_SKILL_TARGET={tecnica:'logistica',docencia:'educacion'},TRAINING_SEATS=6,TRAINING_MONTHS=2,TRAINING_GAIN=18;
 
 export async function createOfflineAdapter(){
-  const response=await fetch('offline_seed.json',{cache:'no-store'});
+  const [response,wasmRouteEngine]=await Promise.all([fetch('offline_seed.json',{cache:'no-store'}),loadWasmRoadRouter()]);
   if(!response.ok)throw Error('No se pudo iniciar la ciudad offline. Recargá los archivos del juego.');
-  const seed=await response.json();let state,municipalScenarioCacheKey='',municipalScenarioCache=null;
+  const seed=await response.json();let state,municipalScenarioCacheKey='',municipalScenarioCache=null,wasmRouteCalls=0,wasmRouteNodes=0,javascriptRouteCalls=0;
   const LAND_CHUNK_SIZE=8,landWater=(x,y)=>x===24||x===25;
   function validateOfflineBridgeSite(x,y){
     if(x!==24)throw Error('El puente empieza en la celda oeste del río (x=24).');
@@ -513,6 +514,21 @@ function advanceOfflineZonedDevelopment(){
     const pop=()=>{const first=queue[0],last=queue.pop();if(queue.length){let i=0;while(true){let c=i*2+1;if(c>=queue.length)break;if(c+1<queue.length&&less(queue[c+1],queue[c]))c++;if(!less(queue[c],last))break;queue[i]=queue[c];i=c}queue[i]=last}return first};
     const edgeKey=(a,b)=>[a,b].sort().join('|'),quality=p=>qualities.get(p)??82,delta={east:[1,0],west:[-1,0],south:[0,1],north:[0,-1]},allowed=(a,b)=>{const step=[b[0]-a[0],b[1]-a[1]];for(const point of [a,b]){const asset=assetMap.get(point);if(mode==='truck'&&asset?.truckRestricted)return false;if(asset?.oneWay&&JSON.stringify(delta[asset.oneWay])!==JSON.stringify(step))return false}return true};
     const edgeCost=(a,b)=>{const arterial=a[1]===10||b[1]===10||a[0]===12||b[0]===12,first=assetMap.get(a)||{},second=assetMap.get(b)||{},typeA=ROAD_TYPES[first.roadType]||ROAD_TYPES.local,typeB=ROAD_TYPES[second.roadType]||ROAD_TYPES.local,qualityFactor=Math.max(.35,Math.min(1,Math.min(quality(a),quality(b))/82)),capacity=(arterial?2.4:1.2)*(typeA.capacity+typeB.capacity)/2.4*qualityFactor*((first.busLane||second.busLane) ? .78 : 1)*6,key=edgeKey(a,b),row=queues[key],queued=typeof row==='number'?row:Number(row?.queueAfter)||0,underWork=works.some(p=>Math.min(Math.abs(a[0]-p.x)+Math.abs(a[1]-p.y),Math.abs(b[0]-p.x)+Math.abs(b[1]-p.y))<=1),speed=(typeA.speed*(mode==='bus'&&first.busLane?1.35:1)+typeB.speed*(mode==='bus'&&second.busLane?1.35:1))/2;return (1+Math.min(4,queued/Math.max(1,capacity))*1.25+(underWork?1.25:0))/Math.max(.5,speed)};
+    if(wasmRouteEngine){
+      const roadNodes=Array.from(roads,road=>road.split(',').map(Number)),indices=new Map(roadNodes.map(([x,y],index)=>[`${x},${y}`,index])),startKeys=new Set(starts.map(([x,y])=>`${x},${y}`));
+      const graph=roadNodes.map(([x,y])=>({x,y,start:startKeys.has(`${x},${y}`),goal:goals.has(`${x},${y}`),neighbors:[],weights:[]}));
+      for(let index=0;index<roadNodes.length;index++){
+        const point=roadNodes[index];
+        for(const [nx,ny] of adj(point[0],point[1])){
+          const next=indices.get(`${nx},${ny}`);
+          if(next===undefined||!allowed(point,[nx,ny])){graph[index].neighbors.push(-1);graph[index].weights.push(0);continue}
+          graph[index].neighbors.push(next);graph[index].weights.push(edgeCost(point,[nx,ny]));
+        }
+      }
+      const result=wasmRouteEngine.solve(graph);
+      if(result!==null){wasmRouteCalls++;wasmRouteNodes=Math.max(wasmRouteNodes,graph.length);if(!result.length)return null;const path=result.map(index=>[roadNodes[index][0],roadNodes[index][1]]);if(!roads.has(`${start.x},${start.y}`))path.unshift([start.x,start.y]);if(!roads.has(`${end.x},${end.y}`))path.push([end.x,end.y]);return path}
+    }
+    javascriptRouteCalls++;
     for(const [x,y]of starts){const key=`${x},${y}`;best.set(key,0);prev.set(key,null);push([0,x,y])}let target=null;
     while(queue.length){const [cost,x,y]=pop(),key=`${x},${y}`;if(cost>(best.get(key)??Infinity)+1e-9)continue;if(goals.has(key)){target=key;break}for(const [nx,ny]of adj(x,y)){const next=`${nx},${ny}`;if(!roads.has(next))continue;const candidate=cost+edgeCost([x,y],[nx,ny]);if(candidate+1e-9<(best.get(next)??Infinity)){best.set(next,candidate);prev.set(next,key);push([candidate,nx,ny])}}}
     if(!target)return null;const path=[];for(let key=target;key;key=prev.get(key))path.push(key.split(',').map(Number));path.reverse();if(!roads.has(`${start.x},${start.y}`))path.unshift([start.x,start.y]);if(!roads.has(`${end.x},${end.y}`))path.push([end.x,end.y]);return path
@@ -2135,7 +2151,7 @@ function advanceOfflineZonedDevelopment(){
     throw Error(`La acción “${a}” todavía requiere una sala Online.`);
   }
   updateOfflineLabor();simulateOfflineNonworkTransit();save();
-  return {setRealtimeClock(enabled=true){realtimeClock=Boolean(enabled);last=Date.now();debtDays=0;debtMinutes=0},async request(path,body){
+  return {getRuntimeDiagnostics(){return{routeEngine:wasmRouteEngine?.kind||'JavaScript (fallback)',wasmRouteCalls,wasmRouteNodes,javascriptRouteCalls}},setRealtimeClock(enabled=true){realtimeClock=Boolean(enabled);last=Date.now();debtDays=0;debtMinutes=0},async request(path,body){
     if(path==='/api/info')return {ips:[],port:8765};
     if(path==='/api/state'){advance();recordOfflineMunicipalCashMovement();save();return view()}
     if(path==='/api/save'){save();return {ok:true,file:'guardado local del navegador'}}

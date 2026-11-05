@@ -11,3 +11,4 @@ node_modules/
 ui-captures/
 build/
 dist/
+wasm/route-engine/target/

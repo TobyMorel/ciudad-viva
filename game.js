@@ -1,20 +1,20 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.288';
-import {setupCityCompanion} from './city-companion.js?v=0.288';
-import {setupCinematicCamera} from './city_cinema.js?v=0.288';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.288';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.288';
-import {createWorld} from './world3d.js?v=0.288';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.288';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.288';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.288';
-import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.288';
-import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.288';
-import {growthDemand} from './growth_demand.js?v=0.288';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.289';
+import {setupCityCompanion} from './city-companion.js?v=0.289';
+import {setupCinematicCamera} from './city_cinema.js?v=0.289';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.289';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.289';
+import {createWorld} from './world3d.js?v=0.289';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.289';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.289';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.289';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.289';
+import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.289';
+import {growthDemand} from './growth_demand.js?v=0.289';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.288';
-import {ROAD_TYPES} from './road_network.js?v=0.288';
-import {geotechnicalEstimate} from './land_survey.js?v=0.288';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.289';
+import {ROAD_TYPES} from './road_network.js?v=0.289';
+import {geotechnicalEstimate} from './land_survey.js?v=0.289';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.

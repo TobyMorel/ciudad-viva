@@ -1,6 +1,6 @@
 {
   "name": "ciudad-viva",
-  "version": "0.288.0",
+  "version": "0.289.0",
   "description": "Simulador municipal Ciudad Viva",
   "repository": {
     "type": "git",
@@ -12,6 +12,7 @@
   },
   "private": true,
   "scripts": {
+    "build:wasm-route": "python scripts/build_wasm_route.py",
     "test:land-ui": "node tests/test_land_expansion_ui.mjs",
     "test:offline-land": "node --test tests/test_new_settlement_offline.mjs"
   }

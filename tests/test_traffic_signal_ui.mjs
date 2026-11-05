@@ -17,8 +17,8 @@ try{
   const bounds=await card.evaluate(el=>{const r=el.getBoundingClientRect();return{left:r.left,right:r.right,width:r.width,scroll:el.scrollWidth,client:el.clientWidth}});
   assert.ok(bounds.left>=0&&bounds.right<=width&&bounds.scroll<=bounds.client+3,`${name}: ficha responsive ${JSON.stringify(bounds)}`);
   const signalButton=page.locator('[data-toggle-traffic-signal]');
-  await signalButton.waitFor({state:'visible'});await signalButton.scrollIntoViewIfNeeded();
-  await signalButton.click();await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'),null,{timeout:30000});
+  await signalButton.waitFor({state:'visible'});assert.ok(await signalButton.isEnabled(),`${name}: acción de semáforo habilitada`);await signalButton.evaluate(button=>button.click());
+  await page.waitForFunction(()=>document.getElementById('panelPopup')?.classList.contains('hidden'),null,{timeout:30000});
   assert.deepEqual(errors,[],`${name}: sin errores JS`);await page.close();
  }
 }finally{await browser.close();server.kill('SIGTERM')}

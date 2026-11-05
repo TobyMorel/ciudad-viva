@@ -41,9 +41,13 @@ def growth_demand(state):
     pending_offices=sum(p.get("kind")=="office" and p.get("status") not in ("cancelada","finalizada") for p in projects)
     university_seekers=sum(p.get("status")=="buscando" and int(p.get("educationRank",0) or 0)>=3 for p in residents)
     office_open_jobs=sum(max(0,int(b.get("business",{}).get("jobSlots",b.get("jobSlots",0)))-int(b.get("business",{}).get("lastWorkers",b.get("workersAssigned",0)))) for b in offices)
-    office_job_gap=max(0,university_seekers-office_open_jobs)
-    office_goal=min(12,math.ceil(office_job_gap/26))
-    office_shortage=max(0,office_goal-len(offices)-pending_offices)
+    pending_office_projects=[p for p in projects if p.get("kind")=="office" and p.get("status") not in ("cancelada","finalizada","pausada","suspendida")]
+    pending_office_jobs=sum(40 if p.get("density")=="high" else 32 if p.get("density")=="medium" else 24 for p in pending_office_projects)
+    unplaced_graduates=max(0,university_seekers-office_open_jobs-pending_office_jobs)
+    # Vacantes operativas y oficinas en obra cubren primero a los universitarios
+    # que buscan trabajo. La demanda representa puestos todavía sin ofrecer.
+    office_shortage=min(12,math.ceil(unplaced_graduates/24))
+    office_goal=len(offices)+pending_offices+office_shortage
     return {
         "housing":{"value":min(100,round(shortage/36*100)),"shortage":shortage,"vacancies":vacancies,"waiting":interest},
         "commercial":{"value":min(100,round(commercial_shortage/max(1,shop_goal)*100)) if shop_goal else 0,
@@ -51,6 +55,7 @@ def growth_demand(state):
                       "pipeline":pending_shops,"idle":idle_shops},
         "industry":{"value":min(100,round(factory_shortage/max(1,factory_goal)*100)) if factory_goal else 0,
                     "shortage":factory_shortage,"goal":factory_goal,"unemployedCandidates":low_skill_seekers,"openJobs":factory_open_jobs},
-        "office":{"value":min(100,round(office_shortage/max(1,office_goal)*100)) if office_goal else 0,
-                  "shortage":office_shortage,"goal":office_goal,"unemployedCandidates":university_seekers,"openJobs":office_open_jobs}
+        "office":{"value":min(100,round(unplaced_graduates/24*100)),
+                  "shortage":office_shortage,"goal":office_goal,"unemployedCandidates":university_seekers,
+                  "unplacedGraduates":unplaced_graduates,"openJobs":office_open_jobs,"pendingJobs":pending_office_jobs}
     }

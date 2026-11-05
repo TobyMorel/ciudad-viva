@@ -254,3 +254,6 @@ body[data-theme="dark"] .game-dock>[data-popup]:focus-visible span {
     height: 38px;
   }
 }
+.zone-mode-controls{grid-column:1/-1;grid-row:4;gap:4px 6px;padding-top:0}
+.zone-mode-controls button{min-height:32px;padding:5px 8px;font-size:9px}
+.zone-mode-controls>small{font-size:8px}

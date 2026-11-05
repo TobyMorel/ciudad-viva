@@ -305,12 +305,13 @@ Ninguna empresa debe ser siempre óptima. La contratación varía según disponi
 
 ### Tareas para la IA
 
-- [ ] Mostrar demanda por vivienda, comercio e industria con explicación.
+- [x] Mostrar demanda por vivienda, comercio, industria y oficinas con explicación, descontando vacantes y proyectos en curso (Alfa 0.274).
 - [ ] Simular al menos un promotor privado que decide cuándo iniciar obra.
 - [ ] Exigir constructora y tiempo también para crecimiento privado.
 - [ ] Crear estados de parcela: disponible, anunciada, solicitada, en obra, ocupada, vacía y abandonada.
 - [ ] Distinguir propiedad privada de inversión pública, para no cobrar al municipio cada casa privada.
-- [x] Elegir zonificación de baja o alta densidad para viviendas, comercios e industrias; ajustar capacidad de residentes y empleos y reflejarla en sus modelos 3D (Alfa 0.272).
+- [x] Elegir zonificación de densidad baja, media o alta para viviendas, comercios, oficinas e industrias; ajustar capacidad de residentes y empleos y reflejarla en los edificios 3D (Alfa 0.274).
+- [x] Zonificar con pincel, rectángulo o relleno contiguo, quitar permisos de parcela y consultar aptitud local antes de construir (Alfa 0.274).
 
 ### Criterios de aceptación
 

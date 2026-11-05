@@ -21,7 +21,9 @@ export function createLivingCity3D({THREE,scene,camera,canvas,box,sphere,cylinde
   return null;
  }
  function figure(parent,x,y,z,id,{child=false,worker=false}={}){
-  const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar(child?.77:1);parent.add(g);
+  // Mantener los peatones a escala de las personas animadas del tránsito:
+  // antes estos residentes se dibujaban casi al doble de altura que los autos.
+  const g=new THREE.Group();g.position.set(x,y,z);g.scale.setScalar((child?.77:1)*.56);parent.add(g);
   const code=hash(id),shirt=worker?'#dfa94e':C[code%C.length],skin=palette[code%palette.length],hair=['#4a3c35','#73604d','#394651'][code%3];
   const legs=[],arms=[];
   for(const side of [-1,1]){

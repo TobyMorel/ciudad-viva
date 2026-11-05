@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.273
+# Ciudad Viva · Alfa 0.274
+
+**Zonificación detallada y sincronización de calles (0.274):** la demanda de oficinas sigue a universitarios desempleados y descuenta vacantes reales; las zonas ofrecen densidad baja, media y alta, herramientas de pincel, rectángulo y relleno, y una capa de aptitud. Las calles aparecen con sus marcas y cruces pavimentados; las farolas quedan sobre la vereda. Los peatones recuperan una escala coherente y vuelve la mezcla de autos y bicicletas. LAN usa el mismo motor `offline.js` que Offline.
 
 **Estacionamiento realista y economía por formación (0.273):** los autos reservan plazas libres cerca del destino, maniobran desde la calle, dejan pasajeros caminando y muestran cuándo buscan lugar; el informe agrega tiempos, caminata, permanencia y capacidad libre. El ingreso del hogar define si sus integrantes usan auto, bicicleta o van a pie. La formación conecta trabajadores con fábricas, comercios u oficinas privadas. El municipio puede ajustar cuatro impuestos sectoriales y subsidiar facturas de servicios vencidas.
 

@@ -5663,19 +5663,19 @@ def complete_construction(p, quality=82):
         state["monthlyExpenses"]+=maintenance
         state["roadAssets"].append({"x":p["x"],"y":p["y"],"roadType":road_type,"quality":quality,"monthlyCost":maintenance,"oneWay":None,"busLane":False,"truckRestricted":False})
     elif p["kind"]=="home":
-        b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":3 if p.get("density")=="high" else 1,"occupants":0,"capacity":64 if p.get("density")=="high" else 28,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
+        b={"x":p["x"],"y":p["y"],"kind":"home","name":"Viviendas en calle nueva","level":3 if p.get("density")=="high" else 2 if p.get("density")=="medium" else 1,"occupants":0,"capacity":64 if p.get("density")=="high" else 44 if p.get("density")=="medium" else 28,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False),"housingContracts":[]}; state["buildings"].append(b)
         ev("Vivienda terminada",f"La vivienda en {p['x']+1},{p['y']+1} superó la inspección y quedó disponible. Los hogares llegarán según demanda y empleos.")
     elif p["kind"]=="shop":
-        building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"jobSlots":24 if p.get("density")=="high" else 12,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"jobSlots":24 if p.get("density")=="high" else 18 if p.get("density")=="medium" else 12,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
         building["business"]=new_business(building,building["jobSlots"],opening_capital);state["buildings"].append(building);state["jobs"]+=building["jobSlots"]
     elif p["kind"]=="office":
-        slots=40 if p.get("density")=="high" else 24;building={"x":p["x"],"y":p["y"],"kind":"office","name":"Oficinas profesionales","level":1,"occupants":0,"jobSlots":slots,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        slots=40 if p.get("density")=="high" else 32 if p.get("density")=="medium" else 24;building={"x":p["x"],"y":p["y"],"kind":"office","name":"Oficinas profesionales","level":1,"occupants":0,"jobSlots":slots,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         opening_capital=max(6000,int(p.get("operatingReserve",6000)));building["business"]={"id":f"office-{p['x']}-{p['y']}","name":building["name"],"status":"abierto","cash":opening_capital,"jobSlots":slots,"wage":28,"lastWorkers":0,"lastSales":0,"lastRevenue":0,"lastPayroll":0,"lastOperatingCost":0,"lastProfit":0,"fixedCost":35,"creditDebt":0}
         state["buildings"].append(building);state["jobs"]+=slots
     elif p["kind"]=="factory":
         industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
-        building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":32 if p.get("density")=="high" else 20,"density":p.get("density","low"),"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":32 if p.get("density")=="high" else 26 if p.get("density")=="medium" else 20,"density":p.get("density","low"),"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         if industry_type=="concrete":name="Hormigonera de Puerto Claro"
         building["name"]=name;building["monthlyOperatingCost"]=450 if industry_type=="concrete" else building["monthlyOperatingCost"]
         building["business"]={"id":f"factory-{p['x']}-{p['y']}","name":building["name"],"industryType":industry_type,"status":"abierto","cash":int(p.get("operatingReserve",4200)),"jobSlots":building["jobSlots"],"wage":12,"lastProduction":0,"lastLocalSales":0,"lastProfit":0,"inventory":0,"rawMaterialInventory":0,"rawSteelInventory":0,"componentStock":0,"lastMaterialPurchase":0,"lastMaterialShortage":0,"lastMaterialCause":"","quarryReserve":2400 if is_quarry else 0,"aggregateStock":0,"concreteStock":0,"timberStock":0}
@@ -7155,18 +7155,24 @@ class Handler(BaseHTTPRequestHandler):
                 if action=="unlockLand":
                     try:unlock_land_chunk(data.get("chunkX"),data.get("chunkY"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all()
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="configureRoad":
                     try:configure_road(data.get("x"),data.get("y"),str(data.get("setting","")),data.get("value"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all()
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="toggleTrafficSignal":
                     try:toggle_traffic_signal(data.get("x"),data.get("y"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all()
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="placeRoad":
                     try:place_road_instantly(data.get("x"),data.get("y"),data.get("roadType","local"))
                     except (ValueError,TypeError) as error:self._send(409,{"error":str(error)});return
+                    # Bump again after the mutation: a long-poll can rebuild the
+                    # cached view after the pre-action revision but before this write.
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all()
                     self._send(200,public_state(pid,use_cache=True));return
                 if action in POLICE_COSTS or action=="setPolicePriority":
                     try:invest_police_unit(action,int(data.get("x",-1)),int(data.get("y",-1)),data.get("priority"))
@@ -7720,7 +7726,7 @@ class Handler(BaseHTTPRequestHandler):
                     ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversión $350 · capacidad de recolección +0,15 t/día. Cada depósito conectado suma además una estación de transferencia con 12 t de almacenamiento y despacho de 1,5 t/día.")
                 elif action=="zone":
                     kind=data.get("kind");density=str(data.get("density","low"))
-                    if kind not in ("home","shop","office","factory","clear") or density not in ("low","high"):self._send(400,{"error":"Uso de suelo inválido"});return
+                    if kind not in ("home","shop","office","factory","clear") or density not in ("low","medium","high"):self._send(400,{"error":"Uso de suelo inválido"});return
                     cells=data.get("cells") or [[data.get("x",-1),data.get("y",-1)]]
                     if not isinstance(cells,list) or not cells or len(cells)>560:self._send(400,{"error":"La pintura debe incluir entre 1 y 560 parcelas."});return
                     normalized=[];seen=set()
@@ -7796,6 +7802,9 @@ class Handler(BaseHTTPRequestHandler):
                     chosen=save_slot(name="Nueva partida " + time.strftime("%d-%m-%Y %H:%M"))
                     state["roomName"]=chosen["name"]
                 else: self._send(400,{"error":"Acción desconocida"}); return
+                # A second revision after the write invalidates any view that a
+                # concurrent long-poll may have cached during this action.
+                STATE_REVISION+=1;STATE_CONDITION.notify_all()
                 self._send(200,public_state(pid,use_cache=True)); return
             if path=="/api/save" and SHARED_ENGINE is not None:
                 if not ROOM_OPEN or pid not in state.get("players",{}):

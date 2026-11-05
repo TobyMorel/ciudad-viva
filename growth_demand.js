@@ -19,12 +19,16 @@ export function growthDemand(state){
   const openFactoryJobs=buildings.filter(b=>b.kind==='factory'&&b.business?.status!=='cerrado').reduce((n,b)=>n+Math.max(0,Number(b.business?.jobSlots||b.jobSlots||0)-Number(b.business?.lastWorkers||0)),0);
   const factoryGoal=Math.min(12,Math.max(Math.ceil(activeShops/2),Math.ceil(Math.max(0,lowSkillSeekers-openFactoryJobs)/20))),factories=buildings.filter(b=>b.kind==='factory'&&b.business?.status!=='cerrado').length+projects.filter(p=>p.kind==='factory'&&live(p)).length;
   const factoryShortage=Math.max(0,factoryGoal-factories);
-  const universitySeekers=residents.filter(p=>Number(p.educationRank||0)>=3).length,offices=buildings.filter(b=>b.kind==='office'&&b.business?.status!=='cerrado').length,pendingOffices=projects.filter(p=>p.kind==='office'&&live(p)).length;
-  const officeGoal=Math.min(12,Math.ceil(universitySeekers/26)),officeShortage=Math.max(0,officeGoal-offices-pendingOffices);
+  const universitySeekers=residents.filter(p=>Number(p.educationRank||0)>=3).length,officeBuildings=buildings.filter(b=>b.kind==='office'&&b.business?.status!=='cerrado'),offices=officeBuildings.length,officeProjects=projects.filter(p=>p.kind==='office'&&live(p)&&!['pausada','suspendida'].includes(p.status)),pendingOffices=officeProjects.length;
+  const officeOpenJobs=officeBuildings.reduce((n,b)=>n+Math.max(0,Number(b.business?.jobSlots||b.jobSlots||0)-Number(b.business?.lastWorkers??b.workersAssigned??0)),0);
+  const pendingOfficeJobs=officeProjects.reduce((n,p)=>n+(p.density==='high'?40:p.density==='medium'?32:24),0),unplacedGraduates=Math.max(0,universitySeekers-officeOpenJobs-pendingOfficeJobs);
+  // Only graduates still looking for work create demand. Vacancies in open offices
+  // and jobs in offices already being built are counted before another project starts.
+  const officeShortage=Math.min(12,Math.ceil(unplacedGraduates/24)),officeGoal=offices+pendingOffices+officeShortage;
   return{
     housing:{value:Math.min(100,Math.round(shortage/36*100)),shortage,vacancies,waiting},
     commercial:{value:shopGoal?Math.min(100,Math.round(commercialShortage/shopGoal*100)):0,shortage:commercialShortage,goal:shopGoal,existing:shops.length,pipeline:pendingShops,idle:idleShops},
     industry:{value:factoryGoal?Math.min(100,Math.round(factoryShortage/factoryGoal*100)):0,shortage:factoryShortage,goal:factoryGoal},
-    office:{value:officeGoal?Math.min(100,Math.round(officeShortage/officeGoal*100)):0,shortage:officeShortage,goal:officeGoal,universitySeekers,existing:offices,pipeline:pendingOffices}
+    office:{value:Math.min(100,Math.round(unplacedGraduates/24*100)),shortage:officeShortage,goal:officeGoal,universitySeekers,unplacedGraduates,openJobs:officeOpenJobs,pendingJobs:pendingOfficeJobs,existing:offices,pipeline:pendingOffices}
   };
 }

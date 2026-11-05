@@ -1,7 +1,26 @@
 {
-  "currentVersion": "0.273",
+  "currentVersion": "0.274",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.274",
+      "date": "2026-11-04",
+      "title": "Zonificación por densidad, aptitud del suelo y demanda de oficinas",
+      "roadmapPhase": 4,
+      "overallProgress": null,
+      "changes": [
+        "La demanda de oficinas sube según los universitarios que siguen buscando empleo. Primero descuenta vacantes en empresas abiertas y puestos de oficinas que ya están en construcción; la falta restante activa proyectos privados en parcelas zonificadas y conectadas.",
+        "La zonificación agrega densidad media para viviendas, comercios, oficinas y fábricas, con capacidades y modelos de edificio acordes. En el mapa se distinguen densidades baja, media y alta.",
+        "El catálogo de Zonas incluye pincel, rectángulo y relleno contiguo. Se puede quitar una parcela con clic derecho o seleccionar Quitar zona; los lotes siguen necesitando frente a una calle local o avenida.",
+        "Aptitud del suelo colorea las parcelas zonificadas según población, empleo, formación y servicios del entorno. Verde indica mayor aptitud, ámbar intermedia y rojo menor.",
+        "La tesorería aclara la escala inicial de impuestos empresariales: oficinas 5%, comercios 2% y fábricas 0,75%; los hogares tributan mediante el impuesto inmobiliario del mismo panel.",
+        "Las calles nuevas aparecen al terminar la colocación y se recalculan junto con sus vecinas, incluidas las marcas viales. El estado de servidor ahora se publica después de la mutación y el render 3D conserva la firma anterior si un armado visual falla.",
+        "LAN y Offline usan el mismo motor JavaScript `offline.js`; se renuevan las referencias de caché para que la entrega 0.274 cargue también el motor actual en los navegadores.",
+        "Peatones residentes, obreros y visitantes se dibujan a una escala coherente con autos y bicicletas. Se recupera la distribución de movilidad estable: 65% de preferencia por auto y 42% por bicicleta, sin bloquearla por los ingresos del hogar.",
+        "Las farolas aparecen solo en tramos rectos, sobre la vereda y separadas de las intersecciones. Los cruces pavimentan su unión completa para evitar parches de acera sobre la calzada."
+      ],
+      "verification": "Pasaron las pruebas focalizadas del motor compartido Offline/LAN y de la sala LAN con cuatro jugadores (10 casos); también la revisión de sintaxis y formato. No se ejecutó la suite completa."
+    },
     {
       "version": "0.273",
       "date": "2026-11-05",

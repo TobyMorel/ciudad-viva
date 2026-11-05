@@ -84,6 +84,7 @@ body[data-theme="dark"] .game-dock,body[data-theme="dark"] .world-toolbar,body[d
 body[data-theme="dark"] .game-dock button,body[data-theme="dark"] .world-toolbar button,body[data-theme="dark"] .theme-toggle{background:#29454a;color:#d5eee8;border-color:#50716d}
 body[data-theme="dark"] .game-dock button span,body[data-theme="dark"] .world-toolbar b{color:#e5f1ed}
 body[data-theme="dark"] .popup-content .tool,body[data-theme="dark"] .build-group,body[data-theme="dark"] .build-intro,body[data-theme="dark"] .economy-section,body[data-theme="dark"] .economy-section .supply-line,body[data-theme="dark"] .economy-section .detail-grid>div,body[data-theme="dark"] .popup-content .supply-line,body[data-theme="dark"] .popup-content .workplace,body[data-theme="dark"] .popup-content .project,body[data-theme="dark"] .popup-content .detail-grid>div,body[data-theme="dark"] .traffic-stats span,body[data-theme="dark"] .traffic-queue-section,body[data-theme="dark"] .traffic-profile,body[data-theme="dark"] .traffic-window,body[data-theme="dark"] .room-list,body[data-theme="dark"] .lan-choice,body[data-theme="dark"] .mode-option{background:#263c43;color:#e4eeeb;border-color:#4a6667}
+body[data-theme="dark"] .zone-mode-controls{color:#c2d9ce}body[data-theme="dark"] .zone-mode-controls button{background:#263c43;color:#d6e9dc;border-color:#4a6667}body[data-theme="dark"] .zone-mode-controls button[aria-pressed="true"]{background:#2e8068;color:#fff}body[data-theme="dark"] .zone-mode-controls [data-zone-suitability][aria-pressed="true"]{background:#876b30;color:#fff2cc}body[data-theme="dark"] .zone-mode-controls>small{color:#bfd2c6}
 body[data-theme="dark"] .city-subnav{background:#20383f;border-color:#456164}
 body[data-theme="dark"] .city-subnav button{background:transparent;color:#d1e4e1}
 body[data-theme="dark"] .city-subnav button.active{background:#3b6867;color:#fff}
@@ -167,6 +168,12 @@ body[data-theme="dark"] .taxi-panel{color:#e7f0eb}
 .build-search span{font-size:21px;line-height:1}
 .build-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#294c42;font:11px system-ui}
 .build-catalog-count{display:none}
+.zone-mode-controls{grid-column:1;display:flex;flex-wrap:wrap;align-items:center;gap:5px 9px;min-width:0;padding-top:2px;color:#547168;font:650 10px system-ui}
+.zone-mode-controls>div{display:flex;flex-wrap:wrap;gap:5px;min-width:0}
+.zone-mode-controls button{min-height:30px;padding:5px 9px;border:1px solid #d5e1d9;border-radius:8px;background:#fffefa;color:#416459;font:700 10px system-ui;white-space:nowrap}
+.zone-mode-controls button[aria-pressed="true"]{border-color:#468d72;background:#2e8068;color:#fff}
+.zone-mode-controls [data-zone-suitability][aria-pressed="true"]{border-color:#b48737;background:#f0d69b;color:#4c3b1c}
+.zone-mode-controls>small{flex-basis:100%;color:#657c71;font:9px/1.35 system-ui}
 .build-catalog-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-auto-rows:max-content;align-content:start;gap:9px;height:auto;min-height:0;flex:1 1 0;overflow:auto;padding:1px 2px 8px;scrollbar-width:thin}
 .popup-content .tool.build-catalog-item{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:120px minmax(0,auto);align-content:start;gap:5px;min-width:0;min-height:0;padding:6px;border:1px solid #dce5df;border-radius:12px;background:#fffefa;box-shadow:0 2px 8px #2945380c;overflow:hidden}
 .popup-content .tool.build-catalog-item:hover,.popup-content .tool.build-catalog-item:focus-visible{border-color:#6ca98c;background:#f4faf3;outline:2px solid #6ca98c44}

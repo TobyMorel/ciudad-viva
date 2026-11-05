@@ -28,7 +28,9 @@ export async function loadRtcConfig(){
  // enlace Cloudflare obtiene sólo las mismas claves PUBLICABLES desde
  // /api/public/config; se cachean para sobrevivir a una caída del túnel.
  let response;
- try{response=await fetch("/public_directory.json",{cache:"no-store"})}catch{}
+ // Resolve the public config relative to this module so project sites such
+ // as GitHub Pages (/ciudad-viva/) do not incorrectly request it at host root.
+ try{response=await fetch(new URL("./public_directory.json",import.meta.url),{cache:"no-store"})}catch{}
  if(!response?.ok){
   response=await fetch("/api/public/config",{cache:"no-store"});
  }
@@ -198,7 +200,7 @@ async function handleHostRequest(request,pid,joined){
   return {status:response.status,body};
  }catch{return {status:502,body:'{"error":"La partida local dejó de responder."}'}}
 }
-export async function startRtcHost({roomId,activate,onStatus}){
+export async function startRtcHost({roomId,activate,onStatus,onPeerLeave}){
  const cfg=await loadRtcConfig();
  const keyPair=await crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"},true,["sign","verify"]);
  const pubKey=JSON.stringify(await crypto.subtle.exportKey("jwk",keyPair.publicKey));
@@ -210,6 +212,11 @@ export async function startRtcHost({roomId,activate,onStatus}){
      m.sdp?.type!=="offer"||typeof m.sdp?.sdp!=="string"||m.sdp.sdp.length>40000)return;
   const peer=newPeer(),pid="public-"+id().slice(0,24);
   let joined=false;
+  const removeJoinedPeer=()=>{
+   if(!joined)return;
+   joined=false;
+   try{Promise.resolve(onPeerLeave?.(pid)).catch(()=>{})}catch{}
+  };
   peers.set(m.client,peer);
   // Un atacante no puede ocupar indefinidamente los 12 espacios enviando
   // ofertas que nunca se conectan: cerrar los peers incompletos tras 25 s.
@@ -221,7 +228,7 @@ export async function startRtcHost({roomId,activate,onStatus}){
   peer.onconnectionstatechange=()=>{
    if(peer.connectionState==="connected")clearTimeout(pendingTimer);
    if(["closed","failed","disconnected"].includes(peer.connectionState)){
-    clearTimeout(pendingTimer);peers.delete(m.client);try{peer.close()}catch{}
+    clearTimeout(pendingTimer);peers.delete(m.client);removeJoinedPeer();try{peer.close()}catch{}
    }
   };
   peer.ondatachannel=event=>{
@@ -232,7 +239,7 @@ export async function startRtcHost({roomId,activate,onStatus}){
     const result=await handleHostRequest(req,pid,joined);
     if(String(req?.path||"").split("?")[0]==="/api/room/join"&&result.status===200)joined=true;
     try{await wire.send("res",rid,result)}catch{peer.close()}
-   },()=>{peers.delete(m.client);peer.close()});
+   },()=>{peers.delete(m.client);removeJoinedPeer();peer.close()});
   };
   try{
    await peer.setRemoteDescription(m.sdp);

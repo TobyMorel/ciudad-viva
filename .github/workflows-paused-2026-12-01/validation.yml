@@ -40,7 +40,6 @@ jobs:
           node --check traffic.js
           node --check simulation_time.js
           node --check game.js
-          node --check public_rtc.js
           node --check beginnerTutorial.js
           node --check cityInsights.js
           node --check city-companion.js
@@ -56,6 +55,7 @@ jobs:
           node --check city_immersive_state.js
           node --check city_immersive_3d.js
           node --check online_engine.mjs
+          node --check public_rtc.js
           python -m py_compile shared_engine.py
           node --check cityGuide.js
           node --check reference-ui.js
@@ -79,7 +79,7 @@ jobs:
       - name: Empaquetar entrega completa
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.282
+          name: ciudad-viva-alfa-0.284
           path: |
             .
             !.git/**
@@ -107,7 +107,7 @@ jobs:
         run: |
           npm ci
           npx playwright install --with-deps chromium
-      - name: "WebRTC directo en dos navegadores y Supabase Realtime"
+      - name: WebRTC P2P, configuración bajo subruta y limpieza de invitados
         run: node tests/test_public_webrtc_ui.mjs
       - name: "Tutorial narrado: móvil y escritorio"
         run: node tests/test_beginner_tutorial_ui.mjs
@@ -142,6 +142,7 @@ jobs:
             tests/test_port_import_ui.mjs
             tests/test_funeral_ui.mjs
             tests/test_land_expansion_ui.mjs
+            tests/test_municipal_approvals_ui.mjs
             tests/test_new_settlement_traffic_ui.mjs
             tests/test_traffic_signal_ui.mjs
             tests/test_citizen_inbox_ui.mjs
@@ -158,7 +159,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ciudad-viva-alfa-0.282-responsive
+          name: ciudad-viva-alfa-0.284-responsive
           path: ui-captures/
           if-no-files-found: ignore
           retention-days: 30

@@ -21,9 +21,15 @@ class VersionSequence(unittest.TestCase):
         index=(ROOT/"index.html").read_text(encoding="utf-8")
         self.assertIn(f"ALFA {versions[0]}",index)
         self.assertIn(f"HISTORIAL · ALFA 0.1–{versions[0]}",index)
-        workflow=(ROOT/".github/workflows/validation.yml").read_text(encoding="utf-8")
+        workflow=(ROOT/".github/workflows-paused-2026-12-01/validation.yml").read_text(encoding="utf-8")
         self.assertIn(f"name: ciudad-viva-alfa-{versions[0]}\n",workflow)
         self.assertIn(f"name: ciudad-viva-alfa-{versions[0]}-responsive\n",workflow)
+
+    def test_actions_workflows_are_paused_outside_runner_directory(self):
+        active=list((ROOT/".github/workflows").glob("*.yml"))+list((ROOT/".github/workflows").glob("*.yaml"))
+        self.assertEqual(active,[])
+        note=(ROOT/".github/workflows-paused-2026-12-01/README.md").read_text(encoding="utf-8")
+        self.assertIn("1 de diciembre de 2026",note)
 
     def test_next_version_increments_integer_suffix_not_decimal(self):
         def next_version(v):

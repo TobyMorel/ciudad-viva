@@ -71,6 +71,29 @@ class SharedOfflineEngineTests(unittest.TestCase):
         self.assertTrue(any(b["name"]=="Centro de pruebas" for b in view["buildings"]))
         self.assertIn([5,10],view["roads"])
 
+    def test_environmental_remediation_and_citizen_consultation_use_the_online_shared_engine(self):
+        city=copy.deepcopy(self.engine.snapshot())
+        city.update({"day":20,"money":20000,"population":4,"paused":True,"speed":1,
+                     "roads":[[4,10],[5,10],[6,10]],"roadAssets":[],"projects":[],"commutes":[],"zones":[]})
+        city["buildings"]=[
+            {"kind":"home","name":"Barrio oeste","x":8,"y":10,"status":"operativo","capacity":4,"occupants":4,"quality":80,"residents":[
+                {"id":"resident-minor","age":12,"workerEligible":False,"status":"inactivo"},
+                {"id":"resident-worker","age":34,"workerEligible":True,"status":"empleado","monthlyWage":120},
+                {"id":"resident-searcher","age":42,"workerEligible":True,"status":"buscando","monthlyWage":80},
+                {"id":"resident-older","age":72,"workerEligible":False,"status":"inactivo","retired":True}]},
+            {"kind":"factory","name":"Metalúrgica oeste","x":7,"y":10,"status":"habilitado","business":{"status":"abierto","industryType":"metalworks","lastProduction":20,"lastWorkers":8}}
+        ]
+        view=self.engine.load(city)
+        self.assertEqual(view["governmentReport"]["districts"][0]["population"],4)
+        view=self.engine.action({"action":"startEnvironmentalRemediation","x":7,"y":10,"medium":"air","contractor":"Sur Obras"})
+        self.assertEqual(len(view["environmentReport"]["remediation"]["inProgress"]),1)
+        view=self.engine.action({"action":"startCitizenConsultation","districtId":"oeste","topic":"employment"})
+        self.assertEqual(view["governmentReport"]["consultations"][-1]["status"],"abierta")
+        saved=self.engine.snapshot()
+        restored=self.engine.load(saved)
+        self.assertEqual(len(restored["environmentReport"]["remediation"]["inProgress"]),1)
+        self.assertEqual(restored["governmentReport"]["consultations"][-1]["status"],"abierta")
+
 
 if __name__=="__main__":
     unittest.main()

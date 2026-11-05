@@ -1,14 +1,16 @@
-# Ciudad Viva · Alfa 0.282
+# Ciudad Viva · Alfa 0.284
 
-**Online híbrido WebRTC + Cloudflare (0.282):** desde el ejecutable Windows, cada invitado prueba primero la conexión WebRTC directa (acciones y estado por canal DTLS); si la red la bloquea, utiliza automáticamente Cloudflare como respaldo. Si el anfitrión no logra abrir Cloudflare, aún puede anunciar y alojar una sala WebRTC. La señalización usa Supabase Realtime, con respuestas firmadas por el anfitrión. Se conservan LAN y Radmin VPN, hasta 13 jugadores por sala y recarga de servidores bajo demanda. Los Quick Tunnels son experimentales; WebRTC sin TURN no funciona en todas las redes. Ver `PUBLIC_SERVERS.md`.
+**WebRTC directo desde navegador con Cloudflare de respaldo:** Servidores públicos puede conectar por P2P desde GitHub Pages o la app Windows. Supabase sólo lleva señalización efímera; el anfitrión conserva la simulación y valida cada ruta. Si el P2P falla, se usa el túnel disponible. La compatibilidad con redes domésticas depende del NAT y aún necesita una prueba de campo; WebRTC sin TURN no garantiza conexión en todas las redes. La cuota de GitHub Actions está agotada hasta el 1 de diciembre de 2026: Vercel sigue desplegando `main`, las verificaciones se pueden correr localmente con `bash scripts/validate_local.sh` o `scripts/validate_local.ps1`, y el `.exe` se empaqueta en Windows con `scripts/build_windows_host.ps1`.
 
-# Ciudad Viva · Alfa 0.281
+## Ciudad Viva · Alfa 0.283
 
-**13 jugadores y directorio público bajo demanda:** las salas LAN e Internet admiten hasta 13 jugadores incluido el anfitrión. Las búsquedas públicas sólo consultan Supabase al abrir «Servidores públicos» o pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Los anfitriones mantienen sus anuncios activos con una señal cada 5 minutos; desaparecen a los 12 minutos si la conexión cae. No hay un máximo global artificial de servidores. La conexión WebRTC P2P sigue siendo una alternativa futura que requiere pruebas de NAT y TURN. Ver `PUBLIC_SERVERS.md`.
+**Remediación ambiental, consultas por distrito y coordinación cooperativa:** las obras de remediación reducen riesgos locales con plazo, contratista y costo mensual; las consultas muestran una muestra estimada por edad y quedan registradas; en Online, pausa y velocidad se aprueban por mayoría y el anfitrión puede delegar. El centro de respuesta reúne 17 clases de alertas con evidencia y acceso a los sistemas correspondientes. La auditoría del roadmap conserva pendientes reales; las fases todavía incompletas no se marcan como 95%.
+
+**13 jugadores y directorio público bajo demanda:** las salas LAN e Internet admiten hasta 13 jugadores incluido el anfitrión. Las búsquedas públicas sólo consultan Supabase al abrir «Servidores públicos» o pulsar «Recargar servidores», con 30 segundos mínimos entre consultas. Los anfitriones mantienen sus anuncios activos con una señal cada 5 minutos; desaparecen a los 12 minutos si la conexión cae. No hay un máximo global artificial de servidores. En esta versión el transporte WebRTC directo aún no estaba integrado; se agregó en 0.284. Ver `PUBLIC_SERVERS.md`.
 
 # Ciudad Viva · Alfa 0.280
 
-**Preparación del directorio global sin configuración manual (0.281):** el ejecutable consulta automáticamente la configuración pública de Supabase publicada por Ciudad Viva; los anfitriones no tienen que introducir URL o claves en su PC. También se pueden buscar salas desde la web en GitHub Pages, aunque sólo el .exe crea un servidor alojado localmente. Seguridad del proxy reforzada para impedir cualquier acceso a API administrativas mediante rutas codificadas. Las partidas y guardados siguen exclusivamente en la PC del anfitrión. **Directorio global activado:** se usa el proyecto CiudadViva y su clave publicable, sin instalar ni configurar servicios en las computadoras de los jugadores. Los anuncios se autorizan por un token secreto de cada sala mediante una Edge Function de Supabase, sin cuentas de usuario. Consulta `PUBLIC_SERVERS.md`.
+**Preparación del directorio global sin configuración manual (0.282):** el ejecutable consulta automáticamente la configuración pública de Supabase publicada por Ciudad Viva; los anfitriones no tienen que introducir URL o claves en su PC. También se pueden buscar salas desde la web en GitHub Pages, aunque sólo el .exe crea un servidor alojado localmente. Seguridad del proxy reforzada para impedir cualquier acceso a API administrativas mediante rutas codificadas. Las partidas y guardados siguen exclusivamente en la PC del anfitrión. **Directorio global activado:** se usa el proyecto CiudadViva y su clave publicable, sin instalar ni configurar servicios en las computadoras de los jugadores. Los anuncios se autorizan por un token secreto de cada sala mediante una Edge Function de Supabase, sin cuentas de usuario. Consulta `PUBLIC_SERVERS.md`.
 
 **Esta versión no convierte Cloudflare Quick Tunnels en infraestructura de producción:** los enlaces automáticos son experimentales y requieren probarse desde otra red real.
 
@@ -210,7 +212,7 @@ Además de las visitas a comercios, los hogares accesibles generan viajes a cent
 
 ## Iniciar
 
-- **Anfitrión Windows:** descargá [CiudadViva.exe · Alfa 0.242](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.242/CiudadViva.exe) y abrilo. Incluye el servidor y abre la ciudad en una sola ventana; no requiere instalar Python.
+- **Anfitrión Windows:** el último ejecutable publicado es [CiudadViva.exe · Alfa 0.283](https://github.com/TobyMorel/ciudad-viva/releases/download/v0.283/CiudadViva.exe). Para empaquetar el código 0.284 en una PC Windows, ejecutá `powershell -ExecutionPolicy Bypass -File scripts/build_windows_host.ps1`; requiere Python 3.12 y Node.js 22.
 - **Anfitrión Linux/macOS:** ejecutá **Iniciar Ciudad Viva.sh** con Python 3.9 o posterior.
 - **Modo individual:** abrí la página desde GitHub Pages o usá `index.html`.
 

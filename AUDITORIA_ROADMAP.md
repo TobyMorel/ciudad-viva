@@ -1,3 +1,37 @@
+# Auditoría integral de las fases 1–15 · Alfa 0.284
+
+La revisión contrasta sistemas observables, casos de prueba y pendientes del roadmap maestro. Los porcentajes son orientativos y solo cambian cuando hay una mecánica o evidencia nueva; no se convierten en un promedio global.
+
+| Fase | Avance | Evidencia principal | Pendiente que impide llegar a 95% |
+|---:|---:|---|---|
+| 1 | 90% | Expansión por sectores, calles y zonas conectadas, catastro y compra municipal de inmuebles privados; pruebas de adquisición y expansión. | Mercado de transferencias entre privados, valor del suelo por zona y planificación vial completa. |
+| 2 | 80% | Contratos, constructoras, avances por etapas, cuadrillas, inspecciones, pagos, garantías y órdenes de cambio. | Disputas, riesgos y demoras todavía no cubren todas las categorías de obra. |
+| 3 | 85% | Inventario y proveedores finitos, depósitos, pedidos y camiones; regresiones Online/Offline para pedidos, desvíos y faltantes. | Maquinaria especializada y cadenas extensas bajo congestión todavía requieren pruebas. |
+| 4 | 70% | Zonificación por densidad y promotores privados activados por demanda y acceso vial. | Competencia entre promotores y precios de suelo, alquiler e inversión más variados. |
+| 5 | 75% | Hogares, mudanzas, formación, empleo, compra/alquiler y migración; el ambiente puede reducir la llegada o impulsar salidas. | Ahorro e ingresos de cada familia, motivos de salida y permanencia aún requieren balance longitudinal. |
+| 6 | 70% | Redes de agua, energía, saneamiento y drenaje con capacidad, consumo, cortes, respaldos y reparaciones. | Redundancia distribuida y respuesta conjunta a déficits extensos todavía no están validadas. |
+| 7 | 96% | Viajes, rutas, transporte público, estacionamiento, capacidad y operación diaria cubiertos por pruebas extensas. | Validar alivio de congestión y puntualidad en ciudades densas. |
+| 8 | 97% | Impuestos por sector, empleo, cuentas municipales, deuda y previsiones con conciliación de caja. | Validar recuperación fiscal completa y continuidad de servicios en una crisis prolongada. |
+| 9 | 80% | Salud, policía, bomberos, residuos, educación, protección social y respuesta física con personal, rutas y presupuesto. | Formación técnica/docente y saturación simultánea de múltiples servicios. |
+| 10 | 80% | Indicadores ambientales por barrio y remediaciones contratadas con fuente, alcance local, duración, costo e historial. | Atender más fuentes y medios, y calibrar efectos acumulados a largo plazo. |
+| 11 | 75% | Apoyo, elecciones, acuerdos y consultas distritales por grupo de edad con resultado estimado e historial. | La participación todavía se estima desde perfiles residentes; faltan respuestas individuales y trazabilidad histórica completa de promesas. |
+| 12 | 90% | Presencia, chat, cursores, responsabilidades, votación mayoritaria y delegación de anfitrión; se agrega transporte WebRTC firmado desde navegador y respaldo Cloudflare. | Validación sostenida entre redes reales, NAT restrictivo, pérdida y reconexión durante partidas. |
+| 13 | 70% | Centro con 17 categorías de alerta, severidad, evidencia, respuesta recomendada e ingreso a sistemas existentes. | Cada familia todavía necesita su ciclo causal completo de prevención, decisión, recuperación y cierre. |
+| 14 | 70% | Ocho metas de ciudad, seis especializaciones y seguimiento histórico; estrés contable en cinco perfiles y 360 cierres. | Mejorar trayectorias y sostenibilidad en ciudades de escalas distintas; los perfiles de estrés no simulan cada jornada diaria. |
+| 15 | 90% | Paneles nuevos y 25 escenarios comprobados en Chromium a 390×844 y 1440×900. | Accesibilidad evaluada con usuarios y rendimiento en ciudades extensas y sesiones multijugador prolongadas. |
+
+La meta de 95% para cada fase no se declara alcanzada: las fases 2–6 y 9–15 conservan pendientes funcionales o de validación. El total no se promedia porque las 34 fases no tienen pesos comparables. La batería reproducible está en `scripts/validate_local.sh`; GitHub Actions queda pausado hasta el 1 de diciembre de 2026. La verificación local no sustituye una sesión entre redes reales ni el smoke temporal del directorio global.
+
+## Revisión de alcance · Alfa 0.284
+
+WebRTC añade un transporte directo desde la web y la app Windows, con señalización efímera, respuesta firmada, identidad creada por el anfitrión, límites de rutas y respaldo Cloudflare. La caída de un invitado libera su presencia en la sala. Se conserva la fase 12 en 90% porque la conectividad entre redes y bajo NAT restrictivo aún no tiene prueba de campo; no se contabiliza la implementación como conectividad universal.
+
+La base Alfa 0.283 agregó remediación ambiental contratada, consultas estimadas y coordinación cooperativa. Sus verificaciones locales anteriores quedan registradas aquí; las acciones automáticas actuales están pausadas por cuota.
+
+Evidencia registrada de Alfa 0.283: 227 pruebas Python, 183 Node/Offline, 25 escenarios responsive y cinco perfiles × 360 cierres contables. Para 0.284, la validación del protocolo WebRTC se ejecuta con el script local; queda pendiente la prueba entre redes. No se afirma que las fases 1–15 lleguen a 95%; sus brechas restantes están detalladas arriba.
+
+---
+
 # Auditoría · Alfa 0.159 · servicios públicos inmediatos
 
 Cambio de flujo solicitado: salud, policía y bomberos se colocan con pago inmediato en lugar de entrar en una obra. Mantienen dependencias de plantilla, redes y calles para servir realmente. No se atribuye aumento de progreso de fase porque son servicios existentes cuyo flujo se simplifica; fase 4=60%, fase 7=95%, fase 9=75%. Progreso global no estimable por falta de pesos verificables de las 34 fases.

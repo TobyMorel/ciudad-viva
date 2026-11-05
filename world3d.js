@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import {applyTrafficQueue} from './traffic.js';
-import {daylightIntensity} from './simulation_time.js?v=0.282';
+import {daylightIntensity} from './simulation_time.js?v=0.284';
 import {metroVisualPlan} from './metro_visuals.js';
-import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.282';
-import {createLivingCity3D} from './living_city_3d.js?v=0.282';
-import {createCityImmersive3D} from './city_immersive_3d.js?v=0.282';
+import {createCitySpectacle3D} from './city_spectacle_3d.js?v=0.284';
+import {createLivingCity3D} from './living_city_3d.js?v=0.284';
+import {createCityImmersive3D} from './city_immersive_3d.js?v=0.284';
 
 // La cuadrícula lógica conserva sus celdas; en escena, cada celda mide 3
 // unidades y los modelos crecen un 35%, dejando más espacio entre ellos.
@@ -462,7 +462,7 @@ export function createWorld(canvas){
   function updateCamera(){resize();const yaw=Math.PI/4+view.rotation*Math.PI/2,span=58/clamp(view.zoom,.43,4),units=span/Math.max(1,canvas.clientHeight);const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),upGround=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));const target=new THREE.Vector3(cameraAnchor.x*TILE*MAP_WORLD_SCALE,0,cameraAnchor.y*TILE*MAP_WORLD_SCALE).addScaledVector(right,-view.panX*units).addScaledVector(upGround,-view.panY*units),targetLocalX=target.x/MAP_WORLD_SCALE,targetLocalZ=target.z/MAP_WORLD_SCALE,recycle=20000;for(const [axis,localTarget] of [['x',targetLocalX],['z',targetLocalZ]]){const delta=localTarget-infiniteGroundOffset[axis];if(Math.abs(delta)>10000)infiniteGroundOffset[axis]+=Math.trunc(delta/recycle)*recycle;for(const ground of infiniteGround)ground.position[axis]=infiniteGroundOffset[axis]}sun.target.position.set(targetLocalX,0,targetLocalZ);sun.position.set(targetLocalX+3,31,targetLocalZ+28);camera.position.copy(target).add(new THREE.Vector3(Math.sin(yaw)*60*MAP_WORLD_SCALE,65*MAP_WORLD_SCALE,Math.cos(yaw)*60*MAP_WORLD_SCALE));camera.lookAt(target);camera.updateMatrixWorld()}
   const daySky=new THREE.Color('#bcd9df'),nightSky=new THREE.Color('#172633'),twilightSky=new THREE.Color('#cb9b79'),dayGround=new THREE.Color('#597d6e'),nightGround=new THREE.Color('#253b4c'),sunDay=new THREE.Color('#ffe4bb'),sunNight=new THREE.Color('#8096c4'),hemiNight=new THREE.Color('#9fbad0'),hemiDay=new THREE.Color('#fff5e5'),tempSky=new THREE.Color(),tempHemi=new THREE.Color(),tempGround=new THREE.Color();
   function updateLighting(minutes){const daylight=daylightIntensity(minutes),horizon=clamp(1-Math.abs(((minutes%1440)+1440)%1440-720)/180,0,1);tempSky.copy(nightSky).lerp(daySky,daylight).lerp(twilightSky,horizon*(1-daylight)*.72);scene.background.copy(tempSky);scene.fog.color.copy(tempSky);tempHemi.copy(hemiNight).lerp(hemiDay,daylight);hemi.color.copy(tempHemi);tempGround.copy(nightGround).lerp(dayGround,daylight);hemi.groundColor.copy(tempGround);hemi.intensity=.38+daylight*.64;sun.color.copy(sunNight).lerp(sunDay,daylight);sun.intensity=.24+daylight*2.35;renderer.toneMappingExposure=.84+daylight*.18;const glow=1-daylight;for(const lamp of streetLights){const powered=poweredStreetlights.has(key(lamp.x,lamp.y));lamp.light.intensity=powered?glow*3.2:0;lamp.bulb.material.emissiveIntensity=powered?glow*3.2:0;lamp.pool.material.opacity=powered?glow*.4:0}}
-  function environmentalRoadColor(score){if(!view.environmentOverlay)return null;if(view.environmentOverlay==='flood')return score>=65?'#3694aa':score>=1?'#8cbecc':'#aaa997';if(score<20)return'#58a47a';if(score<40)return'#d2bd65';if(score<65)return'#e28b58';return'#c95850'}
+  function environmentalRoadColor(score){if(!view.environmentOverlay)return null;if(view.environmentOverlay==='flood')return score>=65?'#3694aa':score>=1?'#8cbecc':'#aaa997';if(view.environmentOverlay==='quality')score=100-score;if(score<20)return'#58a47a';if(score<40)return'#d2bd65';if(score<65)return'#e28b58';return'#c95850'}
   function addRoad(root,x,y,roads,stress=0,signals=false,environmentIndex=0,asset=null){
     const roadType=asset?.roadType||'local',spec=ROAD_TYPES_RENDER[roadType]||ROAD_TYPES_RENDER.local,[cx,cz]=tilePos(x,y),n=roads.has(key(x,y-1)),s=roads.has(key(x,y+1)),e=roads.has(key(x+1,y)),w=roads.has(key(x-1,y)),degree=Number(n)+Number(s)+Number(e)+Number(w);
     const asphalt=environmentalRoadColor(environmentIndex)||(view.trafficOverlay?(stress>.8?'#c64e48':stress>.45?'#e88b48':stress>.2?'#e7be58':'#55af82'):COLORS.road);

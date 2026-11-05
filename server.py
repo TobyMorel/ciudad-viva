@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Servidor LAN local de Ciudad Viva. Solo biblioteca estándar de Python."""
-import gzip, heapq, json, math, mimetypes, os, socket, sys, threading, time, uuid, webbrowser
+import gzip, heapq, json, math, mimetypes, os, re, socket, sys, threading, time, uuid, webbrowser
 from urllib.parse import parse_qs, unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -18,7 +18,7 @@ if getattr(sys,"frozen",False):
     data_home=Path(os.environ.get("LOCALAPPDATA") or (Path.home()/".local"/"share"))
     SAVE_ROOT=Path(os.environ.get("CIUDAD_VIVA_DATA_DIR") or (data_home/"Ciudad Viva"))
 else:
-    SAVE_ROOT=ROOT
+    SAVE_ROOT=Path(os.environ.get("CIUDAD_VIVA_DATA_DIR") or ROOT)
 SAVE_ROOT.mkdir(parents=True,exist_ok=True)
 SAVE=SAVE_ROOT/"ciudad_guardada.json"
 LOCK=threading.RLock()
@@ -608,6 +608,7 @@ MUNICIPAL_ROLES={
     "hacienda":{"label":"Hacienda","summary":"Impuestos, créditos, presupuestos e inversiones"},
     "servicios":{"label":"Servicios","summary":"Salud, educación, redes, residuos y emergencias"},
     "movilidad":{"label":"Movilidad","summary":"Colectivos y operación del transporte"}}
+MUNICIPAL_APPROVAL_THRESHOLDS=(0,5000,10000,25000,50000)
 BUS_WINDOW_DEPARTURES=(
     ("early","05:00–07:00",1.5),("morningPeak","07:00–09:00",1.0),("dayMorning","09:00–11:00",1.75),("dayNoon","11:00–13:00",1.75),
     ("midday","13:00–15:00",1.5),("afternoon","15:00–17:00",1.5),
@@ -961,12 +962,15 @@ CITY_DEVELOPMENT_GOALS=[
  {"id":"connected","title":"Ciudad conectada","description":"Conectar los hogares y destinos urbanos con el acceso regional.","criteria":[("homeAccess","Hogares con acceso vial",90,"%","min"),("destinationAccess","Servicios y actividad con acceso vial",85,"%","min")]},
  {"id":"resilient","title":"Ciudad resiliente","description":"Mantener servicios e infraestructura en condiciones de respuesta.","criteria":[("services","Cobertura de servicios",80,"%","min"),("roadCondition","Condición vial media",75,"%","min"),("openFailures","Cortes activos de servicios",0,"","max"),("openRecovery","Reparaciones críticas pendientes",0,"","max")]},
  {"id":"inclusive","title":"Ciudad inclusiva","description":"Reducir brechas entre los barrios habitados.","criteria":[("population","Población residente",25,"personas","min"),("minimumSupport","Apoyo mínimo entre barrios",45,"%","min"),("districtGap","Brecha social máxima entre barrios",20,"puntos","max")]},
- {"id":"prosperous","title":"Ciudad próspera","description":"Combinar empleo formal, caja mensual positiva y actividad privada.","criteria":[("monthlyBalance","Saldo mensual base",0,"$","min"),("employment","Empleo formal",65,"%","min"),("activeBusinesses","Comercios y fábricas activos",2,"locales","min")]}
+ {"id":"prosperous","title":"Ciudad próspera","description":"Combinar empleo formal, caja mensual positiva y actividad privada.","criteria":[("monthlyBalance","Saldo mensual base",0,"$","min"),("employment","Empleo formal",65,"%","min"),("activeBusinesses","Empresas activas",2,"locales","min")]},
+ {"id":"healthy","title":"Ciudad saludable","description":"Reducir la exposición ambiental y acercar espacios verdes a los hogares.","criteria":[("environmentQuality","Calidad ambiental residencial",68,"%","min"),("waterPollution","Riesgo ambiental del agua",35,"%","max"),("soilPollution","Riesgo ambiental del suelo",35,"%","max"),("parkAccess","Residentes cerca de una plaza",45,"%","min")]},
+ {"id":"sustainable","title":"Movilidad sostenible","description":"Conectar trabajos y estudios con caminata, bicicleta o transporte público.","criteria":[("sustainableModeShare","Viajes sin auto particular",45,"%","min"),("roadCondition","Condición vial media",70,"%","min")]},
+ {"id":"renewal","title":"Revitalización urbana","description":"Completar rehabilitaciones y reducir brechas entre distritos.","criteria":[("urbanRenewals","Rehabilitaciones completadas en el último año",1,"obras","min"),("districtGap","Brecha social máxima entre barrios",35,"puntos","max")]}
 ]
-_CITY_BUILDING_KINDS={"home","shop","factory","hotel","civic","school","fireStation","depot","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant","landfill"}
+_CITY_BUILDING_KINDS={"home","shop","office","factory","hotel","civic","school","fireStation","depot","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant","landfill"}
 def _city_dev_state():
  d=state.setdefault("government",{}).setdefault("cityDevelopment",{})
- d.setdefault("focus",None);d.setdefault("streakMonths",0);d.setdefault("completed",[]);d.setdefault("lastReviewedDay",None)
+ d.setdefault("focus",None);d.setdefault("streakMonths",0);d.setdefault("completed",[]);d.setdefault("lastReviewedDay",None);d.setdefault("specializationHistory",[]);d["schemaVersion"]=2
  return d
 def _city_dev_readings():
  buildings=state.get("buildings",[]);homes=[b for b in buildings if b.get("kind")=="home"];dest=[b for b in buildings if b.get("kind") in _CITY_BUILDING_KINDS]
@@ -975,15 +979,32 @@ def _city_dev_readings():
  districts=government_districts();inh=[x for x in districts if x.get("population",0)>0];supports=[x.get("support",0) for x in inh];vals=[v for d in inh for v in (d.get("employment",0),d.get("housing",0),d.get("support",0))]
  roads=state.get("roads",[]);assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[]) if isinstance(a,dict)}
  resolved={"resuelta","resuelto","reparada","reparado","cerrada","cerrado","completada","completado","estabilizada","estabilizado","cancelada","cancelado"}
- failures=state.get("utilities",{}).get("failures",[]);needs=state.get("recoveryNeeds",[])
- activebiz=sum(1 for b in buildings if b.get("kind") in ("shop","factory","hotel") and str(b.get("business",{}).get("status",b.get("status",""))).lower() in ("abierto","operativo","en actividad"))
+ failures=state.get("utilities",{}).get("failures",[]);needs=state.get("recoveryNeeds",[]);population=sum(int(b.get("occupants",0)) for b in homes)
+ activebiz=sum(1 for b in buildings if b.get("kind") in ("shop","office","factory","hotel") and str(b.get("business",{}).get("status",b.get("status",""))).lower() in ("abierto","operativo","en actividad"))
  inc=float(state.get("grossMonthlyIncome",0) or 0);exp=float(state.get("effectiveMonthlyExpenses",0) or 0)
- return {"services":max(0,min(100,float(state.get("services",0) or 0))),"employment":max(0,min(100,float(state.get("employment",0) or 0))),"population":sum(int(d.get("population",0) or 0) for d in districts),
+ env=state.get("environmentReport",{});quality_report=env.get("qualityOfLife",{});water_report=env.get("water",{});soil_report=env.get("soil",{});green=env.get("green",{})
+ environment_quality=quality_report.get("residentialAverageIndex",sum(float(b.get("environmentQuality",70))*int(b.get("occupants",0)) for b in homes)/max(1,population) if population else 70)
+ water_pollution=water_report.get("residentialRiskIndex",sum(float(b.get("environmentWaterRisk",0))*int(b.get("occupants",0)) for b in homes)/max(1,population) if population else 0)
+ soil_pollution=soil_report.get("residentialRiskIndex",sum(float(b.get("environmentSoilRisk",0))*int(b.get("occupants",0)) for b in homes)/max(1,population) if population else 0)
+ parks=[b for b in buildings if b.get("kind")=="civic" and b.get("serviceModel")=="urbanPark" and b.get("status") in ("operativo","habilitado")]
+ park_access=green.get("nearbyPopulationPct",round(100*sum(int(h.get("occupants",0)) for h in homes if any(abs(h.get("x",0)-p.get("x",0))+abs(h.get("y",0)-p.get("y",0))<=3 for p in parks))/max(1,population)))
+ commutes=state.get("commutes",[]);commute_people=sum(max(0,int(t.get("workers",0) or 0)) for t in commutes);sustainable_people=sum(max(0,int(t.get("workers",0) or 0)) if t.get("mode") in ("walk","bicycle","bus") else max(0,int(t.get("busRiders",0) or 0)) for t in commutes)
+ workplaces=state.get("workplaces",[]);factory_jobs=sum(max(0,int(w.get("staffedJobs",0) or 0)) for w in workplaces if w.get("kind")=="factory");office_jobs=sum(max(0,int(w.get("staffedJobs",0) or 0)) for w in workplaces if w.get("kind")=="office");all_jobs=sum(max(0,int(w.get("staffedJobs",0) or 0)) for w in workplaces if w.get("kind") in ("shop","office","factory","hotel"))
+ residents=[r for b in homes for r in b.get("residents",[])];university_residents=sum(1 for r in residents if int(r.get("educationRank",0) or 0)>=3);universities=sum(1 for b in buildings if b.get("kind")=="school" and b.get("serviceModel")=="university" and b.get("status") not in ("cerrado","abandonado"))
+ hotels=sum(1 for b in buildings if b.get("kind")=="hotel" and b.get("business",{}).get("status")=="abierto");tourist_visitors=sum(max(0,int(e.get("visitors",0) or 0)) for e in state.get("tourismEvents",[]) if e.get("status")=="realizado" and int(state.get("day",1))-int(e.get("completedDay",0) or 0)<=360)
+ ports=sum(1 for b in buildings if b.get("kind")=="port" and b.get("status") in ("habilitado","operativo"));shipments=sum(1 for v in state.get("supply",{}).get("portVoyages",[]) if v.get("status") in ("entregado","atracado","exportado"))
+ renewals=sum(1 for w in state.get("urbanRenewalHistory",[]) if w.get("status")=="completada" and int(state.get("day",1))-int(w.get("completedDay",0) or 0)<=360)
+ return {"services":max(0,min(100,float(state.get("services",0) or 0))),"employment":max(0,min(100,float(state.get("employment",0) or 0))),"population":population,
  "homeAccess":round(100*ch/len(homes)) if homes else 0,"destinationAccess":round(100*cd/len(dest)) if dest else 0,
  "roadCondition":round(sum(float(assets.get((r[0],r[1]),{}).get("quality",82)) for r in roads)/len(roads),1) if roads else 0,
- "openFailures":sum(str(f.get("status","abierta")).lower() not in resolved for f in failures if isinstance(f,dict)),
- "openRecovery":sum(str(n.get("status","abierta")).lower() not in resolved for n in needs if isinstance(n,dict)),
- "minimumSupport":min(supports) if supports else 0,"districtGap":round(max(vals)-min(vals),1) if vals else 100,"monthlyBalance":round(inc-exp),"activeBusinesses":activebiz}
+ "openFailures":sum(str(f.get("status","abierta")).lower() not in resolved for f in failures if isinstance(f,dict)),"openRecovery":sum(str(n.get("status","abierta")).lower() not in resolved for n in needs if isinstance(n,dict)),
+ "minimumSupport":min(supports) if supports else 0,"districtGap":round(max(vals)-min(vals),1) if vals else 100,"monthlyBalance":round(inc-exp),"activeBusinesses":activebiz,
+ "environmentQuality":round(environment_quality),"waterPollution":round(water_pollution),"soilPollution":round(soil_pollution),"parkAccess":round(park_access),"sustainableModeShare":round(100*sustainable_people/max(1,commute_people)) if commute_people else 0,"urbanRenewals":renewals,
+ "factoryJobs":factory_jobs,"officeJobs":office_jobs,"allBusinessJobs":all_jobs,"universityCount":universities,"universityResidents":university_residents,"hotelCount":hotels,"touristVisitors":tourist_visitors,"operationalPorts":ports,"portShipments":shipments,"homes":len(homes)}
+def _city_dev_specializations(readings):
+ d=_city_dev_state();history=d.get("specializationHistory",[]);previous=history[-2].get("scores",{}) if len(history)>1 else {};total=max(1,readings.get("allBusinessJobs",0));factory_share=readings.get("factoryJobs",0)/total
+ rows=[("universitaria","Universitaria",min(100,(40 if readings.get("universityCount") else 0)+min(60,100*readings.get("universityResidents",0)/max(1,readings.get("population",0)))),f"{readings.get('universityCount',0)} universidades · {readings.get('universityResidents',0)} residentes con título"),("industrial","Industrial",min(100,round(factory_share*120)),f"{readings.get('factoryJobs',0)} empleos fabriles · {round(factory_share*100)}% del empleo privado informado"),("turistica","Turística",min(100,readings.get("hotelCount",0)*22+min(56,round(readings.get("touristVisitors",0)/5))),f"{readings.get('hotelCount',0)} hoteles abiertos · {readings.get('touristVisitors',0)} visitas recientes"),("portuaria","Portuaria",min(100,readings.get("operationalPorts",0)*28+readings.get("portShipments",0)*14),f"{readings.get('operationalPorts',0)} terminales operativas · {readings.get('portShipments',0)} embarques recientes"),("verde","Verde y saludable",round(readings.get("environmentQuality",70)*.6+readings.get("parkAccess",0)*.4),f"Calidad ambiental {readings.get('environmentQuality',70)}/100 · {readings.get('parkAccess',0)}% cerca de una plaza"),("residencial","Residencial",min(100,40+min(30,readings.get("population",0)/10)+readings.get("environmentQuality",70)*.3 if readings.get("homes") else 0),f"{readings.get('population',0)} residentes · {readings.get('homes',0)} edificios de vivienda")]
+ return [{"id":key,"title":title,"score":round(score),"emerging":score>=65,"evidence":evidence,"trend":None if key not in previous else round(score-previous[key])} for key,title,score,evidence in sorted(rows,key=lambda r:(-r[2],r[0]))]
 def _city_dev_snapshot(readings=None):
  d=_city_dev_state();readings=readings or _city_dev_readings();done={x.get("id"):x for x in d.get("completed",[]) if isinstance(x,dict)};goals=[]
  for spec in CITY_DEVELOPMENT_GOALS:
@@ -993,15 +1014,17 @@ def _city_dev_snapshot(readings=None):
    checks.append({"label":label,"value":round(value,1) if isinstance(value,float) else value,"target":target,"unit":unit,"comparison":cmp,"met":bool(met)})
   active=d.get("focus")==spec["id"];finished=spec["id"] in done;streak=int(d.get("streakMonths",0)) if active else 0
   goals.append({"id":spec["id"],"title":spec["title"],"description":spec["description"],"checks":checks,"checksMet":sum(c["met"] for c in checks),"checksTotal":len(checks),"qualified":all(c["met"] for c in checks),"active":active,"completed":finished,"completedDay":done.get(spec["id"],{}).get("completedDay"),"streakMonths":CITY_DEVELOPMENT_MONTHS if finished else streak,"requiredMonths":CITY_DEVELOPMENT_MONTHS,"progress":100 if finished else round(100*streak/CITY_DEVELOPMENT_MONTHS),"canFocus":not finished})
- return {"focus":d.get("focus"),"goals":goals,"completed":len(done),"total":len(CITY_DEVELOPMENT_GOALS),"reviewDay":d.get("lastReviewedDay"),"optional":True}
+ return {"schemaVersion":2,"focus":d.get("focus"),"goals":goals,"completed":len(done),"total":len(CITY_DEVELOPMENT_GOALS),"reviewDay":d.get("lastReviewedDay"),"optional":True,"specializations":_city_dev_specializations(readings)}
 def city_development_report():
  d=_city_dev_state()
- if not isinstance(d.get("review"),dict):d["review"]=_city_dev_snapshot()
+ if not isinstance(d.get("review"),dict) or d["review"].get("schemaVersion")!=2 or d["review"].get("total")!=len(CITY_DEVELOPMENT_GOALS):d["review"]=_city_dev_snapshot()
  return d["review"]
 def update_city_development():
  d=_city_dev_state();day=int(state.get("day",1))
  if d.get("lastReviewedDay")==day:return
- readings=_city_dev_readings();goal=next((x for x in CITY_DEVELOPMENT_GOALS if x["id"]==d.get("focus")),None);done={x.get("id") for x in d.get("completed",[]) if isinstance(x,dict)}
+ readings=_city_dev_readings();scores={x["id"]:x["score"] for x in _city_dev_specializations(readings)}
+ if not d["specializationHistory"] or d["specializationHistory"][-1].get("day")!=day:d["specializationHistory"].append({"day":day,"scores":scores});d["specializationHistory"]=d["specializationHistory"][-12:]
+ goal=next((x for x in CITY_DEVELOPMENT_GOALS if x["id"]==d.get("focus")),None);done={x.get("id") for x in d.get("completed",[]) if isinstance(x,dict)}
  if goal and goal["id"] not in done:
   ok=all(readings.get(k,0)>=t if cmp=="min" else readings.get(k,0)<=t for k,_,t,_,cmp in goal["criteria"])
   d["streakMonths"]=int(d.get("streakMonths",0))+1 if ok else 0
@@ -1038,14 +1061,108 @@ def ensure_government_state():
 
 def municipal_team_report(player_id=None):
     government=state.setdefault("government",{})
-    responsibilities=government.setdefault("responsibilities",{})
+    responsibilities=state.setdefault("municipalResponsibilities",government.setdefault("responsibilities",{}))
     cutoff=time.time()-25
     active=[(member,last) for member,last in state.get("players",{}).items() if last>cutoff]
     active.sort(key=lambda item:(item[0]!=state.get("host"),item[0]))
     labels={member:state.get("playerNames",{}).get(member) or ("Alcaldía · anfitrión" if member==state.get("host") else f"Jugador {member[-6:]}") for member,_ in active}
     members=[{"id":member,"label":labels[member],"isHost":member==state.get("host"),"role":next((role for role,owner in responsibilities.items() if owner==member),"compartido")} for member,_ in active]
     roles=[{"id":role,"label":meta["label"],"summary":meta["summary"],"playerId":responsibilities.get(role),"playerLabel":labels.get(responsibilities.get(role),"Titular desconectado · área compartida")} for role,meta in MUNICIPAL_ROLES.items()]
-    return {"isHost":player_id is not None and player_id==state.get("host"),"myRole":next((role for role,owner in responsibilities.items() if owner==player_id),"compartido"),"members":members,"roles":roles,"online":len(active)}
+    cooperation=municipal_cooperation_state()
+    decision_rows=[]
+    for decision in cooperation["decisions"][-8:]:
+        votes=decision.get("votes",{});labels_for_votes={member:labels.get(member,state.get("playerNames",{}).get(member,"Jugador desconectado")) for member in decision.get("eligibleVoters",[])}
+        decision_rows.append({"id":decision["id"],"title":decision["title"],"cost":decision["cost"],"status":decision["status"],"proposerName":decision.get("proposerName","Jugador"),"requiredVotes":decision.get("requiredVotes",1),"yesVotes":sum(v=="yes" for v in votes.values()),"noVotes":sum(v=="no" for v in votes.values()),"myVote":votes.get(player_id),"votes":[{"name":labels_for_votes.get(member,"Jugador"),"vote":vote} for member,vote in votes.items()]})
+    control_vote=cooperation.get("controlVote")
+    control_vote_view=None
+    if isinstance(control_vote,dict):
+        control_votes=control_vote.get("votes",{})
+        control_vote_view={"id":control_vote.get("id"),"control":control_vote.get("control"),"value":control_vote.get("value"),"status":control_vote.get("status"),"proposerName":control_vote.get("proposerName","Jugador"),"requiredVotes":control_vote.get("requiredVotes",1),"yesVotes":sum(v=="yes" for v in control_votes.values()),"noVotes":sum(v=="no" for v in control_votes.values()),"myVote":control_votes.get(player_id),"votes":[{"name":state.get("playerNames",{}).get(member,"Jugador"),"vote":vote} for member,vote in control_votes.items()],"cancellationReason":control_vote.get("cancellationReason")}
+    cooperation_view={"approvalThreshold":cooperation["approvalThreshold"],"thresholds":list(MUNICIPAL_APPROVAL_THRESHOLDS),"decisions":decision_rows,"controlVote":control_vote_view,"controlHistory":cooperation.get("controlHistory",[])[-6:]}
+    return {"isHost":player_id is not None and player_id==state.get("host"),"myRole":next((role for role,owner in responsibilities.items() if owner==player_id),"compartido"),"members":members,"roles":roles,"online":len(active),"cooperation":cooperation_view}
+
+def municipal_cooperation_state():
+    value=state.setdefault("municipalCooperation",{})
+    if value.get("approvalThreshold") not in MUNICIPAL_APPROVAL_THRESHOLDS:value["approvalThreshold"]=0
+    value.setdefault("decisions",[])
+    value["decisions"]=[d for d in value["decisions"] if isinstance(d,dict)][-40:]
+    value.setdefault("controlVote",None)
+    value.setdefault("controlHistory",[])
+    value["controlHistory"]=[row for row in value["controlHistory"] if isinstance(row,dict)][-12:]
+    return value
+
+def restore_municipal_network_data(snapshot):
+    """Restore team settings without reviving stale players' votes or assignments."""
+    saved=snapshot.get("municipalCooperation") if isinstance(snapshot,dict) else None
+    cooperation=json.loads(json.dumps(saved)) if isinstance(saved,dict) else {"approvalThreshold":0,"decisions":[]}
+    if cooperation.get("approvalThreshold") not in MUNICIPAL_APPROVAL_THRESHOLDS:cooperation["approvalThreshold"]=0
+    decisions=[]
+    for item in cooperation.get("decisions",[]):
+        if not isinstance(item,dict):continue
+        decision=dict(item)
+        if decision.get("status")=="pending":
+            decision["status"]="cancelled"
+            decision["resolvedAt"]=int(time.time())
+            decision["cancellationReason"]="La sala cambió al cargar la partida."
+        decisions.append(decision)
+    cooperation["decisions"]=decisions[-40:]
+    control_vote=cooperation.get("controlVote")
+    if isinstance(control_vote,dict) and control_vote.get("status")=="pending":
+        control_vote["status"]="cancelled"
+        control_vote["cancellationReason"]="La sala cambió al cargar la partida."
+        cooperation.setdefault("controlHistory",[]).append(control_vote)
+        cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+        cooperation["controlVote"]=None
+    active=set(state.get("players",{}))
+    responsibilities=snapshot.get("municipalResponsibilities",{}) if isinstance(snapshot,dict) else {}
+    if not isinstance(responsibilities,dict):responsibilities={}
+    responsibilities={role:owner for role,owner in responsibilities.items() if role in MUNICIPAL_ROLES and owner in active}
+    state["municipalCooperation"]=cooperation
+    state["municipalResponsibilities"]=responsibilities
+
+def municipal_action_cost(data):
+    """Known city-funded purchases that can be placed behind an optional team vote."""
+    action=data.get("action");kind=data.get("kind")
+    if action=="place":
+        if kind in ("home","shop","office","factory","hotel"):return 0
+        model=SERVICE_MODELS.get(str(data.get("serviceModel") or "")) or SCHOOL_MODELS.get(str(data.get("serviceModel") or ""))
+        spec=PROJECTS.get(str(kind or ""))
+        return max(0,int((model or {}).get("cost",(spec or {}).get("cost",0))))
+    if action=="placeRoad":return max(0,int(ROAD_TYPES.get(str(data.get("roadType") or "local"),ROAD_TYPES["local"])["cost"]))
+    if action in HOSPITAL_COSTS:return HOSPITAL_COSTS[action]
+    if action in POLICE_COSTS:return POLICE_COSTS[action]
+    if action=="expandSchool":
+        x,y=int(data.get("x",-1)),int(data.get("y",-1));school=next((b for b in state.get("buildings",[]) if b.get("kind")=="school" and (b.get("x"),b.get("y"))==(x,y)),None)
+        model=service_model(school) if school else None
+        if not model:return 0
+        current=max(0,int(school.get("classrooms",model["classrooms"])));classrooms=min(2,max(0,model["classrooms"]+6-current));contractor=CONTRACTORS.get(str(data.get("contractor") or ""),CONTRACTORS["Constructora Delta"])
+        return round(4100*classrooms*contractor["price"])
+    return 0
+
+def municipal_action_payload(data):
+    action=data.get("action");keys={"place":{"action","kind","x","y","serviceModel","industryType","contractor","busLineId"},"placeRoad":{"action","x","y","roadType"},"openHospitalWard":{"action","x","y"},"expandHospitalWard":{"action","x","y"},"addAmbulance":{"action","x","y"},"openPoliceUnit":{"action","x","y"},"addPoliceVehicle":{"action","x","y"},"expandSchool":{"action","x","y","contractor"}}
+    allowed=keys.get(action,set())
+    return {key:value for key,value in data.items() if key in allowed and isinstance(value,(str,int,float,bool,type(None)))}
+
+def create_municipal_decision(player_id,data,cost):
+    active=sorted(member for member,last in state.get("players",{}).items() if last>time.time()-25)
+    if len(active)<2:return None
+    payload=municipal_action_payload(data)
+    if not payload or len(payload.get("action",""))>80:return None
+    name=state.get("playerNames",{}).get(player_id,"Jugador");description=action_description(payload)
+    decision={"id":uuid.uuid4().hex,"title":description[:100],"cost":int(cost),"status":"pending","proposer":player_id,"proposerName":name,"createdAt":int(time.time()),"eligibleVoters":active,"requiredVotes":len(active)//2+1,"votes":{player_id:"yes"},"action":payload}
+    cooperation=municipal_cooperation_state();cooperation["decisions"].append(decision);cooperation["decisions"]=cooperation["decisions"][-40:]
+    return decision
+
+def vote_municipal_decision(player_id,decision_id,vote):
+    if vote not in ("yes","no"):raise ValueError("El voto debe ser a favor o en contra.")
+    decision=next((d for d in municipal_cooperation_state()["decisions"] if d.get("id")==str(decision_id)),None)
+    if not decision or decision.get("status")!="pending":raise ValueError("La decisión ya no está pendiente de votación.")
+    if player_id not in decision.get("eligibleVoters",[]) or state.get("players",{}).get(player_id,0)<=time.time()-25:raise ValueError("Solo pueden votar quienes estaban en la sala y siguen conectados.")
+    decision.setdefault("votes",{})[player_id]=vote;yes=sum(v=="yes" for v in decision["votes"].values());no=sum(v=="no" for v in decision["votes"].values());remaining=max(0,len(decision.get("eligibleVoters",[]))-len(decision["votes"]));required=int(decision.get("requiredVotes",1))
+    if yes>=required:decision["status"]="approved";decision["resolvedAt"]=int(time.time())
+    elif yes+remaining<required:decision["status"]="rejected";decision["resolvedAt"]=int(time.time())
+    return decision
 
 def government_districts():
     districts=[{"id":"oeste","name":"Oeste","homes":[]},{"id":"centro","name":"Centro","homes":[]},{"id":"puerto","name":"Puerto","homes":[]}]
@@ -1061,12 +1178,15 @@ def government_districts():
         employed=sum(1 for r in eligible if r.get("status")=="empleado")
         crowding=sum(int(h.get("occupants",0)) for h in d["homes"])/max(1,sum(int(h.get("capacity",h.get("occupants",0))) for h in d["homes"]))
         quality=sum(float(h.get("quality",80)) for h in d["homes"])/max(1,len(d["homes"]))
+        environment=sum(float(h.get("environmentQuality",70))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 70
+        water_risk=sum(float(h.get("environmentWaterRisk",0))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
+        soil_risk=sum(float(h.get("environmentSoilRisk",0))*int(h.get("occupants",0)) for h in d["homes"])/max(1,population) if population else 0
         services=max(0,min(100,float(state.get("services",0))))
         employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
         housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
         tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
         tax_penalty=tax_pressure_penalty(tax_pressure,tax_service_relief())
-        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23-tax_penalty))
+        base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.25 +(employment-65)*.2 +(services-65)*.2 +(housing-70)*.2 +(environment-70)*.15-tax_penalty))
         active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
         overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
         complaint_pressure=min(12,sum(2+min(3,max(0,int(c.get("monthsOpen",1))-1)*.5) for c in active_complaints)+len(overdue_agreements)*2)
@@ -1075,8 +1195,9 @@ def government_districts():
         if employment<55:issues.append("empleo")
         if housing<65:issues.append("vivienda")
         if services<55:issues.append("servicios")
+        if environment<48 or water_risk>=45 or soil_risk>=45:issues.append("ambiente")
         if base_score<45:issues.append("confianza")
-        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"taxPressure":tax_pressure,"taxPenalty":tax_penalty,"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Gestión estable"})
+        rows.append({"id":d["id"],"name":d["name"],"population":population,"eligibleWorkers":len(eligible),"employed":employed,"employment":round(employment),"housing":round(housing),"services":round(services),"environmentQuality":round(environment),"waterRisk":round(water_risk),"soilRisk":round(soil_risk),"taxPressure":tax_pressure,"taxPenalty":tax_penalty,"baseSupport":round(base_score),"support":round(score),"openComplaints":len(active_complaints),"homes":len(d["homes"]),"issues":issues,"issue":"Empleo" if employment<55 else "Vivienda" if housing<65 else "Servicios" if services<55 else "Ambiente" if "ambiente" in issues else "Gestión estable"})
     return rows
 
 def government_plan_metrics():
@@ -1966,6 +2087,8 @@ def save_slot(slot_id=None,name=None):
     existing.update({"city":str(state.get("name","Puerto Claro"))[:48],"day":int(state.get("day",1)),"updatedAt":int(time.time())})
     folder=SAVE_ROOT/"partidas";folder.mkdir(parents=True,exist_ok=True)
     snapshot=SHARED_ENGINE.snapshot() if SHARED_ENGINE is not None and ROOM_OPEN else {k:v for k,v in state.items() if k not in ("players","playerNames","host","chatMessages","actionFeed","roomName")}
+    if isinstance(state.get("municipalCooperation"),dict):snapshot["municipalCooperation"]=json.loads(json.dumps(state["municipalCooperation"]))
+    if isinstance(state.get("municipalResponsibilities"),dict):snapshot["municipalResponsibilities"]=json.loads(json.dumps(state["municipalResponsibilities"]))
     write_slot_json(folder/(slot_id+".json"),snapshot)
     write_slot_json(folder/"indice.json",slots)
     ACTIVE_SLOT_ID=slot_id
@@ -1983,7 +2106,7 @@ def publish_shared_view(view):
     SHARED_GAME_VIEW=view
     # Python's state is a read-only view for chat, cursors and old API consumers;
     # only offline.js can mutate the simulation itself.
-    network_keys=("players","playerNames","host","chatMessages","actionFeed","roomName")
+    network_keys=("players","playerNames","host","chatMessages","actionFeed","roomName","municipalCooperation","municipalResponsibilities")
     network={key:state[key] for key in network_keys if key in state}
     state.clear()
     state.update(view)
@@ -2025,6 +2148,7 @@ def start_shared_room(player_id,data,client_ip):
     state["playerNames"]={player_id:clean_player_name(data.get("name"))}
     state["chatMessages"]=[]
     state["actionFeed"]=[]
+    restore_municipal_network_data(snapshot or {})
     if slot_id:
         chosen=next((x for x in slot_catalog() if x["id"]==slot_id),None)
         state["roomName"]=chosen["name"] if chosen else state.get("name","Ciudad Viva")
@@ -7105,6 +7229,29 @@ class Handler(BaseHTTPRequestHandler):
         except Exception: self._send(400,{"error":"JSON inválido"}); return
         path=self.path.split("?",1)[0]
         pid=self.headers.get("X-Player-Id","jugador-local")
+        if path=="/api/public/rtc/leave":
+            if self.client_address[0] not in ("127.0.0.1","::1"):
+                self._send(403,{"error":"Sólo el anfitrión puede cerrar una sesión WebRTC."});return
+            player_id=str(data.get("playerId") or "")
+            if not re.fullmatch(r"public-[0-9a-f]{24}",player_id):
+                self._send(400,{"error":"Identidad WebRTC inválida."});return
+            with LOCK:
+                if not ROOM_OPEN or pid!=state.get("host"):
+                    self._send(403,{"error":"Sólo el anfitrión puede cerrar una sesión WebRTC."});return
+                removed=player_id in state.get("players",{})
+                if removed:
+                    state["players"].pop(player_id,None)
+                    state.setdefault("playerNames",{}).pop(player_id,None)
+                    responsibilities=state.get("municipalResponsibilities",{})
+                    if isinstance(responsibilities,dict):
+                        for role,owner in list(responsibilities.items()):
+                            if owner==player_id:responsibilities.pop(role,None)
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all()
+            if removed:
+                with CURSOR_CONDITION:
+                    if PLAYER_CURSORS.pop(player_id,None) is not None:
+                        CURSOR_REVISION+=1;CURSOR_CONDITION.notify_all()
+            self._send(200,{"ok":True,"removed":removed});return
         if path=="/api/cursors":
             if not cursor_member(pid):self._send(409,{"error":"Entrá a la sala para mover el cursor."});return
             view=" ".join(str(data.get("view") or "").strip().split())[:60]
@@ -7185,7 +7332,113 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(action,str) or len(action)>80:
                     self._send(400,{"error":"Acción inválida."});return
                 previous=state.get("events",[None])[0] if state.get("events") else None
+                if action=="assignMunicipalRole":
+                    role=str(data.get("role",""));member_id=str(data.get("playerId") or "");responsibilities=state.setdefault("municipalResponsibilities",{})
+                    if role not in MUNICIPAL_ROLES:
+                        self._send(409,{"error":"Responsabilidad municipal desconocida."});return
+                    if member_id and member_id not in state.get("players",{}):
+                        self._send(409,{"error":"Ese jugador ya no está en la sala."});return
+                    for assigned,owner in list(responsibilities.items()):
+                        if owner==member_id:responsibilities.pop(assigned,None)
+                    if member_id:responsibilities[role]=member_id
+                    state["players"][pid]=time.time();state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":f"actualizó la responsabilidad de {MUNICIPAL_ROLES[role]['label']}","day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                cooperation=municipal_cooperation_state()
+                if action=="transferMunicipalHost":
+                    if pid!=state.get("host"):
+                        self._send(403,{"error":"Solo el anfitrión actual puede delegar la alcaldía."});return
+                    target=str(data.get("playerId") or "")
+                    if target==pid or target not in state.get("players",{}) or state["players"].get(target,0)<=time.time()-25:
+                        self._send(409,{"error":"Elegí otro jugador que siga conectado a la sala."});return
+                    previous_name=state.get("playerNames",{}).get(pid,"Anfitrión");next_name=state.get("playerNames",{}).get(target,"Jugador")
+                    state["host"]=target
+                    state["players"][pid]=time.time()
+                    state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":previous_name,"detail":f"delegó la alcaldía a {next_name}","day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action in ("proposeSimulationControl","voteSimulationControl"):
+                    now=time.time();current=cooperation.get("controlVote")
+                    if action=="proposeSimulationControl":
+                        control=str(data.get("control") or "")
+                        if control not in ("pause","speed"):
+                            self._send(409,{"error":"El control cooperativo debe ser pausa o velocidad."});return
+                        value=data.get("value")
+                        if control=="pause":
+                            if not isinstance(value,bool):self._send(409,{"error":"La pausa necesita un valor verdadero o falso."});return
+                        else:
+                            try:value=int(value)
+                            except (TypeError,ValueError):value=0
+                            if value not in (1,2,4):self._send(409,{"error":"Elegí velocidad x1, x2 o x4."});return
+                        if isinstance(current,dict) and current.get("status")=="pending" and now-int(current.get("createdAt",0))<=60:
+                            self._send(409,{"error":"Ya hay una votación de pausa o velocidad en curso."});return
+                        if isinstance(current,dict) and current.get("status")=="pending":
+                            current["status"]="expired";cooperation.setdefault("controlHistory",[]).append(current);cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+                        active_ids=sorted(member for member,last in state.get("players",{}).items() if last>now-25)
+                        vote={"id":uuid.uuid4().hex,"control":control,"value":value,"status":"pending","proposer":pid,"proposerName":state.get("playerNames",{}).get(pid,"Jugador"),"createdAt":int(now),"eligibleVoters":active_ids,"requiredVotes":len(active_ids)//2+1,"votes":{pid:"yes"}}
+                        cooperation["controlVote"]=vote
+                    else:
+                        if not isinstance(current,dict) or current.get("status")!="pending" or now-int(current.get("createdAt",0))>60 or str(data.get("voteId") or "")!=str(current.get("id") or ""):
+                            self._send(409,{"error":"No hay una votación de control vigente; actualizá el panel y volvé a votar."});return
+                        choice=str(data.get("vote") or "")
+                        if choice not in ("yes","no"):
+                            self._send(409,{"error":"El voto debe ser a favor o en contra."});return
+                        if pid not in current.get("eligibleVoters",[]) or state.get("players",{}).get(pid,0)<=now-25:
+                            self._send(403,{"error":"Solo pueden votar los jugadores presentes al iniciar la propuesta."});return
+                        current.setdefault("votes",{})[pid]=choice;vote=current
+                    vote=cooperation.get("controlVote") or vote
+                    active_ids={member for member,last in state.get("players",{}).items() if last>now-25}
+                    electorate=[member for member in vote.get("eligibleVoters",[]) if member in active_ids]
+                    required=max(1,len(electorate)//2+1);votes=vote.get("votes",{});yes=sum(votes.get(member)=="yes" for member in electorate);no=sum(votes.get(member)=="no" for member in electorate);remaining=max(0,len(electorate)-yes-no);vote["requiredVotes"]=required
+                    if yes>=required:
+                        engine_action={"action":vote["control"],"value":vote["value"]}
+                        try:view=SHARED_ENGINE.action(engine_action)
+                        except SharedEngineError as error:
+                            vote["status"]="rejected";vote["cancellationReason"]=str(error)
+                            self._send(409,{"error":str(error)});return
+                        publish_shared_view(view);vote["status"]="applied";vote["resolvedAt"]=int(now)
+                    elif yes+remaining<required:
+                        vote["status"]="rejected";vote["resolvedAt"]=int(now)
+                    state["players"][pid]=now
+                    label=("pausa" if vote["control"]=="pause" else f"velocidad x{vote['value']}")
+                    detail=(f"aprobó el cambio de {label}" if vote["status"]=="applied" else f"votó {'a favor' if votes.get(pid)=='yes' else 'en contra'} del cambio de {label}")
+                    state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":detail,"day":state.get("day",1),"time":int(now)});del state["actionFeed"][:-40]
+                    if vote["status"] in ("applied","rejected"):
+                        cooperation.setdefault("controlHistory",[]).append(vote);cooperation["controlHistory"]=cooperation["controlHistory"][-12:]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action in ("pause","speed"):
+                    self._send(409,{"error":"En una sala Online, pausa y velocidad se proponen desde los controles cooperativos."});return
+                if action=="setMunicipalApprovalThreshold":
+                    if pid!=state.get("host"):
+                        self._send(403,{"error":"Solo el anfitrión puede configurar el umbral de aprobación."});return
+                    try:threshold=int(data.get("threshold",0))
+                    except (TypeError,ValueError):threshold=-1
+                    if threshold not in MUNICIPAL_APPROVAL_THRESHOLDS:
+                        self._send(409,{"error":"Elegí uno de los umbrales disponibles."});return
+                    cooperation["approvalThreshold"]=threshold
+                    state["players"][pid]=time.time();state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Anfitrión"),"detail":f"configuró la aprobación municipal desde ${threshold:,}".replace(",","."),"day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action=="voteMunicipalDecision":
+                    try:decision=vote_municipal_decision(pid,data.get("decisionId"),data.get("vote"))
+                    except ValueError as error:self._send(409,{"error":str(error)});return
+                    state["players"][pid]=time.time();state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":state.get("playerNames",{}).get(pid,"Jugador"),"detail":f"votó {'a favor' if data.get('vote')=='yes' else 'en contra'} de {decision['title'][:70]}","day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
+                if action=="executeMunicipalDecision":
+                    decision=next((d for d in cooperation["decisions"] if d.get("id")==str(data.get("decisionId"))),None)
+                    if not decision or decision.get("status")!="approved":
+                        self._send(409,{"error":"La inversión necesita votos suficientes antes de ejecutarse."});return
+                    if state.get("government",{}).get("status") in ("derrotado","destituido"):
+                        self._send(409,{"error":"El equipo dejó el gobierno; no puede ejecutar nuevas inversiones."});return
+                    try:view=SHARED_ENGINE.action(decision["action"])
+                    except SharedEngineError as error:self._send(409,{"error":str(error)});return
+                    publish_shared_view(view);decision["status"]="executed";decision["executedAt"]=int(time.time());state["players"][pid]=time.time()
+                    self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),f"ejecutó la inversión aprobada · {decision['title'][:70]}",previous)
+                    STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
                 if action=="new" and ACTIVE_SLOT_ID:save_slot()
+                estimated_cost=municipal_action_cost(data);threshold=cooperation.get("approvalThreshold",0);active_players=[member for member,last in state.get("players",{}).items() if last>time.time()-25]
+                if threshold and estimated_cost>=threshold and len(active_players)>=2:
+                    decision=create_municipal_decision(pid,data,estimated_cost)
+                    if decision:
+                        state["players"][pid]=time.time();state.setdefault("actionFeed",[]).append({"id":uuid.uuid4().hex,"player":decision["proposerName"],"detail":f"propuso {decision['title'][:65]} · ${estimated_cost:,} para votar".replace(",","."),"day":state.get("day",1),"time":int(time.time())});del state["actionFeed"][:-40]
+                        STATE_REVISION+=1;STATE_CONDITION.notify_all();self._send(200,public_state(pid,use_cache=True));return
                 try:
                     view=SHARED_ENGINE.action(data)
                 except SharedEngineError as error:self._send(409,{"error":str(error)});return
@@ -7891,6 +8144,7 @@ class Handler(BaseHTTPRequestHandler):
                     view=SHARED_ENGINE.load(loaded)
                 except (ValueError,OSError,SharedEngineError) as error:
                     self._send(409,{"error":str(error)});return
+                restore_municipal_network_data(loaded)
                 publish_shared_view(view)
                 STATE_REVISION+=1;STATE_CONDITION.notify_all()
                 self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),"cargó una partida guardada",None)
@@ -7902,6 +8156,7 @@ class Handler(BaseHTTPRequestHandler):
                 for key in ("players","playerNames","host","chatMessages","actionFeed"):loaded[key]=state.get(key,{} if key in ("players","playerNames") else [] if key in ("chatMessages","actionFeed") else pid)
                 loaded["roomName"]=state.get("roomName",state.get("name","Ciudad Viva"))
                 state={**initial_state(),**loaded};ev("Ciudad cargada","Se restauró el último estado guardado.")
+                restore_municipal_network_data(loaded)
                 self._action_context=(state.get("playerNames",{}).get(pid,"Jugador"),"cargó una partida guardada",None)
                 self._send(200,public_state(pid,use_cache=True));return
         self._send(404,{"error":"No encontrado"})

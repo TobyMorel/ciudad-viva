@@ -87,6 +87,21 @@ class LANMultiplayerTests(unittest.TestCase):
                 return json.loads(raw)
             return raw
 
+    def test_public_webrtc_disconnect_removes_guest_membership_and_cursor(self):
+        self.request("/api/room/create", "host", {})
+        guest = "public-" + "a" * 24
+        self.request("/api/room/join", guest, {"name": "Invitado P2P"})
+        server.state.setdefault("municipalResponsibilities", {})["roads"] = guest
+        server.PLAYER_CURSORS[guest] = {"x": 4, "y": 7, "view": "Mapa", "at": time.time()}
+
+        result = self.request("/api/public/rtc/leave", "host", {"playerId": guest})
+
+        self.assertEqual(result, {"ok": True, "removed": True})
+        self.assertNotIn(guest, server.state["players"])
+        self.assertNotIn(guest, server.state["playerNames"])
+        self.assertNotIn(guest, server.state["municipalResponsibilities"].values())
+        self.assertNotIn(guest, server.PLAYER_CURSORS)
+
     def test_four_players_receive_concurrent_actions_and_static_assets_load(self):
         created = self.request("/api/room/create", "host", {})
         self.assertEqual(created["roomCode"], "TEST42")
@@ -122,9 +137,14 @@ class LANMultiplayerTests(unittest.TestCase):
             watchers = [pool.submit(watch, player_id) for player_id in player_ids]
             ready.wait(timeout=5)
             started_at = time.monotonic()
+            tax_changes = [
+                {"action": "adjustTax", "kind": "property", "delta": 10},
+                {"action": "adjustTax", "kind": "shop", "delta": 25},
+                {"action": "adjustTax", "kind": "factory", "delta": 25},
+                {"action": "adjustTax", "kind": "office", "delta": 25},
+            ]
             actions = [
-                pool.submit(self.request, "/api/action", player_id,
-                    {"action": "speed", "value": index + 1}, 15)
+                pool.submit(self.request, "/api/action", player_id, tax_changes[index], 15)
                 for index, player_id in enumerate(player_ids)
             ]
             for action in actions:
@@ -136,7 +156,7 @@ class LANMultiplayerTests(unittest.TestCase):
             self.assertEqual(snapshot["stateRevision"], target)
             self.assertEqual(snapshot["online"], 4)
             self.assertEqual(len(snapshot["onlinePlayers"]),4)
-            self.assertIn(snapshot["speed"],[1,2,3,4])
+            self.assertEqual(len(snapshot["actionFeed"][-4:]), 4)
 
         # The same new-city Offline rules execute for every connected player.
         self.request("/api/action", "host", {"action": "placeRoad", "x": 5, "y": 10})

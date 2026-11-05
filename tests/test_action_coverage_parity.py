@@ -19,11 +19,14 @@ class OnlineOfflineActionCoverage(unittest.TestCase):
 
     def test_windows_package_includes_javascript_runtime(self):
         spec=(ROOT/"desktop_app.spec").read_text(encoding="utf-8")
-        workflow=(ROOT/".github/workflows/desktop.yml").read_text(encoding="utf-8")
+        workflow=(ROOT/".github/workflows-paused-2026-12-01/desktop.yml").read_text(encoding="utf-8")
+        local_build=(ROOT/"scripts/build_windows_host.ps1").read_text(encoding="utf-8")
         self.assertIn('"online_engine.mjs","package.json"',spec)
         self.assertIn('binaries=binaries',spec)
         self.assertIn("node-version: '22'",workflow)
         self.assertIn("runtime/node.exe",workflow)
+        self.assertIn("PyInstaller",local_build)
+        self.assertIn("runtime/node.exe",local_build)
 
 
 if __name__=="__main__":

@@ -69,6 +69,7 @@ MATERIAL_NEEDS = {
     "home":{"aggregate":20,"concrete":7,"steel":9,"timber":15,"components":10},
     "factory":{"aggregate":36,"concrete":14,"steel":28,"timber":10,"components":35},
     "shop":{"aggregate":18,"concrete":6,"steel":14,"timber":8,"components":12},
+    "office":{"aggregate":44,"concrete":18,"steel":34,"timber":24,"components":48},
     "civic":{"aggregate":39,"concrete":13,"steel":22,"timber":12,"components":24},
     "school":{"aggregate":43,"concrete":15,"steel":25,"timber":30,"components":28},
     "fireStation":{"aggregate":46,"concrete":16,"steel":34,"timber":24,"components":36},
@@ -574,6 +575,7 @@ def new_business(building, job_slots, starting_cash=5000):
 
 JOB_PROFILES = {
     "shop": ("comercio", "Comercio", 35),
+    "office": ("administracion", "Oficina profesional", 48),
     "factory": ("logistica", "Producción industrial", 42),
     "civic": ("salud", "Atención sanitaria", 48),
     "school": ("educacion", "Docencia", 48),
@@ -619,12 +621,30 @@ def stable_skill(person_id, category):
     return value
 
 def ensure_person_work_profile(person):
+    if "educationRank" not in person:
+        person["educationRank"]=(stable_skill(person.get("id",""),"education")%100)//25
+    person.setdefault("educationLevel",("analfabeto","primario","secundario","universitario")[max(0,min(3,int(person["educationRank"])) )])
     person.setdefault("skills",{})
     for category in ("comercio","administracion","logistica","salud","educacion","bomberos"):
         person["skills"].setdefault(category,25+stable_skill(person.get("id",""),category)%76)
     person.setdefault("expectedMonthlyWage",7+stable_skill(person.get("id",""),"salario")%3)
-    person.setdefault("carAccess",stable_skill(person.get("id",""),"auto")%100<65)
-    person.setdefault("bikeAccess",stable_skill(person.get("id",""),"bicicleta")%100<42)
+    if person["educationRank"]<=1:person["skills"]["logistica"]=max(45,person["skills"].get("logistica",0))
+    if person["educationRank"]>=2:person["skills"]["comercio"]=max(42,person["skills"].get("comercio",0))
+    if person["educationRank"]>=3:person["skills"]["administracion"]=max(55,person["skills"].get("administracion",0))
+    person.setdefault("carAccess",False);person.setdefault("bikeAccess",False)
+
+def update_household_transport(home,person):
+    """La tenencia de vehículo sigue el ingreso disponible del hogar, no una tirada aleatoria."""
+    cash=max(0,float(home.get("householdCash",0)));income=max(0,float(home.get("monthlyWageIncome",0)))
+    person["carAccess"]=bool(cash>=3200 and income>=140)
+    person["bikeAccess"]=not person["carAccess"] and (cash>=240 or income>=28)
+
+def education_qualifies(person,site):
+    rank=max(0,min(3,int(person.get("educationRank",1) or 0)));kind=site.get("kind")
+    if kind=="office":return rank>=3
+    if kind=="shop":return rank>=2
+    if kind=="factory":return rank<=1
+    return True
 
 def workplace_profile(site):
     category,label,minimum=JOB_PROFILES.get(site.get("kind"),("comercio","Comercio",35))
@@ -633,8 +653,8 @@ def workplace_profile(site):
         category,label,minimum="salud","Acompañamiento social",48
     if site.get("kind")=="civic" and (model or {}).get("police"):
         category,label,minimum="administracion","Seguridad municipal",48
-    firm=site.get("business",{}) if site.get("kind") in ("shop","hotel","factory") else {}
-    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","hotel","factory") else 14 if site.get("kind") in ("powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school","fireStation") else 8))
+    firm=site.get("business",{}) if site.get("kind") in ("shop","office","hotel","factory") else {}
+    wage=max(1,int(firm.get("wage",10) if site.get("kind") in ("shop","office","hotel","factory") else 14 if site.get("kind") in ("powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill","recyclingPlant") else 12 if site.get("kind") in ("airport","civic","school","fireStation") else 8))
     return category,label,minimum,wage
 
 def training_candidates(category,center,excluded=None):
@@ -697,7 +717,7 @@ def new_social_services():
     return {"housingAidBudget":0,"lastReport":{},"history":[],"shelterResidents":[],"shelterReport":{},"elderCareReport":{}}
 
 def new_tax_state():
-    return {"propertyRateBp":60,"businessRateBp":200,"arrearsByAsset":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
+    return {"propertyRateBp":60,"shopRateBp":200,"factoryRateBp":75,"officeRateBp":500,"businessRateBp":200,"arrearsByAsset":{},"utilityArrearsByHome":{},"lastReport":{},"lastProcessedMonth":0,"history":[]}
 
 HERITAGE_FOUNDING_YEARS={"Municipalidad":1942,"Mercado Central":1948,"Barrio Estación":1951,"Casas del Oeste":1957,"Pasaje del Molino":1959,"Café Estación":1963,"Almacén del Oeste":1965,"Galería Central":1968}
 HERITAGE_MATERIALS={"aggregate":6,"steel":3,"timber":4,"components":3}
@@ -1044,7 +1064,7 @@ def government_districts():
         employment=100*employed/max(1,len(eligible)) if eligible else float(state.get("employment",0))
         housing=max(0,min(100,100- max(0,crowding-.82)*95 +(quality-80)*.25))
         tax_pressure=max(0,int(state.get("taxes",{}).get("lastReport",{}).get("pressure",0)))
-        tax_penalty=tax_pressure_penalty(tax_pressure)
+        tax_penalty=tax_pressure_penalty(tax_pressure,tax_service_relief())
         base_score=max(0,min(100,50+(float(state.get("approval",50))-50)*.28 +(employment-65)*.24 +(services-65)*.25 +(housing-70)*.23-tax_penalty))
         active_complaints=[c for c in state.get("government",{}).get("complaints",[]) if c.get("districtId")==d["id"] and c.get("status")=="abierto"]
         overdue_agreements=[a for a in state.get("government",{}).get("agreements",[]) if a.get("districtId")==d["id"] and a.get("mandate")==state.get("government",{}).get("mandate") and a.get("status")=="vencido"]
@@ -1441,21 +1461,47 @@ def advance_heritage_works():
 
 def ensure_tax_state():
     taxes=state.setdefault("taxes",new_tax_state())
+    legacy_business=taxes.get("businessRateBp",200);had_shop_rate="shopRateBp" in taxes
     for key,value in new_tax_state().items():taxes.setdefault(key,value)
+    # Las partidas anteriores usaban una sola tasa para comercios e industrias.
+    if not had_shop_rate:taxes["shopRateBp"]=legacy_business
+    taxes.setdefault("factoryRateBp",75);taxes.setdefault("officeRateBp",500)
+    taxes["businessRateBp"]=taxes["shopRateBp"]
     return taxes
+
+def tax_service_relief():
+    services=max(0,min(100,int(state.get("services",0))))
+    relief=2 if services>=85 else 1 if services>=70 else 0
+    waste=state.get("waste",{}).get("report",{})
+    if waste.get("collectionCoveragePct",0)>=80:relief+=1
+    return min(3,relief)
+
+def utility_invoice_for_home(home):
+    access=home.get("utilityAccess",{})
+    occupants=max(0,int(home.get("occupants",0)))
+    rates={"electricity":1.0,"water":1.0,"sewer":.75,"gas":.5,"telecom":.5}
+    served={"electricity":access.get("powerServedPct",0),"water":access.get("waterServedPct",0),"sewer":access.get("wastewaterTreatedPct",0),"gas":access.get("gasServedPct",0),"telecom":access.get("telecomServedPct",0)}
+    return {key:round(occupants*rate*max(0,min(100,float(served.get(key,0))))/100) for key,rate in rates.items()}
 
 def collect_municipal_taxes():
     """Cobra gravámenes sobre caja existente; la mora queda como cuenta por cobrar."""
     taxes=ensure_tax_state();month=(state.get("day",1)-1)//30
     if taxes.get("lastProcessedMonth")==month:return taxes.get("lastReport",{})
-    rates={"property":max(0,int(taxes.get("propertyRateBp",60))),"business":max(0,int(taxes.get("businessRateBp",200)))}
-    accounts=taxes.setdefault("arrearsByAsset",{});property_due=property_paid=business_due=business_paid=late_homes=late_firms=0
+    rates={"property":max(0,int(taxes.get("propertyRateBp",60))),"shop":max(0,int(taxes.get("shopRateBp",200))),"factory":max(0,int(taxes.get("factoryRateBp",75))),"office":max(0,int(taxes.get("officeRateBp",500)))}
+    accounts=taxes.setdefault("arrearsByAsset",{});utility_accounts=taxes.setdefault("utilityArrearsByHome",{});property_due=property_paid=utility_due=utility_paid=late_homes=late_firms=0
+    sector_due={key:0 for key in ("shop","factory","office")};sector_paid={key:0 for key in sector_due};late_utilities=0
     for home in (b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("occupants",0)>0):
         key=f"home-{home['x']}-{home['y']}";due=round(home.get("occupants",0)*2400*rates["property"]/120000)+accounts.get(key,0);cash=max(0,round(home.get("householdCash",0)));paid=min(cash,due)
         home["householdCash"]=cash-paid;accounts[key]=due-paid;home["propertyTaxDue"]=due;home["propertyTaxPaid"]=paid;home["propertyTaxArrears"]=due-paid
         property_due+=due;property_paid+=paid;late_homes+=int(due>paid)
-    for shop in (b for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto"):
-        firm=shop["business"];key=firm.get("id",f"shop-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates["business"]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
+        invoice=utility_invoice_for_home(home);invoice_total=sum(invoice.values());utility_key=f"{home['x']},{home['y']}";utility_total=invoice_total+utility_accounts.get(utility_key,0);utility_paid_home=min(max(0,home.get("householdCash",0)),utility_total);home["householdCash"]-=utility_paid_home;utility_accounts[utility_key]=utility_total-utility_paid_home
+        home["utilityBill"]=invoice;home["utilityBillTotal"]=invoice_total;home["utilityBillPaid"]=utility_paid_home;home["utilityArrears"]=utility_total-utility_paid_home
+        overdue=home.get("utilityArrears",0)>0;home["utilityDelinquencyMonths"]=(home.get("utilityDelinquencyMonths",0)+1) if overdue else 0
+        if home["utilityDelinquencyMonths"]>=3 and not home.get("paymentDisconnected"):
+            home["paymentDisconnected"]=True;ev("Servicios suspendidos por falta de pago",f"{home.get('name','Una familia')} acumuló tres facturas de servicios impagas; luz, agua, gas y telecomunicaciones quedan suspendidos hasta recibir un subsidio.")
+        utility_due+=utility_total;utility_paid+=utility_paid_home;late_utilities+=int(overdue)
+    for shop in (b for b in state.get("buildings",[]) if b.get("kind") in rates and b.get("business",{}).get("status")=="abierto"):
+        firm=shop["business"];sector=shop["kind"];key=firm.get("id",f"{sector}-{shop['x']}-{shop['y']}");due=round(max(0,firm.get("lastRevenue",0))*rates[sector]/10000)+accounts.get(key,0);cash=max(0,round(firm.get("cash",0)));paid=min(cash,due)
         firm["cash"]=cash-paid;accounts[key]=due-paid;firm["municipalTaxDue"]=due;firm["municipalTaxPaid"]=paid;firm["municipalTaxArrears"]=due-paid
         previous_delinquency=firm.get("taxDelinquencyMonths",0);firm["taxDelinquencyMonths"]=previous_delinquency+1 if due>paid else 0
         if firm["taxDelinquencyMonths"]==3 and previous_delinquency<3:
@@ -1463,26 +1509,27 @@ def collect_municipal_taxes():
         elif previous_delinquency>=3 and firm["taxDelinquencyMonths"]==0:
             ev("Crédito comercial restablecido",f"{firm.get('name',shop.get('name','Empresa'))} regularizó sus impuestos y recuperó su línea de crédito, descontando cualquier saldo fiscal aún pendiente.")
         firm["taxAdjustedCreditLimit"]=business_credit_limit_after_tax(firm)
-        business_due+=due;business_paid+=paid;late_firms+=int(due>paid)
+        sector_due[sector]+=due;sector_paid[sector]+=paid;late_firms+=int(due>paid)
     taxes["lastProcessedMonth"]=month
     household_income=sum(max(0,h.get("monthlyWageIncome",0)) for h in state.get("buildings",[]) if h.get("kind")=="home")
-    business_sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto")
-    collected=property_paid+business_paid;pressure=round(100*collected/max(1,household_income+business_sales+collected))
-    report={"propertyRateBp":rates["property"],"businessRateBp":rates["business"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":business_sales,"householdWageIncome":household_income,"propertyBilled":property_due,"propertyCollected":property_paid,"businessBilled":business_due,"businessCollected":business_paid,"collected":collected,"pressure":pressure,"arrears":sum(accounts.values()),"delinquentHomes":late_homes,"delinquentBusinesses":late_firms,"month":month}
+    sector_sales={sector:sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")==sector and b.get("business",{}).get("status")=="abierto") for sector in sector_due}
+    business_due=sum(sector_due.values());business_paid=sum(sector_paid.values());collected=property_paid+business_paid+utility_paid;pressure=round(100*collected/max(1,household_income+sum(sector_sales.values())+collected));relief=tax_service_relief()
+    report={"propertyRateBp":rates["property"],"shopRateBp":rates["shop"],"factoryRateBp":rates["factory"],"officeRateBp":rates["office"],"businessRateBp":rates["shop"],"assessedHomes":sum(b.get("occupants",0)*2400 for b in state.get("buildings",[]) if b.get("kind")=="home"),"taxableBusinessSales":sum(sector_sales.values()),"taxableSalesBySector":sector_sales,"householdWageIncome":household_income,"propertyBilled":property_due,"propertyCollected":property_paid,"utilityBilled":utility_due,"utilityCollected":utility_paid,"utilityArrears":sum(utility_accounts.values()),"utilityTaxesBilled":sector_due,"utilityTaxesCollected":sector_paid,"shopBilled":sector_due["shop"],"shopCollected":sector_paid["shop"],"factoryBilled":sector_due["factory"],"factoryCollected":sector_paid["factory"],"officeBilled":sector_due["office"],"officeCollected":sector_paid["office"],"businessBilled":business_due,"businessCollected":business_paid,"collected":collected,"pressure":pressure,"taxServiceRelief":relief,"effectivePressure":max(0,pressure-relief*5),"arrears":sum(accounts.values())+sum(utility_accounts.values()),"delinquentHomes":late_homes,"delinquentUtilities":late_utilities,"delinquentBusinesses":late_firms,"month":month}
     taxes["lastReport"]=report;taxes.setdefault("history",[]).append(report.copy());del taxes["history"][:-12]
     if report["collected"]:ev("Recaudación municipal",f"Se cobraron $ {report['collected']:,} de impuestos sobre viviendas y ventas; $ {report['arrears']:,} quedan en mora.".replace(",","."))
     if late_homes and late_homes>=max(3,round(sum(1 for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0)*.35)):
         state["approval"]=max(0,state.get("approval",0)-1);ev("Mora tributaria extendida",f"{late_homes} hogares no pudieron pagar el impuesto completo; la confianza municipal cae un punto.")
     return report
 
-def tax_pressure_penalty(pressure):
+def tax_pressure_penalty(pressure, relief=0):
     """Each 5 percentage points above a 5% cash-flow burden costs one support/demand point."""
-    return min(5,max(0,(max(0,int(pressure))-5)//5))
+    effective=max(0,int(pressure)-max(0,int(relief))*5)
+    return min(5,max(0,(effective-5)//5))
 
 def tax_adjusted_migration_demand(approval,pressure):
     base=round((float(approval)-45)/8)
     if base<=0:return max(-5,base)
-    return max(0,min(12,base-tax_pressure_penalty(pressure)))
+    return max(0,min(12,base-tax_pressure_penalty(pressure,tax_service_relief())))
 
 def municipal_finance_forecast(monthly_income, monthly_expenses):
     finance=state.get("finance",{});loans=[dict(x) for x in finance.get("municipalLoans",[]) if x.get("status")=="active"]
@@ -1498,10 +1545,10 @@ def municipal_finance_forecast(monthly_income, monthly_expenses):
             amount=min(unpaid,monthly);schedule[index]+=amount;unpaid-=amount
     taxes=state.get("taxes",{});tax_report=taxes.get("lastReport",{});last_tax=max(0,round(tax_report.get("collected",0)))
     assessed=sum(max(0,b.get("occupants",0))*2400 for b in state.get("buildings",[]) if b.get("kind")=="home")
-    sales=sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind") in ("shop","factory") and b.get("business",{}).get("status")=="abierto")
-    property_rate=max(0,int(taxes.get("propertyRateBp",60)));business_rate=max(0,int(taxes.get("businessRateBp",200)))
+    sales_by_sector={kind:sum(max(0,b.get("business",{}).get("lastRevenue",0)) for b in state.get("buildings",[]) if b.get("kind")==kind and b.get("business",{}).get("status")=="abierto") for kind in ("shop","factory","office")}
+    property_rate=max(0,int(taxes.get("propertyRateBp",60)));sector_rates={"shop":max(0,int(taxes.get("shopRateBp",taxes.get("businessRateBp",200)))),"factory":max(0,int(taxes.get("factoryRateBp",75))),"office":max(0,int(taxes.get("officeRateBp",500)))}
     property_collection=min(1,max(0,tax_report.get("propertyCollected",0)/tax_report["propertyBilled"])) if tax_report.get("propertyBilled",0)>0 else 1;business_collection=min(1,max(0,tax_report.get("businessCollected",0)/tax_report["businessBilled"])) if tax_report.get("businessBilled",0)>0 else 1
-    projected_tax=round(assessed*property_rate/120000*min(1,property_collection)+sales*business_rate/10000*min(1,business_collection))
+    projected_tax=round(assessed*property_rate/120000*min(1,property_collection)+sum(sales_by_sector[k]*rate/10000 for k,rate in sector_rates.items()))
     projected_income=max(0,round(monthly_income)-last_tax+projected_tax)
     programs=finance.get("programBudgets",{});program_report=programs.get("lastReport",{}).get("programs",{});program_names=("services","networks","mobility");program_order=municipal_program_priority(programs)
     program_costs={key:max(0,round(program_report.get(key,{}).get("monthlyCost",0))) for key in program_names}
@@ -1587,7 +1634,7 @@ def municipal_finance_scenarios(monthly_income, monthly_expenses, base_forecast=
     global _MUNICIPAL_SCENARIO_CACHE
     finance=state.get("finance",{});taxes=state.get("taxes",{})
     project_basis=[[p.get(k) for k in ("id","cost","paid","duration","elapsed","status","privatePaid")] for p in state.get("projects",[])]
-    tax_basis={k:taxes.get(k) for k in ("propertyRateBp","businessRateBp","lastReport")}
+    tax_basis={k:taxes.get(k) for k in ("propertyRateBp","shopRateBp","factoryRateBp","officeRateBp","businessRateBp","lastReport")}
     asset_basis=[[b.get("kind"),b.get("occupants"),b.get("status"),b.get("business",{}).get("lastRevenue"),b.get("business",{}).get("status")] for b in state.get("buildings",[]) if b.get("kind") in ("home","shop")]
     cache_basis={"day":state.get("day"),"cash":state.get("money"),"income":monthly_income,"expenses":monthly_expenses,
         "loans":finance.get("municipalLoans",[]),"reserve":finance.get("debtReserve"),"programs":finance.get("programBudgets",{}),
@@ -1816,7 +1863,7 @@ def _register_private_land(target,claims,item,category):
     if not isinstance(item,dict) or not isinstance(item.get("x"),int) or not isinstance(item.get("y"),int):return
     if category=="project" and not item.get("privatePaid"):return
     kind=item.get("kind")
-    private=category=="project" or item.get("ownerType")=="private" or kind in {"home","shop","factory","hotel"}
+    private=category=="project" or item.get("ownerType")=="private" or kind in {"home","shop","office","factory","hotel"}
     if not private:return
     x,y=item["x"],item["y"];key=f"{x},{y}";deed=claims["parcelDeeds"].get(key)
     if deed:
@@ -2126,7 +2173,7 @@ CONTRACTORS = {
  "Estudio y Obra Norte": {"price":1.42,"days":25,"quality":.95,"reliability":.94,"capacity":2,"workers":20,"forklifts":2,"unloadWorkers":3,"unloadRate":12,"profile":"Especializada · calidad alta, precio mayor"}}
 ROAD_TYPES={"local":{"label":"Calle local","cost":1200,"maintenance":15,"capacity":1.2,"speed":1.0,"parking":2,"access":True,"lanes":1},"avenue":{"label":"Avenida","cost":3200,"maintenance":36,"capacity":2.7,"speed":1.28,"parking":0,"access":True,"lanes":2},"route":{"label":"Ruta regional","cost":2500,"maintenance":28,"capacity":2.2,"speed":1.58,"parking":0,"access":False,"lanes":1},"highway":{"label":"Autopista","cost":4800,"maintenance":52,"capacity":4.6,"speed":2.12,"parking":0,"access":False,"lanes":2}}
 ROAD_DIRECTION_DELTAS={"east":(1,0),"west":(-1,0),"south":(0,1),"north":(0,-1)}
-PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Asignación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y movilización","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
+PROJECTS = {"road":{"label":"Calle local","cost":1200,"days":24,"stageNames":["Proyecto y permisos","Preparación del terreno","Base y drenaje","Pavimentación","Inspección y habilitación"]},"home":{"label":"Vivienda privada","cost":4200,"days":39,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y ocupación"]},"shop":{"label":"Local comercial","cost":3600,"days":34,"stageNames":["Permiso y financiación","Preparación de parcela","Estructura","Instalaciones y terminaciones","Inspección y habilitación"]},"office":{"label":"Edificio de oficinas","cost":12000,"days":64,"stageNames":["Licencia y financiación privada","Cimentación y estructura","Instalaciones digitales","Puesta en marcha de empresas","Inspección y apertura"]},"civic":{"label":"Centro de salud","cost":8000,"days":62,"stageNames":["Anteproyecto y permisos","Asignación y movilización","Cimientos y estructura","Instalaciones y equipamiento","Inspección y habilitación"]},"depot":{"label":"Depósito municipal","cost":5600,"days":50,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y playa de carga","Estanterías y seguridad","Inspección y apertura"]},"busGarage":{"label":"Cochera municipal","cost":4200,"days":40,"stageNames":["Proyecto y permisos","Preparación del terreno","Estructura y cubierta","Taller y portones","Inspección y habilitación"]},"busStop":{"label":"Parada de colectivo","cost":950,"days":18,"stageNames":["Proyecto y permisos","Base accesible","Refugio y señalización","Iluminación","Inspección y habilitación"]},"port":{"label":"Terminal portuaria","cost":14500,"days":82,"stageNames":["Permisos costeros y movilización","Pilotaje y muelle","Patio de carga y grúa","Pruebas de atraque","Inspección y apertura"]},"airport":{"label":"Aeropuerto regional","cost":19500,"days":112,"stageNames":["Evaluación y adquisición del suelo","Terraplenado y drenaje","Pista y señalización","Terminal y equipos de seguridad","Pruebas de operación e inspección"]},"hotel":{"label":"Hotel privado","cost":13200,"days":76,"stageNames":["Licencia y capital privado","Cimientos y estructura","Agua y energía","Habitaciones y cocina","Inspección y apertura"]}}
 PROJECTS["bridge"]={"label":"Puente vial sobre el río","cost":13000,"days":84,"stageNames":["Estudio de suelo y permisos","Pilotes y estribos","Estructura metálica","Tablero y señalización","Inspección y habilitación"]}
 PROJECTS["factory"]={"label":"Procesadora de alimentos","cost":9200,"days":68,"stageNames":["Licencia y capital privado","Cimentación y nave","Maquinaria y servicios","Pruebas de producción","Inspección y apertura"]}
 PROJECTS["powerPlant"]={"label":"Central eléctrica","cost":18800,"days":96,"stageNames":["Estudio y permisos","Cimientos y turbina","Conexión eléctrica","Pruebas de generación","Inspección y puesta en marcha"]}
@@ -2137,7 +2184,7 @@ PROJECTS["waterPlant"]={"label":"Planta potabilizadora","cost":14200,"days":84,"
 PROJECTS["wastewaterPlant"]={"label":"Planta depuradora","cost":16600,"days":90,"stageNames":["Estudio ambiental y permisos","Colectores y tanques","Digestores y filtros","Pruebas de calidad","Inspección y puesta en marcha"]}
 PROJECTS["landfill"]={"label":"Relleno sanitario municipal","cost":9800,"days":72,"stageNames":["Evaluación ambiental y movilización","Impermeabilización del terreno","Celdas de disposición","Báscula y control de acceso","Inspección y habilitación"]}
 PROJECTS["recyclingPlant"]={"label":"Planta de reciclaje","cost":14800,"days":88,"stageNames":["Estudio ambiental y movilización","Separación y clasificación","Línea de lavado","Pruebas de recuperación","Inspección y habilitación"]}
-LABOR_NEEDS = {"road":4,"bridge":10,"home":6,"shop":7,"factory":12,"civic":11,"school":12,"fireStation":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"gasPlant":10,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
+LABOR_NEEDS = {"road":4,"bridge":10,"home":6,"shop":7,"office":14,"factory":12,"civic":11,"school":12,"fireStation":12,"depot":8,"busGarage":6,"busStop":4,"port":14,"airport":16,"hotel":10,"powerPlant":18,"waterPlant":12,"gasPlant":10,"wastewaterPlant":14,"landfill":12,"recyclingPlant":16}
 
 def material_fraction(material, progress):
     # La preparación consume áridos; estructura consume acero/madera; instalaciones consumen componentes.
@@ -2848,7 +2895,7 @@ def apply_climate_impacts():
 
 def calculate_utility_balance(apply_effects=False):
     utilities=ensure_utility_state();climate=ensure_climate_state()
-    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","factory","civic","school","fireStation","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","gasPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
+    buildings=[b for b in state.get("buildings",[]) if b.get("kind") in ("home","shop","office","factory","civic","school","fireStation","depot","landfill","recyclingPlant","busGarage","port","airport","hotel","powerPlant","waterPlant","gasPlant","wastewaterPlant") and b.get("status","habilitado") not in ("cerrado","abandonado")]
     month=((state.get("day",1)-1)//30)%12
     summer=month in (11,0,1)
     day=state.get("day",1);heat_day,drought_day=climate_year_targets(day)
@@ -2860,7 +2907,7 @@ def calculate_utility_balance(apply_effects=False):
         kind=building.get("kind");occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
         workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
         if kind=="home":return occupants*.72*seasonal_power,occupants*.12*seasonal_water
-        if kind in ("shop","factory"):return workers*(1.1 if kind=="factory" else 1.35)*seasonal_power,workers*.08*seasonal_water
+        if kind in ("shop","office","factory"):return workers*(1.1 if kind=="factory" else 1.25 if kind=="office" else 1.35)*seasonal_power,workers*.08*seasonal_water
         if kind=="hotel":return building.get("beds",48)*1.25*seasonal_power,building.get("beds",48)*.09*seasonal_water
         if kind in ("civic","school","fireStation"):return 32*seasonal_power,14*seasonal_water
         if kind=="depot":return 12*seasonal_power,4*seasonal_water
@@ -2879,10 +2926,11 @@ def calculate_utility_balance(apply_effects=False):
         if restrictions_active and kind in ("shop","hotel","port","airport"):m3*=.65
         occupants=max(0,building.get("occupants",0));firm=building.get("business",{})
         workers=max(1,firm.get("lastWorkers",round(firm.get("jobSlots",0)*.55)))
-        gas=occupants*.025 if kind=="home" else workers*.11 if kind in ("shop","factory") else 4 if kind in ("hotel","airport","port") else 1
-        telecom=occupants*.018 if kind=="home" else workers*.035 if kind in ("shop","factory","civic","school","hotel","airport","port") else .2
+        gas=occupants*.025 if kind=="home" else workers*.11 if kind in ("shop","office","factory") else 4 if kind in ("hotel","airport","port") else 1
+        telecom=occupants*.018 if kind=="home" else workers*.07 if kind=="office" else workers*.035 if kind in ("shop","factory","civic","school","hotel","airport","port") else .2
         building["utilityDemand"]={"powerKw":round(kw,1),"waterM3Day":round(m3,1),"gasM3Day":round(gas,2),"telecomMbps":round(telecom,2)}
-        building["utilityAccess"]={"powerConnected":utility_building_connected(building,"power"),"waterConnected":utility_building_connected(building,"water"),"sewerConnected":utility_building_connected(building,"sewer"),"gasConnected":utility_building_connected(building,"gas"),"telecomConnected":utility_building_connected(building,"telecom"),"gasServedPct":0,"telecomServedPct":0,"powerServedPct":0,"waterServedPct":0,"wastewaterTreatedPct":0}
+        disconnected=bool(kind=="home" and building.get("paymentDisconnected"))
+        building["utilityAccess"]={"powerConnected":not disconnected and utility_building_connected(building,"power"),"waterConnected":not disconnected and utility_building_connected(building,"water"),"sewerConnected":not disconnected and utility_building_connected(building,"sewer"),"gasConnected":not disconnected and utility_building_connected(building,"gas"),"telecomConnected":not disconnected and utility_building_connected(building,"telecom"),"gasServedPct":0,"telecomServedPct":0,"powerServedPct":0,"waterServedPct":0,"wastewaterTreatedPct":0,"paymentDisconnected":disconnected}
     power_tiles=energized_utility_tiles("power");water_tiles=energized_utility_tiles("water");sewer_tiles=energized_utility_tiles("sewer")
     generation=sum(b.get("generationKw",900)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="powerPlant" and utility_building_connected(b,"power"))
     potable=sum(b.get("treatmentM3Day",220)*facility_capacity_factor(b) for b in buildings if b.get("kind")=="waterPlant" and utility_building_connected(b,"power") and utility_building_connected(b,"water"))
@@ -3505,7 +3553,7 @@ def commute_model():
     roads={tuple(r) for r in state["roads"]}
     homes=[b for b in state["buildings"] if b.get("kind")=="home" and b.get("occupants",0)>0]
     sites=[b for b in state["buildings"] if b.get("status","operativo") in ("operativo","habilitado") and
-           (b.get("kind") in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant") or (b.get("kind") in ("shop","hotel","factory") and b.get("business",{}).get("status")=="abierto"))]
+           (b.get("kind") in ("civic","school","fireStation","depot","landfill","recyclingPlant","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant") or (b.get("kind") in ("shop","office","hotel","factory") and b.get("business",{}).get("status")=="abierto"))]
     state.setdefault("busRoutes",[])
     for line in state["busRoutes"]:
         path=bus_line_route(line)
@@ -3529,12 +3577,12 @@ def commute_model():
             riders=sum(t["workers"] for t in _commute_cache["routes"] if t.get("busLineId")==line.get("id"))
             line.update({"ridersThisPass":riders,"dailyRiders":riders,"monthlyFareRevenue":line.get("monthlyFareRevenue",0) if line.get("fareCollectedDay")==state["day"] else round(riders*line.get("fare",BUS_FARE)*44) if line.get("operational") else 0,"monthlyOperatingCost":line.get("buses",1)*BUS_MONTHLY_OPERATING_COST if line.get("operational") else 0})
         return _commute_cache
-    weights={"shop":1.0,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"gasPlant":.85,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
-    company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","hotel","factory"))
+    weights={"shop":1.0,"office":1.25,"civic":.8,"school":.8,"fireStation":.8,"depot":.65,"port":.85,"airport":.9,"powerPlant":1.0,"waterPlant":.9,"gasPlant":.85,"wastewaterPlant":.8,"landfill":.7,"recyclingPlant":.8}
+    company_jobs=sum(b.get("business",{}).get("jobSlots",0) for b in sites if b["kind"] in ("shop","office","hotel","factory"))
     public_sites=[b for b in sites if b.get("serviceModel")!="urbanPark" and b["kind"] in ("civic","school","fireStation","depot","landfill","port","airport","powerPlant","waterPlant","gasPlant","wastewaterPlant","recyclingPlant")]
     public_jobs=max(0,state["jobs"]-company_jobs)
     public_weight=sum(weights[b["kind"]] for b in public_sites)
-    caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","hotel","factory") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
+    caps=[max(0,int(b.get("business",{}).get("jobSlots",0))) if b["kind"] in ("shop","office","hotel","factory") else min(max(0,int(b.get("jobSlots",public_jobs))),public_jobs*weights[b["kind"]]/max(.01,public_weight)) for b in sites]
     routes={}; distances={}
     for hi,home in enumerate(homes):
         for si,site in enumerate(sites):
@@ -3544,7 +3592,7 @@ def commute_model():
                 distances[hi,si]=sum(1 for aa,bb in zip(path,path[1:]) if tuple(aa) in roads and tuple(bb) in roads)
     residents=[(hi,home,person) for hi,home in enumerate(homes) for person in home.get("residents",[]) if person.get("workerEligible")]
     airport_jobs=sum(max(0,int(site.get("jobSlots",0))) for site in sites if site.get("kind") in ("airport","hotel","powerPlant","waterPlant","gasPlant","wastewaterPlant","landfill"))
-    target=min(round(len(residents)*max(0,min(100,state["employment"]))/100)+airport_jobs,round(sum(caps)))
+    target=min(len(residents),round(sum(caps)))
     remaining={si:int(math.floor(cap)) for si,cap in enumerate(caps)}
     # Priorizar residentes sin empleo; rutas cortas primero. Cada residente recibe un solo empleador.
     reserved_drivers={pid for line in state["busRoutes"] if line.get("status")=="active" and line.get("route") for pid in line.get("driverIds",[])}
@@ -3552,10 +3600,10 @@ def commute_model():
     for hi,home,person in residents:
         prior_status=person.get("status");prior_employer=person.get("employerName");prior_employer_id=person.get("employerId")
         person.update({"status":"buscando","employerId":None,"employerName":None,"monthlyWage":0,"attendance":0})
-        ensure_person_work_profile(person)
+        ensure_person_work_profile(person);update_household_transport(home,person)
         if person.get("id") in reserved_drivers:continue
         reachable=sorted((distances[hi,si],si) for si in range(len(sites)) if (hi,si) in routes)
-        qualified=[(distance,si) for distance,si in reachable if person["skills"].get(workplace_profile(sites[si])[0],0)>=workplace_profile(sites[si])[2]]
+        qualified=[(distance,si) for distance,si in reachable if education_qualifies(person,sites[si]) and person["skills"].get(workplace_profile(sites[si])[0],0)>=workplace_profile(sites[si])[2]]
         choices=[(distance,si) for distance,si in qualified if workplace_profile(sites[si])[3]>=person["expectedMonthlyWage"]]
         row=(home,person,prior_status,prior_employer,prior_employer_id)
         if choices:
@@ -3570,7 +3618,7 @@ def commute_model():
         if len(employees)>=target:break
         si=next((candidate for _,candidate in choices if remaining[candidate]>0),None)
         if si is None:continue
-        site=sites[si];firm=site.get("business",{}) if site["kind"] in ("shop","hotel","factory") else {}
+        site=sites[si];firm=site.get("business",{}) if site["kind"] in ("shop","office","hotel","factory") else {}
         wage=workplace_profile(site)[3]
         employer_id=firm.get("id",f"public-{site['kind']}-{site['x']}-{site['y']}")
         person.update({"status":"empleado","employerId":employer_id,"employerName":site.get("name",site["kind"]),"monthlyWage":wage})
@@ -3710,7 +3758,7 @@ def commute_model():
     workplaces=[];staffed=private_staffed=0
     for si,site in enumerate(sites):
         slots=caps[si];effective=min(slots,site_effective[si]);staffed+=effective
-        if site["kind"] in ("shop","factory","hotel"):private_staffed+=effective
+        if site["kind"] in ("shop","office","factory","hotel"):private_staffed+=effective
         people=site_people[si]
         category,label,minimum,job_wage=workplace_profile(site)
         workplaces.append({"name":site.get("name",site["kind"].title()),"kind":site["kind"],"x":site["x"],"y":site["y"],"jobSlots":round(slots),"workersAssigned":len(people),"staffedJobs":round(effective),"payroll":sum(x["wage"] for x in people),"attendance":round(effective/max(1,len(people)),2),"meanMinutes":round(site_minutes[si]/len(people)) if people else None,"jobCategory":category,"jobCategoryLabel":label,"minimumSkill":minimum,"offeredWage":job_wage})
@@ -3719,7 +3767,7 @@ def commute_model():
     for journey in education.get("studentJourneys",[]):
         home=journey["home"];school=journey["school"];route=journey["route"];distance=max(0,len(route)-1)
         if distance<1:continue
-        mode="bicycle" if journey.get("person",{}).get("age",0)>=13 and 2<=distance<=7 and stable_skill(journey.get("person",{}).get("id",""),"bicicleta")%100<42 else "auto" if distance>3 and journey.get("carAccess") else "walk"
+        mode="bicycle" if journey.get("person",{}).get("age",0)>=13 and 2<=distance<=7 and journey.get("bikeAccess") else "auto" if distance>3 and journey.get("carAccess") else "walk"
         key=(tuple(home),tuple(school),mode)
         school_groups.setdefault(key,{"from":home,"to":school,"route":route,"distance":distance,"mode":mode,"students":[]})["students"].append(journey["person"])
     school_walkers=school_bicycles=school_bus_passengers=school_vehicles=school_emissions=0
@@ -3790,7 +3838,7 @@ def commute_model():
         workplace["meanMinutes"]=round(minutes_by_site[si]/workers_by_site[si]) if workers_by_site.get(si) else None
         workplace["payroll"]=sum(emp.get("earnedWage",emp["wage"]) for emp in site_people[si])
         staffed+=effective
-        if workplace["kind"] in ("shop","factory","hotel"):private_staffed+=effective
+        if workplace["kind"] in ("shop","office","factory","hotel"):private_staffed+=effective
     model.update({"meanMinutes":round(minutes_sum/max(1,len(employees))) if employees else 0,"effectiveWorkers":round(staffed),"staffedJobs":round(staffed),"privateStaffedJobs":round(private_staffed),"effectiveEmployment":min(100,round(staffed/max(1,state["population"]*.42)*100))})
     model["transferCommuters"]=sum(trip["workers"] for trip in commutes if trip.get("reason")=="trabajo" and len(trip.get("busLineIds",[]))==2)
     model["carAccessWorkers"]=sum(1 for _,_,person in residents if person.get("carAccess"))
@@ -4060,47 +4108,68 @@ def traffic_factor(route, exclude_order=None):
     return sum(factors)/len(factors)
 
 def assign_parking_capacity(trips):
-    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])};roads=[tuple(r) for r in state.get("roads",[])];road_set=set(roads);groups={};destinations={}
-    for trip in trips or []:
-        if trip.get("mode")!="auto" or trip.get("reason")=="regreso" or int(trip.get("vehicles",0))<=0:continue
-        destination=trip.get("to") or [];window=trip.get("departureWindowKey","midday")
-        if len(destination)!=2:continue
-        x,y=int(destination[0]),int(destination[1]);destination_key=(x,y);key=(x,y,window);row=groups.setdefault(key,{"x":x,"y":y,"window":window,"destination":destination_key,"demand":0,"trips":[]});row["demand"]+=max(0,math.ceil(trip.get("vehicles",0)));row["trips"].append(trip);destinations[destination_key]=None
-    rows=list(groups.values());road_pools={}
+    assets={(a.get("x"),a.get("y")):a for a in state.get("roadAssets",[])};roads=[tuple(r) for r in state.get("roads",[])];road_set=set(roads);slots=[]
     for x,y in roads:
-        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)));road_type=assets.get((x,y),{}).get("roadType","local");spaces=ROAD_TYPES.get(road_type,ROAD_TYPES["local"])["parking"]*(0 if degree>=3 else 1)
-        if spaces:road_pools[(x,y)]={"x":x,"y":y,"spaces":spaces}
-    garages=[b for b in state.get("buildings",[]) if b.get("serviceModel")=="parkingGarage" and b.get("status") in ("habilitado","operativo")];garage_destinations={}
+        degree=sum((x+dx,y+dy) in road_set for dx,dy in ((1,0),(-1,0),(0,1),(0,-1)));count=ROAD_TYPES.get(assets.get((x,y),{}).get("roadType","local"),ROAD_TYPES["local"])["parking"]*(0 if degree>=3 else 1)
+        slots.extend({"id":f"street:{x},{y}:{i}","kind":"street","road":[x,y],"index":i,"x":x,"y":y} for i in range(count))
+    garages=[b for b in state.get("buildings",[]) if b.get("serviceModel")=="parkingGarage" and b.get("status") in ("habilitado","operativo")];garage_slots=[]
+    for garage in garages:
+        access=sorted((point for point in roads if abs(point[0]-garage["x"])+abs(point[1]-garage["y"])==1),key=lambda point:(point[1],point[0]))
+        if not access:continue
+        garage_slots.extend({"id":f"garage:{garage['x']},{garage['y']}:{i}","kind":"garage","road":list(access[0]),"index":i,"x":garage["x"],"y":garage["y"],"garage":garage} for i in range(max(0,int(garage.get("parkingSpaces",24)))))
+    slots.extend(garage_slots);neighbors=((1,0),(-1,0),(0,1),(0,-1));slots_by_road={}
+    for slot in slots:slots_by_road.setdefault(tuple(slot["road"]),[]).append(slot)
+    def nearest_available(building,used,count):
+        if count<=0 or len(used)>=len(slots):return []
+        origin=tuple(map(int,building));frontier=[];visited=set();found=[];distance=1
+        for dx,dy in neighbors:
+            point=(origin[0]+dx,origin[1]+dy)
+            if point in road_set and point not in visited:visited.add(point);frontier.append(point)
+        while frontier and len(found)<count:
+            for point in frontier:
+                found.extend((distance,slot) for slot in slots_by_road.get(point,[]) if slot["id"] not in used)
+            if len(found)>=count:break
+            next_frontier=[]
+            for x,y in frontier:
+                for dx,dy in neighbors:
+                    point=(x+dx,y+dy)
+                    if point in road_set and point not in visited:visited.add(point);next_frontier.append(point)
+            frontier=next_frontier;distance+=1
+        return sorted(found,key=lambda row:(row[0],row[1]["y"],row[1]["x"],row[1]["index"]))[:count]
+    reserved_by_window={};stats_by_window={};garage_peaks={i:0 for i in range(len(garages))};reservations=[];total_demand=total_allocated=weighted_search=weighted_walk=weighted_stay=weighted_cars=0
+    ordered=sorted((t for t in (trips or []) if t.get("mode")=="auto" and math.ceil(float(t.get("vehicles",0) or 0))>0 and len(t.get("to",[]))==2 and len(t.get("from",[]))==2),key=lambda t:(t.get("departureWindowKey","midday"),t["to"][1],t["to"][0]))
+    used_returns=set()
+    for trip in ordered:
+        if id(trip) in used_returns:continue
+        window=trip.get("departureWindowKey","midday");destination=tuple(map(int,trip["to"]));demand=max(1,math.ceil(float(trip.get("vehicles",0) or 0)));is_work=trip.get("reason")=="trabajo"
+        back=next((row for row in ordered if is_work and row.get("reason")=="regreso" and row.get("from")==trip.get("to") and row.get("to")==trip.get("from") and id(row) not in used_returns),None)
+        used=reserved_by_window.setdefault("workday" if is_work else window,set())
+        assigned=nearest_available(destination,used,demand)
+        for _,slot in assigned:used.add(slot["id"])
+        allocated=len(assigned);shortfall=max(0,demand-allocated);first=assigned[0] if assigned else None;search=min(30,3+math.ceil(shortfall/max(1,allocated+1))*2) if shortfall else max(0,round((first[0]-1)*.35)) if first else 8;walk=max(0,first[0]-1) if first else 0;stay=510 if trip.get("reason")=="trabajo" else 480 if trip.get("reason")=="regreso" else 150
+        visual_slots=[{**slot,"walkDistance":max(0,distance-1)} for distance,slot in assigned[:12]]
+        if first:
+            return_window=trip.get("returnWindowKey") or (back or {}).get("departureWindowKey","eveningPeak");origin_used=reserved_by_window.setdefault(f"home:{return_window}",set());origin_rows=nearest_available(trip["from"],origin_used,allocated);origin=origin_rows[0] if origin_rows else None
+            for _,home_slot in origin_rows:
+                origin_used.add(home_slot["id"]);reservations.append({"slotId":home_slot["id"],"tripKey":f"{trip.get('reason')}:{trip['from'][0]},{trip['from'][1]}>{trip['to'][0]},{trip['to'][1]}:home","x":home_slot["x"],"y":home_slot["y"],"index":home_slot["index"],"kind":home_slot["kind"],"window":f"home:{return_window}","status":"reservada"})
+            drive_route=route_between(tuple(origin[1]["road"] if origin else trip["from"]),tuple(first[1]["road"])) or [list(origin[1]["road"] if origin else trip["from"]),first[1]["road"]]
+            trip.update({"parkingSlot":visual_slots[0],"parkingSlots":visual_slots,"parkingOriginSlot":{**origin[1],"walkDistance":max(0,origin[0]-1)} if origin else None,"parkingRoute":drive_route,"parkingWalkDistance":walk,"parkingAssignedVehicles":allocated,"parkingSearchMinutes":search,"parkingSearching":shortfall>0,"parkingSpacesUsed":allocated,"parkingShortfall":shortfall,"parkingMinutes":2+search,"parkingStayMinutes":stay})
+            if back:
+                return_shortfall=max(0,allocated-len(origin_rows));back_slots=[{**slot,"walkDistance":max(0,distance-1)} for distance,slot in origin_rows[:12]];used_returns.add(id(back));back.update({"parkingSlot":back_slots[0] if back_slots else None,"parkingSlots":back_slots,"parkingOriginSlot":visual_slots[0],"parkingRoute":list(reversed(drive_route)),"parkingWalkDistance":back_slots[0]["walkDistance"] if back_slots else 0,"parkingAssignedVehicles":len(origin_rows),"parkingSearchMinutes":min(30,3+math.ceil(return_shortfall/max(1,allocated)*2)) if return_shortfall else 0,"parkingSearching":return_shortfall>0,"parkingSpacesUsed":len(origin_rows),"parkingShortfall":return_shortfall,"parkingStayMinutes":stay,"parkingCapacity":len(slots)})
+        else:
+            trip.update({"parkingSlot":None,"parkingSlots":[],"parkingRoute":[],"parkingWalkDistance":0,"parkingAssignedVehicles":0,"parkingSearchMinutes":search,"parkingSearching":True,"parkingSpacesUsed":0,"parkingShortfall":demand,"parkingMinutes":10,"parkingStayMinutes":stay})
+            if back:
+                used_returns.add(id(back));back.update({"parkingSlot":None,"parkingSlots":[],"parkingOriginSlot":None,"parkingRoute":[],"parkingWalkDistance":0,"parkingAssignedVehicles":0,"parkingSearchMinutes":search,"parkingSearching":True,"parkingSpacesUsed":0,"parkingShortfall":demand,"parkingStayMinutes":stay,"parkingCapacity":len(slots)})
+        trip["parkingCapacity"]=len(slots);trip["estimatedMinutes"]=float(trip.get("estimatedMinutes",0))+search;trip["trafficFactor"]=float(trip.get("trafficFactor",1))+search/10
+        row=stats_by_window.setdefault(window,{"demand":0,"occupied":0,"shortfall":0});row["demand"]+=demand;row["occupied"]+=allocated;row["shortfall"]+=shortfall;total_demand+=demand;total_allocated+=allocated;weighted_search+=search*demand;weighted_walk+=walk*demand;weighted_stay+=stay*demand;weighted_cars+=demand
+        for _,slot in assigned:reservations.append({"slotId":slot["id"],"tripKey":f"{trip.get('reason')}:{trip['from'][0]},{trip['from'][1]}>{trip['to'][0]},{trip['to'][1]}:{window}","x":slot["x"],"y":slot["y"],"index":slot["index"],"kind":slot["kind"],"window":window,"status":"reservada"})
     for index,garage in enumerate(garages):
-        nearby=sorted(((abs(x-garage["x"])+abs(y-garage["y"]),y,x) for x,y in destinations if abs(x-garage["x"])+abs(y-garage["y"])<=4))
-        garage_destinations[index]=(nearby[0][2],nearby[0][1]) if nearby else None
-    windows=set(row["window"] for row in rows);garage_peaks={index:0 for index in range(len(garages))};peak_demand=peak_occupied=peak_shortfall=0
-    for window in windows:
-        street_remaining={point:pool["spaces"] for point,pool in road_pools.items()};garage_remaining={index:max(0,int(garage.get("parkingSpaces",24))) for index,garage in enumerate(garages)};stats={"demand":0,"occupied":0,"shortfall":0}
-        for row in sorted((row for row in rows if row["window"]==window),key=lambda item:(item["y"],item["x"])):
-            remaining=row["demand"];street_used=garage_used=0
-            nearby_streets=[]
-            for point in ((row["x"],row["y"]),(row["x"]+1,row["y"]),(row["x"]-1,row["y"]),(row["x"],row["y"]+1),(row["x"],row["y"]-1)):
-                pool=road_pools.get(point)
-                if pool and street_remaining.get(point,0)>0:nearby_streets.append((abs(point[0]-row["x"])+abs(point[1]-row["y"]),point[1],point[0],point))
-            for _,__,___,point in sorted(nearby_streets):
-                if not remaining:break
-                used=min(remaining,street_remaining.get(point,0));street_remaining[point]-=used;street_used+=used;remaining-=used
-            nearby_garages=[(abs(g["x"]-row["x"])+abs(g["y"]-row["y"]),g["y"],g["x"],i,g) for i,g in enumerate(garages) if garage_destinations.get(i)==row["destination"] and abs(g["x"]-row["x"])+abs(g["y"]-row["y"])<=4]
-            for _,__,___,index,garage in sorted(nearby_garages):
-                if not remaining:break
-                used=min(remaining,garage_remaining.get(index,0));garage_remaining[index]-=used;garage_used+=used;remaining-=used
-            occupied=street_used+garage_used;missing=max(0,row["demand"]-occupied);potential=sum(road_pools[p]["spaces"] for p in ((row["x"],row["y"]),(row["x"]+1,row["y"]),(row["x"]-1,row["y"]),(row["x"],row["y"]+1),(row["x"],row["y"]-1)) if p in road_pools)+sum(max(0,int(g.get("parkingSpaces",24))) for _,__,___,_,g in nearby_garages);search=min(18,2+math.ceil(missing/max(1,potential)*8)) if missing else 0
-            trip_spaces=occupied
-            for trip in row["trips"]:
-                used=min(math.ceil(trip.get("vehicles",0)),trip_spaces);trip_spaces-=used;trip.update({"parkingCapacity":potential,"parkingSpacesUsed":used,"parkingShortfall":missing,"parkingMinutes":2+search,"estimatedMinutes":trip.get("estimatedMinutes",0)+search,"trafficFactor":trip.get("trafficFactor",1)+search/10})
-            for _,__,___,index,garage in nearby_garages:garage_peaks[index]=max(garage_peaks[index],max(0,int(garage.get("parkingSpaces",24))-garage_remaining.get(index,0)))
-            stats["demand"]+=row["demand"];stats["occupied"]+=occupied;stats["shortfall"]+=missing
-        peak_demand=max(peak_demand,stats["demand"]);peak_occupied=max(peak_occupied,stats["occupied"]);peak_shortfall=max(peak_shortfall,stats["shortfall"])
+        prefix=f"garage:{garage['x']},{garage['y']}:";garage_peaks[index]=max((sum(slot_id.startswith(prefix) for slot_id in used) for used in reserved_by_window.values()),default=0)
     municipal_occupied=monthly_fee=0
     for index,garage in enumerate(garages):
-        occupied=garage_peaks[index];fee=max(0,int(garage.get("dailyFee",5)));municipal_occupied+=occupied;monthly_fee+=occupied*fee*30;garage["parkingOccupied"]=occupied;garage["parkingRevenue"]=occupied*fee*30
-    report={"demand":peak_demand,"capacity":sum(pool["spaces"] for pool in road_pools.values())+sum(max(0,int(garage.get("parkingSpaces",24))) for garage in garages),"occupied":peak_occupied,"shortfall":peak_shortfall,"municipalCapacity":sum(max(0,int(garage.get("parkingSpaces",24))) for garage in garages),"municipalOccupied":municipal_occupied,"monthlyFee":monthly_fee,"garages":[{"x":garage["x"],"y":garage["y"],"capacity":garage.get("parkingSpaces",24),"occupied":garage.get("parkingOccupied",0),"feePerDay":garage.get("dailyFee",5)} for garage in garages]}
+        occupied=min(int(garage.get("parkingSpaces",24)),garage_peaks[index]);fee=max(0,int(garage.get("dailyFee",5)));municipal_occupied+=occupied;monthly_fee+=occupied*fee*30;garage["parkingOccupied"]=occupied;garage["parkingRevenue"]=occupied*fee*30
+    peak=max(stats_by_window.values(),key=lambda row:row["occupied"],default={"demand":0,"occupied":0,"shortfall":0});peak_occupied=max((len(used) for used in reserved_by_window.values()),default=0)
+    report={"demand":peak["demand"],"capacity":len(slots),"occupied":min(len(slots),peak_occupied),"free":max(0,len(slots)-peak_occupied),"shortfall":peak["shortfall"],"averageSearchMinutes":round(weighted_search/max(1,weighted_cars),1),"averageWalkDistance":round(weighted_walk/max(1,weighted_cars),1),"averageStayMinutes":round(weighted_stay/max(1,weighted_cars)),"municipalCapacity":len(garage_slots),"municipalOccupied":municipal_occupied,"monthlyFee":monthly_fee,"garages":[{"x":g["x"],"y":g["y"],"capacity":g.get("parkingSpaces",24),"occupied":g.get("parkingOccupied",0),"feePerDay":g.get("dailyFee",5)} for g in garages],"reservations":reservations}
     state.setdefault("traffic",{})["parking"]=report;return report
 
 
@@ -4611,6 +4680,20 @@ def simulate_business_month(workforce):
     regional_report.update({"capturedUnits":regional_sold,"revenue":regional_revenue,"unmetOffer":max(0,regional_report["cityOffer"]-regional_sold),"localUnmet":local_unmet});state["regionalMarketReport"]=regional_report;state["regionalMarket"]["lastReport"]=regional_report;state["regionalMarket"]["history"].append({k:regional_report[k] for k in ("month","regionalDemand","cityOffer","capturedUnits","capturePct","revenue")});state["regionalMarket"]["history"]=state["regionalMarket"]["history"][-24:];refresh_private_investment_opportunity(regional_report,local_unmet)
     return {"revenue":revenue_total,"payroll":payroll_total,"sales":sales_total,"inputs":inputs_total,"closed":closed,"regionalUnits":regional_sold,"regionalRevenue":regional_revenue}
 
+def settle_office_businesses(workforce):
+    """Las oficinas venden servicios profesionales, pagan salarios y mantienen caja privada."""
+    workplace={(w.get("x"),w.get("y")):w for w in workforce.get("workplaces",[])}
+    for office in (b for b in state.get("buildings",[]) if b.get("kind")=="office"):
+        firm=office.setdefault("business",{});row=workplace.get((office["x"],office["y"]),{});staffed=max(0,int(row.get("staffedJobs",0)));payroll=max(0,int(row.get("payroll",0)))
+        access=office.get("utilityAccess",{});service=min(access.get("powerServedPct",100),access.get("waterServedPct",100),access.get("wastewaterTreatedPct",100))/100
+        revenue=round(staffed*190*max(.25,service));operating=round(35+staffed*18);cash=round(firm.get("cash",6000))+revenue-payroll-operating
+        firm.update({"lastWorkers":staffed,"lastSales":staffed*8,"lastRevenue":revenue,"lastPayroll":payroll,"lastOperatingCost":operating,"lastProfit":revenue-payroll-operating,"cash":cash})
+        for emp in workforce.get("employees",[]):
+            if emp.get("site",{}).get("kind")!="office" or (emp["site"].get("x"),emp["site"].get("y"))!=(office["x"],office["y"]):continue
+            wage=max(0,int(emp.get("earnedWage",emp.get("wage",0))));home=emp.get("home",{});home["householdCash"]=round(home.get("householdCash",0)+wage);home["monthlyWageIncome"]=home.get("monthlyWageIncome",0)+wage
+        if cash<0 and firm.get("status")=="abierto":
+            firm["status"]="cerrado";office["status"]="cerrado";state["jobs"]=max(0,state.get("jobs",0)-firm.get("jobSlots",0));ev("Oficina cerrada",f"{office.get('name','Oficina')} agotó su capital. Los puestos universitarios dejaron de operar.")
+
 def route_to_project(project):return route_between((4,10),(project["x"],project["y"]),mode="truck")
 
 def storage_location(location_id):
@@ -4893,7 +4976,7 @@ def commit_private_construction_deliveries(project,quotes):
 
 def construction_duration_days(kind,base_days,contractor_days,base_divisor=240):
     """Acelerar a la mitad obras privadas de vivienda, comercio e industria."""
-    quick=kind in ("home","shop","factory")
+    quick=kind in ("home","shop","office","factory")
     divisor=base_divisor*(2 if quick else 1)
     return max(2 if quick else 3,round(float(base_days)*float(contractor_days)/divisor))
 
@@ -4901,7 +4984,7 @@ def accelerate_existing_private_builds():
     """Reduce once the remaining term on active housing, shop and factory projects."""
     for project in state.get("projects",[]):
         kind=project.get("kind")
-        if kind not in ("home","shop","factory") or project.get("constructionSpeedAdjusted"):continue
+        if kind not in ("home","shop","office","factory") or project.get("constructionSpeedAdjusted"):continue
         if project.get("status") in ("cancelada","finalizada","completada","terminada"):continue
         contractor=CONTRACTORS.get(project.get("contractor"),{"days":30})
         expected=construction_duration_days(kind,PROJECTS[kind]["days"],contractor.get("days",30))
@@ -4920,7 +5003,7 @@ def advance_zoned_development():
     """Demanda y parcela libre bastan para iniciar una inversión privada."""
     supply=growth_demand(state)
     reserved={(e.get("x"),e.get("y")) for key in ("buildings","projects","abandoned","railStations") for e in state.get(key,[])}
-    for kind,shortage in (("home",supply["housing"]["shortage"]),("shop",supply["commercial"]["shortage"]),("factory",supply["industry"]["shortage"])):
+    for kind,shortage in (("home",supply["housing"]["shortage"]),("shop",supply["commercial"]["shortage"]),("factory",supply["industry"]["shortage"]),("office",supply.get("office",{}).get("shortage",0))):
         if shortage<=0:continue
         zones=[z for z in state.get("zones",[]) if z.get("kind")==kind and z.get("status") in (None,"disponible") and (z.get("x"),z.get("y")) not in reserved and zoning_road_access(z["x"],z["y"]) and route_between((z["x"],z["y"]),(4,10))]
         if not zones:continue
@@ -5586,6 +5669,10 @@ def complete_construction(p, quality=82):
         building={"x":p["x"],"y":p["y"],"kind":"shop","name":"Nuevo comercio","level":1,"occupants":0,"jobSlots":24 if p.get("density")=="high" else 12,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
         opening_capital=1200 if p.get("zonedDevelopment") else min(1200,max(0,state["privateCapital"]));state["privateCapital"]-=0 if p.get("zonedDevelopment") else opening_capital
         building["business"]=new_business(building,building["jobSlots"],opening_capital);state["buildings"].append(building);state["jobs"]+=building["jobSlots"]
+    elif p["kind"]=="office":
+        slots=40 if p.get("density")=="high" else 24;building={"x":p["x"],"y":p["y"],"kind":"office","name":"Oficinas profesionales","level":1,"occupants":0,"jobSlots":slots,"density":p.get("density","low"),"status":"habilitado","quality":quality,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
+        opening_capital=max(6000,int(p.get("operatingReserve",6000)));building["business"]={"id":f"office-{p['x']}-{p['y']}","name":building["name"],"status":"abierto","cash":opening_capital,"jobSlots":slots,"wage":28,"lastWorkers":0,"lastSales":0,"lastRevenue":0,"lastPayroll":0,"lastOperatingCost":0,"lastProfit":0,"fixedCost":35,"creditDebt":0}
+        state["buildings"].append(building);state["jobs"]+=slots
     elif p["kind"]=="factory":
         industry_type=p.get("industryType") or next_factory_industry();is_quarry=industry_type=="quarry";is_sawmill=industry_type=="sawmill";is_metalworks=industry_type=="metalworks";name=FACTORY_LABELS.get(industry_type,"Procesadora de alimentos")
         building={"x":p["x"],"y":p["y"],"kind":"factory","name":name,"level":1,"occupants":0,"status":"habilitado","quality":quality,"jobSlots":32 if p.get("density")=="high" else 20,"density":p.get("density","low"),"monthlyOperatingCost":320 if is_quarry else 360 if is_sawmill else 420 if is_metalworks else 180,"ownerType":p.get("ownerType","private"),"ownerName":p.get("ownerName",p["contractor"]),"zonedDevelopment":p.get("zonedDevelopment",False)}
@@ -5798,6 +5885,7 @@ def tick_one_day():
         tourism_tax=simulate_hotel_month(economic)
         renew_private_commercial_leases()
         activity=simulate_business_month(economic)
+        settle_office_businesses(economic)
         queue_factory_exports()
         settle_tourism_event_retail()
         rebalance_private_staffing(economic)
@@ -6380,7 +6468,7 @@ def education_service_report(workplaces=None,advance=False,include_students=Fals
             for person,_,home in school["assigned"]:
                 route=route_between((home["x"],home["y"]),(school["building"]["x"],school["building"]["y"]))
                 if route:
-                    student_journeys.append({"home":[home["x"],home["y"]],"school":[school["building"]["x"],school["building"]["y"]],"schoolName":school["building"].get("name","Escuela municipal"),"route":route,"person":{"id":person.get("id"),"name":person.get("name") or f"Vecino #{str(person.get('id',''))[-5:]}","age":person.get("age"),"status":"estudiante"},"carAccess":any(p.get("carAccess") for p in home.get("residents",[]))})
+                    student_journeys.append({"home":[home["x"],home["y"]],"school":[school["building"]["x"],school["building"]["y"]],"schoolName":school["building"].get("name","Escuela municipal"),"route":route,"person":{"id":person.get("id"),"name":person.get("name") or f"Vecino #{str(person.get('id',''))[-5:]}","age":person.get("age"),"status":"estudiante"},"carAccess":any(p.get("carAccess") for p in home.get("residents",[])),"bikeAccess":any(p.get("bikeAccess") for p in home.get("residents",[]))})
         rows.append({"name":school["building"].get("name","Escuela municipal"),"x":school["building"]["x"],"y":school["building"]["y"],
                      "serviceModel":school["building"].get("serviceModel"),"ageMin":school["ageMin"],"ageMax":school["ageMax"],
                      "radius":school["radius"],"teachers":school["teachers"],"classrooms":school["building"].get("classrooms",4),
@@ -7211,12 +7299,28 @@ class Handler(BaseHTTPRequestHandler):
                 if action=="adjustTax":
                     taxes=ensure_tax_state();kind=str(data.get("kind",""));delta=int(data.get("delta",0))
                     if kind=="property":key="propertyRateBp";low,high,step=20,140,10
-                    elif kind=="business":key="businessRateBp";low,high,step=0,500,25
+                    elif kind=="shop":key="shopRateBp";low,high,step=0,500,25
+                    elif kind=="factory":key="factoryRateBp";low,high,step=0,500,25
+                    elif kind=="office":key="officeRateBp";low,high,step=0,1000,25
                     else:self._send(409,{"error":"Tipo de impuesto no reconocido."});return
                     if delta not in (-step,step):self._send(409,{"error":"Cambio de alícuota inválido."});return
-                    old=taxes.get(key,60 if kind=="property" else 200);new=max(low,min(high,old+delta))
+                    old=taxes.get(key,60 if kind=="property" else 200 if kind=="shop" else 75 if kind=="factory" else 500);new=max(low,min(high,old+delta))
                     if new==old:self._send(409,{"error":"La alícuota ya está en su límite."});return
-                    taxes[key]=new;ev("Política tributaria ajustada",f"Impuesto {'inmobiliario anual' if kind=='property' else 'a ventas comerciales'}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
+                    taxes[key]=new
+                    if kind=="shop":taxes["businessRateBp"]=new
+                    label={"property":"vivienda","shop":"comercio","factory":"fábrica","office":"oficina"}[kind]
+                    ev("Política tributaria ajustada",f"Impuesto a {label}: {old/100:.2f}% → {new/100:.2f}%. El cobro real y la mora se actualizarán al cierre mensual.")
+                    self._send(200,public_state(pid,use_cache=True));return
+                if action=="subsidizeUtilities":
+                    x=int(data.get("x",-1));y=int(data.get("y",-1));home=next((b for b in state.get("buildings",[]) if b.get("kind")=="home" and b.get("x")==x and b.get("y")==y),None)
+                    if not home:self._send(409,{"error":"Seleccioná una vivienda para revisar su factura."});return
+                    taxes=ensure_tax_state();key=f"{x},{y}";arrears=max(0,int(taxes.setdefault("utilityArrearsByHome",{}).get(key,home.get("utilityArrears",0))))
+                    if arrears<=0:self._send(409,{"error":"Esta familia no tiene facturas de servicios pendientes."});return
+                    reserved=sum(max(0,p.get("cost",0)-p.get("paid",0)) for p in state.get("projects",[]) if not p.get("privatePaid"));available=max(0,int(state.get("money",0))-reserved)
+                    if available<arrears:self._send(409,{"error":f"Quedan $ {available:,} libres; el subsidio total cuesta $ {arrears:,}.".replace(",",".")});return
+                    state["money"]-=arrears;taxes["utilityArrearsByHome"][key]=0;home["utilityArrears"]=0;home["utilityDelinquencyMonths"]=0;home["paymentDisconnected"]=False
+                    home["utilityAccess"]=home.get("utilityAccess",{});home["utilityAccess"]["paymentDisconnected"]=False
+                    calculate_utility_balance();ev("Servicios del hogar subsidiados",f"El municipio cubrió $ {arrears:,} de deuda de servicios en la vivienda {x+1},{y+1}; la conexión fue restablecida.".replace(",","."))
                     self._send(200,public_state(pid,use_cache=True));return
                 if action=="adjustHousingAidBudget":
                     social=state.setdefault("socialServices",new_social_services());delta=int(data.get("delta",0));old=max(0,int(social.get("housingAidBudget",0)));new=max(0,min(5000,old+delta))
@@ -7404,8 +7508,8 @@ class Handler(BaseHTTPRequestHandler):
                         if not any(site["x"]==x and site["y"]==y for site in bus_stop_sites(bus_line)):
                             self._send(409,{"error":"La parcela ya no está disponible junto al recorrido o la línea alcanzó su límite de paradas."});return
                     zone=next((z for z in state.get("zones",[]) if z["x"]==x and z["y"]==y),None)
-                    if kind in ("home","shop","factory") and (not zone or zone["kind"]!=kind):
-                        required="residencial" if kind=="home" else "comercial" if kind=="shop" else "industrial"
+                    if kind in ("home","shop","office","factory") and (not zone or zone["kind"]!=kind):
+                        required="residencial" if kind=="home" else "comercial" if kind=="shop" else "oficinas" if kind=="office" else "industrial"
                         self._send(409,{"error":f"Primero asigná uso {required} a esta parcela."}); return
                     industry_choice=data.get("industryType") if kind=="factory" else None
                     if industry_choice is not None and industry_choice not in FACTORY_LABELS:
@@ -7413,7 +7517,7 @@ class Handler(BaseHTTPRequestHandler):
                     if kind=="road":
                         if not any(abs(rx-x)+abs(ry-y)<=1 for rx,ry in state["roads"]): self._send(409,{"error":"La calle debe conectar con la red existente"}); return
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
-                    elif kind in ("home","shop","hotel","factory"):
+                    elif kind in ("home","shop","office","hotel","factory"):
                         # Los permisos se cobran después de validar el capital de la operación.
                         contractor=contractor if contractor in CONTRACTORS else "Constructora Delta"
                     else:
@@ -7443,10 +7547,10 @@ class Handler(BaseHTTPRequestHandler):
                         p["label"]=FACTORY_LABELS[p["industryType"]]
                     # Igual que Offline: una obra puesta manualmente se habilita en este clic.
                     # Las obras automáticas de promotores conservan sus cronogramas.
-                    if kind in ("home","shop","hotel","factory"):
+                    if kind in ("home","shop","office","hotel","factory"):
                         permit=max(50,round(spec["cost"]*.12))
                         p["privatePaid"]=True;p["municipalPermitPaid"]=permit;p["cost"]=total-permit
-                        operating_reserve=4200 if kind=="factory" else 0
+                        operating_reserve=6000 if kind=="office" else 4200 if kind=="factory" else 1200 if kind=="shop" else 0
                         if state["money"]<permit:
                             self._send(409,{"error":f"Fondos municipales insuficientes para permisos ($ {permit:,}).".replace(",","." )});return
                         if state["privateCapital"]<p["cost"]+operating_reserve:
@@ -7616,7 +7720,7 @@ class Handler(BaseHTTPRequestHandler):
                     ev("Contenedor instalado",f"Calle {x+1},{y+1}: inversión $350 · capacidad de recolección +0,15 t/día. Cada depósito conectado suma además una estación de transferencia con 12 t de almacenamiento y despacho de 1,5 t/día.")
                 elif action=="zone":
                     kind=data.get("kind");density=str(data.get("density","low"))
-                    if kind not in ("home","shop","factory","clear") or density not in ("low","high"):self._send(400,{"error":"Uso de suelo inválido"});return
+                    if kind not in ("home","shop","office","factory","clear") or density not in ("low","high"):self._send(400,{"error":"Uso de suelo inválido"});return
                     cells=data.get("cells") or [[data.get("x",-1),data.get("y",-1)]]
                     if not isinstance(cells,list) or not cells or len(cells)>560:self._send(400,{"error":"La pintura debe incluir entre 1 y 560 parcelas."});return
                     normalized=[];seen=set()
@@ -7634,8 +7738,8 @@ class Handler(BaseHTTPRequestHandler):
                         ev("Permisos de suelo eliminados",f"Se quitaron permisos de zona en {before-len(state['zones'])} parcela(s).")
                     else:
                         for x,y in normalized:state["zones"].append({"x":x,"y":y,"kind":kind,"density":density if kind=="home" else density,"owner":"municipal","status":"disponible","autoDeveloperPermit":True})
-                        label={"home":"residencial","shop":"comercial","factory":"industrial"}[kind]
-                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). Con demanda y calle conectada, un promotor financia viviendas, comercios e industrias; el municipio no paga esas obras ni su mantenimiento.")
+                        label={"home":"residencial","shop":"comercial","office":"oficinas","factory":"industrial"}[kind]
+                        ev("Permisos de suelo pintados",f"Se asignó permiso {label} a {len(normalized)} parcela(s). Con demanda y calle conectada, un promotor financia viviendas, comercios, oficinas e industrias; el municipio no paga esas obras ni su mantenimiento.")
                         advance_zoned_development()
                 elif action in ("pauseProject","resumeProject","cancelProject"):
                     project=next((p for p in state["projects"] if p["id"]==str(data.get("id"))),None)

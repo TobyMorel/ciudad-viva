@@ -465,7 +465,8 @@ Ninguna empresa debe ser siempre óptima. La contratación varía según disponi
 ### Tareas para la IA
 
 - [ ] Crear un presupuesto que cuadre ingresos, gastos, reserva y deuda.
-- [ ] Incorporar impuestos ajustables con efectos diferidos.
+- [x] Ajustar por separado impuestos a viviendas, comercios, fábricas y oficinas, con recaudación sobre ventas, mora y efectos de apoyo ligados a servicios y orden (Alfa 0.273).
+- [x] Facturar servicios domiciliarios a cada hogar; acumular deuda, suspender el acceso tras impagos y permitir un subsidio municipal explícito desde la vivienda (Alfa 0.273).
 - [ ] Diferenciar inversión de capital, gastos operativos y obligaciones contractuales.
 - [ ] Crear vínculos entre empleo, población, consumo y recaudación.
 - [ ] Avisar sobre insolvencia antes de que ocurra.
@@ -836,6 +837,7 @@ Se inaugura un polígono industrial sin suficiente electricidad → las fábrica
 
 ### Tareas para la IA
 
+- [x] Abrir oficinas profesionales privadas con empleos universitarios, ventas, salarios, operación y tributo sectorial; incluir su zonificación y demanda de puestos (Alfa 0.273).
 - [ ] Definir balances de caja privados y decisiones independientes del alcalde.
 - [ ] Incluir al menos tres empresas que compitan por una misma clientela sin generar ingresos de la nada.
 - [ ] Simular entrada, expansión, despido, cierre y posible recuperación.
@@ -994,7 +996,7 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 
 ### Tareas para la IA
 
-- [ ] Conectar demanda laboral de empresas con competencias, salarios, vivienda y transporte.
+- [x] Asignar perfiles educativos y limitar el acceso laboral: baja formación a fábricas, secundaria a comercios y universidad a oficinas; aumentar demanda de fábricas u oficinas cuando falten puestos compatibles (Alfa 0.273).
 - [ ] Permitir programas de formación con duración, presupuesto y capacidad.
 - [ ] Mostrar indicadores de desempleo, vacantes, ingresos y carga habitacional por distrito.
 - [ ] Agregar migración por oportunidades económicas y efectos secundarios sobre servicios.
@@ -1045,6 +1047,8 @@ Se abre una planta tecnológica con 500 puestos anunciados, pero solo 130 trabaj
 - [x] Ampliar las celdas 50% y los modelos del mundo 3D 35%, conservando selección, cámara y coordenadas de juego (Alfa 0.270; base espacial para incorporar más categorías viales).
 - [x] Ensanchar las calles con veredas, un carril de circulación por sentido y una franja de estacionamiento junto a cada vereda; animar la entrada en reversa y la salida de los autos estacionados (Alfa 0.271; visual, sin cambiar la economía).
 - [x] Asignar espacios de estacionamiento físicos de calles y garajes a los viajes; la falta de plazas añade búsqueda y los garajes municipales cobran solo por su ocupación pico (Alfa 0.272).
+- [x] Reservar cada plaza por franja para impedir dobles asignaciones; buscar la plaza disponible más cercana en toda la red vial conectada, marcar los autos que siguen buscando y mostrar los promedios de espera, caminata y permanencia (Alfa 0.273).
+- [x] Mantener los autos en el mapa: conducir hasta la plaza, estacionar, caminar al destino y volver al vehículo; calcular auto o bicicleta según la economía del hogar (Alfa 0.273).
 - [x] Permitir configurar sentido único, carril de autobús y restricción de camiones por tramo; las rutas de autos, colectivos y carga obedecen las reglas y muestran la dirección en el mapa (Alfa 0.272).
 
 ### Criterios de aceptación

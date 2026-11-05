@@ -8,44 +8,56 @@ export const roadTypeInfo=type=>ROAD_TYPES[type]||ROAD_TYPES.local;
 export const roadAssetMap=assets=>new Map((assets||[]).map(asset=>[`${asset.x},${asset.y}`,asset]));
 export const roadParkingSpaces=(asset,degree=2)=>roadTypeInfo(asset?.roadType).parking*(degree>=3?0:1);
 
+function pathToRoad(origin,slot,roads,roadSet){
+  const from=[Number(origin[0]),Number(origin[1])],target=slot.road,queue=[],previous=new Map(),goals=new Set([`${target[0]},${target[1]}`]);
+  for(const [x,y] of [[from[0]+1,from[1]],[from[0]-1,from[1]],[from[0],from[1]+1],[from[0],from[1]-1]]){const id=`${x},${y}`;if(roadSet.has(id)&&!previous.has(id)){previous.set(id,null);queue.push([x,y])}}
+  if(roadSet.has(`${from[0]},${from[1]}`)&&!previous.has(`${from[0]},${from[1]}`)){previous.set(`${from[0]},${from[1]}`,null);queue.push(from)}
+  if(!queue.length)return [from,[...target]];
+  let end=null;
+  for(let i=0;i<queue.length;i++){const [x,y]=queue[i],id=`${x},${y}`;if(goals.has(id)){end=id;break}for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){const next=`${nx},${ny}`;if(!roadSet.has(next)||previous.has(next))continue;previous.set(next,id);queue.push([nx,ny])}}
+  if(!end)return [from,[...target]];const path=[];for(let at=end;at;at=previous.get(at)){const [x,y]=at.split(',').map(Number);path.push([x,y])}path.reverse();if(path[0][0]!==from[0]||path[0][1]!==from[1])path.unshift(from);return path;
+}
+
 export function assignParking(state,trips){
-  const assets=roadAssetMap(state.roadAssets),roads=state.roads||[],garages=(state.buildings||[]).filter(building=>building.serviceModel==='parkingGarage'&&['habilitado','operativo'].includes(building.status));
-  const destinations=new Map(),groups=new Map();
-  for(const trip of trips||[]){
-    if(trip.mode!=='auto'||!Number(trip.vehicles)||!Array.isArray(trip.to)||trip.reason==='regreso')continue;
-    const x=Number(trip.to[0]),y=Number(trip.to[1]),window=trip.departureWindowKey||'midday',destination=x+','+y,id=destination+':'+window;
-    const row=groups.get(id)||{id,destination,x,y,window,demand:0,trips:[]};
-    row.demand+=Math.max(0,Math.ceil(Number(trip.vehicles)||0));row.trips.push(trip);groups.set(id,row);destinations.set(destination,{x,y});
-  }
-  const rows=[...groups.values()],roadPools=[],roadPoolByKey=new Map(),roadSet=new Set(roads.map(([x,y])=>x+','+y));
-  for(const [x,y] of roads){
-    const degree=[[1,0],[-1,0],[0,1],[0,-1]].reduce((n,[dx,dy])=>n+Number(roadSet.has((x+dx)+','+(y+dy))),0),spaces=roadParkingSpaces(assets.get(x+','+y),degree);
-    if(spaces>0){const pool={x,y,spaces};roadPools.push(pool);roadPoolByKey.set(x+','+y,pool)}
-  }
-  for(const garage of garages){
-    const candidates=[...destinations.entries()].map(([id,point])=>({id,...point,distance:Math.abs(point.x-garage.x)+Math.abs(point.y-garage.y)})).filter(row=>row.distance<=4).sort((a,b)=>a.distance-b.distance||a.y-b.y||a.x-b.x||a.id.localeCompare(b.id));
-    garage.parkingDestination=candidates[0]?.id||null;
-  }
-  const windows=[...new Set(rows.map(row=>row.window))],garagePeaks=new Map(garages.map(garage=>[garage,0]));let peakDemand=0,peakOccupied=0,peakShortfall=0;
-  for(const window of windows){
-    const streetRemaining=new Map(roadPools.map(pool=>[pool.x+','+pool.y,pool.spaces])),garageRemaining=new Map(garages.map(garage=>[garage,Math.max(0,Math.trunc(garage.parkingSpaces||24))]));
-    const windowRows=rows.filter(row=>row.window===window).sort((a,b)=>a.y-b.y||a.x-b.x),stats={demand:0,occupied:0,shortfall:0};
-    for(const row of windowRows){
-      let remaining=row.demand,streetUsed=0,garageUsed=0;
-      const streetCandidates=[[row.x,row.y],[row.x+1,row.y],[row.x-1,row.y],[row.x,row.y+1],[row.x,row.y-1]].map(([x,y])=>roadPoolByKey.get(x+','+y)).filter(pool=>pool&&(streetRemaining.get(pool.x+','+pool.y)||0)>0).map(pool=>({...pool,distance:Math.abs(pool.x-row.x)+Math.abs(pool.y-row.y)})).sort((a,b)=>a.distance-b.distance||a.y-b.y||a.x-b.x);
-      for(const pool of streetCandidates){if(!remaining)break;const key=pool.x+','+pool.y,used=Math.min(remaining,streetRemaining.get(key)||0);streetRemaining.set(key,(streetRemaining.get(key)||0)-used);streetUsed+=used;remaining-=used}
-      const garageCandidates=garages.filter(garage=>garage.parkingDestination===row.destination&&Math.abs(garage.x-row.x)+Math.abs(garage.y-row.y)<=4).sort((a,b)=>Math.abs(a.x-row.x)+Math.abs(a.y-row.y)-Math.abs(b.x-row.x)-Math.abs(b.y-row.y)||a.y-b.y||a.x-b.x);
-      for(const garage of garageCandidates){if(!remaining)break;const used=Math.min(remaining,garageRemaining.get(garage)||0);garageRemaining.set(garage,(garageRemaining.get(garage)||0)-used);garageUsed+=used;remaining-=used}
-      const occupied=streetUsed+garageUsed,shortfall=Math.max(0,row.demand-occupied),potential=[[row.x,row.y],[row.x+1,row.y],[row.x-1,row.y],[row.x,row.y+1],[row.x,row.y-1]].reduce((n,[x,y])=>n+(roadPoolByKey.get(x+','+y)?.spaces||0),0)+garageCandidates.reduce((n,garage)=>n+Math.max(0,Math.trunc(garage.parkingSpaces||24)),0),search=Math.min(18,shortfall?2+Math.ceil(shortfall/Math.max(1,potential)*8):0);
-      let tripSpaces=occupied;
-      for(const trip of row.trips){const used=Math.min(Math.ceil(Number(trip.vehicles)||0),tripSpaces);tripSpaces-=used;Object.assign(trip,{parkingCapacity:potential,parkingSpacesUsed:used,parkingShortfall:shortfall,parkingMinutes:2+search,estimatedMinutes:(Number(trip.estimatedMinutes)||0)+search,trafficFactor:(Number(trip.trafficFactor)||1)+search/10})}
-      for(const garage of garageCandidates){const used=Math.max(0,Math.trunc(garage.parkingSpaces||24))-(garageRemaining.get(garage)||0);garagePeaks.set(garage,Math.max(garagePeaks.get(garage)||0,used))}
-      stats.demand+=row.demand;stats.occupied+=occupied;stats.shortfall+=shortfall;
+  const assets=roadAssetMap(state.roadAssets),roads=state.roads||[],roadSet=new Set(roads.map(([x,y])=>`${x},${y}`)),roadSlots=[];
+  for(const [x,y] of roads){const degree=[[1,0],[-1,0],[0,1],[0,-1]].reduce((n,[dx,dy])=>n+Number(roadSet.has(`${x+dx},${y+dy}`)),0),count=roadParkingSpaces(assets.get(`${x},${y}`),degree);for(let index=0;index<count;index++)roadSlots.push({id:`street:${x},${y}:${index}`,kind:'street',road:[x,y],index,x,y})}
+  const garages=(state.buildings||[]).filter(b=>b.serviceModel==='parkingGarage'&&['habilitado','operativo'].includes(b.status)),garageSlots=[];
+  for(const garage of garages){const adjacent=roads.filter(([x,y])=>Math.abs(x-garage.x)+Math.abs(y-garage.y)===1).sort((a,b)=>Math.abs(a[0]-garage.x)+Math.abs(a[1]-garage.y)-Math.abs(b[0]-garage.x)-Math.abs(b[1]-garage.y)||a[1]-b[1]||a[0]-b[0]),road=adjacent[0];if(!road)continue;for(let index=0;index<Math.max(0,Math.trunc(garage.parkingSpaces||24));index++)garageSlots.push({id:`garage:${garage.x},${garage.y}:${index}`,kind:'garage',road:[...road],index,x:garage.x,y:garage.y,garage})}
+  const allSlots=[...roadSlots,...garageSlots],slotsByRoad=new Map(),occupancy=new Map(),garagePeaks=new Map(garages.map(g=>[g,0])),reservations=[];
+  for(const slot of allSlots){const id=`${slot.road[0]},${slot.road[1]}`,rows=slotsByRoad.get(id)||[];rows.push(slot);slotsByRoad.set(id,rows)}
+  let totalDemand=0,totalAllocated=0,weightedSearch=0,weightedWalk=0,weightedStay=0,weightedCars=0;
+  const nearestAvailable=(start,used,count)=>{
+    if(!count||used.size>=allSlots.length)return[];
+    let frontier=[],distance=1;const visited=new Set(),found=[];
+    for(const [x,y] of [[start[0]+1,start[1]],[start[0]-1,start[1]],[start[0],start[1]+1],[start[0],start[1]-1]]){const id=`${x},${y}`;if(roadSet.has(id)&&!visited.has(id)){visited.add(id);frontier.push([x,y])}}
+    while(frontier.length&&found.length<count){
+      for(const [x,y] of frontier)for(const slot of slotsByRoad.get(`${x},${y}`)||[])if(!used.has(slot.id))found.push({slot,distance});
+      if(found.length>=count)break;
+      const next=[];for(const [x,y] of frontier)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const id=`${x+dx},${y+dy}`;if(roadSet.has(id)&&!visited.has(id)){visited.add(id);next.push([x+dx,y+dy])}}
+      frontier=next;distance++;
     }
-    peakDemand=Math.max(peakDemand,stats.demand);peakOccupied=Math.max(peakOccupied,stats.occupied);peakShortfall=Math.max(peakShortfall,stats.shortfall);
+    return found.sort((a,b)=>a.distance-b.distance||a.slot.y-b.slot.y||a.slot.x-b.slot.x||a.slot.index-b.slot.index).slice(0,count);
+  };
+  const allocate=(destination,period,count,trip)=>{
+    const used=occupancy.get(period)||new Set(),assigned=nearestAvailable(destination,used,Math.max(0,count));for(const {slot} of assigned){used.add(slot.id);reservations.push({slotId:slot.id,tripKey:`${trip.reason}:${trip.from.join(',')}>${trip.to.join(',')}`,x:slot.x,y:slot.y,index:slot.index,kind:slot.kind,period,status:'reservada'})}occupancy.set(period,used);return assigned.map(({slot,distance})=>({...slot,distance,walkDistance:Math.max(0,distance-1)}));
+  };
+  const ordered=(trips||[]).filter(t=>t.mode==='auto'&&Math.ceil(Number(t.vehicles)||0)>0&&Array.isArray(t.to)&&Array.isArray(t.from));
+  const usedReturns=new Set();
+  for(const trip of ordered){
+    if(trip.reason==='regreso'&&usedReturns.has(trip))continue;
+    const demand=Math.max(1,Math.ceil(Number(trip.vehicles)||0)),window=trip.departureWindowKey||'midday',isWork=trip.reason==='trabajo';
+    const back=isWork?ordered.find(t=>t.reason==='regreso'&&!usedReturns.has(t)&&t.from?.[0]===trip.to?.[0]&&t.from?.[1]===trip.to?.[1]&&t.to?.[0]===trip.from?.[0]&&t.to?.[1]===trip.from?.[1]):null;
+    const endWindow=trip.returnWindowKey||back?.departureWindowKey||'eveningPeak',destinationPeriod=isWork?'workday':`visit:${window}`,homePeriod=`home:${endWindow}`;
+    const destinations=allocate(trip.to.map(Number),destinationPeriod,demand,trip),first=destinations[0]||null,origins=first?allocate(trip.from.map(Number),homePeriod,destinations.length,trip):[],origin=origins[0]||null;
+    const allocated=destinations.length,shortfall=Math.max(0,demand-allocated),searchMinutes=shortfall?Math.min(30,5+Math.ceil(shortfall/Math.max(1,demand)*20)):first?Math.round(first.distance*.35):0,walk=first?.walkDistance||0,stay=isWork?600:Math.max(60,Number(trip.parkingStayMinutes)||150);
+    let driveRoute=[];if(first){driveRoute=pathToRoad(origin?.road||trip.from,first,roads,roadSet);if(back){const returnShortfall=Math.max(0,destinations.length-origins.length);usedReturns.add(back);back.parkingSlot=origin;back.parkingSlots=origins.slice(0,12);back.parkingOriginSlot=first;back.parkingWalkDistance=origin?.walkDistance||0;back.parkingRoute=[...driveRoute].reverse();back.parkingSearching=returnShortfall>0;back.parkingSearchMinutes=returnShortfall?Math.min(30,5+Math.ceil(returnShortfall/Math.max(1,destinations.length)*20)):0;back.parkingSpacesUsed=origins.length;back.parkingAssignedVehicles=origins.length;back.parkingShortfall=returnShortfall;back.parkingStayMinutes=stay;back.parkingCapacity=allSlots.length}}
+    else if(back){back.parkingSlot=null;back.parkingSlots=[];back.parkingOriginSlot=null;back.parkingRoute=[];back.parkingWalkDistance=0;back.parkingAssignedVehicles=0;back.parkingSearching=true;back.parkingSearchMinutes=searchMinutes;back.parkingSpacesUsed=0;back.parkingShortfall=demand;back.parkingStayMinutes=stay;back.parkingCapacity=allSlots.length}
+    Object.assign(trip,{parkingSlot:first,parkingSlots:destinations.slice(0,12),parkingOriginSlot:origin,parkingOriginSlots:origins.slice(0,12),parkingRoute:driveRoute,parkingWalkDistance:walk,parkingAssignedVehicles:allocated,parkingSearchMinutes:searchMinutes,parkingSearching:shortfall>0,parkingSpacesUsed:allocated,parkingShortfall:shortfall,parkingMinutes:2+searchMinutes,parkingStayMinutes:stay,parkingCapacity:allSlots.length});
+    trip.estimatedMinutes=(Number(trip.estimatedMinutes)||0)+searchMinutes;trip.trafficFactor=(Number(trip.trafficFactor)||1)+searchMinutes/10;
+    totalDemand+=demand;totalAllocated+=allocated;weightedSearch+=searchMinutes*demand;weightedWalk+=walk*demand;weightedStay+=stay*demand;weightedCars+=demand;
+    if(back)usedReturns.add(back);
   }
-  let municipalOccupied=0,monthlyFee=0;
-  for(const garage of garages){const occupied=garagePeaks.get(garage)||0,fee=Math.max(0,Number(garage.dailyFee)||5);municipalOccupied+=occupied;monthlyFee+=occupied*fee*30;garage.parkingOccupied=occupied;garage.parkingRevenue=occupied*fee*30}
-  const report={demand:peakDemand,capacity:roadPools.reduce((n,pool)=>n+pool.spaces,0)+garages.reduce((n,garage)=>n+Math.max(0,Math.trunc(garage.parkingSpaces||24)),0),occupied:peakOccupied,shortfall:peakShortfall,municipalCapacity:garages.reduce((n,garage)=>n+Math.max(0,Math.trunc(garage.parkingSpaces||24)),0),municipalOccupied,monthlyFee,garages:garages.map(garage=>({x:garage.x,y:garage.y,capacity:garage.parkingSpaces||24,occupied:garage.parkingOccupied||0,feePerDay:garage.dailyFee||5}))};
-  state.traffic=state.traffic||{};state.traffic.parking=report;return report;
+  const periods=[...occupancy.values()],peakOccupied=Math.max(0,...periods.map(set=>set.size));let municipalOccupied=0,monthlyFee=0;
+  for(const garage of garages){const occupied=Math.min(Math.trunc(garage.parkingSpaces||24),Math.max(0,...periods.map(set=>[...set].filter(id=>id.startsWith(`garage:${garage.x},${garage.y}:`)).length))),fee=Math.max(0,Number(garage.dailyFee)||5);garagePeaks.set(garage,occupied);municipalOccupied+=occupied;monthlyFee+=occupied*fee*30;garage.parkingOccupied=occupied;garage.parkingRevenue=occupied*fee*30}
+  const report={demand:totalDemand,capacity:allSlots.length,occupied:Math.min(allSlots.length,peakOccupied),free:Math.max(0,allSlots.length-peakOccupied),shortfall:Math.max(0,totalDemand-totalAllocated),averageSearchMinutes:weightedCars?+(weightedSearch/weightedCars).toFixed(1):0,averageWalkDistance:weightedCars?+(weightedWalk/weightedCars).toFixed(1):0,averageStayMinutes:weightedCars?+(weightedStay/weightedCars).toFixed(0):0,municipalCapacity:garageSlots.length,municipalOccupied,monthlyFee,garages:garages.map(g=>({x:g.x,y:g.y,capacity:g.parkingSpaces||24,occupied:g.parkingOccupied||0,feePerDay:g.dailyFee||5})),reservations};state.traffic=state.traffic||{};state.traffic.parking=report;return report;
 }

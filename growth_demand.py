@@ -4,6 +4,7 @@ Personas interesadas se guardan en housingDemand.unmet para que la migración
 pueda ocupar las viviendas a medida que se habilitan. La presión para nuevas
 obras aparece solo después de agotar las plazas habitables.
 """
+import math
 def growth_demand(state):
     day=int(state.get("day",1))
     buildings=state.get("buildings",[]) or []
@@ -28,15 +29,28 @@ def growth_demand(state):
     active_shops=sum(b.get("business",{}).get("status")=="abierto" and
                      (b.get("business",{}).get("lastSales",0)>0 or b.get("business",{}).get("lastInputUnits",0)>0)
                      for b in shops)
-    factory_goal=min(6,(active_shops+1)//2)
+    residents=[p for h in buildings if h.get("kind")=="home" for p in h.get("residents",[]) if p.get("workerEligible")]
+    low_skill_seekers=sum(p.get("status")=="buscando" and int(p.get("educationRank",1) or 0)<=1 for p in residents)
+    factory_open_jobs=sum(max(0,int(b.get("business",{}).get("jobSlots",b.get("jobSlots",0)))-int(b.get("business",{}).get("lastWorkers",b.get("workersAssigned",0)))) for b in buildings if b.get("kind")=="factory" and b.get("business",{}).get("status")!="cerrado")
+    factory_job_gap=max(0,low_skill_seekers-factory_open_jobs)
+    factory_goal=min(12,max((active_shops+1)//2,math.ceil(factory_job_gap/20)))
     factories=sum(b.get("kind")=="factory" and b.get("business",{}).get("status")!="cerrado" for b in buildings)
     pending_factories=sum(p.get("kind")=="factory" and p.get("status") not in ("cancelada","finalizada") for p in projects)
     factory_shortage=max(0,factory_goal-factories-pending_factories)
+    offices=[b for b in buildings if b.get("kind")=="office" and b.get("business",{}).get("status")!="cerrado"]
+    pending_offices=sum(p.get("kind")=="office" and p.get("status") not in ("cancelada","finalizada") for p in projects)
+    university_seekers=sum(p.get("status")=="buscando" and int(p.get("educationRank",0) or 0)>=3 for p in residents)
+    office_open_jobs=sum(max(0,int(b.get("business",{}).get("jobSlots",b.get("jobSlots",0)))-int(b.get("business",{}).get("lastWorkers",b.get("workersAssigned",0)))) for b in offices)
+    office_job_gap=max(0,university_seekers-office_open_jobs)
+    office_goal=min(12,math.ceil(office_job_gap/26))
+    office_shortage=max(0,office_goal-len(offices)-pending_offices)
     return {
         "housing":{"value":min(100,round(shortage/36*100)),"shortage":shortage,"vacancies":vacancies,"waiting":interest},
         "commercial":{"value":min(100,round(commercial_shortage/max(1,shop_goal)*100)) if shop_goal else 0,
                       "shortage":commercial_shortage,"goal":shop_goal,"existing":len(shops),
                       "pipeline":pending_shops,"idle":idle_shops},
         "industry":{"value":min(100,round(factory_shortage/max(1,factory_goal)*100)) if factory_goal else 0,
-                    "shortage":factory_shortage,"goal":factory_goal}
+                    "shortage":factory_shortage,"goal":factory_goal,"unemployedCandidates":low_skill_seekers,"openJobs":factory_open_jobs},
+        "office":{"value":min(100,round(office_shortage/max(1,office_goal)*100)) if office_goal else 0,
+                  "shortage":office_shortage,"goal":office_goal,"unemployedCandidates":university_seekers,"openJobs":office_open_jobs}
     }

@@ -14,11 +14,17 @@ export function growthDemand(state){
     Math.max(0,(b.business?.lastRegionalDemand||0)-(b.business?.lastRegionalSales||0))===0).length;
   const commercialShortage=idleShops?0:requiredShops;
   const activeShops=shops.filter(b=>b.business?.status==='abierto'&&((b.business?.lastSales||0)>0||(b.business?.lastInputUnits||0)>0)).length;
-  const factoryGoal=Math.min(6,Math.ceil(activeShops/2)),factories=buildings.filter(b=>b.kind==='factory'&&b.business?.status!=='cerrado').length+projects.filter(p=>p.kind==='factory'&&live(p)).length;
+  const residents=buildings.filter(b=>b.kind==='home').flatMap(b=>b.residents||[]).filter(p=>p.workerEligible&&p.status==='buscando');
+  const lowSkillSeekers=residents.filter(p=>Number(p.educationRank||0)<=1).length;
+  const openFactoryJobs=buildings.filter(b=>b.kind==='factory'&&b.business?.status!=='cerrado').reduce((n,b)=>n+Math.max(0,Number(b.business?.jobSlots||b.jobSlots||0)-Number(b.business?.lastWorkers||0)),0);
+  const factoryGoal=Math.min(12,Math.max(Math.ceil(activeShops/2),Math.ceil(Math.max(0,lowSkillSeekers-openFactoryJobs)/20))),factories=buildings.filter(b=>b.kind==='factory'&&b.business?.status!=='cerrado').length+projects.filter(p=>p.kind==='factory'&&live(p)).length;
   const factoryShortage=Math.max(0,factoryGoal-factories);
+  const universitySeekers=residents.filter(p=>Number(p.educationRank||0)>=3).length,offices=buildings.filter(b=>b.kind==='office'&&b.business?.status!=='cerrado').length,pendingOffices=projects.filter(p=>p.kind==='office'&&live(p)).length;
+  const officeGoal=Math.min(12,Math.ceil(universitySeekers/26)),officeShortage=Math.max(0,officeGoal-offices-pendingOffices);
   return{
     housing:{value:Math.min(100,Math.round(shortage/36*100)),shortage,vacancies,waiting},
     commercial:{value:shopGoal?Math.min(100,Math.round(commercialShortage/shopGoal*100)):0,shortage:commercialShortage,goal:shopGoal,existing:shops.length,pipeline:pendingShops,idle:idleShops},
-    industry:{value:factoryGoal?Math.min(100,Math.round(factoryShortage/factoryGoal*100)):0,shortage:factoryShortage,goal:factoryGoal}
+    industry:{value:factoryGoal?Math.min(100,Math.round(factoryShortage/factoryGoal*100)):0,shortage:factoryShortage,goal:factoryGoal},
+    office:{value:officeGoal?Math.min(100,Math.round(officeShortage/officeGoal*100)):0,shortage:officeShortage,goal:officeGoal,universitySeekers,existing:offices,pipeline:pendingOffices}
   };
 }

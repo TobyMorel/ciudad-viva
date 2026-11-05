@@ -1,7 +1,23 @@
 {
-  "currentVersion": "0.272",
+  "currentVersion": "0.273",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.273",
+      "date": "2026-11-05",
+      "title": "Estacionamiento realista y economía por formación",
+      "roadmapPhase": 22,
+      "overallProgress": null,
+      "changes": [
+        "Los autos reservan la plaza libre más cercana de toda la red vial conectada y no comparten reservas durante la misma franja. Si no encuentran sitio, siguen circulando con un indicador de búsqueda hasta que una plaza se libera; al aparcar permanecen junto al destino mientras sus ocupantes caminan y vuelven al vehículo para salir. El modelo mantiene la misma escala que los autos en movimiento.",
+        "El panel de Tráfico muestra estacionamientos libres, tiempo medio de búsqueda, distancia media a pie y permanencia media. Los garajes municipales calculan ocupación e ingresos desde reservas simultáneas.",
+        "Los hogares eligen auto, bicicleta o caminata según ingreso y ahorro. La educación determina a qué vacantes pueden acceder: baja formación a fábricas, secundaria a comercios y estudios universitarios a oficinas.",
+        "Se agrega zonificación y modelo 3D de oficinas privadas, con puestos profesionales, salarios, ventas y demanda cuando faltan empleos universitarios.",
+        "La Economía permite configurar por separado impuestos a viviendas, comercios, fábricas y oficinas. Los hogares pagan las redes municipales; si acumulan tres facturas impagas pierden acceso y el municipio puede subsidiar la deuda desde la ficha de la vivienda.",
+        "Las mejoras funcionan en partidas Offline y LAN; se amplía el widget de demanda a oficinas y se detallan tasas, facturas y estacionamiento en la interfaz."
+      ],
+      "verification": "Comprobación rápida en Offline y servidor LAN: plazas distintas para llegadas simultáneas, reutilización en otra franja, búsqueda de plazas lejanas y circulación con indicador cuando no hay espacio; revisión de sintaxis JavaScript/Python y del formato. No se ejecutó la suite completa local."
+    },
     {
       "version": "0.272",
       "date": "2026-11-04",

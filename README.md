@@ -1,6 +1,8 @@
-# Ciudad Viva · Alfa 0.272
+# Ciudad Viva · Alfa 0.273
 
-**Jerarquía vial, estacionamiento y densidad urbana (0.272):** calles locales, avenidas, rutas regionales y autopistas tienen costos, velocidad, capacidad y mantenimiento distintos. Los viajes compiten por espacios de estacionamiento reales; los garajes municipales cobran por ocupación. Las reglas de sentido, carril de autobús y acceso de camiones cambian las rutas. Las zonas permiten elegir baja o alta densidad para viviendas, comercios e industrias.
+**Estacionamiento realista y economía por formación (0.273):** los autos reservan plazas libres cerca del destino, maniobran desde la calle, dejan pasajeros caminando y muestran cuándo buscan lugar; el informe agrega tiempos, caminata, permanencia y capacidad libre. El ingreso del hogar define si sus integrantes usan auto, bicicleta o van a pie. La formación conecta trabajadores con fábricas, comercios u oficinas privadas. El municipio puede ajustar cuatro impuestos sectoriales y subsidiar facturas de servicios vencidas.
+
+**Jerarquía vial, estacionamiento y densidad urbana (0.272):** las calles locales, avenidas, rutas regionales y autopistas tienen costos, velocidad, capacidad y mantenimiento distintos. Las reglas de sentido, carril de autobús y acceso de camiones cambian las rutas. Las zonas ofrecen densidad baja y alta para viviendas, comercios e industrias.
 
 
 # Ciudad Viva · Alfa 0.270

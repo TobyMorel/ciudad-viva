@@ -415,7 +415,7 @@ export function createWorld(canvas){
     for(;index<headlightLightPool.length;index++){headlightLightPool[index].visible=false;headlightLightPool[index].intensity=0}
   }
   const walkerModelPool=new Map(),bicycleModelPool=new Map(),vehicleModelPool=new Map();
-  const actorIdentity=a=>a.actorKey?`key:${a.actorKey}`:a.selection?`${a.selection.type}:${a.selection.title}:${(a.selection.people||[]).map(p=>p.id).join(',')}:${a.route?.map(p=>p.join(',')).join(';')||''}:${a.offset??''}`:a.route?.length?`route:${a.mesh.userData.vehicleModelKey||a.mesh.userData.walkerModelKey||a.selection?.type||'actor'}:${a.route.map(p=>p.join(',')).join(';')}:${a.offset??''}`:null;
+  const actorIdentity=a=>a.selection?`${a.selection.type}:${a.selection.title}:${(a.selection.people||[]).map(p=>p.id).join(',')}:${a.actorKey||''}:${a.offset??''}`:null;
   const sameRoute=(a,b)=>a?.length===b?.length&&a.every((point,index)=>point[0]===b[index][0]&&point[1]===b[index][1]);
   function projectRoutePhase(route,position,direction){
     const total=Math.max(TILE,(route.length-1)*TILE);let bestDistance=Infinity,bestAlong=0;

@@ -1,7 +1,20 @@
 {
-  "currentVersion": "0.292",
+  "currentVersion": "0.293",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.293",
+      "date": "2026-11-06",
+      "title": "Tránsito continuo, aves renovadas y lluvia sin neblina",
+      "overallProgress": null,
+      "changes": [
+        "Los vehículos conservan también su velocidad al reconstruirse la escena. La firma visual ya no fuerza una reconstrucción de todo el tránsito cuando solo cambian datos generales del estado, como economía o clima.",
+        "Gaviotas, palomas y gorriones ahora usan siluetas de alas, cola, pico, pecho y plumaje diferenciados, con animación de vuelo conservada.",
+        "La lluvia deja de teñir la niebla o aclarar el mundo; permanecen las gotas y los charcos.",
+        "Se eliminaron los montones de basura dibujados y avisos de residuos sobre tramos de calle. La simulación conserva la acumulación de residuos; el mapa la señala con el icono de recolección en edificios de la cuadra."
+      ],
+      "verification": "Revisión de cambios y coherencia de versión. No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.292",
       "date": "2026-11-06",

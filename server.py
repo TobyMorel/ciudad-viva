@@ -3209,8 +3209,7 @@ def calculate_waste_balance(advance=False,apply_effects=False):
         waste["scrapSteelTons"]=round(max(0,waste.get("scrapSteelTons",0))+recycled*.2,3)
     backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
     backlog=max(0,waste.get("uncollectedTons",0));stored=max(0,waste.get("landfillStoredTons",0))
-    roads=sorted(state.get("roads",[]),key=lambda p:(p[1],p[0]));pile_count=min(18,math.ceil(backlog/1.5))
-    litter_tiles=[list(roads[(i*max(1,len(roads)//max(1,pile_count)))%len(roads)]) for i in range(pile_count)] if roads and pile_count else []
+    litter_tiles=[]
     collected=waste.get("lastCollectionTons",0);recycled=waste.get("lastRecycledTonsDay",0)
     operating=round(trucks*160+len(landfills)*420+len(recyclers)*650+collected*30*7.5)
     recycling_income=round(recycled*30*18)

@@ -1,3 +1,7 @@
+## Alfa 0.293 · Tránsito continuo y vida silvestre renovada
+
+Se corrigió la restauración de velocidad al reconstruir actores y se evitó rehacer la escena completa por cambios de estado que no alteran objetos visibles. Las aves recibieron modelos 3D con alas, plumas, cola y rasgos propios de gaviotas, palomas y gorriones. La lluvia mantiene gotas y charcos sin aclarar la imagen ni teñir la niebla. La basura acumulada ya no aparece sobre las calles; los avisos de recolección se muestran con su icono sobre los edificios de la cuadra.
+
 ## Alfa 0.292 · Cámara fluida y marcadores alineados
 
 Las reconstrucciones de edificios, vegetación y escena se agrupan al terminar un gesto de cámara para evitar pausas durante el paneo y el zoom. La cámara se actualiza como máximo una vez por cuadro y el cálculo de LOD reutiliza su resultado. Los iconos de avisos se proyectan en lote, sin transición de posición, y siguen al edificio en cada cuadro.

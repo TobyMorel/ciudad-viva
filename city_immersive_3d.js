@@ -208,12 +208,40 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   boats.push({g,x,z,seed});return g;
  }
  function gull(parent,x,z,seed,species='gull'){
-  const g=place(parent,x,4.8,z),coast=species==='gull',cityGull=species==='city-gull',gullSpecies=coast||cityGull,urban=!gullSpecies,sparrow=species==='sparrow',body=sphere(g,sparrow?.085:urban?.105:.12,sparrow?'#987956':urban?'#89949a':'#faf6e6',0,0,0,1);body.scale.set(1,urban?.78:.7,urban?1.08:1.28);
-  sphere(g,.065,sparrow?'#bd8953':urban?'#b9bec0':'#edbf66',0,-.016,.15,1);
+  const g=place(parent,x,4.8,z),coast=species==='gull',cityGull=species==='city-gull',sparrow=species==='sparrow',pigeon=species==='pigeon';
+  const palette=coast?{body:'#f4f1e8',back:'#c4ccd0',wing:'#929da4',tip:'#41494c',breast:'#fff8e9',beak:'#dfa34c',neck:'#f7f4eb'}:
+   cityGull?{body:'#ecebe5',back:'#adb7ba',wing:'#7c898d',tip:'#536064',breast:'#f9f5e9',beak:'#d6a84e',neck:'#e8eee9'}:
+   sparrow?{body:'#a67c56',back:'#72543e',wing:'#806047',tip:'#5c4536',breast:'#d8b992',beak:'#c78c4e',neck:'#bf9164'}:
+   {body:'#7d8990',back:'#606d74',wing:'#69777e',tip:'#46535a',breast:'#aeb7b7',beak:'#b27c48',neck:'#4b827d'};
+  const body=sphere(g,.112,palette.body,0,0,0,2);body.scale.set(.78,.74,1.32);
+  const back=sphere(g,.092,palette.back,0,.035,-.035,2);back.scale.set(.82,.40,1.12);
+  const breast=sphere(g,.074,palette.breast,0,-.023,.102,2);breast.scale.set(.83,.80,.88);
+  sphere(g,sparrow?.070:.076,palette.body,0,.044,.145,2);
+  sphere(g,.045,palette.neck,0,.006,.108,1).scale.set(1,.58,.62);
   for(const sx of [-1,1]){
-   const wing=place(g,sx*.12,.02,0);
-   const plane=box(wing,sparrow?.27:urban?.34:.42,urban?.028:.035,urban?.14:.17,sparrow?'#806343':urban?'#777f84':'#f2f5ec',sx*(urban?.15:.19),0,0);
-   plane.rotation.z=sx*.1;
+   sphere(g,.013,'#262e31',sx*.058,.056,.171,1);
+   sphere(g,.004,'#fff9e8',sx*.064,.061,.174,1);
+  }
+  const beak=custom(g,new THREE.ConeGeometry(sparrow?.025:.032,sparrow?.095:.115,6),mat(palette.beak),0,.026,.225);beak.rotation.x=Math.PI/2;
+  // Cola corta, abierta en abanico, con plumas visibles desde arriba.
+  for(let i=-1;i<=1;i++){
+   const feather=custom(g,new THREE.ConeGeometry(.025,.19,5),mat(i===0?palette.back:palette.wing),i*.026,-.002,-.205);
+   feather.rotation.x=-Math.PI/2;feather.rotation.z=i*.22;
+  }
+  const wingLength=coast?.46:cityGull?.40:sparrow?.29:.34;
+  const wingShape=new THREE.Shape();wingShape.moveTo(0,-.045);wingShape.quadraticCurveTo(wingLength*.30,-.12,wingLength*.72,-.105);wingShape.lineTo(wingLength,.005);wingShape.quadraticCurveTo(wingLength*.72,.055,wingLength*.37,.082);wingShape.quadraticCurveTo(.08,.09,0,.045);wingShape.closePath();
+  const wingGeo=new THREE.ExtrudeGeometry(wingShape,{depth:.022,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.008,bevelThickness:.006});
+  const tipShape=new THREE.Shape();tipShape.moveTo(wingLength*.70,-.095);tipShape.lineTo(wingLength,-.003);tipShape.quadraticCurveTo(wingLength*.90,.035,wingLength*.69,.045);tipShape.closePath();
+  const tipGeo=new THREE.ExtrudeGeometry(tipShape,{depth:.026,bevelEnabled:false,steps:1});
+  for(const sx of [-1,1]){
+   const wing=place(g,sx*.052,.012,0);wing.scale.x=sx;
+   const panel=custom(wing,wingGeo,mat(palette.wing),0,0,0);panel.rotation.x=-Math.PI/2;
+   const tip=custom(wing,tipGeo,mat(palette.tip),0,0,.025);tip.rotation.x=-Math.PI/2;
+   // Marcas suaves en las alas ayudan a distinguir palomas, gaviotas y gorriones.
+   if(pigeon||sparrow){
+    const stripeShape=new THREE.Shape();stripeShape.moveTo(wingLength*.20,-.052);stripeShape.lineTo(wingLength*.48,-.072);stripeShape.lineTo(wingLength*.57,-.056);stripeShape.lineTo(wingLength*.29,-.035);stripeShape.closePath();
+    const stripe=custom(wing,new THREE.ShapeGeometry(stripeShape),mat(pigeon?'#a9b3ad':'#c49a6d'),0,0,.051);stripe.rotation.x=-Math.PI/2;
+   }
    const radiusX=coast?8+rnd(seed+91)*7:cityGull?4.3+rnd(seed+91)*2.8:sparrow?3.2+rnd(seed+91)*2.1:2.8+rnd(seed+91)*2.1,radiusZ=coast?4.5+rnd(seed+92)*5:cityGull?2.8+rnd(seed+92)*2.2:sparrow?2+rnd(seed+92)*1.5:1.8+rnd(seed+92)*1.6;
    wings.push({wing,g,sx,seed,x,z,kind:'bird',species,baseY:coast?5.15:cityGull?5.25:sparrow?4.45:4.75,radiusX,radiusZ,period:coast?32+rnd(seed+93)*24:20+rnd(seed+93)*18,phase:rnd(seed+94)*Math.PI*2});
   }
@@ -382,23 +410,6 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
     custom(g,new THREE.ConeGeometry(.125,.34,8),mat('#e99554'),sx,.22,.47);
     box(g,.19,.025,.19,'#e9dbb6',sx,.11,.47);
    }
-  }
-  for(const [i,l] of plan.issues.litter.entries()){
-   const [x,z]=point(l.x,l.y),g=place(layers.repairs,x,.09,z);
-   for(let j=0;j<4;j++){
-    const xx=-.69+j*.16,zz=.67+j%2*.12;
-    const bag=sphere(g,.11,['#586a5f','#88847c','#72847a'][j%3],xx,.12,zz,1);
-    bag.scale.y=.8;
-    box(g,.055,.062,.05,'#d4cbab',xx,.24,zz);
-    const paper=box(g,.15,.01,.085,'#f1dfb9',xx+.1,.025,zz+.16);
-    paper.rotation.y=j*.3+i;
-   }
-  }
-  for(const c of plan.issues.overflowing){
-   const [x,z]=point(c.x,c.y),g=place(layers.repairs,x,.04,z);
-   box(g,.43,.47,.34,'#4b7b76',.54,.32,.51);
-   box(g,.46,.085,.40,'#9aa9a4',.54,.58,.51);
-   for(let i=0;i<4;i++)sphere(g,.10,['#a19c83','#5e806d','#8d9b8a'][i%3],.29+i*.13,.15,.68+(i%2)*.08,1);
   }
   for(const [i,r] of plan.issues.utilities.entries()){
    const [x,z]=point(r.x,r.y),g=place(layers.repairs,x,0,z);
@@ -679,7 +690,7 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
    immersivePortSites:plan?.ports.length||0,immersiveBoats:boats.length,
    immersiveAnimalFigures:animals.length,immersiveBirdWings:wings.length,
    immersiveSchoolSites:plan?.schools.length||0,
-   immersiveRoadIssues:(plan?.issues.potholes.length||0)+(plan?.issues.litter.length||0),
+   immersiveRoadIssues:plan?.issues.potholes.length||0,
    immersiveRepairCrews:plan?.issues.utilities.length||0,
    immersiveFireHoses:waterDrops.length,
    immersiveAmbulanceScenes:plan?.emergencies.ambulances.filter(a=>a.arrived).length||0,

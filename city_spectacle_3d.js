@@ -265,15 +265,14 @@ export function createCitySpectacle3D({THREE,scene,camera,canvas,buildingModels,
   new THREE.MeshBasicMaterial({color:'#bd8951',side:THREE.DoubleSide,transparent:true,opacity:.76,depthWrite:false}),leavesCount);
  leaves.frustumCulled=false;leaves.visible=false;leaves.name='Hojas de estación 3D';weatherRoot.add(leaves);
  const dummy=new THREE.Object3D(),direction=new THREE.Vector3(),center=new THREE.Vector3();
- let lastLitBucket='',lastWeatherFrame=0;const fogRainColor=new THREE.Color('#b0c4ce');
+ let lastLitBucket='',lastWeatherFrame=0;
  function tick(delta,minutes,paused=false){
   if(!plan)return;
   frame++;if(!paused)clock+=Math.min(.1,delta||0);
   const hasRain=plan.rainMm>0;
   raindrops.visible=hasRain;leaves.visible=(plan.season==='otoño'||plan.season==='primavera')&&!hasRain;
-  scene.fog.near=hasRain?65:132;scene.fog.far=hasRain?Math.max(95,178-plan.rainMm*1.2):240;
-  if(hasRain)scene.fog.color.lerp(fogRainColor,.16);
-  else if(plan.season==='otoño'||plan.season==='invierno'){weatherTint.set(seasonalPalette[plan.season].sky);scene.background.lerp(weatherTint,.08)}
+  // La lluvia no altera la niebla global ni la exposición del mundo.
+  if(plan.season==='otoño'||plan.season==='invierno'){weatherTint.set(seasonalPalette[plan.season].sky);scene.background.lerp(weatherTint,.08)}
   if(frame-lastWeatherFrame>=3){
    lastWeatherFrame=frame;
    // Punto al que mira la cámara: evita que los efectos queden en el origen al mover el mapa.

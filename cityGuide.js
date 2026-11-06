@@ -67,17 +67,19 @@ export function collectCityAlerts(state){
   push(item('funeral','⚱️','Traslado funerario pendiente',`${d.name||'Residente fallecido'} · ${reason}`,
    `Construí un ${facility} municipal, asegurá una ruta desde este hogar y mantenelo dentro de su alcance. El coche fúnebre saldrá cuando haya cupo.`,d.homeX,d.homeY,d.deathDay,`funeral-${d.residentId}`,0));
  }
- for(const raw of state.waste?.report?.litterTiles||[]){
-  if(!raw)continue;
-  const x=Array.isArray(raw)?raw[0]:raw.x,y=Array.isArray(raw)?raw[1]:raw.y;
-  if(!site(x,y))continue;
-  push(item('litter','🗑','Basura acumulada en la calle','Hay residuos visibles sobre este tramo. No son materiales disponibles para construir.','Construí una base de recolección con camiones, calles conectadas y capacidad de disposición. Revisá los contenedores y las rutas en Ciudad → Servicios.',x,y,now,`litter-${x}-${y}`,1));
- }
- for(const c of state.waste?.containers||[]){
-  if(!c||!site(c.x,c.y))continue;
+ const alertedWasteBuildings=new Set();
+ const fullWasteContainers=(state.waste?.containers||[]).filter(c=>c&&site(c.x,c.y)).map(c=>({
+  container:c,fill:Math.max(0,Number(c.storedTons)||0)/Math.max(.15,Number(c.capacityTons)||2)
+ })).filter(x=>x.fill>=.75).sort((a,b)=>b.fill-a.fill);
+ for(const {container:c,fill} of fullWasteContainers){
   const capacity=Math.max(.15,Number(c.capacityTons)||2),stored=Math.max(0,Number(c.storedTons)||0);
-  if(stored<capacity*.75)continue;
-  push(item('waste','🗑','Contenedor casi lleno',`Residuos: ${stored.toFixed(2)} de ${capacity.toFixed(2)} toneladas.`,'Construí una base de recolección y verificá ruta, camiones, destino y presupuesto. Tocá la parcela para ver más detalles.',c.x,c.y,now,`container-${c.id||c.x+'-'+c.y}`,1));
+  const building=(state.buildings||[]).filter(b=>['home','shop','office','factory','hotel'].includes(b.kind)&&site(b.x,b.y))
+   .map(b=>({building:b,distance:Math.abs(b.x-c.x)+Math.abs(b.y-c.y)}))
+   .filter(x=>x.distance<=1&&!alertedWasteBuildings.has(`${x.building.x},${x.building.y}`))
+   .sort((a,b)=>a.distance-b.distance||a.building.x-b.building.x||a.building.y-b.building.y)[0]?.building;
+  if(!building)continue;
+  alertedWasteBuildings.add(`${building.x},${building.y}`);
+  push(item('waste','🗑','Recolección de residuos pendiente',`El contenedor de esta cuadra llegó al ${Math.round(fill*100)}% (${stored.toFixed(2)} de ${capacity.toFixed(2)} toneladas).`,'El aviso queda asociado a este edificio. Revisá la ruta de recolección, los camiones y la capacidad de destino en Ciudad → Servicios.',building.x,building.y,now,`container-${c.id||c.x+'-'+c.y}`,1));
  }
  for(const project of state.projects||[]){
   if(!site(project.x,project.y)||!['pausada','suspendida','cambio_pendiente'].includes(project.status))continue;

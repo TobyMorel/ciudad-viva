@@ -780,3 +780,8 @@ Los indicadores de clima y FPS usan dos filas fijas debajo de la barra del mapa;
 El cambio de zoom ya no invalida ni reconstruye edificios mientras se mueve la cámara. Las reconstrucciones de escena que coinciden con un gesto también se agrupan y se ejecutan al estabilizarse la cámara; el LOD de edificios se actualiza entonces y conserva el modelo actual mientras tanto. La regeneración de vegetación se limita durante movimientos continuos y se actualiza al estabilizar la cámara.
 
 Las coordenadas de avisos, cursores compartidos, paradas de transporte y etiquetas de barrios se proyectan en lotes, actualizando la cámara una sola vez por conjunto. Los avisos se recolocan en el siguiente frame y se eliminó la transición CSS de posición que los hacía quedar detrás del edificio.
+
+
+## Alfa 0.293 · continuidad de tránsito y presentación del clima
+
+La firma que decide reconstruir la escena debe depender de datos visuales concretos; el contador general de revisiones no se usa como invalidación porque también cambia por simulación económica y climática. Cuando un actor sí se reconstruye, conserva ruta, fase y velocidad previas para que su posición no salte. La lluvia no modifica la niebla ni la exposición global. El informe de residuos mantiene tonelajes y operación, pero `litterTiles` queda vacío en los motores Offline y servidor: los montones sobre la calzada se eliminaron; el aviso de recolección se asocia al edificio más cercano a un contenedor lleno.

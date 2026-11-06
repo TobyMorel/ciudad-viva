@@ -72,15 +72,10 @@ export function realStreetIssues(state){
  const potholes=(state?.roadAssets||[]).filter(r=>roads.has(key(r))&&N(r.quality??82)<65).map(r=>({
   x:r.x,y:r.y,quality:N(r.quality??82),closed:Boolean(r.accidentClosed)
  }));
- const litter=(state?.waste?.report?.litterTiles||[]).map(point).filter(Boolean).filter(p=>roads.has(key(p)));
- const overflowing=(state?.waste?.containers||[]).filter(c=>N(c.capacityTons)>0&&N(c.storedTons)/N(c.capacityTons)>.72).map(c=>({
-  x:c.x,y:c.y,fill:N(c.storedTons)/N(c.capacityTons)
- }));
  const utilities=(state?.utilities?.report?.failures||[]).filter(f=>
   ['en reparación','en reparacion','reparando','en curso'].includes(f.status)&&Number.isInteger(f.x)&&Number.isInteger(f.y))
   .map(f=>({x:f.x,y:f.y,kind:f.network||'cuadrilla',route:f.responseRoute||[]}));
- return {potholes:potholes.slice(0,55),litter:litter.slice(0,32),
-  overflowing:overflowing.slice(0,20),utilities:utilities.slice(0,16)};
+ return {potholes:potholes.slice(0,55),utilities:utilities.slice(0,16)};
 }
 export function realEmergencyScenes(state){
  const day=N(state?.day);

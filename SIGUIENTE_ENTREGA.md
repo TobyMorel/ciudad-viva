@@ -1,3 +1,7 @@
+## Alfa 0.292 · Cámara fluida y marcadores alineados
+
+Las reconstrucciones de edificios, vegetación y escena se agrupan al terminar un gesto de cámara para evitar pausas durante el paneo y el zoom. La cámara se actualiza como máximo una vez por cuadro y el cálculo de LOD reutiliza su resultado. Los iconos de avisos se proyectan en lote, sin transición de posición, y siguen al edificio en cada cuadro.
+
 ## Alfa 0.291 · HUD del mapa sin solapamientos
 
 Se separaron clima y FPS en una columna con posiciones propias, y se movió el panel de mensajes vecinales debajo de ambos. El ajuste mantiene la demanda en la esquina opuesta y adapta el panel al ancho disponible del mapa.

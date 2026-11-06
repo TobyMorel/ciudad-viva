@@ -1,7 +1,19 @@
 {
-  "currentVersion": "0.291",
+  "currentVersion": "0.292",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.292",
+      "date": "2026-11-06",
+      "title": "Cámara fluida e iconos alineados",
+      "overallProgress": null,
+      "changes": [
+        "El zoom deja de reconstruir toda la escena en cada cambio de nivel de detalle; los modelos y las actualizaciones de escena pendientes se agrupan al terminar el gesto de cámara.",
+        "La vegetación limita las reconstrucciones durante paneos y zooms continuos para evitar pausas repetidas.",
+        "Los iconos de edificios, cursores y marcadores de mapa se proyectan en lotes y se actualizan sin transición de posición, para que permanezcan junto a su ubicación al mover la cámara."
+      ],
+      "verification": "Revisión estática del código y coherencia de versión; no se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.291",
       "date": "2026-11-05",

@@ -10,7 +10,7 @@ const buttonAction=(action,label)=>'<button type="button" class="companion-actio
  (action.panel?' data-panel="'+safe(action.panel)+'"':'')+
  (Number.isFinite(action.x)?' data-x="'+action.x+'" data-y="'+action.y+'"':'')+'>'+safe(label)+'</button>';
 
-export function setupCityCompanion({getState,projectTile,onTool,onPanel,onFocus,onCelebrate,serviceModels={}}){
+export function setupCityCompanion({getState,projectTile,projectTiles,onTool,onPanel,onFocus,onCelebrate,serviceModels={}}){
  const launch=document.getElementById('cityCompanionButton'),canvas=document.getElementById('city'),wrap=document.querySelector('.world-wrap');
  if(!launch||!canvas||!wrap)return {refresh(){},gameReady(){},previewTool(){},previewTile(){},hidePreview(){},confirmPlanClick(){return false},updateMap(){}};
  const card=document.createElement('aside');
@@ -26,7 +26,7 @@ export function setupCityCompanion({getState,projectTile,onTool,onPanel,onFocus,
  wrap.append(preview);
  const control=document.getElementById('plannerToggle');
  const markers=document.createElement('div');markers.id='neighborhoodMarkers';markers.className='neighborhood-markers';markers.setAttribute('aria-label','Nombres de los barrios');wrap.append(markers);
- let active=false,tab='advice',labelsVisible=false,planning=false,pending=null,currentTool=null,currentModel=null,lastPreviewTile=null,lastPreviewSignature='',lastRendered='',seen=new Set(),ready=false;
+ let active=false,tab='advice',labelsVisible=false,planning=false,pending=null,currentTool=null,currentModel=null,lastPreviewTile=null,lastPreviewSignature='',lastRendered='',seen=new Set(),ready=false,districtSignature='',districtItems=[];
  const pane=card.querySelector('#cityCompanionContent');
  const sectionLabel=(text)=>'<p class="companion-note">'+safe(text)+'</p>';
  function stateSignature(){
@@ -180,16 +180,10 @@ export function setupCityCompanion({getState,projectTile,onTool,onPanel,onFocus,
   frame=requestAnimationFrame(()=>{
    frame=0;
    if(!labelsVisible)return;
-   const data=collectNeighborhoods(getState()),c=canvas.getBoundingClientRect(),w=wrap.getBoundingClientRect();
-   markers.replaceChildren();
-   for(const d of data){
-    const p=projectTile(d.x,d.y,2.5);
-    if(!p.visible)continue;
-    const button=document.createElement('button');button.type='button';button.className='neighborhood-marker';button.dataset.mapDistrict=d.id;
-    button.style.left=c.left-w.left+p.x+'px';button.style.top=c.top-w.top+p.y+'px';
-    button.textContent=d.name+' · '+fmt(d.population);
-    button.title=d.character+' · Ver barrio';markers.append(button);
-   }
+   const state=getState(),signature=`${state.stateRevision||0}:${state.day||0}:${state.population||0}:${(state.buildings||[]).length}`;
+   if(signature!==districtSignature){districtSignature=signature;districtItems=collectNeighborhoods(state);markers.replaceChildren();for(const d of districtItems){const button=document.createElement('button');button.type='button';button.className='neighborhood-marker';button.dataset.mapDistrict=d.id;button.textContent=d.name+' · '+fmt(d.population);button.title=d.character+' · Ver barrio';markers.append(button)}}
+   const c=canvas.getBoundingClientRect(),w=wrap.getBoundingClientRect(),points=projectTiles?projectTiles(districtItems.map(d=>({x:d.x,y:d.y,height:2.5}))):districtItems.map(d=>projectTile(d.x,d.y,2.5));
+   districtItems.forEach((d,index)=>{const p=points[index],button=markers.children[index];button.hidden=!p.visible;if(p.visible){button.style.left=c.left-w.left+p.x+'px';button.style.top=c.top-w.top+p.y+'px'}});
   });
  }
  window.addEventListener('resize',updateMap);

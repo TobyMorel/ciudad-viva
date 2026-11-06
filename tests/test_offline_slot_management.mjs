@@ -29,7 +29,7 @@ try{
 
  const page=await browser.newPage();await page.goto('http://127.0.0.1:18961/',{waitUntil:'domcontentloaded'});await page.evaluate(()=>new Promise((resolve,reject)=>{const request=indexedDB.deleteDatabase('ciudad-viva-partidas');request.onsuccess=resolve;request.onerror=()=>reject(request.error)}));await seedBackups(page,3);
  const capacity=await page.evaluate(async()=>{
-  const api=await import('/offline_slots.js?v=0.291'),created=[],errors=[];
+  const api=await import('/offline_slots.js?v=0.292'),created=[],errors=[];
   for(const id of ['backup-1','backup-2','backup-3'])try{created.push(await api.restoreOfflineBackup(id))}catch(error){errors.push(error.message)}
   const recovered=await api.listOfflineSlots();await api.deleteOfflineSlot(created[0].id);
   const afterDelete=await api.restoreOfflineBackup('backup-3'),after=await api.listOfflineSlots();

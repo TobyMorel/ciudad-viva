@@ -1,20 +1,20 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.291';
-import {setupCityCompanion} from './city-companion.js?v=0.291';
-import {setupCinematicCamera} from './city_cinema.js?v=0.291';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.291';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.291';
-import {createWorld} from './world3d.js?v=0.291';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.291';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.291';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.291';
-import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.291';
-import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.291';
-import {growthDemand} from './growth_demand.js?v=0.291';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.292';
+import {setupCityCompanion} from './city-companion.js?v=0.292';
+import {setupCinematicCamera} from './city_cinema.js?v=0.292';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.292';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.292';
+import {createWorld} from './world3d.js?v=0.292';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.292';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.292';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.292';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.292';
+import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.292';
+import {growthDemand} from './growth_demand.js?v=0.292';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.291';
-import {ROAD_TYPES} from './road_network.js?v=0.291';
-import {geotechnicalEstimate} from './land_survey.js?v=0.291';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.292';
+import {ROAD_TYPES} from './road_network.js?v=0.292';
+import {geotechnicalEstimate} from './land_survey.js?v=0.292';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -64,7 +64,7 @@ let companion=null,cinema=null,lifeUI=null;
 let sharedCursors=[],ownCursor=null,cursorDirty=false,cursorSending=false,cursorReading=false,lastCursorSample=0,lastCursorSent=0,lastCursorView='',cursorOverCanvas=false,cursorAnimationFrame=0,lastCursorFrame=0,cursorStream=null,cursorRevision=-1;
 // Render in map coordinates so camera movements do not add a second visual delay.
 function renderSharedCursors(){
- const bounds=canvas.getBoundingClientRect(),seen=new Set();
+ const bounds=canvas.getBoundingClientRect(),seen=new Set(),entries=[];
  for(const cursor of gameMode==='online'?sharedCursors:[]){
   const x=Number(cursor.x),y=Number(cursor.y);if(!Number.isFinite(x)||!Number.isFinite(y))continue;
   let motion=sharedCursorPositions.get(cursor.id);if(!motion){motion={x,y,targetX:x,targetY:y};sharedCursorPositions.set(cursor.id,motion)}
@@ -77,10 +77,10 @@ function renderSharedCursors(){
   const label=`${cursor.name||'Jugador'} · ${Math.floor(x)+1},${Math.floor(y)+1}`;
   const name=marker.querySelector('b');
   if(name.textContent!==label)name.textContent=label;
-  const point=world.projectTile(motion.x-.5,motion.y-.5,.2);marker.hidden=!point.visible;
-  if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}
-  seen.add(cursor.id);
+  entries.push({cursor,motion,marker});seen.add(cursor.id);
  }
+ const points=world.projectTiles(entries.map(({motion})=>({x:motion.x-.5,y:motion.y-.5,height:.2})));
+ entries.forEach(({marker},index)=>{const point=points[index];marker.hidden=!point.visible;if(point.visible){marker.style.left=`${bounds.left+point.x}px`;marker.style.top=`${bounds.top+point.y}px`}});
  for(const [id,marker] of sharedCursorNodes)if(!seen.has(id)){marker.remove();sharedCursorNodes.delete(id);sharedCursorPositions.delete(id)}
 }
 function animateSharedCursors(now){
@@ -204,7 +204,7 @@ const SERVICE_MODELS={
 };
 companion=setupCityCompanion({
  getState:()=>S,serviceModels:SERVICE_MODELS,
- projectTile:(x,y,height)=>world.projectTile(x,y,height),
+ projectTile:(x,y,height)=>world.projectTile(x,y,height),projectTiles:points=>world.projectTiles(points),
  onTool:(kind,model)=>{const button=[...document.querySelectorAll('.tool')].find(b=>b.dataset.tool===kind&&(!model||b.dataset.model===model));if(button)button.click();else showToast('No se encontró esa herramienta en el catálogo.')},
  onPanel:panel=>document.querySelector('.game-dock [data-popup="'+panel+'"]')?.click(),
  onFocus:(x,y)=>{selected={x,y};selectedActor=null;zoom=Math.max(zoom,1.6);const p=world.focusTile(x,y,viewParams());panX=p.panX;panY=p.panY;draw()},
@@ -511,8 +511,8 @@ function cadastralUse(x,y){const b=(S?.buildings||[]).find(q=>q.x===x&&q.y===y),
 function showLandUnlock(plot){const cost=plot.unlockable?`$ ${nfmt(plot.cost)}`:'Desbloqueá primero un sector vecino';ui.selection.innerHTML=`<div class="land-unlock-card"><span class="eyebrow">🗺️ NUEVO TERRENO · SECTOR ${plot.chunkX}, ${plot.chunkY}</span><h3>🔒 Zona construible bloqueada</h3><p>Este sector contiene ${plot.chunkSize*plot.chunkSize} parcelas nuevas. El mapa se genera en todas las direcciones y no tiene un borde final; cada expansión se guarda con la ciudad.</p><div class="detail-grid"><div><span>Desbloqueo</span><b>${cost}</b></div><div><span>Tamaño</span><b>${plot.chunkSize} × ${plot.chunkSize} parcelas</b></div><div><span>Estado</span><b>${plot.unlockable?'Conectado a tu territorio':'Requiere conexión vecina'}</b></div></div>${plot.unlockable?`<button class="primary-action" data-unlock-land data-chunk-x="${plot.chunkX}" data-chunk-y="${plot.chunkY}">Desbloquear por $ ${nfmt(plot.cost)}</button>`:'<small>Desbloqueá el candado de un sector que toque tu terreno actual para continuar expandiéndote.</small>'}</div>`}
 function viewParams(){return {trafficOverlay,environmentOverlay,zoneSuitability:zoneSuitabilityVisible,zoom,panX,panY,rotation,servicePreview:toolVariant&&SERVICE_MODELS[toolVariant]&&hoverServiceTile?{...hoverServiceTile,serviceModel:toolVariant}:null,utilityLayer:tool==='powerLine'?'power':tool==='waterPipe'?'water':tool==='sewerLine'?'sewer':tool==='drainLine'?'drainage':tool==='gasLine'?'gas':tool==='telecomLine'?'telecom':null}}
 function draw(){if(S){const demand=zoneSuitabilityVisible?growthDemand(S):null,displayState={...S,projects:S.projects?.length?S.projects.map(p=>({...p,progress:visualProjectProgress(p,S.timeOfDayMinutes)})):S.projects,zones:zoneSuitabilityVisible?(S.zones||[]).map(z=>({...z,suitability:zoneSuitabilityScore(z,S,demand)})):S.zones};world.sync(displayState,selected,viewParams());updateSoundscape(S);renderAlertMarkers();renderBusRouteMarkers();renderSharedCursors();companion?.updateMap();if(trafficOverlay)renderTrafficPanel()}}
-let alertProjectionFrame=0;
-function setCameraView(){world.setView(viewParams());alertProjectionDirty=true;if(alertProjectionFrame)return;alertProjectionFrame=requestAnimationFrame(()=>{alertProjectionFrame=0;renderAlertMarkers();renderBusRouteMarkers();renderSharedCursors();companion?.updateMap()})}
+let alertProjectionFrame=0,alertMarkerRefreshTimer=0;
+function setCameraView(){world.setView(viewParams());alertProjectionDirty=true;clearTimeout(alertMarkerRefreshTimer);alertMarkerRefreshTimer=setTimeout(()=>renderAlertMarkers(),210);if(alertProjectionFrame)return;alertProjectionFrame=requestAnimationFrame(()=>{alertProjectionFrame=0;syncAlertMarkerPositions();renderBusRouteMarkers();renderSharedCursors();companion?.updateMap()})}
 function screenToTile(px,py){return world.screenToTile(px,py)}
 function isTrafficIntersection(x,y){if(!S?.roads?.some(r=>r[0]===x&&r[1]===y))return false;return [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>S.roads.some(r=>r[0]===x+dx&&r[1]===y+dy)).length>=3}
 function showTrafficSignalSelection(x,y){const k=`${x},${y}`,enabled=(S.trafficSignalOverrides||{})[k]!==false;ui.selection.innerHTML=`<span class="eyebrow">🚦 GESTIÓN DEL TRÁNSITO</span><h2>Intersección ${x+1} · ${y+1}</h2><p>${enabled?'El semáforo está instalado y regula el paso de los vehículos.':'Este cruce no tiene semáforo; los vehículos lo atraviesan con prioridad compartida.'} Podés cambiarlo cuando quieras.</p><div class="detail-grid"><div><span>Estado</span><b>${enabled?'Semáforo activo':'Sin semáforo'}</b></div><div><span>Costo</span><b>Sin costo de instalación</b></div></div><button class="primary-action" data-toggle-traffic-signal data-x="${x}" data-y="${y}">${enabled?'🚫 Retirar semáforo':'🚦 Instalar semáforo'}</button>`}
@@ -521,7 +521,7 @@ function terrain(x,y){const v=(Math.sin(x*.47+y*.19)+Math.cos(y*.42-x*.17)+Math.
 const markerLayer=document.getElementById('cityAlertMarkers'),markerSummary=document.getElementById('alertCounter');
 const citizenInbox=document.getElementById('citizenInbox');let citizenInboxSignature='',citizenInboxCollapsed=false;const dismissedCitizenAlerts=new Set();
 const busRouteComposer=document.getElementById('busRouteComposer'),busRouteMarkers=document.getElementById('busRouteMarkers');
-function renderBusRouteMarkers(){if(!busRouteMarkers)return;busRouteMarkers.replaceChildren();busRouteMarkers.hidden=!busRouteDraft;if(!busRouteDraft||!S)return;const canvasRect=canvas.getBoundingClientRect(),wrapRect=document.querySelector('.world-wrap').getBoundingClientRect();busRouteDraft.stops.forEach(([x,y],index)=>{const point=world.projectTile(x,y,.35);if(!point.visible)return;const pin=document.createElement('span');pin.className=`bus-route-marker${busRouteDraft.kind==='taxi'?' taxi-route-marker':''}`;pin.textContent=String(index+1);pin.style.left=`${canvasRect.left-wrapRect.left+point.x}px`;pin.style.top=`${canvasRect.top-wrapRect.top+point.y}px`;busRouteMarkers.append(pin)})}
+function renderBusRouteMarkers(){if(!busRouteMarkers)return;busRouteMarkers.replaceChildren();busRouteMarkers.hidden=!busRouteDraft;if(!busRouteDraft||!S)return;const canvasRect=canvas.getBoundingClientRect(),wrapRect=document.querySelector('.world-wrap').getBoundingClientRect(),stops=busRouteDraft.stops,points=world.projectTiles(stops.map(([x,y])=>({x,y,height:.35})));stops.forEach((_,index)=>{const point=points[index];if(!point.visible)return;const pin=document.createElement('span');pin.className=`bus-route-marker${busRouteDraft.kind==='taxi'?' taxi-route-marker':''}`;pin.textContent=String(index+1);pin.style.left=`${canvasRect.left-wrapRect.left+point.x}px`;pin.style.top=`${canvasRect.top-wrapRect.top+point.y}px`;busRouteMarkers.append(pin)})}
 
 function renderBusRouteComposer(){if(!busRouteComposer)return;busRouteComposer.hidden=!busRouteDraft;if(!busRouteDraft)return;const count=busRouteDraft.stops.length;const taxi=busRouteDraft.kind==='taxi';busRouteComposer.innerHTML=`<b>${taxi?'🚕 Diseñando circuito':'🚌 Diseñando línea'} · depósito ${busRouteDraft.x+1},${busRouteDraft.y+1}</b><span>${count} ${count===1?'parada marcada':'paradas marcadas'} · tocá calles en orden · ${taxi?'$220':'$350'} por parada</span>${taxi?'':`<label>Flota <select data-bus-draft-fleet aria-label="Colectivos de la línea">${[1,2,3].map(n=>`<option value="${n}" ${busFleetCount===n?'selected':''}>${n}</option>`).join('')}</select></label>`}<div><button data-bus-draft="undo" ${count?'':'disabled'}>Deshacer</button><button data-bus-draft="cancel">Cancelar</button><button data-bus-draft="finish" ${count>=2?'':'disabled'}>${taxi?'Asignar taxi':'Inaugurar línea'}</button></div>`}
 busRouteComposer?.addEventListener('change',e=>{if(e.target.matches('[data-bus-draft-fleet]'))busFleetCount=+e.target.value||1});
@@ -563,12 +563,12 @@ function renderCitizenInbox(){
 }
 function renderAlertMarkers(){
  if(!S||!markerLayer)return;
- cityAlerts=cityAlertCards();const retained=new Set(),existing=new Map([...markerLayer.children].map(node=>[node.dataset.cityAlertTile,node]));
- for(const group of groupAlertsByTile(cityAlerts)){
+ cityAlerts=cityAlertCards();const retained=new Set(),existing=new Map([...markerLayer.children].map(node=>[node.dataset.cityAlertTile,node])),groups=groupAlertsByTile(cityAlerts),positions=world.projectTiles(groups.map(group=>{const alert=group.items.slice().sort((a,b)=>a.priority-b.priority||Number(b.kind==='service')-Number(a.kind==='service'))[0],roadAlert=['litter','waste','road','traffic'].includes(alert.kind)&&!S.buildings?.some(b=>b.x===group.x&&b.y===group.y);return{x:group.x,y:group.y,height:roadAlert?.42:1.75}}));
+ groups.forEach((group,index)=>{
   const alert=group.items.slice().sort((a,b)=>a.priority-b.priority||Number(b.kind==='service')-Number(a.kind==='service'))[0];
   const roadAlert=['litter','waste','road','traffic'].includes(alert.kind)&&!S.buildings?.some(b=>b.x===group.x&&b.y===group.y);
-  const pos=world.projectTile(group.x,group.y,roadAlert?.42:1.75);
-  if(!pos?.visible)continue;
+  const pos=positions[index];
+  if(!pos?.visible)return;
   let button=existing.get(group.key);
   if(!button){button=document.createElement('button');button.type='button';button.dataset.cityAlertTile=group.key;markerLayer.append(button)}
   button.dataset.cityAlertX=group.x;button.dataset.cityAlertY=group.y;button.dataset.cityAlertHeight=roadAlert?.42:1.75;button.hidden=false;button.style.visibility='visible';
@@ -577,17 +577,16 @@ function renderAlertMarkers(){
   button.textContent=alert.icon;button.title=group.items.length>1?`${alert.title} · ${group.items.length} avisos en esta parcela`:alert.title;
   button.setAttribute('aria-label',group.items.length>1?`${group.items.length} avisos en parcela ${group.x+1}, ${group.y+1}. ${alert.title}`:alert.title+', parcela '+(group.x+1)+', '+(group.y+1));
   button.style.left=pos.x+'px';button.style.top=pos.y+'px';retained.add(group.key);
- }
+ });
  for(const node of [...markerLayer.children])if(!retained.has(node.dataset.cityAlertTile))node.remove();
 }
 setInterval(renderAlertMarkers,3500);
 let alertProjectionDirty=true;
 function syncAlertMarkerPositions(){
  if(!markerLayer||!S||!alertProjectionDirty)return;alertProjectionDirty=false;
- for(const button of markerLayer.children){const pos=world.projectTile(Number(button.dataset.cityAlertX),Number(button.dataset.cityAlertY),Number(button.dataset.cityAlertHeight)||1.75);button.style.visibility=pos?.visible?'visible':'hidden';if(pos?.visible){button.style.left=pos.x+'px';button.style.top=pos.y+'px'}}
+ const buttons=[...markerLayer.children],positions=world.projectTiles(buttons.map(button=>({x:Number(button.dataset.cityAlertX),y:Number(button.dataset.cityAlertY),height:Number(button.dataset.cityAlertHeight)||1.75})));
+ buttons.forEach((button,index)=>{const pos=positions[index];button.style.visibility=pos?.visible?'visible':'hidden';if(pos?.visible){button.style.left=pos.x+'px';button.style.top=pos.y+'px'}})
 }
-function followCameraAlertMarkers(){syncAlertMarkerPositions();requestAnimationFrame(followCameraAlertMarkers)}
-requestAnimationFrame(followCameraAlertMarkers);
 function renderAlertsPanel(){
  if(!S)return;
  const list=cityAlertCards();

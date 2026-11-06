@@ -773,3 +773,10 @@ Se volvió al `WebGLRenderer` clásico como renderer activo, igual que antes del
 ## Alfa 0.291 · Posiciones del HUD
 
 Los indicadores de clima y FPS usan dos filas fijas debajo de la barra del mapa; el panel de avisos vecinales empieza debajo de ellas y limita su tamaño en pantallas pequeñas. Así se evita que sus áreas transparentes o niveles de apilado oculten el FPS.
+
+
+## Alfa 0.292 · cámara, LOD y marcadores
+
+El cambio de zoom ya no invalida ni reconstruye edificios mientras se mueve la cámara. Las reconstrucciones de escena que coinciden con un gesto también se agrupan y se ejecutan al estabilizarse la cámara; el LOD de edificios se actualiza entonces y conserva el modelo actual mientras tanto. La regeneración de vegetación se limita durante movimientos continuos y se actualiza al estabilizar la cámara.
+
+Las coordenadas de avisos, cursores compartidos, paradas de transporte y etiquetas de barrios se proyectan en lotes, actualizando la cámara una sola vez por conjunto. Los avisos se recolocan en el siguiente frame y se eliminó la transición CSS de posición que los hacía quedar detrás del edificio.

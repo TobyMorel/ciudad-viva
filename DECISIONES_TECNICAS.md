@@ -785,3 +785,8 @@ Las coordenadas de avisos, cursores compartidos, paradas de transporte y etiquet
 ## Alfa 0.293 · continuidad de tránsito y presentación del clima
 
 La firma que decide reconstruir la escena debe depender de datos visuales concretos; el contador general de revisiones no se usa como invalidación porque también cambia por simulación económica y climática. Cuando un actor sí se reconstruye, conserva ruta, fase y velocidad previas para que su posición no salte. La lluvia no modifica la niebla ni la exposición global. El informe de residuos mantiene tonelajes y operación, pero `litterTiles` queda vacío en los motores Offline y servidor: los montones sobre la calzada se eliminaron; el aviso de recolección se asocia al edificio más cercano a un contenedor lleno.
+
+
+## Alfa 0.294 · paneles, entrada y dibujo vial
+
+Los paneles informativos muestran un resumen por defecto y mantienen los controles detallados en una sección desplegable. Los informes municipales resumen primero sus indicadores principales y preservan el estado abierto de sus detalles cuando se actualizan. Los tramos aislados reciben marcas viales al dibujarse; las intersecciones conservan el borde de vereda. Se retiraron actores de entrada sin viaje persistente y señalización provisional sobre la ruta exterior.

@@ -1,6 +1,10 @@
+## Alfa 0.294 · Paneles compactos y entrada vial despejada
+
+Los informes y paneles priorizan resúmenes legibles con datos completos bajo demanda. El acceso exterior deja más carretera visible, ya no tiene los carteles provisionales ni los tres autos en circuito; las esquinas de las calles conservan veredas y las marcas aparecen al colocar cada tramo.
+
 ## Alfa 0.293 · Tránsito continuo y vida silvestre renovada
 
-Se corrigió la restauración de velocidad al reconstruir actores y se evitó rehacer la escena completa por cambios de estado que no alteran objetos visibles. Las aves recibieron modelos 3D con alas, plumas, cola y rasgos propios de gaviotas, palomas y gorriones. La lluvia mantiene gotas y charcos sin aclarar la imagen ni teñir la niebla. La basura acumulada ya no aparece sobre las calles; los avisos de recolección se muestran con su icono sobre los edificios de la cuadra.
+Se corrigió la restauración de velocidad al reconstruir actores. Las aves recibieron modelos 3D con alas y plumaje diferenciados; la lluvia dejó de aclarar la imagen y los avisos de basura pasaron a los edificios cercanos.
 
 ## Alfa 0.292 · Cámara fluida y marcadores alineados
 

@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.293",
+  "currentVersion": "0.294",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.294",
+      "date": "2026-11-06",
+      "title": "Paneles compactos y entrada vial despejada",
+      "overallProgress": null,
+      "changes": [
+        "Los paneles abren con un resumen conciso; los detalles, métricas y controles completos quedan disponibles al desplegarlos. Las categorías municipales ahora usan cuadrícula y el catálogo mantiene texto legible con menos espacio desperdiciado.",
+        "El panel de tráfico muestra primero cuatro datos clave y conserva las métricas de estacionamiento y horarios en una sección desplegable.",
+        "Se acortó el túnel de entrada para dejar visibles dos tramos de carretera exterior y se retiraron los dos carteles provisionales que sobresalían sobre la ruta.",
+        "Se eliminaron los tres vehículos iniciales que recorrían indefinidamente el mismo circuito sin un destino real.",
+        "Los cruces conservan aceras en las esquinas sin conexión y las calles aisladas muestran sus líneas y bordillos desde el primer dibujo."
+      ],
+      "verification": "No se ejecutaron pruebas automatizadas."
+    },
     {
       "version": "0.293",
       "date": "2026-11-06",

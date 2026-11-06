@@ -160,7 +160,8 @@ export function createWorld(canvas){
   let infiniteGroundOffset={x:0,z:0};const infiniteGround=[plane(staticRoot,40000,40000,mat('#8dbb7b'),0,-.24,0),plane(staticRoot,40000,40000,new THREE.MeshStandardMaterial({map:grassTex,roughness:1}),0,-.16,0)];
   const gatewayTunnel=new THREE.Group();gatewayTunnel.position.set(4*TILE,0,10.5*TILE);staticRoot.add(gatewayTunnel);
   // La boca recorre desde el inicio de la carretera exterior hasta la misma entrada urbana.
-  const tunnelStart=-4*TILE,tunnelEnd=.30,tunnelLength=tunnelEnd-tunnelStart,tunnelCenter=(tunnelStart+tunnelEnd)/2,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
+  // Dejá visibles dos tramos de la ruta exterior antes de entrar al túnel.
+  const tunnelStart=-2*TILE,tunnelEnd=.30,tunnelLength=tunnelEnd-tunnelStart,tunnelCenter=(tunnelStart+tunnelEnd)/2,tunnelRoof=box(gatewayTunnel,tunnelLength,.34,2.32,'#b7ad95',tunnelCenter,2.02,0,{cast:true});
   box(gatewayTunnel,tunnelLength,.07,1.98,'#4c5754',tunnelCenter,1.82,0,{cast:false});
   for(const z of [-1.08,1.08]){box(gatewayTunnel,tunnelLength,2,.28,'#978f7c',tunnelCenter,.91,z,{cast:true});box(gatewayTunnel,tunnelLength,.13,.34,'#c0b59a',tunnelCenter,1.88,z,{cast:false})}
   box(gatewayTunnel,.24,2.25,2.16,'#172629',.12,1.05,0,{cast:false});
@@ -474,9 +475,9 @@ export function createWorld(canvas){
     const asphalt=environmentalRoadColor(environmentIndex)||(view.trafficOverlay?(stress>.8?'#c64e48':stress>.45?'#e88b48':stress>.2?'#e7be58':'#55af82'):COLORS.road);
     const roadDegreeAt=(tx,ty)=>[[0,-1],[0,1],[-1,0],[1,0]].reduce((sum,[dx,dy])=>sum+Number(roads.has(key(tx+dx,ty+dy))),0);
     box(root,STREET_SECTION.walk,.055,STREET_SECTION.walk,COLORS.walk,cx,.006,cz,{cast:false});
-    // El centro del cruce se pavimenta de lado a lado para que las esquinas de
-    // las aceras no queden dibujadas encima de la calzada al conectar ramales.
-    const centerRoadWidth=degree>=3?STREET_SECTION.walk:STREET_SECTION.asphalt;
+    // Conservá el borde de vereda en las esquinas sin calle conectada.
+    // Los brazos conectados prolongan el asfalto hasta el centro del cruce.
+    const centerRoadWidth=STREET_SECTION.asphalt;
     box(root,centerRoadWidth,.052,centerRoadWidth,asphalt,cx,.052,cz,{cast:false});
     const paintLanes=(mx,mz,horizontal,length,parkingBays)=>{
       const mark=(side,width,color,yLevel=.083)=>addRoadMark(root,horizontal?length:width,.008,horizontal?width:length,color,mx+(horizontal?0:side),yLevel,mz+(horizontal?side:0));
@@ -505,6 +506,8 @@ export function createWorld(canvas){
       paintLanes(sx,zs,horizontal,length,degree===2&&neighborDegree===2&&straightCurrent&&straightNeighbor);
       if(asset?.busLane){const bx=sx+(horizontal?0:-.57),bz=zs+(horizontal?-.57:0);addRoadMark(root,horizontal?length:.055,.018,horizontal?.055:length,'#58b99a',bx,.087,bz)}
     }
+    // Una calle aislada también muestra carriles, separadores y bordillos desde que se coloca.
+    if(degree===0)paintLanes(cx,cz,true,TILE*.88,false);
     if(asset?.busLane)addRoadMark(root,.78,.025,.055,'#58b99a',cx,.087,cz);
     if(asset?.oneWay){const vectors={east:[1,0,0],west:[-1,0,Math.PI],north:[0,-1,Math.PI/2],south:[0,1,-Math.PI/2]},[dx,dz,rotation]=vectors[asset.oneWay]||vectors.east;for(let j=-1;j<=1;j++){const ax=cx+j*.38*dx,az=cz+j*.38*dz;addRoadMark(root,.24,.014,.045,'#f2d279',ax,.091,az,rotation);addRoadMark(root,.11,.014,.04,'#f2d279',ax+Math.cos(rotation)*.065,.091,az-Math.sin(rotation)*.065,rotation+Math.PI/4);addRoadMark(root,.11,.014,.04,'#f2d279',ax+Math.cos(rotation)*.065,.091,az-Math.sin(rotation)*.065,rotation-Math.PI/4)}}
     if(degree>=3){
@@ -1200,7 +1203,6 @@ export function createWorld(canvas){
   function addSelection(root,chosen){if(!chosen)return;const [x,z]=tilePos(chosen.x,chosen.y);const fill=plane(root,1.92,1.92,mat('#fff5ad',{transparent:true,opacity:.24,depthWrite:false}),x,.11,z);fill.renderOrder=5;line(root,[[x-.98,.13,z-.98],[x+.98,.13,z-.98],[x+.98,.13,z+.98],[x-.98,.13,z+.98],[x-.98,.13,z-.98]],'#fff0a3',1);for(const [dx,dz] of [[-.96,-.96],[.96,-.96],[-.96,.96],[.96,.96]]){roundedBox(root,.17,.055,.17,'#fff0a3',x+dx,.14,z+dz,.025);sphere(root,.055,'#f7d579',x+dx,.2,z+dz,2)}}
   function shortestPath(roads,start){const queue=[start],seen=new Map([[start,null]]);for(let i=0;i<queue.length;i++){const k=queue[i],p=k.split(',').map(Number);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const next=key(p[0]+dx,p[1]+dy);if(roads.has(next)&&!seen.has(next)){seen.set(next,k);queue.push(next)}}}return {last:queue.at(-1),seen}}
   function buildRoute(roads){const keys=[...roads];if(keys.length<2)return [];const first=shortestPath(roads,keys[0]).last,{last,seen}=shortestPath(roads,first),out=[];for(let k=last;k!=null;k=seen.get(k)){const [x,y]=k.split(',').map(Number);out.push(tilePos(x,y))}return out.reverse()}
-  function cityEntryRoute(roads){const start=key(4,10);if(!roads.has(start))return [[4,10]];const queue=[start],previous=new Map([[start,null]]),distance=new Map([[start,0]]);for(let i=0;i<queue.length;i++){const current=queue[i],[x,y]=current.split(',').map(Number);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const next=key(x+dx,y+dy);if(roads.has(next)&&!previous.has(next)){previous.set(next,current);distance.set(next,distance.get(current)+1);queue.push(next)}}}const targets=[...distance.keys()].filter(k=>k!==start).sort((a,b)=>distance.get(b)-distance.get(a)||a.localeCompare(b));const target=targets[0]||start,path=[];for(let k=target;k;k=previous.get(k)){const [x,y]=k.split(',').map(Number);path.push([x,y])}return path.reverse()}
 
   function vehicleFinish(g,style){
     const hub=(x,z,y,r)=>{const h=cylinder(g,r*.46,r*.46,.026,'#c5c9b9',x,y,z,12);h.rotation.z=Math.PI/2;ring(g,r*.48,.012,'#e0c98b',x+(x<0?-.019:.019),y,z,{rotationY:Math.PI/2})};
@@ -1612,7 +1614,7 @@ export function createWorld(canvas){
       }
       for(const offset of [-1,1])cylinder(dynamicRoot,.17,.23,.42,'#7b8c87',cx+offset,-.19,cz,10);
     }
-    if(state.newSettlement){const externalRoads=new Set([...roads,...Array.from({length:4},(_,i)=>key(i,10))]);for(let x=0;x<4;x++)addRoad(dynamicRoot,x,10,externalRoads,0,false);const [ax,az]=tilePos(4,10);for(const dx of [-.58,.58]){box(dynamicRoot,.08,.52,.08,'#4b5755',ax+dx,.27,az+.04);box(dynamicRoot,.78,.07,.11,'#375e68',ax+dx*1.35,.57,az+.04);box(dynamicRoot,.53,.035,.12,'#e6d7b6',ax+dx*1.35,.62,az+.04)}}for(const a of (state.roadAssets||[]).filter(a=>(a.quality??82)<25||a.accidentClosed)){const [cx,cz]=tilePos(a.x,a.y);box(dynamicRoot,1.48,.24,.2,'#fbefe4',cx,.3,cz,{cast:true});for(const dx of [-.55,-.27,0,.27,.55]){const stripe=box(dynamicRoot,.16,.25,.22,dx===0?'#ed8e53':'#cd5c59',cx+dx,.3,cz,{cast:false});stripe.rotation.z=-.2}for(const dx of [-.57,.57]){box(dynamicRoot,.085,.42,.085,'#777783',cx+dx,.23,cz);cylinder(dynamicRoot,.12,.12,.065,'#e69a4f',cx+dx,.51,cz,9)} }
+    if(state.newSettlement){const externalRoads=new Set([...roads,...Array.from({length:4},(_,i)=>key(i,10))]);for(let x=0;x<4;x++)addRoad(dynamicRoot,x,10,externalRoads,0,false)}for(const a of (state.roadAssets||[]).filter(a=>(a.quality??82)<25||a.accidentClosed)){const [cx,cz]=tilePos(a.x,a.y);box(dynamicRoot,1.48,.24,.2,'#fbefe4',cx,.3,cz,{cast:true});for(const dx of [-.55,-.27,0,.27,.55]){const stripe=box(dynamicRoot,.16,.25,.22,dx===0?'#ed8e53':'#cd5c59',cx+dx,.3,cz,{cast:false});stripe.rotation.z=-.2}for(const dx of [-.57,.57]){box(dynamicRoot,.085,.42,.085,'#777783',cx+dx,.23,cz);cylinder(dynamicRoot,.12,.12,.065,'#e69a4f',cx+dx,.51,cz,9)} }
     flushRoadMarks(dynamicRoot);
     if(view.utilityLayer){const networkKey={power:'powerLines',water:'waterPipes',sewer:'sewerLines',drainage:'drainLines',gas:'gasLines',telecom:'telecomLines'}[view.utilityLayer],points=state.utilities?.[networkKey]||[],set=new Set(points.map(([x,y])=>key(x,y))),color={power:'#f0bd4e',water:'#42a9c2',sewer:'#a88bd3',drainage:'#4e9eb9',gas:'#e28b43',telecom:'#a458d4'}[view.utilityLayer];for(const [x,y] of points){const [cx,cz]=tilePos(x,y);for(const [dx,dy] of [[1,0],[0,1]])if(set.has(key(x+dx,y+dy))){const [nx,nz]=tilePos(x+dx,y+dy);rodBetween(dynamicRoot,[cx,.16,cz],[nx,.16,nz],.018,color,8);ring(dynamicRoot,.046,.01,color,cx,.17,cz)}sphere(dynamicRoot,.07,color,cx,.19,cz,1)}for(const f of (state.utilities?.report?.failures||[]).filter(f=>f.network===view.utilityLayer)){const [fx,fz]=tilePos(f.x,f.y);sphere(dynamicRoot,.16,'#d84e4e',fx,.25,fz,1)}if(view.utilityLayer==='drainage')for(const [x,y] of state.utilities?.report?.drainage?.floodedTiles||[]){const [cx,cz]=tilePos(x,y);plane(dynamicRoot,1.18,1.18,mat('#52a9c2',{transparent:true,opacity:.44,depthWrite:false}),cx,.105,cz)}}
     for(const busLine of (state.busRoutes||[]).filter(r=>r.operational&&r.route?.length>1))for(let i=1;i<busLine.route.length;i++){
@@ -1900,7 +1902,6 @@ export function createWorld(canvas){
         addCargoTruck(order,route,{type:'Camión de exportación',title:`${factoryName} → ${order.destination||'mercado regional'}`,description:'Carga industrial en ruta por calles reales; el camión regresa vacío a la fábrica.',destination:order.destination||'Mercado regional',progress,side:.12});
       }
     }
-    if(state.newSettlement&&Number(state.housingDemand?.unmet||0)>0){const cityPath=cityEntryRoute(openRoads),entry=[[-1,10],[0,10],[1,10],[2,10],[3,10],...cityPath].map(([x,y])=>tilePos(x,y));for(let i=0;i<3;i++)routeActors.push({actorKey:`inbound:${i}`,mesh:makeVehicle(['#d89368','#f1d493','#75ada8'][i]),route:[...entry,...entry.slice(0,-1).reverse()],offset:i*5.4,speed:.82+i*.08,side:i===1?.22:-.22,selection:{type:'Vehículo entrante',title:'Llegada por la ruta regional',description:'Familias recorren el acceso exterior y siguen por las calles conectadas hasta la ciudad; luego regresan por el mismo corredor.',metrics:[['Familias buscando vivienda',state.housingDemand.unmet||0],['Acceso','Ruta regional conectada'],['Destino','Calles interiores habilitadas']]}})}
     for(const airport of (state.airports||[]).filter(a=>a.operational&&a.monthlyFlights>0)){const route=[[airport.x,airport.y],[airport.x-1,airport.y-1],[airport.x-4,airport.y-3],[airport.x-8,airport.y-3]].map(([x,y])=>tilePos(x,y));routeActors.push({mesh:makePlane(),route,offset:0,speed:.7,side:0,height:4.6,selection:{type:'Avión de pasajeros',title:'Vuelo regional',description:'Aeronave conectada a la operación del aeropuerto local.',metrics:[['Pasajeros del mes',airport.monthlyPassengers||0],['Vuelos',airport.monthlyFlights||0],['Capacidad terminal',`${airport.passengerCapacity||800} personas`],['Estado',airport.pauseReason||'Ruta en servicio']]}})}
     for(const voyage of (state.supply?.portVoyages||[]).filter(v=>(v.status==='en ruta'||(v.direction==='importación'&&v.status==='atracado'))&&v.route?.length>1)){
       const incoming=voyage.direction==='importación',berth=voyage.status==='atracado',path=berth?[tilePos(...voyage.route.at(-1)),tilePos(...voyage.route.at(-1))]:voyage.route.map(([x,y])=>tilePos(x,y));

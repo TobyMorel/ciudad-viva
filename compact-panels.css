@@ -64,16 +64,18 @@
 .report-kpi-icon{top:8px;right:8px;width:24px;height:24px;font-size:14px}
 .report-kpi>small{font-size:11px}
 .report-explanation,.report-operational-details{min-width:0;border:1px solid #d9e4da;border-radius:10px;background:#f8f9f3}
-.report-explanation>summary,.report-operational-details>summary{padding:9px 11px;color:#225d53;font-size:13px;font-weight:780;cursor:pointer}
-.report-explanation[open],.report-operational-details[open]{padding-bottom:9px}
-.report-explanation[open]>summary,.report-operational-details[open]>summary{margin-bottom:8px;border-bottom:1px solid #dce5dc}
+.report-explanation>summary{padding:9px 11px;color:#225d53;font-size:13px;font-weight:780;cursor:pointer}
+.report-explanation[open]{padding-bottom:9px}
+.report-explanation[open]>summary{margin-bottom:8px;border-bottom:1px solid #dce5dc}
+.report-operational-details{padding-bottom:9px}
+.report-operational-heading{margin:0 8px 8px;padding:9px 3px;color:#225d53;font-size:13px;font-weight:780;border-bottom:1px solid #dce5dc}
 .report-explanation>.report-insight-grid,.report-explanation>.report-process-panel,.report-explanation>.report-detail-heading{margin:8px}
 .report-explanation>.report-insight-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .report-explanation .report-chart-panel,.report-explanation .report-reading-panel,.report-explanation .report-process-panel{padding:10px;border-radius:11px}
-.report-operational-details>*:not(summary){margin:8px}
+.report-operational-details>*:not(.report-operational-heading){margin:8px}
 .report-operational-details .municipal-report-intro{display:none}
 body[data-theme=dark] .report-explanation,body[data-theme=dark] .report-operational-details{background:#243a40;border-color:#466261}
-body[data-theme=dark] .report-explanation>summary,body[data-theme=dark] .report-operational-details>summary{color:#d1e8dc}
+body[data-theme=dark] .report-explanation>summary,body[data-theme=dark] .report-operational-heading{color:#d1e8dc}
 .build-drawer-open .popup-content{padding:7px 12px 10px}
 .build-catalog-controls{gap:5px 8px}
 .build-catalog-controls>p{font-size:12px;line-height:1.3}

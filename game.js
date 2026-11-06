@@ -1,20 +1,20 @@
 import {decorateReferencePopup,clearReferencePopup} from './reference-ui.js';
-import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.294';
-import {setupCityCompanion} from './city-companion.js?v=0.294';
-import {setupCinematicCamera} from './city_cinema.js?v=0.294';
-import {setupLivingCityUI} from './living_city_ui.js?v=0.294';
-import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.294';
-import {createWorld} from './world3d.js?v=0.294';
-import {smoothRemoteCursor} from './cursor_motion.js?v=0.294';
-import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.294';
-import {createOfflineWorkerAdapter} from './offline_client.js?v=0.294';
-import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.294';
-import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.294';
-import {growthDemand} from './growth_demand.js?v=0.294';
+import {setupBeginnerTutorial} from './beginnerTutorial.js?v=0.295';
+import {setupCityCompanion} from './city-companion.js?v=0.295';
+import {setupCinematicCamera} from './city_cinema.js?v=0.295';
+import {setupLivingCityUI} from './living_city_ui.js?v=0.295';
+import {citySpectaclePlan,commerceIdentity} from './city_spectacle_state.js?v=0.295';
+import {createWorld} from './world3d.js?v=0.295';
+import {smoothRemoteCursor} from './cursor_motion.js?v=0.295';
+import {cursorView,cursorStatusText} from './cursor_presence.js?v=0.295';
+import {createOfflineWorkerAdapter} from './offline_client.js?v=0.295';
+import {startRtcHost,connectRtcRoom,loadRtcConfig} from './public_rtc.js?v=0.295';
+import {listOfflineSlots,getOfflineSlot,createOfflineSlot,updateOfflineSlot,deleteOfflineSlot,listOfflineBackups,deleteOfflineBackup,restoreOfflineBackup} from './offline_slots.js?v=0.295';
+import {growthDemand} from './growth_demand.js?v=0.295';
 import {collectCityAlerts,collectBuildingNeeds,collectCitizenNeedAlerts,groupAlertsByTile,projectGuide,INDUSTRIES} from './cityGuide.js';
-import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.294';
-import {ROAD_TYPES} from './road_network.js?v=0.294';
-import {geotechnicalEstimate} from './land_survey.js?v=0.294';
+import {formatGameTime,isNight,trafficWindowAt,trafficWindowLabel,visualProjectProgress} from './simulation_time.js?v=0.295';
+import {ROAD_TYPES} from './road_network.js?v=0.295';
+import {geotechnicalEstimate} from './land_survey.js?v=0.295';
 (()=>{
 const canvas=document.querySelector('#city'),world=createWorld(canvas);
 // Diagnóstico de actores realmente dibujados en Three.js, sin modificar la simulación.
@@ -327,7 +327,7 @@ function renderMunicipalReportDashboard(section,category){
  const chart=percentages.length?`<section class="report-chart-panel"><header><span class="report-section-index">02 · INDICADORES</span><h3>Porcentaje de capacidad y cobertura</h3><p>Escala de 0 a 100%. Cada barra conserva el significado del indicador que la acompaña.</p></header><div class="report-chart-bars">${percentages.map((item,index)=>`<div class="report-chart-row"><div><span>${escHtml(item.label)}</span><b>${escHtml(item.display)}</b></div><i><em style="--report-value:${item.pct}%;--report-tone:${index}"></em></i></div>`).join('')}</div><small class="report-chart-note">La barra muestra el valor publicado por el simulador; no representa una meta si el informe no define una.</small></section>`:`<section class="report-chart-panel report-flow-panel"><header><span class="report-section-index">02 · CIRCUITO</span><h3>Del recurso al resultado</h3><p>Seguí las etapas que convierten capacidad municipal en un efecto visible.</p></header><div class="report-flow-visual">${guide.steps.map((step,index)=>`<div class="report-flow-node"><span>${step[0]}</span><b>${escHtml(step[1])}</b><small>${index===0?'Entrada':index===guide.steps.length-1?'Resultado':'Proceso'}</small></div>${index<guide.steps.length-1?'<i aria-hidden="true">→</i>':''}`).join('')}</div><small class="report-chart-note">Los detalles y valores de cada etapa aparecen en las secciones de abajo.</small></section>`;
  const dashboard=document.createElement('div');dashboard.className='report-dashboard';dashboard.dataset.report=category.id;dashboard.style.setProperty('--report-accent',accents[category.id]||'#148a79');dashboard.innerHTML=`<header class="report-hero"><div class="report-hero-copy"><span class="report-kicker"><i></i> INFORME MUNICIPAL · DATOS EN VIVO</span><h2>${escHtml(guide.title)}</h2><p>${escHtml(category.summary)}</p><div class="report-hero-tags"><span>📍 Puerto Claro</span><span>▦ ${escHtml(category.label)}</span><span>⟳ Actualizado con la partida</span></div></div><img class="report-hero-art" src="assets/report-icons/${cityReportIconFiles[category.id]}" alt="" aria-hidden="true"></header><section class="report-kpi-grid" aria-label="Indicadores principales">${metricCards}</section><div class="report-insight-grid">${chart}<section class="report-reading-panel"><span class="report-section-index">01 · CÓMO LEERLO</span><h3>Qué significa este informe</h3><p>${escHtml(guide.mechanic)}</p><div class="report-reading-callout"><span aria-hidden="true">💡</span><div><b>Para interpretar los datos</b><small>Compará capacidad, acceso y resultado. Un recurso construido puede estar presente sin funcionar a plena capacidad.</small></div></div></section></div><section class="report-process-panel"><header><span class="report-section-index">03 · MECANISMO DEL JUEGO</span><h3>Cómo se produce el resultado</h3><p>Las etapas se relacionan: si una condición falla, el efecto final se reduce.</p></header><ol class="report-process-steps">${guide.steps.map((step,index)=>`<li><span class="report-process-number">0${index+1}</span><span class="report-process-icon" aria-hidden="true">${step[0]}</span><div><b>${escHtml(step[1])}</b><p>${escHtml(step[2])}</p></div>${index<guide.steps.length-1?'<span class="report-process-arrow" aria-hidden="true">→</span>':''}</li>`).join('')}</ol></section><header class="report-detail-heading"><span class="report-section-index">04 · DATOS Y OPERACIÓN</span><h3>Detalle del sistema</h3><p>Este desglose conserva los controles, registros y valores específicos de la ciudad.</p></header></div>`;
  const disclosureState=municipalReportDisclosureState.get(category.id)||{};const explanation=document.createElement('details');explanation.className='report-explanation';explanation.open=Boolean(disclosureState.explanation);const explanationSummary=document.createElement('summary');explanationSummary.textContent='Cómo se mide y cómo funciona';explanation.append(explanationSummary);for(const selector of ['.report-insight-grid','.report-process-panel','.report-detail-heading']){const node=dashboard.querySelector(selector);if(node)explanation.append(node)}dashboard.append(explanation);
- const operational=document.createElement('details');operational.className='report-operational-details';operational.open=Boolean(disclosureState.operational);const operationalSummary=document.createElement('summary');operationalSummary.textContent='Ver datos y controles del sistema';operational.append(operationalSummary);for(const node of [...section.childNodes])operational.append(node);dashboard.append(operational);section.replaceChildren(dashboard);
+ const operational=document.createElement('section');operational.className='report-operational-details';const operationalHeading=document.createElement('h4');operationalHeading.className='report-operational-heading';operationalHeading.textContent='Ver datos y controles del sistema';operational.append(operationalHeading);for(const node of [...section.childNodes])operational.append(node);dashboard.append(operational);section.replaceChildren(dashboard);
 }
 cityReportRail.innerHTML=cityReportCategories.map(category=>'<button type="button" data-city-report="'+category.id+'" title="'+category.label+'" aria-label="Abrir informe: '+category.label+'"><img src="assets/report-icons/'+cityReportIconFiles[category.id]+'" alt="" aria-hidden="true"><small>'+category.label+'</small></button>').join('');
 function resizeCityReportRail(){if(!cityReportRail)return;const width=window.matchMedia('(max-width: 650px)').matches?36:window.matchMedia('(max-width: 1050px)').matches?40:48;cityReportRail.style.width=`${width}px`;document.querySelector('.layout')?.style.setProperty('--city-report-rail-width',`${width}px`)}

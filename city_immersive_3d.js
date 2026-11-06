@@ -324,6 +324,9 @@ export function createCityImmersive3D({THREE,scene,camera,canvas,box,sphere,cyli
   const tail=place(g,0,.32,-.21);
   box(tail,.06,.09,.27,coat,0,.08,-.11);
   const owner=walkOwner?person(parent,x-.34,z-.10,seed+83,{umbrella:false}):null;
+  // Los peatones ambientales usan un modelo de escala completa; igualalos a
+  // los caminantes del tránsito principal sin reducir a los demás personajes.
+  if(owner)owner.g.scale.setScalar(.58);
   animals.push({g,tail,x,z,seed,cat,owner,walkCenter,ownerX:x-.34,ownerZ:z-.10});
   if(owner)dogWalks.push({dog:g,owner:owner.g,x,z,ownerX:x-.34,ownerZ:z-.10,seed});
   return g;

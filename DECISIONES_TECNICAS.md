@@ -790,3 +790,8 @@ La firma que decide reconstruir la escena debe depender de datos visuales concre
 ## Alfa 0.294 · paneles, entrada y dibujo vial
 
 Los paneles informativos muestran un resumen por defecto y mantienen los controles detallados en una sección desplegable. Los informes municipales resumen primero sus indicadores principales y preservan el estado abierto de sus detalles cuando se actualizan. Los tramos aislados reciben marcas viales al dibujarse; las intersecciones conservan el borde de vereda. Se retiraron actores de entrada sin viaje persistente y señalización provisional sobre la ruta exterior.
+
+
+## Alfa 0.295 · reloj visual, vehículos de servicio y ambiente
+
+El reloj del renderer toma como referencia los minutos de juego absolutos y sólo acepta sincronizaciones hacia adelante. Esto evita que cada `draw()` devuelva la hora visual al valor recibido y repita la fase de viajes diarios, iluminación y clima. Al cambiar a una partida anterior o iniciar otra ciudad, el renderer reinicia el reloj cuando detecta el cambio. Los paseadores de perros se escalan a la altura de los caminantes del tránsito; el recolector usa el eje frontal común y sólo aparece con rutas conectadas y adyacentes. Las sombras diurnas se pintan con una textura radial instanciada en un único lote, sin luces ni shadow maps. El túnel conserva el comienzo en la entrada regional y se recorta en el extremo que mira a la ciudad. El desglose de controles de los informes se muestra como sección fija abierta. No se ejecutaron pruebas automatizadas, por instrucción.

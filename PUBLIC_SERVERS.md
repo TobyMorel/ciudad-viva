@@ -1,5 +1,5 @@
 
-# Ciudad Viva · Conectividad híbrida WebRTC + Cloudflare (Alfa 0.294)
+# Ciudad Viva · Conectividad híbrida WebRTC + Cloudflare (Alfa 0.295)
 
 La app Windows permite **WebRTC directo primero** y, si falla la conexión P2P, **Cloudflare Quick Tunnel como respaldo automático**. No se abren puertos, no hace falta instalar utilidades ni pagar un servidor central.
 

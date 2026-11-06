@@ -1,4 +1,6 @@
-# Ciudad Viva · Alfa 0.294
+# Ciudad Viva · Alfa 0.295
+
+El ciclo visual ahora sigue el reloj de la partida sin retrocesos; los caminantes con perro respetan la escala de los demás, el camión recolector circula alineado con la vía y el terreno recibe sombras de nubes suaves durante el día. Los informes mantienen abierto el desglose del sistema. El túnel conserva el acceso inicial y termina antes del tramo urbano.
 
 El mapa usa el renderer WebGL 2 clásico de Three.js. La variante WebGPU queda fuera de la carga inicial porque en la ciudad actual provocó pausas al mover la cámara y demoró el primer dibujo; se reconsiderará después de perfilarla en equipos reales. La búsqueda ponderada de caminos offline se compila desde Rust a WebAssembly y conserva el algoritmo JavaScript como respaldo para navegadores sin WASM o mapas mayores al límite de nodos. Para regenerar el binario: instalá Rust, ejecutá `rustup target add wasm32-unknown-unknown` y luego `npm run build:wasm-route`.
 

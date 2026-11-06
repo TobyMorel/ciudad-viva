@@ -1,7 +1,21 @@
 {
-  "currentVersion": "0.294",
+  "currentVersion": "0.295",
   "archiveNote": "El repositorio disponible conserva registros detallados desde Alfa 0.10. Alfa 0.1–0.9 se listan como parte del índice histórico, pero sus notas originales no están disponibles y no se reconstruyen como hechos.",
   "versions": [
+    {
+      "version": "0.295",
+      "date": "2026-11-06",
+      "title": "Animación estable y ambiente diurno",
+      "overallProgress": null,
+      "changes": [
+        "El reloj visual sigue el tiempo real de la partida y evita retroceder al recibir estados repetidos; peatones, bicis, vehículos, iluminación y clima ya no reinician sus fases por esas sincronizaciones.",
+        "Los paseadores de perros ahora tienen la escala de los demás residentes. El camión recolector quedó modelado en el mismo eje de marcha que los otros vehículos, y las rutas inválidas o desconectadas ya no generan camiones inmóviles.",
+        "Se añadieron sombras de nubes amplias, difusas y móviles durante el día mediante una sola tanda de instancias, sin agregar shadow maps ni luces.",
+        "El túnel vuelve a cubrir el inicio de la carretera y se acorta por el extremo urbano, dejando visible el tramo final antes de entrar a la ciudad.",
+        "«Ver datos y controles del sistema» permanece desplegado en todos los informes municipales."
+      ],
+      "verification": "No se ejecutaron pruebas automatizadas, por instrucción."
+    },
     {
       "version": "0.294",
       "date": "2026-11-06",

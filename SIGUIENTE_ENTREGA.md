@@ -1,3 +1,7 @@
+## Alfa 0.295 · Animación estable y ambiente diurno
+
+El reloj 3D avanza con el mismo ritmo de la partida y no retrocede al recibir actualizaciones. Se corrigió la escala de quienes pasean perros y la orientación y ruta de los camiones recolectores. Una tanda de sombras suaves de nubes recorre el terreno durante el día sin mapas de sombra ni luces adicionales. El túnel vuelve a cubrir el inicio de la ruta y se recorta en su extremo urbano. Los informes municipales dejan siempre visible «Ver datos y controles del sistema».
+
 ## Alfa 0.294 · Paneles compactos y entrada vial despejada
 
 Los informes y paneles priorizan resúmenes legibles con datos completos bajo demanda. El acceso exterior deja más carretera visible, ya no tiene los carteles provisionales ni los tres autos en circuito; las esquinas de las calles conservan veredas y las marcas aparecen al colocar cada tramo.
